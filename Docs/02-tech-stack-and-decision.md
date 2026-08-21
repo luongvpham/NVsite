@@ -636,30 +636,35 @@ Merge theo email/SĐT khi đăng ký username/password **hiện không yêu cầ
 
 ---
 
-### Quyết định #29 — Identity Model chốt lại: email là identity key, `UserShop` không có credential ⭐
+### Quyết định #29 — Identity Model chốt lại: email là identity key, credential riêng theo shop, token shop bị giới hạn năng lực ⭐
 
 **Supersede Quyết định #28.** Chi tiết đầy đủ (schema, ràng buộc DB, luồng đăng ký/đăng nhập, reasoning từng điểm) tại **`03-identity-entity-design.md`**.
 
 **Bốn điểm cốt lõi:**
 
 1. **Email là identity key toàn cục**, UNIQUE, và **luôn ở trạng thái đã verify**. Không tồn tại `User` có email chưa verify trong DB.
-2. **`UserShop` là membership thuần** — chỉ có `UserId`, `ShopId`, `RoleId`, `Status`. **Bỏ hẳn** `Username`/`PasswordSalt`/`PasswordHash`.
+2. **`UserShop` giữ `PasswordSalt`/`PasswordHash` riêng theo shop**, bỏ `Username` (định danh đăng nhập là email). **Hồ sơ** (`FullName`/`AvatarUrl`/`Phone`) **dùng chung** ở `User`.
 3. **Mỗi `User` bắt buộc có email đã verify HOẶC `ExternalLogin` với Zalo.** Enforce ở domain lúc tạo `User`, đỡ thêm bằng cột `PrimaryIdentityKind` + CHECK constraint.
-4. **Không merge, chỉ link.** Trùng email khi đăng ký → báo "đã có tài khoản, hãy đăng nhập hoặc quên mật khẩu". Không có flow verify-để-link.
+4. **Không merge, chỉ link.** Trùng email khi đăng ký ở `vsite.vn` → báo "đã có tài khoản". Trùng email khi đăng ký ở domain shop mà chưa có membership → vẫn gửi verify bình thường (user không hề biết email đã tồn tại).
 
-**Lý do bỏ credential khỏi `UserShop` — đây là điểm quan trọng nhất:**
+**Vì sao giữ password riêng theo shop:**
 
-Credential riêng theo shop **không** tách biệt được gì về mặt bảo mật. Mọi credential dù đặt ở shop nào cũng cấp ra token có `sub = User.Id`, mở cửa vào dữ liệu ở **mức user toàn cục**. Cho phép tạo credential mới ở shop B mà không chứng minh sở hữu `User.Id` chính là kịch bản tấn công ở Quyết định #28 — thêm bước verify email chỉ đẩy nó sang chỗ khác chứ không xoá được.
+- Ảo giác tách biệt là **có chủ đích** (đúng tinh thần Quyết định #4) — khách vào `spa-abc.com` không cần biết vsite tồn tại.
+- Dùng chung password thì đổi ở shop này làm hỏng đăng nhập ở shop kia — user không hiểu vì sao.
+- Chrome lưu credential **theo origin**; password dùng chung làm autofill điền sai sau khi đổi ở origin khác.
 
-Bỏ credential khỏi `UserShop` đóng lỗ hổng **về mặt cấu trúc**: không còn thao tác nào gắn được credential mới vào một `User.Id` đã tồn tại mà không đi qua session hợp lệ hoặc flow forgot-password.
+**Vì sao KHÔNG dựng lại lỗ hổng của Quyết định #28:**
 
-**Đánh đổi chấp nhận:** khách hàng dùng cùng một tài khoản cho mọi shop. Vẫn nhất quán với Quyết định #4 — *session* riêng biệt theo domain (token khác audience), chỉ *account* là chung, đúng như #4 đã ghi: "Session riêng biệt ≠ account riêng biệt".
+Lỗ hổng cũ không nằm ở *chỗ chứa credential*, mà ở chỗ **credential mới gắn được vào `User.Id` đã tồn tại mà không cần chứng minh sở hữu**. Hai lớp chặn, thiếu một là quay lại lỗ hổng cũ:
+
+- **Quyết định #30** — đăng ký bằng email/password **luôn** verify email, kể cả lần thứ N tại shop khác. Kẻ tấn công không nhận được mail → không tạo được `UserShop`.
+- **Quyết định #32** — token `shop:{shopId}` không đọc/sửa được credential global. Password shop yếu nhất không kéo theo mất tài khoản.
 
 **Entity chốt:** `User` · `ExternalLogin` · `UserShop` · `Shop` · `Role` · `PendingRegistration`.
 
-**Thời điểm tạo `UserShop`:** mọi lần **authenticate thành công trong context của một shop** → upsert `UserShop` (role `Customer`). Bao gồm cả đăng ký mới tại domain shop lẫn user đã có tài khoản vsite nay đăng nhập tại domain shop. Duyệt web ẩn danh thì không tạo gì. Cột `Source` (`RegisteredOnShop` / `LoggedInOnShop` / `InvitedByShop` / `ShopCreator`) + `LastActiveAt` phục vụ thống kê cho chủ shop.
+**Thời điểm tạo `UserShop`:** mọi lần **authenticate thành công trong context của một shop** → upsert `UserShop` (role `Customer`). Bao gồm cả đăng ký mới tại domain shop lẫn user đã có tài khoản vsite nay đăng nhập tại domain shop. Duyệt web ẩn danh thì không tạo gì. Cột `Source` (`RegisteredOnShop` / `LoggedInOnShop` / `InvitedByShop` / `ShopCreator`) + `LastActiveAt` phục vụ thống kê cho chủ shop. `Source` **bất biến sau khi tạo** — chỉ set ở nhánh INSERT.
 
-⚠️ **Ranh giới dữ liệu:** Portal không bao giờ serialize thẳng entity `User` — phải qua DTO riêng cho góc nhìn shop. Shop không được thấy user thuộc shop nào khác. Chi tiết ở §3.3 của `03-identity-entity-design.md`.
+⚠️ **Ranh giới dữ liệu:** Portal không bao giờ serialize thẳng entity `User` — phải qua DTO riêng cho góc nhìn shop. Chủ shop không được thấy user thuộc shop nào khác. Chi tiết ở §3.3 của `03-identity-entity-design.md`.
 
 **✅ Rủi ro account-takeover ở Quyết định #28: ĐÃ ĐÓNG.**
 
@@ -683,6 +688,10 @@ Bỏ credential khỏi `UserShop` đóng lỗ hổng **về mặt cấu trúc**:
 
 ⚠️ **Tuyệt đối không** làm biến thể "verify email xong thì set password mới người dùng vừa nhập" — đó là password-reset ngầm, nạn nhân không nhận được cảnh báo, và nó dựng lại đúng lỗ hổng vừa đóng.
 
+**Khi context là domain shop:** password vừa nhập ghi vào `UserShop.PasswordHash`, **tuyệt đối không** ghi vào `User.PasswordHash`. Nếu ghi, password yếu đặt ở một shop trở thành password đăng nhập `vsite.vn` — mở đúng đường tấn công mà Quyết định #32 đang chặn.
+
+**Quên mật khẩu cũng scoped:** reset token phải mang scope (`vsite.vn` hay `shopId` nào); reset ở `spa-abc.com` chỉ đổi password shop đó, revoke refresh token cùng scope, và mail thông báo phải nêu rõ đổi ở đâu.
+
 ---
 
 ### Quyết định #31 — Phân giải Role theo domain; Portal lấy `ShopId` từ route ⭐
@@ -703,6 +712,36 @@ Bỏ credential khỏi `UserShop` đóng lỗ hổng **về mặt cấu trúc**:
 7. `ownerShopIds` trong JWT (Quyết định #27) **chỉ dùng để render UI shop switcher**, tuyệt đối không làm căn cứ authorize. Authorization Handler query `UserShop(userId, shopId)` tại mỗi request.
 8. Không có `UserShop` record → **không có role** ở shop đó. Không fallback về role mặc định.
 9. `User.RoleId = PlatformAdmin` **không được** bypass Global Query Filter ngầm. Admin xem dữ liệu shop → **endpoint riêng + audit log riêng**. Tắt filter có điều kiện trong endpoint dùng chung là lỗ hổng chờ sẵn.
+
+---
+
+### Quyết định #32 — Ranh giới năng lực của token `shop:{shopId}` ⭐⚠️
+
+**Chốt:** Token có audience `shop:{shopId}` **không** đọc hoặc sửa được bất cứ thứ gì ở mức credential global hoặc dữ liệu xuyên shop.
+
+**Vì sao:** token này sinh ra từ password của **riêng shop đó** — thứ user được phép đặt khác nhau và có thể yếu hơn ở tiệm họ ít quan tâm (Quyết định #29). Nếu nó chạm được credential global thì **tài khoản chỉ an toàn bằng mật khẩu yếu nhất trong N shop**.
+
+| Thao tác từ token `shop:{shopId}` | |
+|---|---|
+| Đọc `FullName`, `AvatarUrl`, `Phone`, `Email` của chính mình | ✅ |
+| Sửa `FullName`, `AvatarUrl`, `Phone` | ✅ hồ sơ dùng chung, propagate mọi nơi |
+| Đổi password **của chính shop đó** | ✅ |
+| Đọc/ghi booking, review, dữ liệu **tại shop đó** | ✅ |
+| **Đổi `User.Email`** | ❌ đổi email → "quên mật khẩu" → chiếm toàn bộ tài khoản |
+| **Đặt/đổi password global (`vsite.vn`)** | ❌ leo thang scope shop → scope platform |
+| **Thêm/xoá `ExternalLogin`** | ❌ gắn Google của attacker = cửa hậu vĩnh viễn |
+| **Đổi password của shop khác** | ❌ |
+| **Liệt kê shop khác mà user thuộc về** | ❌ phá ảo giác tách biệt + lộ đời tư |
+| **Đọc booking/review ở shop khác** | ❌ |
+
+Quy tắc một câu: **hồ sơ thì được, credential và dữ liệu xuyên shop thì không.**
+
+**Cách enforce:**
+- Policy `RequireGlobalScope` gắn cho mọi endpoint chạm tới credential/identity.
+- **Test tự động bắt buộc** — mỗi endpoint identity có test khẳng định token `shop:*` bị từ chối. Chỉ cần **một** endpoint quên là toàn bộ thiết kế identity sụp; không dựa vào code review.
+- **Lockout/rate-limit tách theo scope** — dò password ở Shop C không được khóa tài khoản ở Shop A (nếu không, đây thành vector DoS nhắm vào một user cụ thể).
+
+⚠️ **Ghi invariant này vào `CLAUDE.md` của module Identity**, cùng nhóm với `basePath`/`resolveUrl()` (Quyết định #11) và isomorphic renderer (Quyết định #23) — loại lỗi AI agent sẽ vi phạm liên tục nếu không nói trước.
 
 ---
 
