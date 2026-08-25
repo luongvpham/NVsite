@@ -3,6 +3,8 @@
 > Tài liệu này chốt mô hình `User` / `ExternalLogin` / `UserShop` / `Shop` / `Role`.
 > **Supersede** Quyết định #28 trong `02-tech-stack-and-decision.md` (mô hình `UserShopCredential` + merge theo email/SĐT chưa verify).
 > Mọi thay đổi so với tài liệu này phải được ghi nhận lại tại đây.
+>
+> **Cập nhật gần nhất** (đồng bộ với `04-listing-and-review-design.md` và Quyết định #39): định nghĩa chính xác "liên hệ" ở §3.3 · đánh giá không tạo `UserShop` (§3.3) · `Review` yêu cầu audience `vsite-main`, phản hồi của shop đi qua `vsite-portal` (§7.1) · `Shop` đầy đủ (gồm `Kind`) do `04` §2.1 định nghĩa (§3.4).
 
 ---
 
@@ -212,9 +214,23 @@ Vì `UserShop` được tạo ngay khi user xác thực tại domain shop, shop 
 | Chủ shop **được** thấy | Chủ shop **không** được thấy |
 |---|---|
 | `FullName`, `AvatarUrl` | Danh sách shop khác mà user thuộc về |
-| Email / SĐT — **chỉ khi** user đã có booking hoặc liên hệ với shop | Lịch sử booking / review ở shop khác |
+| Email / SĐT — **chỉ khi** user đã có booking hoặc "liên hệ" với shop (định nghĩa bên dưới) | Lịch sử booking / review ở shop khác |
 | Booking, review của user **tại shop đó** | `PasswordHash` của bất kỳ shop nào (kể cả shop mình) |
 | `CreatedAt`, `LastActiveAt`, `Source` của chính `UserShop` đó | `PrimaryIdentityKind`, `ExternalLogin`, `CCCD`, trạng thái verify |
+
+**Định nghĩa "liên hệ" (chốt để không tranh cãi lúc implement):** user có bản ghi `Lead` với `Kind = ClickPhone` tới một `Listing` của shop đó (xem `04-listing-and-review-design.md` §7). `ViewDetail` và `ClickDirections` **không** tính — chỉ xem thì shop chưa có quyền biết SĐT của khách.
+
+⚠️ **Đừng nhầm với nhãn *"đã liên hệ shop"* ở `04` §6.3.** Hai thứ dùng chung một từ nhưng khác điều kiện và khác mục đích, cố ý:
+
+| | Ở đây (§3.3) | Nhãn trên đánh giá (`04` §6.3) |
+|---|---|---|
+| Điều kiện | `Lead.Kind = ClickPhone` | `ClickPhone` **hoặc** `ClickWebsite`, trong 90 ngày |
+| Dùng để | Mở quyền cho shop xem email/SĐT của khách | Hiển thị tín hiệu tin cậy cho người đọc |
+| Vì sao chặt hơn | Lộ dữ liệu cá nhân — ngưỡng phải cao hơn một nhãn hiển thị | — |
+
+**⚠️ Viết đánh giá KHÔNG tạo `UserShop`.** Đánh giá diễn ra tại `vsite.vn` (audience `vsite-main`), không phải trong context của shop, nên theo đúng luật ở bảng trên thì **không** upsert `UserShop`. Đây là chủ ý: đánh giá là quan hệ giữa user và **vsite**, không phải membership với shop. Chủ shop thấy nội dung đánh giá và tên người viết, nhưng người đó **không** vào danh sách khách hàng của shop, và **không** vì thế mà shop được thấy email/SĐT của họ.
+
+Ghi rõ ở đây để sau này không ai suy diễn ngược rằng "user đánh giá shop thì hẳn là khách của shop".
 
 **Ràng buộc bắt buộc:** Portal **không bao giờ** serialize thẳng entity `User` ra response. Phải có DTO riêng cho góc nhìn shop (ví dụ `ShopCustomerDto`), chỉ chứa đúng các trường ở cột trái. Đây là loại lỗi AI agent sẽ vi phạm nếu không nói trước — mapping "tiện tay" từ `User` là đường ngắn nhất, và nó rò dữ liệu.
 
@@ -222,17 +238,22 @@ Vì `UserShop` được tạo ngay khi user xác thực tại domain shop, shop 
 
 ### 3.4 `Shop`
 
+> ⚠️ **Nguồn sự thật của entity `Shop` là `04-listing-and-review-design.md` §2.1** (Quyết định #39.5). Ở đây chỉ liệt kê phần Identity cần biết; **không** sửa `Shop` ở tài liệu này.
+
 ```
-Shop
+Shop   (trích — bản đầy đủ ở 04 §2.1)
 ─────────────────────────────────────────────
 Id                    UUID          PK
 Name                  string        NOT NULL
 Slug                  string        NOT NULL  UNIQUE
+Kind                  enum          NOT NULL  { Hosted, ExternalOnly }   -- Quyết định #37
+ExternalUrl           string?                 -- NOT NULL khi Kind = ExternalOnly
 Status                enum          { Draft, Active, Suspended, Closed }
 CreatedAt             timestamp
 UpdatedAt             timestamp
 ```
 
+- `Kind` **không** ảnh hưởng tới Identity: cả hai loại shop đều có `UserShop`, `Role`, và luồng đăng nhập như nhau. Khác biệt duy nhất là shop `ExternalOnly` không có `ShopDomain` nên **không tồn tại context đăng nhập tại domain shop** — mọi user của shop đó xác thực qua `vsite.vn` hoặc `admin.vsite.vn`, và do đó **không có** `UserShop.PasswordHash`.
 - Hồ sơ chi tiết (địa chỉ, toạ độ, giờ mở cửa, liên hệ, ảnh) tách sang entity riêng khi thiết kế module Shop đầy đủ.
 - Thông tin domain nằm ở `ShopDomain` (Quyết định #7), không nhét vào `Shop`.
 - `Slug` phải validate với `config/reserved-routes.json` (Quyết định #8 + #24).
@@ -499,7 +520,8 @@ User **Zalo-only không có mật khẩu** ở bất kỳ scope nào → recover
 | Đọc `FullName`, `AvatarUrl`, `Phone`, `Email` của chính mình | ✅ |
 | Sửa `FullName`, `AvatarUrl`, `Phone` | ✅ hồ sơ dùng chung, propagate mọi nơi |
 | Đổi password **của chính shop đó** | ✅ |
-| Đọc/ghi booking, review, dữ liệu **tại shop đó** | ✅ |
+| Đọc/ghi booking, dữ liệu **tại shop đó** | ✅ |
+| **Viết/sửa `Review` trên vsite** | ❌ **yêu cầu audience `vsite-main`** — xem ghi chú bên dưới |
 | **Đổi `User.Email`** | ❌ đổi email → "quên mật khẩu" → chiếm toàn bộ tài khoản |
 | **Đặt/đổi password global (`vsite.vn`)** | ❌ leo thang từ scope shop lên scope platform |
 | **Thêm/xoá `ExternalLogin`** | ❌ gắn Google của attacker = cửa hậu vĩnh viễn |
@@ -510,6 +532,12 @@ User **Zalo-only không có mật khẩu** ở bất kỳ scope nào → recover
 Quy tắc một câu: **hồ sơ thì được, credential và dữ liệu xuyên shop thì không.**
 
 Muốn làm các thao tác ❌ → phải đăng nhập tại `vsite.vn` bằng credential global (hoặc social login).
+
+**Phản hồi đánh giá của shop dùng audience nào:** `vsite-portal`, kèm role `Owner`/`Manager` tại đúng shop đó (Quyết định #39.4). Đây **không** phải ngoại lệ của quy tắc trên — chủ shop *phản hồi* ở Portal, còn *viết đánh giá* thì vẫn phải là một tài khoản khách đăng nhập tại `vsite.vn`. Ghi rõ để không ai nới `RequireGlobalScope` ra cho tiện.
+
+**⚠️ Vì sao `Review` cần audience `vsite-main`:** đánh giá là tài sản tin cậy của vsite, hiển thị trên trang tìm kiếm chung. Nếu token `shop:{shopId}` viết được đánh giá, chủ shop chỉ cần tự tạo vài tài khoản khách tại chính domain shop của mình (nơi họ kiểm soát toàn bộ luồng đăng ký) rồi viết đánh giá 5 sao — mà password shop là thứ họ tự đặt được cho từng tài khoản. Đây là đường tấn công rẻ nhất vào hệ thống đánh giá, và nó nằm gọn trong quyền hạn bình thường của một chủ shop.
+
+Bổ sung vào **Cách enforce** bên dưới: mọi endpoint `Review` (tạo/sửa) gắn policy `RequireGlobalScope`, và có test khẳng định token `shop:*` bị từ chối.
 
 **Cách enforce:**
 
@@ -566,11 +594,14 @@ Muốn làm các thao tác ❌ → phải đăng nhập tại `vsite.vn` bằng 
 | 11 | Rate-limit / lockout **theo từng scope** | Dò password ở Shop C không được làm khóa luôn tài khoản ở Shop A — nếu không, đây thành vector DoS nhắm vào một user cụ thể |
 | 12 | Reset token phải mang scope | Token reset của Shop A không được dùng để đổi password `vsite.vn` hay Shop B (§6.4) |
 | 13 | Chính sách độ mạnh mật khẩu áp cho **cả** `UserShop` | Password shop yếu là điểm vào; §7.1 giới hạn thiệt hại nhưng không nên để nó quá dễ dò |
+| 14 | Rate-limit endpoint `Review` theo **user và IP** | Không có xác thực "đã dùng dịch vụ" nên rate-limit là lớp chặn chính chống review farm — xem `04` §6.6 |
+| 15 | Test: token `shop:*` bị từ chối ở mọi endpoint `Review` | Nếu quên, chủ shop tạo được đánh giá giả cho chính mình (§7.1) |
+| 16 | Shop `ExternalOnly` không được sinh `UserShop.PasswordHash` | Không có domain shop thì không có context đặt password shop (§3.4) |
 
 ### 📌 Cố tình để mở
 
 - **Verify Phone/CCCD:** cột `PhoneVerifiedAt`/`CCCDVerifiedAt` đã có sẵn nhưng chưa dùng. Verify SĐT cần dịch vụ SMS bên ngoài, chưa cần cho MVP. Kể cả sau khi verify, chúng **vẫn là hồ sơ**, không tự động thành identity key — muốn đổi phải ra quyết định mới ghi tại tài liệu này.
-- **Phân quyền chi tiết trong shop** (Manager được làm gì, Accountant được làm gì): `Role` đã có chỗ, nhưng permission matrix thuộc Phase 2 cùng tính năng "Phân quyền nhân viên".
+- **Phân quyền chi tiết trong shop** (Manager được làm gì, Accountant được làm gì): `Role` đã có chỗ, nhưng permission matrix thuộc **Phase 4** cùng tính năng "Phân quyền nhân viên" (Quyết định #39.1). Tới đó, mỗi shop chỉ thực dùng `Owner` và `Customer`.
 
 ---
 

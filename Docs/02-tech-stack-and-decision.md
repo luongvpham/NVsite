@@ -2,7 +2,9 @@
 
 > Tài liệu này ghi lại **những gì đã thống nhất**. Mọi thay đổi so với tài liệu này cần được ghi nhận lại tại đây.
 >
-> **Tài liệu liên quan:** `01-project-ideal.md` (ý tưởng & tính năng) · `03-identity-entity-design.md` (thiết kế entity Identity/Shop chi tiết — chuẩn cho Quyết định #29/#30/#31)
+> **Tài liệu liên quan:** `01-project-ideal.md` (ý tưởng & tính năng) · `03-identity-entity-design.md` (thiết kế entity Identity/Shop chi tiết — chuẩn cho Quyết định #29/#30/#31) · `04-listing-and-review-design.md` (Listing/Review/Lead — chuẩn cho Quyết định #35/#37/#38)
+>
+> **Lần rà soát nhất quán gần nhất:** đã đối chiếu chéo cả 4 tài liệu; các mâu thuẫn còn tồn (tên app cũ, quyền ghi `Review` của token shop, hai danh sách reserved route, đánh số Phase) đã được đóng — xem Quyết định #39.
 
 ---
 
@@ -19,22 +21,33 @@
 
 ### 1.2 Danh sách module
 
+> **Quy ước đánh số Phase:** "MVP" = **Phase 1** trong lộ trình ở `01-project-ideal.md` mục 8. Không dùng "MVP" như một mốc riêng nằm ngoài lộ trình — xem Quyết định #39.
+
 | Module | Phase |
 |---|---|
-| Identity | MVP |
-| Shop | MVP |
-| Service | MVP |
-| Website | MVP |
-| Search | MVP |
-| Review | Phase 2 |
+| Identity | Phase 1 (MVP) |
+| Shop | Phase 1 (MVP) |
+| **Category** (taxonomy toàn cục — Quyết định #35) | Phase 1 (MVP) |
+| **Listing** (tin đăng marketplace — Quyết định #38) | Phase 1 (MVP) |
+| **Review** (đánh giá — chuyển từ Phase 2 lên) | Phase 1 (MVP) |
+| **Lead** (lượt liên hệ — nguồn của "thống kê cơ bản", `04` §7) | Phase 1 (MVP) |
+| Search | Phase 1 (MVP) |
+| Service | Phase 2 |
+| Website (builder + renderer) | Phase 2 |
 | Product | Phase 2 |
-| Booking | Phase 2 |
 | Customer | Phase 2 |
+| Booking | Phase 3 |
 | Notification | Phase 3 |
-| Analytics | Phase 3 |
-| Payment | Phase 3 |
+| Analytics (BI nâng cao, ngoài `Lead`) | Phase 4 |
+| Payment | Phase 4 |
 
 **Quyết định:** Payment / Analytics / Notification giai đoạn đầu **dùng dịch vụ ngoài**, không tự xây.
+
+**Vì sao `Review` lên MVP:** vsite không xử lý giao dịch (mục 2 của `01-project-ideal.md`), nên đánh giá là **tài sản tin cậy duy nhất** phân biệt vsite với việc lướt Google Maps hay Facebook group. Không có đánh giá thì Phase 1 không kiểm chứng được điều gì.
+
+**Vì sao `Service`/`Website` xuống Phase 2:** lộ trình ở `01-project-ideal.md` mục 8 chốt Phase 1 là **danh bạ dịch vụ** (Listing + Review), Website Builder mới là Phase 2. Để hai module này ở MVP là mâu thuẫn trực tiếp với lộ trình — và cũng phá đúng mục tiêu "kiểm chứng nhu cầu trước khi xây phần tốn công nhất". `Listing` **không** phụ thuộc `Service` (Quyết định #38: không auto-map), nên cắt được sạch.
+
+**Thứ tự phụ thuộc bắt buộc:** `Identity` → `Shop` → `Category` → `Listing` → `Search` / `Review` / `Lead`. `Category` phải xong trước `Listing` vì Listing, Search, Review và Menu đều neo vào nó; `Identity`/`Shop` trước vì `Listing.ShopId` NOT NULL và `Review.UserId` NOT NULL.
 
 ### 1.3 Tech stack
 
@@ -91,8 +104,8 @@ immer      — immutable update Component Tree
 
 | App | Gồm | Rendering | Domain |
 |---|---|---|---|
-| `apps/web` | Main (trang chung vsite.vn: tìm kiếm, khám phá, SEO) + Shop (website công khai của từng shop — output của `builder-renderer`) | **SSR** (TanStack Start) | `vsite.vn`, `{slug}.vsite.vn`, custom domain |
-| `apps/portal` | Quản trị shop (dịch vụ, hàng hóa, đơn, đánh giá, thống kê — nội dung của `shop-admin` cũ) + Website Builder (kéo-thả + AI Chat, route `/website`) | **CSR** thuần | `admin.vsite.vn` |
+| `apps/web` | Main (trang chung vsite.vn: tìm kiếm, bản đồ, landing SEO) + **Shop Profile** (`vsite.vn/shop/{slug}` — vsite render, chứa đánh giá) + Shop Site (website công khai của shop — output của `builder-renderer`) | **SSR** (TanStack Start) | `vsite.vn`, `{slug}.vsite.vn`, custom domain |
+| `apps/portal` | Quản trị shop (**tin đăng, lead, đánh giá, hồ sơ shop** ở Phase 1; thêm dịch vụ/hàng hoá từ Phase 2 — nội dung của `shop-admin` cũ) + Website Builder (kéo-thả + AI Chat, route `/website`, Phase 2) | **CSR** thuần | `admin.vsite.vn` |
 
 | Packages (dùng chung) | Dùng bởi |
 |---|---|
@@ -106,6 +119,18 @@ immer      — immutable update Component Tree
 | `ai-agent` — prompt, tool schema, validator | **chỉ** `apps/portal` |
 
 **Ràng buộc dependency giữ nguyên và giờ có ý nghĩa cụ thể:** `builder-renderer` KHÔNG import `builder-core` — vì `apps/web` (Shop) chỉ render, không có Operations Engine, không cần biết gì về editor.
+
+⚠️ **Shop Profile ≠ Shop Site.** Hai thứ khác nhau hoàn toàn, đều nằm trong `apps/web`:
+
+| | Shop Profile | Shop Site |
+|---|---|---|
+| URL | `vsite.vn/shop/{slug}` | `spa-abc.com` · `spa-abc.vsite.vn` · `vsite.vn/{slug}` |
+| Render bởi | vsite (mẫu thống nhất, code thường) | `builder-renderer` (Component Tree) |
+| Ai kiểm soát nội dung | vsite | shop |
+| Hiển thị `Review` | ✅ | ❌ **tuyệt đối không** |
+| Shop `ExternalOnly` có? | ✅ (bản đơn giản) | ❌ |
+
+Shop Profile **không** dùng `builder-renderer`. Đây là chỗ AI agent dễ nhầm — thấy "trang của shop" là với tay sang builder.
 
 ---
 
@@ -137,7 +162,7 @@ immer      — immutable update Component Tree
 
 **Chốt:** Không triển khai Identity Provider. Dùng ASP.NET Core Identity + JWT tự cấp.
 
-**Lý do:** vsite không cần làm Identity Provider cho bên thứ ba. Mọi client đều là first-party (customer-web, shop-admin, mini-website của shop). Redirect flow + PKCE + discovery endpoint của OIDC là chi phí không đổi lại được lợi ích gì trong mô hình này.
+**Lý do:** vsite không cần làm Identity Provider cho bên thứ ba. Mọi client đều là first-party (`apps/web`, `apps/portal`, và website shop do chính `apps/web` render). Redirect flow + PKCE + discovery endpoint của OIDC là chi phí không đổi lại được lợi ích gì trong mô hình này.
 
 **Kiến trúc thay thế:**
 
@@ -264,13 +289,9 @@ created_at
 
 **Chốt:** Enforce ở tầng validation khi shop chọn slug.
 
-```
-api, auth, admin, login, logout, signup, assets, static, cdn,
-www, app, shop, search, help, blog, about, terms, privacy,
-sitemap.xml, robots.txt, .well-known
-```
-
 **Lý do:** Nếu shop đăng ký slug `api` hoặc `auth`, hệ thống tự vỡ. Danh sách nên rộng hơn mức cần thiết.
+
+⚠️ **Danh sách cụ thể KHÔNG nằm ở đây.** Nguồn sự thật duy nhất là `config/reserved-routes.json` (Quyết định #24). Trước đây mục này có một danh sách viết tay riêng — đã **xoá** vì hai danh sách song song chắc chắn lệch nhau, và lệch ở đây là lỗi routing/bảo mật thật. Quyết định #8 giờ chỉ chốt *nguyên tắc phải enforce*; Quyết định #24 chốt *nội dung và cách tiêu thụ*.
 
 ---
 
@@ -301,7 +322,7 @@ Khi có TLS handshake tới domain lạ → Caddy gọi `/internal/tls-check?dom
 - Thẻ `<link rel="canonical">` trỏ về primary
 - `robots.txt` + `sitemap.xml` sinh riêng theo tenant, chỉ chứa primary URL
 
-**Lý do:** Cùng một website truy cập được qua 3 URL là duplicate content, làm loãng SEO của cả platform lẫn shop. Vì `customer-web` là app hướng SEO, việc này ảnh hưởng trực tiếp giá trị cốt lõi sản phẩm.
+**Lý do:** Cùng một website truy cập được qua 3 URL là duplicate content, làm loãng SEO của cả platform lẫn shop. Vì `apps/web` là app hướng SEO, việc này ảnh hưởng trực tiếp giá trị cốt lõi sản phẩm.
 
 ---
 
@@ -545,7 +566,7 @@ Vi phạm những điều dưới đây = lỗi bảo mật, không phải lỗi
 
 ```json
 {
-  "reservedPaths": ["api", "auth", "admin", "login", "register", "search", "portal", "assets", "static", "cdn", "help", "blog", "about", "terms", "privacy"],
+  "reservedPaths": ["api", "auth", "admin", "login", "logout", "register", "signup", "search", "portal", "shop", "assets", "static", "cdn", "help", "blog", "about", "terms", "privacy", "sitemap.xml", "robots.txt", ".well-known"],
   "reservedSubdomains": ["www", "admin", "app", "help", "api", "cdn", "static"]
 }
 ```
@@ -558,6 +579,10 @@ Vi phạm những điều dưới đây = lỗi bảo mật, không phải lỗi
 
 **Việc cần làm khi thêm route/subdomain mới:** chỉ sửa 1 file JSON này — không sửa tay ở FE hoặc BE riêng lẻ.
 
+⚠️ **`shop` là bắt buộc** (mới thêm): trang hồ sơ shop nằm tại `vsite.vn/shop/{slug}`. Nếu không reserve, một shop có thể đăng ký slug `shop` và chiếm mất toàn bộ nhánh URL này.
+
+**Vì sao trang hồ sơ không nằm ở `vsite.vn/{slug}`:** chỗ đó đã bị chiếm bởi website shop dùng `ShopDomain(kind = Path)` (Quyết định #7). Xung đột thật, phải tách nhánh. Website shop thắng vì đó là thứ shop trả tiền để sở hữu.
+
 ---
 
 ### Quyết định #25 — Portal URL: `admin.vsite.vn/*`
@@ -565,7 +590,7 @@ Vi phạm những điều dưới đây = lỗi bảo mật, không phải lỗi
 **Chốt:** Portal dùng subdomain riêng `admin.vsite.vn`, không dùng path `vsite.vn/portal/*`.
 
 **Hệ quả:**
-- `admin` phải nằm trong `reservedSubdomains` (Quyết định #24) — đã có sẵn trong danh sách gợi ý ở Quyết định #9 cũ, giờ chính thức bắt buộc.
+- `admin` phải nằm trong `reservedSubdomains` (Quyết định #24) — giờ chính thức bắt buộc.
 - `portal` **không cần** nằm trong `reservedPaths` nữa vì không còn là path — nhưng vẫn nên giữ trong danh sách để phòng nhầm lẫn/đặt lại sau này.
 - Portal là origin riêng biệt hoàn toàn với `vsite.vn` → cookie/session tách bạch tự nhiên, không phụ thuộc third-party cookie giữa `vsite.vn` và `admin.vsite.vn`.
 - Khớp tự nhiên với việc tách deploy ở Quyết định #22 — Portal vốn đã ở subdomain riêng nên tách thành build artifact/deployment riêng là hệ quả logic, không phải quyết định tùy tiện.
@@ -574,7 +599,9 @@ Vi phạm những điều dưới đây = lỗi bảo mật, không phải lỗi
 
 ### Quyết định #26 — Search Engine: Elasticsearch dùng ngay từ MVP ⭐
 
-**Chốt:** Không đợi ngưỡng như Quyết định #2 cũ. Dùng **Elasticsearch** ngay từ MVP cho cả full-text search (sản phẩm, dịch vụ, tin tức) lẫn geo-search — thay thế PostgreSQL FTS. **Supersede Quyết định #2.**
+**Chốt:** Không đợi ngưỡng như Quyết định #2 cũ. Dùng **Elasticsearch** ngay từ MVP cho cả full-text search lẫn geo-search — thay thế PostgreSQL FTS. **Supersede Quyết định #2.**
+
+⚠️ **Phạm vi index chốt tại Quyết định #38: chỉ index `Listing`.** Không index `Service`, không index `Product`. Mô tả cũ ("sản phẩm, dịch vụ, tin tức") là tàn dư của hệ VSite 4.8 và đã bị bỏ.
 
 **Kiến trúc:**
 - **PostgreSQL + PostGIS vẫn là nguồn sự thật** (transactional write) cho Shop/Service/Product/toạ độ
@@ -726,7 +753,8 @@ Lỗ hổng cũ không nằm ở *chỗ chứa credential*, mà ở chỗ **cred
 | Đọc `FullName`, `AvatarUrl`, `Phone`, `Email` của chính mình | ✅ |
 | Sửa `FullName`, `AvatarUrl`, `Phone` | ✅ hồ sơ dùng chung, propagate mọi nơi |
 | Đổi password **của chính shop đó** | ✅ |
-| Đọc/ghi booking, review, dữ liệu **tại shop đó** | ✅ |
+| Đọc/ghi booking và dữ liệu nghiệp vụ **tại shop đó** | ✅ |
+| **Viết/sửa `Review` trên vsite** | ❌ yêu cầu audience `vsite-main` — xem Quyết định #38 |
 | **Đổi `User.Email`** | ❌ đổi email → "quên mật khẩu" → chiếm toàn bộ tài khoản |
 | **Đặt/đổi password global (`vsite.vn`)** | ❌ leo thang scope shop → scope platform |
 | **Thêm/xoá `ExternalLogin`** | ❌ gắn Google của attacker = cửa hậu vĩnh viễn |
@@ -742,6 +770,177 @@ Quy tắc một câu: **hồ sơ thì được, credential và dữ liệu xuyê
 - **Lockout/rate-limit tách theo scope** — dò password ở Shop C không được khóa tài khoản ở Shop A (nếu không, đây thành vector DoS nhắm vào một user cụ thể).
 
 ⚠️ **Ghi invariant này vào `CLAUDE.md` của module Identity**, cùng nhóm với `basePath`/`resolveUrl()` (Quyết định #11) và isomorphic renderer (Quyết định #23) — loại lỗi AI agent sẽ vi phạm liên tục nếu không nói trước.
+
+---
+
+### Quyết định #33 — Page model: `Composable` vs `System` ⭐
+
+**Chốt:** Component Tree (Quyết định #12/#14) **không** áp cho mọi trang. Mỗi trang có `PageKind`, quyết định builder và AI được phép làm gì.
+
+| `PageKind` | Ví dụ | Builder cho phép | AI Chat cho phép |
+|---|---|---|---|
+| `Composable` | Trang chủ, Giới thiệu, Landing | Kéo-thả tự do: `add` · `remove` · `move` · `update` · `changeTheme` | Toàn bộ 5 operation |
+| `System` | Chi tiết dịch vụ, danh sách dịch vụ theo danh mục, đặt lịch, liên hệ | **Chỉ** đổi variant + theme + bật/tắt slot cố định | **Chỉ** `update` props và `changeTheme` |
+
+**Lý do:** Hệ VSite 4.8 cũ chỉ để Home/Introduct là widget-stack; chi tiết sản phẩm, giỏ hàng, chi tiết bài viết đều là action/view code cứng. Đây là ranh giới đúng và cần giữ. Nếu không chốt, AI Chat sẽ được yêu cầu *"xoá nút đặt lịch ở trang chi tiết dịch vụ"* và Operations Engine sẽ vui vẻ làm — hỏng luồng nghiệp vụ mà không ai phát hiện cho tới khi mất khách.
+
+**Cách enforce:** trường `allowedInPageKinds` trong **Component Registry manifest** (Quyết định #17), codegen ra cả Zod schema lẫn AI tool schema. Đúng nguyên tắc *codegen > skill > CLAUDE.md > hy vọng agent nhớ* — không đặt ràng buộc này ở tầng tài liệu.
+
+---
+
+### Quyết định #34 — Navigation là dữ liệu derived + manual overlay ⭐
+
+**Chốt:** Menu điều hướng của website shop **không** lưu như một cây node thủ công trong Component Tree. Nó được **tính lại** từ các nguồn dữ liệu, cộng thêm một lớp tuỳ chỉnh của shop.
+
+```
+NavigationConfig (per shop)
+  autoSources : [ShopServiceGroup, StaticPage, Contact]
+  items       : [{ sourceRef | customUrl, order, hidden, labelOverride }]
+```
+
+⚠️ **Nguồn tự động KHÔNG phải `ServiceCategory`.** `ServiceCategory` là taxonomy **toàn cục của marketplace** do vsite quản trị (Quyết định #35) — dùng nó làm menu website shop là kéo phân loại của vsite vào sản phẩm mà shop trả tiền để sở hữu, ngược với Quyết định #4. Menu lấy từ **nhóm dịch vụ hiển thị của chính shop** (`ShopServiceGroup`, per-shop, thiết kế cùng module `Service` ở Phase 2). Hai tầng phân loại này tách bạch: một cho tìm kiếm chung, một cho trình bày trên website shop.
+
+**Lý do giữ phần derived:** mỗi loại nội dung tự quản lý field điều hướng của mình; thêm một loại menu item mới về sau (blog, sự kiện) không phải sửa lại toàn bộ hệ menu.
+
+**Lý do KHÔNG lặp lại cách của hệ cũ:** VSite 4.8 sort menu bằng một số `Index` toàn cục rải rác ở 4 màn hình admin tách biệt, và **không có màn hình sắp xếp toàn bộ menu** — thứ tự cuối cùng là hệ quả ngầm của việc admin gõ đúng số ở từng nơi. Với đối tượng chủ spa/salon không rành kỹ thuật, đây là UX không chấp nhận được.
+
+**Chốt UX:** **một** màn hình kéo-thả duy nhất cho toàn bộ menu. Item mới sinh từ nguồn tự động được append vào cuối và chờ shop sắp.
+
+**Tách bạch ba khái niệm** (giữ nguyên từ hệ cũ, phần này họ làm đúng):
+
+| Khái niệm | Hệ cũ | Hệ mới |
+|---|---|---|
+| Nguồn dữ liệu gốc | `SCategory`, `SMenuNews`, `TradeMark` | entity tương ứng |
+| Model hiển thị đã gộp | `MenuUI` | props của component `Header` |
+| Theme render thanh menu | `EMenu` (`MType`) | `variant` (`Header01/02/03`) |
+
+Ánh xạ 1-1, không phát sinh khái niệm mới.
+
+---
+
+### Quyết định #35 — `ServiceCategory` toàn cục; đánh giá neo `Listing`, shop được làm lại từ đầu ⭐
+
+**Chốt hai điểm.**
+
+**(1) Danh mục dịch vụ là entity toàn cục do vsite quản trị**, không phải config JSON per-tenant như hệ cũ. Shop chỉ được **chọn** node lá, không được tự tạo danh mục.
+
+**Vì sao khác hẳn hệ cũ:** VSite 4.8 để mỗi tenant tự vẽ cây danh mục riêng trong JSON blob `SiteConfig` — hợp lý vì các website đó không liên quan gì nhau. vsite mới **không thể** làm vậy: nếu shop A ghi "Massage body" còn shop B ghi "Massage toàn thân" thì search không gom được, landing page khu vực rỗng nghĩa, và toàn bộ giá trị marketplace biến mất.
+
+**(2) `Review` neo vào `Listing`.** Shop gỡ tin đăng thì đánh giá đi theo; đăng lại là bắt đầu từ con số 0.
+
+**Vì sao chọn hướng này** — đã cân nhắc phương án neo vào một entity bền vững ở tầng shop (`ShopCategory`) và **loại bỏ**: nếu đánh giá bám vĩnh viễn theo `(Shop, ngành)`, shop bị đánh giá xấu nặng sẽ **rời nền tảng luôn**, không còn lý do trả phí đăng tin khi điểm số đã hỏng không sửa được. vsite mất cả shop lẫn cơ hội để shop đó cải thiện.
+
+Reset **không miễn phí**: shop mất toàn bộ uy tín đã xây, quay về trạng thái không ai biết mình là ai, phải cố gắng đạt đánh giá tốt hơn. Hình phạt thật, nhưng có lối ra — khác với án chung thân.
+
+⚠️ **Rủi ro chấp nhận, chưa đóng hoàn toàn:** shop có thể coi reset là chiến thuật định kỳ (gom đánh giá xấu → gỡ tin → đăng lại). Ba lớp giảm nhẹ **bắt buộc** triển khai cùng lúc:
+
+1. Hiển thị `ListedSince` công khai — shop reset liên tục luôn hiện "đăng tin từ tuần trước"
+2. Cooldown 30 ngày khi đăng lại cùng ngành
+3. Đếm số lần reset (nội bộ) → hàng đợi kiểm tra thủ công
+
+**Hệ quả kèm theo:** listing chưa có đánh giá **không** được mượn điểm chung của shop (mượn điểm là đường vòng vô hiệu hoá toàn bộ cơ chế reset), và listing mới **không** bị đẩy xuống đáy xếp hạng (nếu không, "làm lại từ đầu" thành án tử).
+
+Chi tiết schema và ba lớp giảm nhẹ tại `04-listing-and-review-design.md` §3.2.
+
+---
+
+### Quyết định #36 — Anti-pattern cấm kế thừa từ VSite .NET Framework 4.8 ⚠️
+
+**Bối cảnh:** hệ cũ được dùng làm tài liệu tham chiếu. Nhiều pattern trong đó **không** phù hợp với stack và mô hình mới. Danh sách này phải nằm trong `CLAUDE.md` ở root — AI agent đọc code cũ để tham khảo sẽ sao chép chúng nếu không được nói trước.
+
+| Anti-pattern | Vì sao cấm | Thay bằng |
+|---|---|---|
+| **Một cột JSON `SiteConfig`** chứa category + attribute + menu + home + contact | Không diff được, không audit, hai staff sửa cùng lúc là ghi đè nhau | Tách bảng + `RowVersion` optimistic concurrency. Component Tree vẫn JSON (Quyết định #12) nhưng **per-page, có version** |
+| **`CategoryID` int không FK**, match bằng giá trị | PostgreSQL có FK thật. Category giờ là entity nghiệp vụ, không phải config UI | UUID + FK + composite FK khi cần kiểm ownership |
+| **Bitmask `Int64`** cho Tags/Promotions | Trần cứng 63 giá trị/site, không đọc được bằng mắt, không index tốt, không sync sang ES sạch | Bảng nối hoặc `text[]` + GIN index |
+| **In-memory cache toàn bộ dữ liệu tenant + filter bằng LINQ** (`SiteData`) | Chính tài liệu hệ cũ ghi rõ: không scale. Quyết định #26 đã thay bằng ES | Elasticsearch |
+| **`MSEOPage { object Item; object Item2; }`** | Mâu thuẫn trực tiếp TypeScript strict + Orval codegen + Zod — không sinh type từ `object` | DTO có kiểu rõ ràng cho từng trang; SEO là field `seo` lồng bên trong |
+| **Không validate server-side khi lưu dữ liệu động** | Vi phạm Quyết định #19. Dữ liệu "trôi" khỏi schema là bug im lặng | FluentValidation/Zod theo schema |
+| **Tham số chết trong chữ ký controller** | Hệ cũ có action nhận `ENewsType`, `locationID` nhưng không dùng. Với AI agent thì nguy hiểm gấp bội — agent giả định tham số có tác dụng và viết code dựa trên đó | Dọn ngay khi phát hiện |
+| **Một action gánh nhiều nhánh rẽ theo enum** (`FilterSNews` render 5 loại trang) | Chính tài liệu hệ cũ thừa nhận làm giảm độ rõ ràng | Mỗi loại trang một route/handler riêng |
+
+**Pattern từ hệ cũ ĐƯỢC giữ lại** (đã đúng, chỉ đổi cách hiện thực):
+
+1. Phân biệt trang lắp-từ-widget vs trang có nghiệp vụ riêng → Quyết định #33
+2. Menu là dữ liệu derived → Quyết định #34
+3. Giải nén dữ liệu **một lần lúc build index**, filter trên cấu trúc phẳng → chính là ES document denormalize qua Hangfire
+4. Facet-count động, ẩn lựa chọn 0 kết quả → ES aggregations
+5. URL lọc SEO-friendly encode trong path (kèm ràng buộc `noindex` mới ở Quyết định #38)
+6. DTO riêng cho từng loại trang, không dùng chung một DTO "to nhất"
+7. Không lưu dữ liệu suy ra được (breadcrumb, URL) — **nhưng `Slug` phải lưu và bất biến**, vì đổi slug là mất SEO
+
+---
+
+### Quyết định #37 — `Shop.Kind`: `Hosted` vs `ExternalOnly`; hai luồng doanh thu ⭐
+
+**Chốt:** vsite bán hai sản phẩm độc lập (mục 2.1 của `01-project-ideal.md`): (1) phí duy trì website, (2) phí đăng tin marketplace. Shop mua một hoặc cả hai.
+
+```
+Shop.Kind        enum   { Hosted, ExternalOnly }
+Shop.ExternalUrl string?   -- NOT NULL khi Kind = ExternalOnly
+```
+
+**Vì sao `Listing.ShopId` KHÔNG được nullable:** một tin đăng không có chủ thì không có ai để xuất hoá đơn (doanh thu #2), không ai phản hồi được đánh giá, không ai chịu trách nhiệm khi nội dung giả mạo, và không ai nhận thống kê lead — mà thống kê lead chính là thứ chứng minh giá trị để shop tiếp tục trả tiền. `ExternalOnly` giải quyết đúng nhu cầu "shop đã có website riêng" mà không phá bốn thứ trên.
+
+**Lợi ích phụ đáng kể:** `ExternalOnly` là **phễu** cho doanh thu #1. Shop vào bằng cửa rẻ, thấy hiệu quả, nâng cấp `Kind = Hosted` mà không mất tài khoản, đánh giá hay lịch sử lead.
+
+⚠️ **Khi đổi `Hosted → ExternalOnly`** (shop ngừng trả phí website): mọi `Listing` đang trỏ `ShopHome`/`ShopPage` **phải** chuyển sang `ExternalUrl` hoặc bị `Unpublished`. Chặn ở tầng application, không phát hiện bằng job — website tắt mà listing vẫn trỏ vào là 404 cho khách đến từ vsite, và vsite mang tiếng.
+
+---
+
+### Quyết định #38 — Listing opt-in, không auto-map; đánh giá tự do có kiểm soát ⭐
+
+**Chốt bốn điểm:**
+
+1. **vsite KHÔNG tự động đăng dịch vụ của shop lên marketplace.** Shop chủ động tạo `Listing`, tự viết nội dung. **Không** map dữ liệu từ website shop sang tin đăng.
+2. **ES index `Listing`, KHÔNG index `Service`.** Search không cần lọc `IsPublished` lúc query, không sợ rò dịch vụ shop chưa muốn công khai, và document ES có schema ổn định.
+3. **Đánh giá tự do** — user đã đăng nhập được đánh giá, không cần chứng minh đã dùng dịch vụ. Đã cân nhắc và **loại bỏ** cơ chế scan mã xác thực (`ServiceEncounter`): đòi hỏi thay đổi hành vi cả hai bên, tỉ lệ áp dụng gần 0 khi nền tảng chưa có người dùng, và shop kiểm soát việc phát mã nên vẫn thiên lệch chọn mẫu.
+4. **Đánh giá chỉ hiển thị trên `vsite.vn`**, không bao giờ trên website shop (Quyết định #4 — ảo giác tách biệt).
+
+**"Tự do" nghĩa là không cần chứng minh đã dùng dịch vụ, KHÔNG phải không có kiểm soát.** Bốn lớp bắt buộc: đăng nhập · rate-limit theo user và IP · không xoá được và không sửa sau 24h · quy trình khiếu nại có thời hạn cam kết. Chi tiết `04-listing-and-review-design.md` §6.6.
+
+**Bổ sung vào Quyết định #10 (SEO):** mọi URL có **≥2 điều kiện lọc** phải `noindex`. Tổ hợp filter sinh không gian URL vô hạn; không có quy tắc này thì crawl budget của toàn platform bị đốt sạch.
+
+**Bổ sung vào Quyết định #26 (Elasticsearch) — reindex trigger:** `ListingUpdated` · `ReviewCountChanged` · `ShopUpdated` · **`ShopDomainChanged`** · `ShopSuspended`. Trigger thứ tư rất dễ quên; triệu chứng là shop đổi domain xong mà kết quả tìm kiếm vẫn dẫn về domain cũ.
+
+**Bổ sung vào Quyết định #32 (năng lực token):** viết/sửa `Review` yêu cầu audience `vsite-main`, **từ chối** token `shop:{shopId}`. Nếu quên, chủ shop dùng token shop của chính mình để tạo đánh giá 5 sao giả.
+
+---
+
+### Quyết định #39 — Chuẩn hoá đánh số Phase và các mâu thuẫn liên tài liệu ⭐
+
+**Bối cảnh:** bốn tài liệu được viết ở các thời điểm khác nhau; một số mục của tài liệu sau sửa ngầm tài liệu trước mà không xoá bản cũ. Quyết định này đóng toàn bộ số đó lại, để AI agent không gặp hai câu trả lời khác nhau cho cùng một câu hỏi.
+
+**(1) "MVP" = "Phase 1".** Lộ trình ở `01-project-ideal.md` mục 8 là nguồn sự thật duy nhất cho việc *khi nào làm gì*. Mọi bảng tính năng phải ghi Phase khớp với lộ trình đó:
+
+| Hạng mục | Trước đây ghi | Chốt |
+|---|---|---|
+| Tìm kiếm · Listing · hồ sơ shop · Review · Lead · kiểm duyệt | MVP | **Phase 1** |
+| Quản lý dịch vụ (`Service`) · Website Builder · theme · publish · subdomain | MVP | **Phase 2** |
+| Quản lý hàng hoá (`Product`) · lưu yêu thích · landing SEO khu vực · ảnh trong đánh giá | MVP / Phase 2 | **Phase 2** |
+| AI Chat Builder · tên miền riêng + SSL · booking | Phase 2 | **Phase 3** |
+| Marketplace template · nhiều chi nhánh · thanh toán/gói · phân quyền nhân viên | Phase 2 / Phase 3 | **Phase 4** |
+
+**(2) Tên app cũ bị xoá hẳn.** `customer-web` / `shop-admin` / `website-builder` chỉ được nhắc tới như *lịch sử* trong Quyết định #22. Mọi chỗ khác dùng `apps/web` và `apps/portal`.
+
+**(3) URL trang hồ sơ shop là `vsite.vn/shop/{slug}`**, không phải `vsite.vn/{slug}` — chỗ đó thuộc về website shop (`ShopDomain.kind = Path`). Áp dụng cho cả `04-listing-and-review-design.md` §2.1 và §5.
+
+**(4) Quyền ghi `Review`:**
+
+| Hành động | Audience bắt buộc | Ghi chú |
+|---|---|---|
+| Khách viết/sửa đánh giá | `vsite-main` | Token `shop:{shopId}` bị **từ chối** (Quyết định #38) |
+| Shop phản hồi đánh giá | `vsite-portal` + role `Owner`/`Manager` tại shop đó | Phản hồi là thao tác quản trị, làm ở Portal — không phải ngoại lệ của quy tắc trên |
+| Shop báo cáo đánh giá vi phạm | `vsite-portal` | Không có quyền gỡ (`04` §6.6 lớp 3) |
+
+**(5) Một khái niệm — một chỗ định nghĩa.** Khi hai tài liệu cùng mô tả một entity, tài liệu **thiết kế chi tiết** thắng và tài liệu kia chỉ trỏ tới:
+
+| Entity | Nguồn sự thật |
+|---|---|
+| `User` · `ExternalLogin` · `UserShop` · `Role` · `PendingRegistration` | `03-identity-entity-design.md` |
+| `Shop` (đầy đủ, gồm `Kind`/`ExternalUrl`) · `ServiceCategory` · `Listing` · `Review` · `Lead` | `04-listing-and-review-design.md` |
+| `ShopDomain` | Quyết định #7 (tài liệu này) |
+| Quyết định kiến trúc, ràng buộc dependency, quy ước codegen | tài liệu này |
 
 ---
 
@@ -792,4 +991,9 @@ Thêm operation type mới vào `builder-core` phải cập nhật **đồng th�
 | 4 | ~~Merge userId theo email/SĐT chưa verify — rủi ro account-takeover xuyên shop~~ | ✅ **Đã resolve** — bỏ credential khỏi `UserShop`, không merge. Xem Quyết định #29/#30 và `03-identity-entity-design.md` |
 | 5 | **[MỚI]** Zalo user ID là app-scoped — chốt dùng 1 Zalo app duy nhất hay coi mỗi app là 1 Provider | ⚠️ Cần chốt trước khi tích hợp Zalo Login |
 | 6 | **[MỚI]** Xoá tài khoản: giải phóng `EmailNormalized` thế nào để user đăng ký lại được bằng email cũ | ⚠️ Cần chốt trước launch |
-| 7 | **[MỚI]** Permission matrix chi tiết theo Shop role (Manager / Staff / Accountant được làm gì) | ⏳ Phase 2, cùng tính năng "Phân quyền nhân viên" |
+| 7 | **[MỚI]** Permission matrix chi tiết theo Shop role (Manager / Staff / Accountant được làm gì) | ⏳ Phase 4, cùng tính năng "Phân quyền nhân viên" (Quyết định #39) |
+| 8 | **[MỚI]** Mô hình giá cho hai luồng doanh thu (thuê bao / theo listing / theo lead) | ⚠️ Entity đã sẵn sàng cho cả ba — cần chốt trước khi bật thu phí |
+| 9 | **[MỚI]** Ngưỡng và quy trình kiểm duyệt listing (auto-approve tới khi nào) | ⚠️ Cần chốt trước launch |
+| 10 | **[MỚI]** SLA xử lý khiếu nại đánh giá (shop báo cáo → vsite phản hồi trong bao lâu) | ⚠️ Rủi ro pháp lý — cần chốt trước launch |
+| 11 | **[MỚI]** Ảnh trong đánh giá: hạ tầng kiểm duyệt + strip EXIF + hàng đợi gỡ bỏ 24h | ⏳ Phase 2, điều kiện đủ tại `04` §6.7 |
+| 12 | **[MỚI]** `ShopServiceGroup` — nhóm dịch vụ hiển thị per-shop, nguồn cho menu website (Quyết định #34) | ⏳ Thiết kế cùng module `Service` ở Phase 2 |
