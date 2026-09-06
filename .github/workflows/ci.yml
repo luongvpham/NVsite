@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  architecture-tests:
+    name: Architecture tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: dotnet test ArchitectureTests
+        working-directory: backend
+        run: dotnet test tests/ArchitectureTests --logger "console;verbosity=normal"
+
+  contract-check:
+    name: Contract drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Export runtime OpenAPI + check no drift vs approved contract
+        run: |
+          node tools/contract-sync/export.mjs
+          node tools/contract-sync/check-no-drift.mjs
+
+  be-tests:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: dotnet test
+        working-directory: backend
+        run: dotnet test --logger "console;verbosity=normal"
+
+  fe-tests:
+    name: Frontend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+      - name: pnpm build (gen:api + apps)
+        run: pnpm build
+      - name: pnpm test
+        run: pnpm test
