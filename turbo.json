@@ -1,0 +1,28 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build", "gen:api"],
+      "outputs": ["dist/**", ".output/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "gen:api": {
+      "cache": true,
+      "inputs": ["$TURBO_ROOT$/contracts/openapi/**"],
+      "outputs": ["src/**"]
+    },
+    "gen:registry": {
+      "cache": true,
+      "outputs": ["registry/generated/**"]
+    }
+  }
+}

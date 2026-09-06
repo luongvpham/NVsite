@@ -1,0 +1,13 @@
+{
+  "Identity": { "dependsOn": [], "phase": 1 },
+  "Shop": { "dependsOn": ["Identity"], "phase": 1 },
+  "Category": { "dependsOn": [], "phase": 1 },
+  "Listing": { "dependsOn": ["Shop", "Category"], "phase": 1 },
+  "Review": { "dependsOn": ["Listing", "Identity"], "phase": 1 },
+  "Lead": { "dependsOn": ["Listing"], "phase": 1 },
+  "Search": { "dependsOn": ["Listing", "Category"], "phase": 1 },
+  "MediaAsset": { "dependsOn": ["Shop"], "phase": 2 },
+  "Website": { "dependsOn": ["Shop", "MediaAsset"], "phase": 2 },
+  "Service": { "dependsOn": ["Shop"], "phase": 2 },
+  "Product": { "dependsOn": ["Shop", "MediaAsset"], "phase": 2 }
+}

@@ -1,0 +1,45 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/guard-write.mjs"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/guard-bash.mjs"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "mcp__codegraph__codegraph_**",
+      "mcp__okf-producer__**",
+      "Edit",
+      "Write",
+      "Bash(dotnet build*)",
+      "Bash(dotnet test*)",
+      "Bash(git checkout*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git stash*)",
+      "Bash(az account show*)",
+      "Bash(az extension add*)",
+      "Bash(az extension list*)",
+      "Bash(az devops login*)",
+      "Bash(az repos list*)",
+      "Bash(az devops invoke*)"
+    ]
+  }
+}

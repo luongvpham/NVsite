@@ -1,0 +1,9 @@
+node_modules
+dist
+.output
+.turbo
+packages/api-sdk/src
+packages/builder-components/registry/generated
+pnpm-lock.yaml
+backend
+DesignIdeal

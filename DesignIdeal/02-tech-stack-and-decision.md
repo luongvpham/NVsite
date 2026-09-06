@@ -944,6 +944,27 @@ Shop.ExternalUrl string?   -- NOT NULL khi Kind = ExternalOnly
 
 ---
 
+### Quyết định #68 — Component Registry manifest triển khai ở Bước 2, trước Identity
+
+**Chốt:** Thứ tự triển khai là Framework → Component Registry manifest + codegen 
+→ Identity/Shop → các module còn lại. Manifest (thuộc module Website, Phase 2) 
+được chạy trước Identity (Phase 1) một cách có chủ ý.
+
+**Đây không phải mâu thuẫn với thứ tự phụ thuộc ở mục 1.2.** Hai loại thứ tự khác nhau:
+thứ tự phụ thuộc entity bị ràng buộc bởi FK NOT NULL và global query filter (#21);
+thứ tự triển khai bị ràng buộc bởi rủi ro kỹ thuật. Manifest là build-time artifact,
+không có FK, output là fixture JSON chứ không phải dữ liệu database.
+
+**Lý do:** manifest schema sai làm hỏng đồng thời 5 consumer. Pipeline codegen là chỗ
+Quyết định #17 đặt cược toàn bộ; nếu nó không chạy được như thiết kế thì biết ở Bước 2
+rẻ hơn nhiều so với biết ở Phase 2. `check-additive.ts` + `registry.lock.json` cũng
+phải có trước manifest thật đầu tiên.
+
+**Ràng buộc đi kèm:** Bước 2 không được tạo entity, migration, hay đụng database.
+Vi phạm ràng buộc này là lấn sang Bước 3 và làm mất lý do được ưu tiên.
+
+---
+
 ## 4. Ràng Buộc Dependency
 
 ### Backend
@@ -997,3 +1018,5 @@ Thêm operation type mới vào `builder-core` phải cập nhật **đồng th�
 | 10 | **[MỚI]** SLA xử lý khiếu nại đánh giá (shop báo cáo → vsite phản hồi trong bao lâu) | ⚠️ Rủi ro pháp lý — cần chốt trước launch |
 | 11 | **[MỚI]** Ảnh trong đánh giá: hạ tầng kiểm duyệt + strip EXIF + hàng đợi gỡ bỏ 24h | ⏳ Phase 2, điều kiện đủ tại `04` §6.7 |
 | 12 | **[MỚI]** `ShopServiceGroup` — nhóm dịch vụ hiển thị per-shop, nguồn cho menu website (Quyết định #34) | ⏳ Thiết kế cùng module `Service` ở Phase 2 |
+
+

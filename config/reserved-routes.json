@@ -1,0 +1,26 @@
+{
+  "reservedPaths": [
+    "api",
+    "auth",
+    "admin",
+    "login",
+    "logout",
+    "register",
+    "signup",
+    "search",
+    "portal",
+    "shop",
+    "assets",
+    "static",
+    "cdn",
+    "help",
+    "blog",
+    "about",
+    "terms",
+    "privacy",
+    "sitemap.xml",
+    "robots.txt",
+    ".well-known"
+  ],
+  "reservedSubdomains": ["www", "admin", "app", "help", "api", "cdn", "static"]
+}
