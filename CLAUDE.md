@@ -23,6 +23,14 @@ Toàn bộ thiết kế nằm trong `DesignIdeal/`. **Đừng đoán — tra b�
 
 **Khi hai tài liệu mô tả cùng một entity, tài liệu thiết kế chi tiết thắng** (Quyết định #39.5). `02` là nguồn sự thật cho quyết định kiến trúc; `03`–`07` là nguồn sự thật cho entity tương ứng.
 
+**Nhưng tài liệu `DesignIdeal/` mô tả Ý ĐỊNH lúc thiết kế, không phải bản đã chạy được.** Sau khi một
+task hoàn thành, thực thi thật có thể lệch so với đúng file đã đọc ở trên — vì lý do kỹ thuật phát
+sinh lúc code mà lúc viết tài liệu chưa thấy được. Trước khi dựa vào một file `DesignIdeal/*.md` để
+sửa/mở rộng code đã có, **kiểm tra `docs/tasks/<TASK-ID>/changelog.md` có tồn tại không** (tên
+`TASK-ID` tra ở đầu file tài liệu tương ứng, nếu có dòng "⚠️ Đã hiện thực hoá") — file đó liệt kê
+từng điểm lệch với nguyên nhân, chia rõ "lệch có chủ đích, giữ nguyên" và "chưa làm xong, còn nợ".
+Đừng "sửa lại cho đúng tài liệu" một chỗ mà changelog đã ghi là lệch có chủ đích.
+
 ---
 
 ## Quy trình
@@ -55,7 +63,7 @@ Chi tiết ở `DesignIdeal/ai-agent-development-workflow.md`. Tóm tắt:
 2. **Không bao giờ overwrite contract bằng runtime swagger.** Swagger *đề xuất*, người *duyệt*, contract *chốt*.
 3. **BREAKING mặc định là bug implementation**, không phải lý do tạo `v2`.
 4. **Contract sai hoặc thiếu → DỪNG và báo.** Không tự sửa, không làm tạm rồi sửa sau.
-5. **File generated không sửa tay**: `packages/api-sdk/**`, `packages/builder-components/registry/generated/**`.
+5. **File generated không sửa tay**: `packages/api-sdk/src/generated/**`, `packages/builder-components/generated/**`.
 
 ---
 

@@ -8,7 +8,7 @@ const PROTECTED_PATTERNS = [
   /contracts\/contract\.lock/,
   /config\/reserved-routes\.json/,
   /packages\/api-sdk\/src\/generated\//,
-  /packages\/builder-components\/registry\/generated\//,
+  /packages\/builder-components\/generated\//,
 ];
 
 const WRITE_OPS = [

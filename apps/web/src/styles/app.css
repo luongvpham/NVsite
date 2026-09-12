@@ -1,2 +1,8 @@
 @import 'tailwindcss';
 @config '../../../../packages/ui/tailwind-preset.js';
+
+/* Tailwind v4 auto content-detection chỉ quét trong thư mục app này — các package sibling
+   (dùng chung, ngoài apps/web) phải khai báo tường minh bằng @source, nếu không class dùng
+   trong đó không được generate. */
+@source '../../../../packages/ui/src';
+@source '../../../../packages/builder-components/src';

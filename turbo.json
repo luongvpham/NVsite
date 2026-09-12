@@ -2,7 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "build": {
-      "dependsOn": ["^build", "gen:api"],
+      "dependsOn": ["^build", "gen:api", "gen:registry"],
       "outputs": ["dist/**", ".output/**"]
     },
     "dev": {
@@ -13,7 +13,7 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build", "gen:registry"]
     },
     "gen:api": {
       "cache": true,
@@ -22,7 +22,7 @@
     },
     "gen:registry": {
       "cache": true,
-      "outputs": ["registry/generated/**"]
+      "outputs": ["generated/**"]
     }
   }
 }

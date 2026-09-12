@@ -1,0 +1,36 @@
+{
+  "name": "@vsite/builder-components",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "gen:registry": "tsx scripts/gen-registry.ts",
+    "check-additive": "tsx scripts/check-additive.ts",
+    "test": "vitest run",
+    "lint": "eslint . --ignore-pattern generated"
+  },
+  "dependencies": {
+    "@vsite/theme-engine": "workspace:*",
+    "sanitize-html": "^2.14.0",
+    "zod": "^3.24.1"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "^19.0.7",
+    "ajv": "^8.17.1",
+    "@types/sanitize-html": "^2.13.0",
+    "fast-glob": "^3.3.3",
+    "jsdom": "^25.0.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^5.0.0"
+  }
+}

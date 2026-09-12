@@ -6,21 +6,27 @@
     "node": ">=24.0.0 <25.0.0"
   },
   "scripts": {
+    "prepare": "simple-git-hooks",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "gen:api": "turbo run gen:api",
     "gen:registry": "turbo run gen:registry",
+    "check:registry-additive": "pnpm --filter @vsite/builder-components run check-additive",
     "contract:export": "node tools/contract-sync/export.mjs",
     "contract:diff": "node tools/contract-sync/diff-report.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
+  "simple-git-hooks": {
+    "pre-commit": "node tools/pre-commit-check-additive.mjs"
+  },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
     "eslint": "^9.18.0",
     "prettier": "^3.4.2",
+    "simple-git-hooks": "^2.11.1",
     "turbo": "^2.3.3",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
