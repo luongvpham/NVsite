@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DevRegistryRouteImport } from './routes/dev-registry'
 import { Route as SamplesRouteImport } from './routes/samples'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevRegistryRoute = DevRegistryRouteImport.update({
+  id: '/dev-registry',
+  path: '/dev-registry',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SamplesRoute = SamplesRouteImport.update({
@@ -25,27 +31,31 @@ const SamplesRoute = SamplesRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dev-registry': typeof DevRegistryRoute
   '/samples': typeof SamplesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dev-registry': typeof DevRegistryRoute
   '/samples': typeof SamplesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dev-registry': typeof DevRegistryRoute
   '/samples': typeof SamplesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/samples'
+  fullPaths: '/' | '/dev-registry' | '/samples'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/samples'
-  id: '__root__' | '/' | '/samples'
+  to: '/' | '/dev-registry' | '/samples'
+  id: '__root__' | '/' | '/dev-registry' | '/samples'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DevRegistryRoute: typeof DevRegistryRoute
   SamplesRoute: typeof SamplesRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev-registry': {
+      id: '/dev-registry'
+      path: '/dev-registry'
+      fullPath: '/dev-registry'
+      preLoaderRoute: typeof DevRegistryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/samples': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DevRegistryRoute: DevRegistryRoute,
   SamplesRoute: SamplesRoute,
 }
 export const routeTree = rootRouteImport

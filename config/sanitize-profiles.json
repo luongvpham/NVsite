@@ -1,0 +1,10 @@
+{
+  "inline": {
+    "tags": ["strong", "em", "u", "s", "br", "a"],
+    "attrs": { "a": ["href", "target", "rel"] }
+  },
+  "basic": {
+    "tags": ["p", "strong", "em", "u", "s", "br", "a", "ul", "ol", "li", "h2", "h3", "h4", "blockquote"],
+    "attrs": { "a": ["href", "target", "rel"] }
+  }
+}

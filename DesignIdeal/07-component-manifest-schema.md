@@ -7,6 +7,17 @@
 > **Vị trí trong lộ trình:** đây là input trực tiếp của **Bước 2** (Component Manifest + codegen + component mẫu). Bước 2 **không tạo migration nào** — toàn bộ tài liệu này là build-time.
 >
 > **Quy ước:** `type` PascalCase, `variant` PascalCase + số thứ tự, tên prop camelCase, tên file kebab-case.
+>
+> **⚠️ Đã hiện thực hoá (Bước 2, BOOTSTRAP-002).** Bản triển khai thật lệch với vài chỗ tài liệu này
+> mô tả — đọc **trước khi dựa vào tài liệu này** để sửa/mở rộng registry:
+> - `docs/tasks/BOOTSTRAP-002/changelog.md` — từng điểm lệch so với đúng tài liệu này, kèm nguyên
+>   nhân; chia rõ "lệch có chủ đích, giữ nguyên" và "chưa làm xong, còn nợ". Quan trọng nhất: vị trí
+>   thật của `RenderContextValue` (§3 vẽ sai so với bản chạy được — xem lệch #1) và route dev harness
+>   thật là `/dev-registry`, không phải `/_dev/registry` (lệch #2).
+> - `docs/tasks/BOOTSTRAP-002/review.md` — đánh giá Gate 2 độc lập (change-reviewer), Warning/nợ kỹ
+>   thuật chi tiết hơn changelog.
+> - `packages/builder-components/CLAUDE.md` và `packages/builder-renderer/CLAUDE.md` — invariant thật
+>   đang được enforce trong code (lint, `check-additive.ts`), nguồn sự thật gần code hơn tài liệu này.
 
 ---
 

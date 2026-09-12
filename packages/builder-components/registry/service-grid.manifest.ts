@@ -1,0 +1,70 @@
+import type { ComponentManifest } from '../meta/manifest-schema';
+
+export default {
+  type: 'ServiceGrid',
+  category: 'Service',
+  label: 'Lưới dịch vụ',
+  description: 'Hiển thị danh sách dịch vụ của shop dạng lưới thẻ.',
+  icon: 'LayoutGrid',
+  acceptsChildren: false,
+  allowedChildTypes: null,
+  allowedInPageKinds: ['Composable'],
+  maxPerPage: null,
+  aiSummary: 'Lưới dịch vụ: {{heading}}',
+  since: '1.0.0',
+
+  variants: [
+    {
+      key: 'ServiceGrid01',
+      label: 'Thẻ có ảnh',
+      preview: 'servicegrid/sg01.webp',
+      usesProps: ['heading', 'source', 'showPrice', 'columns'],
+      requiresProps: ['source'],
+      since: '1.0.0',
+    },
+  ],
+
+  props: {
+    heading: {
+      kind: 'text',
+      label: 'Tiêu đề',
+      maxLength: 120,
+      multiline: false,
+      group: 'Nội dung',
+      order: 1,
+      editableInSystemPage: false,
+      since: '1.0.0',
+    },
+    source: {
+      kind: 'binding',
+      label: 'Nguồn dữ liệu',
+      sources: ['Service', 'ServiceGroup'],
+      allowFilters: ['groupId', 'sort', 'take'],
+      group: 'Dữ liệu',
+      order: 1,
+      editableInSystemPage: true,
+      since: '1.0.0',
+    },
+    showPrice: {
+      kind: 'boolean',
+      label: 'Hiện giá',
+      default: true,
+      group: 'Hiển thị',
+      order: 1,
+      editableInSystemPage: true,
+      since: '1.0.0',
+    },
+    columns: {
+      kind: 'number',
+      label: 'Số cột',
+      min: 2,
+      max: 4,
+      step: 1,
+      default: 3,
+      group: 'Hiển thị',
+      order: 2,
+      editableInSystemPage: false,
+      since: '1.0.0',
+    },
+  },
+} satisfies ComponentManifest;

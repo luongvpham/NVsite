@@ -1,0 +1,172 @@
+{
+  "Gallery": {
+    "variants": {
+      "Gallery01": {
+        "requiresProps": [
+          "items"
+        ]
+      },
+      "Gallery02": {
+        "requiresProps": [
+          "items"
+        ]
+      }
+    },
+    "props": {
+      "heading": {
+        "kind": "text",
+        "maxLength": 120
+      },
+      "items": {
+        "kind": "list",
+        "minItems": 1,
+        "maxItems": 24,
+        "itemProps": {
+          "image": {
+            "kind": "image",
+            "preset": "800x800,cover"
+          },
+          "caption": {
+            "kind": "text",
+            "maxLength": 120
+          }
+        }
+      },
+      "columns": {
+        "kind": "number",
+        "min": 2,
+        "max": 4
+      }
+    }
+  },
+  "Hero": {
+    "variants": {
+      "Hero01": {
+        "requiresProps": [
+          "image",
+          "title"
+        ]
+      },
+      "Hero02": {
+        "requiresProps": [
+          "title"
+        ]
+      }
+    },
+    "props": {
+      "title": {
+        "kind": "text",
+        "maxLength": 120
+      },
+      "subtitle": {
+        "kind": "richText",
+        "maxLength": 300
+      },
+      "image": {
+        "kind": "image",
+        "preset": "1600x900,cover"
+      },
+      "cta": {
+        "kind": "group",
+        "props": {
+          "label": {
+            "kind": "text",
+            "maxLength": 40
+          },
+          "target": {
+            "kind": "link"
+          }
+        }
+      },
+      "overlayOpacity": {
+        "kind": "number",
+        "min": 0,
+        "max": 80
+      },
+      "align": {
+        "kind": "select",
+        "options": [
+          "left",
+          "center"
+        ]
+      }
+    }
+  },
+  "RichText": {
+    "variants": {
+      "RichText01": {
+        "requiresProps": [
+          "content"
+        ]
+      }
+    },
+    "props": {
+      "content": {
+        "kind": "richText",
+        "maxLength": 5000
+      },
+      "align": {
+        "kind": "select",
+        "options": [
+          "left",
+          "justify"
+        ]
+      }
+    }
+  },
+  "Section": {
+    "variants": {
+      "Section01": {
+        "requiresProps": []
+      },
+      "Section02": {
+        "requiresProps": []
+      }
+    },
+    "props": {
+      "background": {
+        "kind": "color"
+      },
+      "paddingY": {
+        "kind": "select",
+        "options": [
+          "sm",
+          "lg"
+        ]
+      },
+      "maxWidth": {
+        "kind": "select",
+        "options": [
+          "lg",
+          "xl"
+        ]
+      }
+    }
+  },
+  "ServiceGrid": {
+    "variants": {
+      "ServiceGrid01": {
+        "requiresProps": [
+          "source"
+        ]
+      }
+    },
+    "props": {
+      "heading": {
+        "kind": "text",
+        "maxLength": 120
+      },
+      "source": {
+        "kind": "binding"
+      },
+      "showPrice": {
+        "kind": "boolean"
+      },
+      "columns": {
+        "kind": "number",
+        "min": 2,
+        "max": 4
+      }
+    }
+  }
+}

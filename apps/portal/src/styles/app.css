@@ -1,2 +1,9 @@
 @import 'tailwindcss';
 @config '../../../../packages/ui/tailwind-preset.js';
+
+/* Tailwind v4 auto content-detection chỉ quét trong thư mục app này — các package sibling
+   (dùng chung, ngoài apps/portal) phải khai báo tường minh bằng @source, nếu không class dùng
+   trong đó không được generate (bug thật đã gặp: Hero02 height=0 vì flex/items-stretch không
+   có CSS tương ứng). */
+@source '../../../../packages/ui/src';
+@source '../../../../packages/builder-components/src';

@@ -1,0 +1,57 @@
+{
+  "type": "Section",
+  "variant": "Section01",
+  "id": "c_root",
+  "props": { "background": "background", "paddingY": "lg", "maxWidth": "xl" },
+  "children": [
+    {
+      "type": "Hero",
+      "variant": "Hero01",
+      "id": "c_hero",
+      "props": {
+        "title": "Chào mừng đến Spa ABC",
+        "subtitle": "Thư giãn trọn vẹn, chăm sóc tận tâm",
+        "image": { "imageId": "media_8891", "alt": "Ảnh spa" },
+        "overlayOpacity": 35,
+        "align": "center",
+        "cta": {
+          "label": "Đặt lịch ngay",
+          "target": { "kind": "external", "url": "https://vsite.vn/dat-lich" }
+        }
+      }
+    },
+    {
+      "type": "RichText",
+      "variant": "RichText01",
+      "id": "c_richtext",
+      "props": {
+        "content": "<p>Spa ABC phục vụ <strong>massage</strong> và chăm sóc da.</p>",
+        "align": "left"
+      }
+    },
+    {
+      "type": "Gallery",
+      "variant": "Gallery01",
+      "id": "c_gallery",
+      "props": {
+        "heading": "Không gian spa",
+        "items": [
+          { "image": { "imageId": "media_1", "alt": "Phòng massage" }, "caption": "Phòng massage" },
+          { "image": { "imageId": "media_2", "alt": "Khu vực chờ" }, "caption": "Khu vực chờ" }
+        ],
+        "columns": 3
+      }
+    },
+    {
+      "type": "ServiceGrid",
+      "variant": "ServiceGrid01",
+      "id": "c_servicegrid",
+      "props": {
+        "heading": "Dịch vụ nổi bật",
+        "source": { "filters": { "take": 3 } },
+        "showPrice": true,
+        "columns": 3
+      }
+    }
+  ]
+}
