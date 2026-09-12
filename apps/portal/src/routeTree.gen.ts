@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DevRegistryRouteImport } from './routes/dev-registry'
-import { Route as SamplesRouteImport } from './routes/samples'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,40 +22,31 @@ const DevRegistryRoute = DevRegistryRouteImport.update({
   path: '/dev-registry',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SamplesRoute = SamplesRouteImport.update({
-  id: '/samples',
-  path: '/samples',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dev-registry': typeof DevRegistryRoute
-  '/samples': typeof SamplesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dev-registry': typeof DevRegistryRoute
-  '/samples': typeof SamplesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dev-registry': typeof DevRegistryRoute
-  '/samples': typeof SamplesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dev-registry' | '/samples'
+  fullPaths: '/' | '/dev-registry'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dev-registry' | '/samples'
-  id: '__root__' | '/' | '/dev-registry' | '/samples'
+  to: '/' | '/dev-registry'
+  id: '__root__' | '/' | '/dev-registry'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DevRegistryRoute: typeof DevRegistryRoute
-  SamplesRoute: typeof SamplesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,20 +65,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevRegistryRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/samples': {
-      id: '/samples'
-      path: '/samples'
-      fullPath: '/samples'
-      preLoaderRoute: typeof SamplesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DevRegistryRoute: DevRegistryRoute,
-  SamplesRoute: SamplesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

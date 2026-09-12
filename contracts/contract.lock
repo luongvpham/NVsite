@@ -1,8 +1,1 @@
-{
-  "sample.v1.json": {
-    "sha256": "9df3833e1b931bd1f862217e5ddfa5e9a14b8745e7c8f9d67cd18ccfb08b416d",
-    "approvedAt": "2026-09-06T01:19:08.852Z",
-    "approvedBy": "human",
-    "taskId": "SAMPLE-002"
-  }
-}
+{}

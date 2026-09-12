@@ -5,8 +5,9 @@ namespace ArchitectureTests;
 
 /// <summary>
 /// Module không được reference project của module khác (Quyết định #1).
-/// Quét trực tiếp ProjectReference trong .csproj dưới backend/src/Modules/*,
-/// vì chỉ có một module (Sample) hiện tại nên NetArchTest (assembly-level) không đủ để chứng minh rule.
+/// Quét trực tiếp ProjectReference trong .csproj dưới backend/src/Modules/*, không cần assembly-level
+/// NetArchTest — nên vẫn hoạt động (vacuously pass) kể cả khi backend/src/Modules/ rỗng, như giữa lúc
+/// Sample bị xoá (docs/tasks/CLEANUP-SAMPLE.md) và Identity (Bước 3) chưa tồn tại.
 /// </summary>
 public sealed class ModuleBoundaryTests
 {
