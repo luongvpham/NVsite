@@ -1,4 +1,5 @@
-import { getSampleMock } from '@vsite/api-sdk/mocks';
 import { setupServer } from 'msw/node';
 
-export const server = setupServer(...getSampleMock());
+// Sample đã bị xoá (docs/tasks/CLEANUP-SAMPLE.md) — module thật đầu tiên (Identity, Bước 3) thêm
+// handler thật vào đây (`...getXxxMock()` từ `@vsite/api-sdk/mocks`).
+export const server = setupServer();

@@ -20,10 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Modules\Sample\Sample.Domain\Sample.Domain.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Sample\Sample.Application\Sample.Application.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Sample\Sample.Infrastructure\Sample.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Sample\Sample.Api\Sample.Api.csproj" />
     <ProjectReference Include="..\..\src\Shared\Shared.csproj" />
   </ItemGroup>
 

@@ -2,7 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.csproj" />
-    <ProjectReference Include="..\Modules\Sample\Sample.Api\Sample.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -11,14 +10,21 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- ValidationExceptionHandler dùng FluentValidation.ValidationException — trước đây đến gián
+         tiếp qua Sample.Api → Sample.Application, giờ phải khai trực tiếp sau khi Sample bị xoá
+         (docs/tasks/CLEANUP-SAMPLE.md). -->
+    <PackageReference Include="FluentValidation" />
   </ItemGroup>
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Xuất OpenAPI document tĩnh lúc build — nguồn cho tools/contract-sync (backend/CLAUDE.md). -->
-    <OpenApiGenerateDocumentsOnBuild>true</OpenApiGenerateDocumentsOnBuild>
+    <!-- Xuất OpenAPI document tĩnh lúc build — nguồn cho tools/contract-sync (backend/CLAUDE.md).
+         TẠM TẮT: Sample đã bị xoá (docs/tasks/CLEANUP-SAMPLE.md), Program.cs hiện không đăng ký
+         AddOpenApi() nào — GenerateOpenApiDocuments fail vì IDocumentProvider rỗng. Bật lại
+         "true" cùng lúc với AddOpenApi("identity", ...) ở Bước 3. -->
+    <OpenApiGenerateDocumentsOnBuild>false</OpenApiGenerateDocumentsOnBuild>
     <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/obj/openapi</OpenApiDocumentsDirectory>
   </PropertyGroup>
 

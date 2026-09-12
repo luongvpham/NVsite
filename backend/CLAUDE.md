@@ -93,10 +93,8 @@ Bắt buộc có, không phải tuỳ chọn:
 7. Chạy skill `contract-sync`, sinh `docs/tasks/{ID}/contract-diff.md`
 8. **Dừng lại chờ Gate 1.** Chỉ viết `brief.md` sau khi contract được duyệt
 
-## Sample module (throwaway, có chủ ý)
+## Thứ tự module thật (Phase 1)
 
-`Modules/Sample/` tồn tại chỉ để chứng minh pipeline Bước 1, **phải bị xoá trước khi bắt đầu Bước 3 (`Identity`)**. Xem `docs/tasks/CLEANUP-SAMPLE.md`.
-
-## Thứ tự module thật (Phase 1, sau khi xoá Sample)
+Sample module (throwaway, đã chứng minh pipeline Bước 1) đã bị xoá — xem `docs/tasks/CLEANUP-SAMPLE.md` cho lịch sử dọn dẹp.
 
 `Identity` → `Shop` → `Category` → `Listing` → `Search` / `Review` / `Lead`. Xem `docs/architecture/dependency-map.json` và `DesignIdeal/ai-agent-development-workflow.md` §14.

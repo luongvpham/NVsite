@@ -1,4 +1,4 @@
 export * from './mutator/axios-instance';
-export * from './generated/sample/sample/sample';
-export * from './generated/sample/model';
-export * from './generated/sample/sample.zod';
+
+// Sample đã bị xoá (docs/tasks/CLEANUP-SAMPLE.md) — module thật đầu tiên (Identity, Bước 3) thêm
+// lại `export * from './generated/{module}/...'` ở đây.
