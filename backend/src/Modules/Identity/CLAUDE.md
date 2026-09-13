@@ -3,15 +3,27 @@
 ## Trạng thái (Bước 3)
 
 Phase 0 (hạ tầng Postgres/Redis) + Phase 1 (entity + migration + Global Query Filter) + Phase 2
-(đăng ký/verify/đăng nhập/refresh/quên-đổi mật khẩu, 6 endpoint, `IDENTITY-001` đã Gate 1) đã xong,
-kèm `Api.Tenancy.TenantResolutionMiddleware` (resolve tenant từ Host — xem mục riêng bên dưới).
-Phase 3 (auth policy `RequireGlobalScope` + test token scope) chưa làm.
+(đăng ký/verify/đăng nhập/refresh/quên-đổi mật khẩu, 6 endpoint) + Phase 3 (auth policy
+`RequireGlobalScope` + `ShopMembershipValidationMiddleware` + 3 endpoint protected + test token
+scope) đã xong. `IDENTITY-001` đã Gate 1 hai vòng (Round 1: 6 endpoint auth flow; Round 2: 3
+endpoint `/me`), kèm `Api.Tenancy.TenantResolutionMiddleware` (resolve tenant từ Host — xem mục
+riêng bên dưới).
 
-**6 endpoint hiện có** (`Identity.Api/IdentityEndpoints.cs`): `/auth/{register,verify-email,login,
-refresh-token,forgot-password,reset-password}` — MỘT bộ route duy nhất cho mọi context (không có
-`{shopId}` trong route nào — xem "Tenant Resolution Middleware" bên dưới). **Chưa có policy
-authorize nào** — mọi endpoint hiện AllowAnonymous, kể cả refresh-token/reset-password (đúng — đó
-chính là mục đích của chúng, không cần JWT hợp lệ trước). Phase 3 sẽ thêm `RequireGlobalScope`.
+**9 endpoint hiện có** (`Identity.Api/IdentityEndpoints.cs`):
+- `/auth/{register,verify-email,login,refresh-token,forgot-password,reset-password}` —
+  `AllowAnonymous` (đúng mục đích — không cần JWT hợp lệ trước để gọi các endpoint này). MỘT bộ
+  route duy nhất cho mọi context (không có `{shopId}` trong route nào — xem "Tenant Resolution
+  Middleware" bên dưới).
+- `GET /auth/me` — `RequireAuthorization()` (mọi audience).
+- `GET /auth/me/shops` — `RequireAuthorization(AuthPolicies.RequireGlobalScope)` — CHẶN token
+  `shop:{shopId}` (403 `INSUFFICIENT_SCOPE`), đây chính là endpoint minh hoạ/test cho Quyết định #32.
+- `POST /auth/me/change-password` — `RequireAuthorization()` (mọi audience — đổi đúng credential
+  theo scope của chính token đó, xem `ChangePasswordHandler`).
+
+**Test bắt buộc `03` §7.1** (token `shop:*` bị từ chối đúng chỗ) nằm ở
+`backend/tests/Identity.IntegrationTests/TokenScopeTests.cs` — đi qua `IdentityApiFactory`
+(`WebApplicationFactory<Program>` thật, Postgres + Redis qua Testcontainers), chưa chạy pass thật
+trong sandbox này (không có Docker) — xem `docs/DOCKER-TEST-DEBT.md` mục 3.
 
 ## ⚠️ Tenant Resolution Middleware — đọc trước khi thêm endpoint mới
 

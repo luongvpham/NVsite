@@ -23,6 +23,10 @@ builder.Services.AddExceptionHandler<AppExceptionHandler>();
 builder.Services.AddExceptionHandler<UnauthorizedAccessExceptionHandler>();
 builder.Services.AddProblemDetails();
 
+// Mặc định ASP.NET Core trả 401/403 không có body khi authorization policy fail — thay bằng
+// ProblemDetails có error_code (Quyết định #19), dùng chung mọi module.
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, ProblemDetailsAuthorizationMiddlewareResultHandler>();
+
 builder.Services.AddSingleton<IReservedRoutesProvider>(_ =>
     new ReservedRoutesProvider(Path.Combine(AppContext.BaseDirectory, "config", "reserved-routes.json")));
 
@@ -32,6 +36,10 @@ builder.Services.AddScoped<TenantContext>();
 builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
 
 builder.Services.AddIdentityModule(builder.Configuration);
+
+// JWT Bearer validation + policy RequireGlobalScope (Quyết định #32) — wiring thật sống ở
+// Identity.Api vì cần JwtOptions (Identity.Infrastructure); root Api chỉ gọi đúng method này.
+builder.Services.AddIdentityAuthentication();
 
 // Dev only — apps/web (TanStack Start, :3000) và apps/portal (Vite CSR, :5173) gọi API
 // từ browser sau khi hydrate, khác port = khác origin. Production dùng domain thật sau Caddy,
@@ -57,6 +65,15 @@ app.UseExceptionHandler();
 // Sau CORS (preflight OPTIONS không cần resolve tenant), TRƯỚC mọi endpoint — mọi handler đọc
 // ShopId/audience qua ITenantContext, không handler nào tự parse Host/route.
 app.UseMiddleware<TenantResolutionMiddleware>();
+
+app.UseAuthentication();
+
+// Quyết định #21.5/#31 — JWT hợp lệ chữ ký/hạn dùng KHÔNG đồng nghĩa quyền còn hiệu lực. Chạy
+// SAU UseAuthentication (cần ClaimsPrincipal), TRƯỚC UseAuthorization (chặn sớm nếu membership đã
+// bị thu hồi hoặc token dùng sai domain, trước khi tới bước kiểm policy theo endpoint).
+app.UseMiddleware<ShopMembershipValidationMiddleware>();
+
+app.UseAuthorization();
 
 app.MapOpenApi();
 
