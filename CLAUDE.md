@@ -20,6 +20,7 @@ Toàn bộ thiết kế nằm trong `DesignIdeal/`. **Đừng đoán — tra b�
 | `Service`, `ShopServiceGroup` | `DesignIdeal/06-service-design.md` |
 | Component manifest schema, codegen registry | `DesignIdeal/07-component-manifest-schema.md` |
 | **Quy trình làm việc, contract, cổng duyệt** | `DesignIdeal/ai-agent-development-workflow.md` |
+| **Layout code backend** (Domain/Application/Infrastructure, CQRS, base entity, exception hierarchy) — đọc trước khi thêm module/entity/use-case mới | `DesignIdeal/architecture-guide.md` + `backend/CLAUDE.md` |
 
 **Khi hai tài liệu mô tả cùng một entity, tài liệu thiết kế chi tiết thắng** (Quyết định #39.5). `02` là nguồn sự thật cho quyết định kiến trúc; `03`–`07` là nguồn sự thật cho entity tương ứng.
 

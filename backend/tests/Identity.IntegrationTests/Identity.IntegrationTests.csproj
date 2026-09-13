@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -10,9 +10,12 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="NetArchTest.Rules" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <!-- Testcontainers.PostgreSql kéo theo Npgsql/EF Core Relational bản khác — pin tường minh để
+         tránh MSB3277 (conflict version) khi build. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,8 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Identity\Identity.Infrastructure\Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Shared\Shared.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Identity\Identity.Domain\Identity.Domain.csproj" />
   </ItemGroup>
 
 </Project>
