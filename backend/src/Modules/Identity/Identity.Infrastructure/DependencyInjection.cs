@@ -37,6 +37,8 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IEmailSender, LoggingEmailSender>();
         services.AddScoped<IShopLookupService, ShopLookupService>();
+        services.AddScoped<IUserShopMembershipService, UserShopMembershipService>();
+        services.AddScoped<ILoginAttemptThrottle, LoginAttemptThrottle>();
 
         var applicationAssembly = typeof(RegisterCommand).Assembly;
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(applicationAssembly));

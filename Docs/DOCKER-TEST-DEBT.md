@@ -75,3 +75,26 @@ thế bước thủ công này nếu tiện hơn khi thực hiện:
 
 **Coi là xong khi:** bước 6, 7, 9 cho đúng `ShopId` như mô tả — middleware resolve tenant từ Host
 header chính xác, không lẫn giữa hai context.
+
+### 3. Identity — Phase 3 token-scope tests qua HTTP pipeline thật (IDENTITY-001)
+
+Ngày thêm: 2026-09-13
+
+```
+cd backend
+dotnet test tests/Identity.IntegrationTests --filter "FullyQualifiedName~TokenScopeTests"
+```
+
+**Cần Docker vì:** `IdentityApiFactory` (`WebApplicationFactory<Program>`) dựng CẢ Postgres
+(dùng chung `PostgresFixture` qua collection) LẪN Redis (`Testcontainers.Redis`, container riêng)
+— toàn bộ pipeline HTTP thật (`TenantResolutionMiddleware` → JWT auth →
+`ShopMembershipValidationMiddleware` → `RequireGlobalScope`) cần cả hai chạy thật, không mock được.
+Đã build thành công, đã chạy thử ở sandbox không Docker và xác nhận lỗi DUY NHẤT là
+`DockerEndpointAuthConfig`/"Docker is either not running" — nghĩa là wiring DI/fixture đúng, chỉ
+thiếu Docker daemon.
+
+**Coi là xong khi:** cả 6 test trong `TokenScopeTests` pass thật —
+`GetMe_allows_main_token`, `GetMe_allows_shop_token`, `ListMyShops_allows_main_token`,
+`ListMyShops_rejects_shop_token_with_insufficient_scope` (khẳng định 403 +
+`error_code: INSUFFICIENT_SCOPE` — trọng tâm Quyết định #32/03 §7.1),
+`ChangePassword_allows_main_token`, `ChangePassword_allows_shop_token`.

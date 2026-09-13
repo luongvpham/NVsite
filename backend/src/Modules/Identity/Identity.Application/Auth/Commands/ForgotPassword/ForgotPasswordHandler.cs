@@ -4,6 +4,7 @@ using Identity.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Shared.Authorization;
 using Shared.Domain.Abstractions;
 
 namespace Identity.Application.Auth.Commands.ForgotPassword;
@@ -29,9 +30,9 @@ public sealed class ForgotPasswordHandler(IIdentityDbContext db, ITenantContext 
 
         var audience = tenantContext.AudienceKind switch
         {
-            TenantAudienceKind.Main => "vsite-main",
-            TenantAudienceKind.Portal => "vsite-portal",
-            TenantAudienceKind.Shop => $"shop:{tenantContext.ShopId}",
+            TenantAudienceKind.Main => AudienceHelpers.Main,
+            TenantAudienceKind.Portal => AudienceHelpers.Portal,
+            TenantAudienceKind.Shop => AudienceHelpers.ForShop(tenantContext.ShopId ?? throw new InvalidOperationException("Audience=Shop nhưng ShopId null.")),
             _ => throw new InvalidOperationException("AudienceKind không hợp lệ."),
         };
 

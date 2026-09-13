@@ -13,6 +13,7 @@
     <!-- Shared framework bundle một bản EFCore.Relational khác version với Npgsql (qua
          Identity.Infrastructure) — pin tường minh để tránh MSB3277 (conflict version). -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
   </ItemGroup>
 
   <ItemGroup>

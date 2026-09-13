@@ -1,3 +1,4 @@
+using Identity.Application.Auth.Commands.ChangePassword;
 using Identity.Application.Auth.Commands.ForgotPassword;
 using Identity.Application.Auth.Commands.Login;
 using Identity.Application.Auth.Commands.RefreshToken;
@@ -5,11 +6,14 @@ using Identity.Application.Auth.Commands.Register;
 using Identity.Application.Auth.Commands.ResetPassword;
 using Identity.Application.Auth.Commands.VerifyEmail;
 using Identity.Application.Auth.Dtos;
+using Identity.Application.Auth.Queries.GetMe;
+using Identity.Application.Auth.Queries.ListMyShops;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Shared.Authorization;
 
 namespace Identity.Api;
 
@@ -70,6 +74,32 @@ public static class IdentityEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
+        // Quyết định #32 — mọi endpoint dưới đây yêu cầu JWT hợp lệ. `RequireAuthorization()`
+        // không tham số = bất kỳ audience nào (Main/Portal/Shop); `RequireGlobalScope` = chặn
+        // token `shop:{shopId}` (xem AuthenticationSetup + ShopMembershipValidationMiddleware).
+        auth.MapGet("/me", async (ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetMeQuery(), ct)))
+            .RequireAuthorization()
+            .Produces<MeDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        auth.MapGet("/me/shops", async (ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new ListMyShopsQuery(), ct)))
+            .RequireAuthorization(AuthPolicies.RequireGlobalScope)
+            .Produces<IReadOnlyList<MyShopDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        auth.MapPost("/me/change-password", async (ChangePasswordRequest body, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new ChangePasswordCommand(body.CurrentPassword, body.NewPassword), ct);
+            return Results.NoContent();
+        })
+            .RequireAuthorization()
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
+
         return app;
     }
 }
@@ -79,3 +109,4 @@ public sealed record LoginRequest(string Email, string Password);
 public sealed record RefreshTokenRequest(string RefreshToken);
 public sealed record ForgotPasswordRequest(string Email);
 public sealed record ResetPasswordRequest(string Token, string NewPassword);
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);

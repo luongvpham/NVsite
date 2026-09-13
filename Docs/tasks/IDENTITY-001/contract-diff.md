@@ -1,41 +1,44 @@
 # IDENTITY-001 — contract diff
 
+## Round 2 (Phase 3 — auth policy + protected endpoints) — 2026-09-13
+
 ## ⚠️ BREAKING / REMOVED
-- **REMOVED** `POST /portal/auth/login` (identity.v1.json) — endpoint có trong contract nhưng runtime không còn
-- **REMOVED** `POST /shops/{shopId}/auth/forgot-password` (identity.v1.json) — endpoint có trong contract nhưng runtime không còn
-- **REMOVED** `POST /shops/{shopId}/auth/login` (identity.v1.json) — endpoint có trong contract nhưng runtime không còn
-- **REMOVED** `POST /shops/{shopId}/auth/register` (identity.v1.json) — endpoint có trong contract nhưng runtime không còn
+(không có)
 
 ## NEW_ENDPOINT
-(không có)
+- GET /auth/me
+- POST /auth/me/change-password
+- GET /auth/me/shops
 
 ## ADDITIVE
 (không có)
 
 ## UNCHANGED
-6 operation không đổi.
+6 operation không đổi (6 endpoint auth flow của Round 1).
 
 ## Giả định tôi đã tự đặt (không hỏi)
 
-**Đây là sửa lại thiết kế route của CHÍNH IDENTITY-001** (vừa Gate 1 lần đầu, chưa có FE nào code
-theo) sau khi thảo luận trực tiếp — không phải một task/contract mới. 4 endpoint REMOVED ở trên
-KHÔNG phải xoá tính năng — chức năng của chúng (đăng ký/đăng nhập/quên mật khẩu theo shop, theo
-portal) vẫn còn nguyên, chỉ gộp về đúng 6 route ở mục UNCHANGED (`/auth/*`) thay vì tách route theo
-context.
+Ba endpoint này được thêm **có chủ đích** để có mục tiêu thật cho test bắt buộc theo `03` §7.1
+("với mỗi endpoint identity, một test khẳng định token `shop:*` bị từ chối") — trước đó cả 6
+endpoint Round 1 đều `AllowAnonymous`, không có endpoint nào để test `RequireGlobalScope` cho thật.
+Đã hỏi và được xác nhận rõ ràng (không phải tôi tự quyết): user chọn "Thêm cả 3 endpoint" thay vì
+chỉ thêm tối thiểu 1.
 
-**Lý do gộp:** route cũ (`/shops/{shopId}/auth/*`) đòi hỏi FE phải tự biết `shopId` (GUID) trước
-khi gọi — nhưng FE khi render website một shop chỉ biết slug/domain đang phục vụ trang
-(`spa-abc.vsite.vn`, `vsite.vn/spa-abc`, `spa-abc.com`), không biết GUID nội bộ. Quyết định (thảo
-luận trực tiếp, không phải tôi tự suy luận): **BE tự resolve `ShopId`/audience từ `Host` header**
-qua `Api.Tenancy.TenantResolutionMiddleware` (Quyết định #7, thu hẹp — chỉ Path/Subdomain qua
-`Shop.Slug`, custom domain vẫn deferred) — chạy TRƯỚC mọi handler, set `ITenantContext`. FE giờ chỉ
-gọi đúng MỘT path tương đối (`/auth/login`...) từ domain đang phục vụ trang; không endpoint nào
-nhận `ShopId` từ route/body nữa (đúng tinh thần Quyết định #21.4 chặt hơn so với route cũ).
+- `GET /auth/me` — `RequireAuthorization()` (mọi audience). Trả `MeDto` (UserId/Email/FullName/
+  AvatarUrl/Phone/Audience) đọc từ JWT claims qua `ICurrentUserContext`, không chạm DB gì thêm ngoài
+  load `User` — chọn vì đây là use-case tối thiểu, không nghiệp vụ mới.
+- `GET /auth/me/shops` — `RequireAuthorization(RequireGlobalScope)`. Đây chính là endpoint bị chặn
+  cho token `shop:*` (Quyết định #32 — token thuộc shop không được đọc danh sách MỌI shop user sở
+  hữu). Trả `ownerShopIds` (đã có trong JWT claim, dùng lại — không query lại DB).
+- `POST /auth/me/change-password` — `RequireAuthorization()` (mọi audience, vì #32 cho phép "đổi
+  password của chính shop đó" khi gọi bằng token `shop:{shopId}`). Chọn endpoint này (thay vì một
+  endpoint đọc/ghi dữ liệu nghiệp vụ khác) vì logic "đổi đúng credential theo scope" đã tồn tại sẵn
+  trong thiết kế Login/VerifyEmail (`User.PasswordHash` vs `UserShop.PasswordHash`), không cần entity
+  mới.
 
-**Testing local:** không có Caddy/domain thật ở dev — xác nhận dùng Windows hosts file
-(`C:\Windows\System32\drivers\etc\hosts`, map `spa-abc.vsite.local` → `127.0.0.1`) để Host header
-đúng thật khi gọi thẳng `http://spa-abc.vsite.local:5270/auth/login` (Kestrel không quan tâm
-hostname, chỉ quan tâm port).
+Không endpoint mới nào query dữ liệu tenant-scoped ngoài `UserShop` của chính user đang đăng nhập
+(qua `ICurrentUserContext.UserId`, không nhận input từ client) — không phát sinh invariant tenant
+isolation mới.
 
 ## Câu hỏi cần anh quyết
-(không có — đã thảo luận và chốt hướng đi trước khi sửa contract này)
+(không có)
