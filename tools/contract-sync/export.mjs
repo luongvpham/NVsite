@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Export runtime OpenAPI theo document module (backend/CLAUDE.md).
- * Build backend/src/Api (kích hoạt Microsoft.Extensions.ApiDescription.Server),
+ * Build backend/src/Vsite.Api (kích hoạt Microsoft.Extensions.ApiDescription.Server),
  * rồi copy từng document sinh ra vào contracts/openapi/.staging/{module}.v1.json.
  *
  * Usage: node tools/contract-sync/export.mjs [moduleName ...]
@@ -13,7 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const API_PROJECT = path.join(REPO_ROOT, 'backend', 'src', 'Api');
+const API_PROJECT = path.join(REPO_ROOT, 'backend', 'src', 'Vsite.Api');
 const OPENAPI_OUTPUT_DIR = path.join(API_PROJECT, 'obj', 'openapi');
 const STAGING_DIR = path.join(REPO_ROOT, 'contracts', 'openapi', '.staging');
 
@@ -34,7 +34,7 @@ function exportDocuments(moduleFilter) {
 
   for (const file of files) {
     // Quy ước Microsoft.Extensions.ApiDescription.Server: {Project}_{documentName}.json
-    const match = file.match(/^Api_(.+)\.json$/);
+    const match = file.match(/^Vsite\.Api_(.+)\.json$/);
     if (!match) continue;
 
     const moduleName = match[1];

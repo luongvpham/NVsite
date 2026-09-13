@@ -23,31 +23,33 @@
 
 > **Quy ước đánh số Phase:** "MVP" = **Phase 1** trong lộ trình ở `01-project-ideal.md` mục 8. Không dùng "MVP" như một mốc riêng nằm ngoài lộ trình — xem Quyết định #39.
 
-| Module | Phase |
-|---|---|
-| Identity | Phase 1 (MVP) |
-| Shop | Phase 1 (MVP) |
-| **Category** (taxonomy toàn cục — Quyết định #35) | Phase 1 (MVP) |
-| **Listing** (tin đăng marketplace — Quyết định #38) | Phase 1 (MVP) |
-| **Review** (đánh giá — chuyển từ Phase 2 lên) | Phase 1 (MVP) |
-| **Lead** (lượt liên hệ — nguồn của "thống kê cơ bản", `04` §7) | Phase 1 (MVP) |
-| Search | Phase 1 (MVP) |
-| Service | Phase 2 |
-| Website (builder + renderer) | Phase 2 |
-| Product | Phase 2 |
-| Customer | Phase 2 |
-| Booking | Phase 3 |
-| Notification | Phase 3 |
-| Analytics (BI nâng cao, ngoài `Lead`) | Phase 4 |
-| Payment | Phase 4 |
+> **Module = folder + namespace, không phải project** (Quyết định #1, sửa 2026-09-13). Danh sách dưới đây phải khớp `docs/architecture/dependency-map.json` — file đó là nguồn sự thật cho `ModuleBoundaryTests`.
+
+| Module | Gồm | Phase |
+|---|---|---|
+| Identity | User, ExternalLogin, Role, UserShop, PendingRegistration, RefreshToken, PasswordResetToken | Phase 1 (MVP) |
+| Shop | Shop (đầy đủ `04` §2.1), ShopDomain | Phase 1 (MVP) |
+| **Marketplace** | ServiceCategory (#35) + Listing (#38) + Review + Lead + index/query Elasticsearch | Phase 1 (MVP) |
+| Media | MediaAsset + pipeline ảnh (`05` §9) | Phase 2 |
+| Website (builder + renderer) | Website, Theme, Page, PageDraft, SitePublication, NavigationConfig, WebsiteTemplate | Phase 2 |
+| **Catalog** | Product (`05` §13–§22) **và** Service (`06`) — bảng/enum tách hoàn toàn | Phase 2 |
+| Customer | | Phase 2 |
+| Booking | | Phase 3 |
+| Notification | | Phase 3 |
+| Analytics (BI nâng cao, ngoài `Lead`) | | Phase 4 |
+| Payment | | Phase 4 |
 
 **Quyết định:** Payment / Analytics / Notification giai đoạn đầu **dùng dịch vụ ngoài**, không tự xây.
 
+**Vì sao `Category`/`Listing`/`Review`/`Lead`/`Search` gộp thành MỘT module `Marketplace`:** năm thứ này là một cụm aggregate không tách được. `Review.ListingId` và `Lead.ListingId` là FK thật; `Review.HasContacted` phải **query `Lead`** cùng listing trong 90 ngày (`04` §6.3); `Listing.RatingAvg`/`ReviewCount` là derived từ `Review` (`04` §6.5); gỡ `Listing` phải snapshot số liệu `Review` vào `ShopCategoryHistory` (`04` §3.2); document ES gộp cả `Listing` + `ServiceCategory.categoryPath[]` + `ratingAvg` (`04` §8.2); `Listing.CategoryId` phải validate `ServiceCategory.IsLeaf` (`04` §3.1). Tách năm module là dựng Integration Event + read model cho những bảng **nằm cùng một database, có FK tới nhau, luôn deploy cùng nhau** — chi phí thuần nghi thức, không đổi lại cách ly nào. Riêng `Search` không có entity nào và nếu là module riêng sẽ **đảo ngược chiều phụ thuộc** (Search kéo dữ liệu từ mọi module); đúng chiều là mỗi module tự đẩy dữ liệu của mình vào index.
+
+**Vì sao `Product` + `Service` gộp thành `Catalog`:** hai nhánh dùng **bảng và enum tách hoàn toàn** (`Service.Status` riêng, `ShopServiceGroup` phẳng ≠ `ShopProductCategory` cây, `Service.ImageId → media_assets` ≠ `ProductImage`), nên không đụng Quyết định #40 — #40 cấm dùng chung *bảng/enum*, không cấm nằm chung project. Gộp để tránh 4 project cho 2 bảng phẳng. ⚠️ `06` §1 gọi Service-vs-Product là "chỗ dễ nhầm nhất trong toàn hệ": tài liệu module `Catalog` **phải** mở đầu bằng bảng phân biệt `Listing`/`Service`/`Product`.
+
 **Vì sao `Review` lên MVP:** vsite không xử lý giao dịch (mục 2 của `01-project-ideal.md`), nên đánh giá là **tài sản tin cậy duy nhất** phân biệt vsite với việc lướt Google Maps hay Facebook group. Không có đánh giá thì Phase 1 không kiểm chứng được điều gì.
 
-**Vì sao `Service`/`Website` xuống Phase 2:** lộ trình ở `01-project-ideal.md` mục 8 chốt Phase 1 là **danh bạ dịch vụ** (Listing + Review), Website Builder mới là Phase 2. Để hai module này ở MVP là mâu thuẫn trực tiếp với lộ trình — và cũng phá đúng mục tiêu "kiểm chứng nhu cầu trước khi xây phần tốn công nhất". `Listing` **không** phụ thuộc `Service` (Quyết định #38: không auto-map), nên cắt được sạch.
+**Vì sao `Catalog`/`Website` xuống Phase 2:** lộ trình ở `01-project-ideal.md` mục 8 chốt Phase 1 là **danh bạ dịch vụ** (Listing + Review), Website Builder mới là Phase 2. Để hai module này ở MVP là mâu thuẫn trực tiếp với lộ trình — và cũng phá đúng mục tiêu "kiểm chứng nhu cầu trước khi xây phần tốn công nhất". `Listing` **không** phụ thuộc `Service` (Quyết định #38: không auto-map), nên cắt được sạch.
 
-**Thứ tự phụ thuộc bắt buộc:** `Identity` → `Shop` → `Category` → `Listing` → `Search` / `Review` / `Lead`. `Category` phải xong trước `Listing` vì Listing, Search, Review và Menu đều neo vào nó; `Identity`/`Shop` trước vì `Listing.ShopId` NOT NULL và `Review.UserId` NOT NULL.
+**Thứ tự phụ thuộc bắt buộc:** `Identity` → `Shop` → `Marketplace`. `Identity`/`Shop` phải xong trước vì `Listing.ShopId` NOT NULL và `Review.UserId` NOT NULL. Trong nội bộ `Marketplace`, thứ tự vẫn là `ServiceCategory` → `Listing` → `Review` / `Lead` / index ES (Listing, Search, Review và Menu đều neo vào `ServiceCategory`).
 
 ### 1.3 Tech stack
 
@@ -140,7 +142,17 @@ Shop Profile **không** dùng `builder-renderer`. Đây là chỗ AI agent dễ 
 
 **Chốt:** Modular Monolith với ranh giới module nghiêm ngặt.
 
-**Ràng buộc:** Module KHÔNG được reference project của module khác. Giao tiếp cross-module qua Integration Event hoặc Public Contract interface.
+**Ràng buộc (sửa 2026-09-13):** Module là một **folder + namespace** `Vsite.{Domain|Application|Infrastructure|Api}.{Module}`, **không** phải project `.csproj` riêng. Backend có đúng **4 project cho toàn hệ** (`Vsite.Domain` / `Vsite.Application` / `Vsite.Infrastructure` / `Vsite.Api`), theo `architecture-guide.md` §1. Namespace của module A chỉ được phụ thuộc namespace của module B nếu B nằm trong `A.dependsOn` của `docs/architecture/dependency-map.json`.
+
+**Enforce:** `backend/tests/ArchitectureTests/ModuleBoundaryTests.cs` đọc chính `dependency-map.json` làm nguồn sự thật duy nhất (Quyết định #17) — thêm module mà quên khai ở đó thì test FAIL. Đây là lớp chặn **test-time**, yếu hơn compile-time của phương án cũ; đổi lại ba thứ dưới đây. Chiều phụ thuộc giữa **tầng** (`Domain ← Application ← Infrastructure ← Api`) vẫn được enforce ở compile-time vì 4 tầng là 4 assembly.
+
+**Vì sao bỏ phương án "mỗi module một bộ 4 project":**
+
+1. **Thiết kế đã chốt sẵn ≥6 FK xuyên module**, không phải nguy cơ tương lai: `UserShop.ShopId → Shop`, `Listing.ShopId → Shop`, `Review.UserId → User`, `Lead.UserId → User` (`04` §6.2, §7), `Service.DetailPageId → pages` và `Service.ImageId → media_assets` (`06` §5), và đặc biệt `Listing.(TargetPageId, ShopId) → Page(Id, ShopId)` mà `04` §4.1 **[5]** khai rõ là **biện pháp bảo mật ở tầng DB** ("chặn ở tầng DB việc shop A đăng listing trỏ vào trang của shop B"). Mỗi module một `DbContext` thì EF Core **không diễn đạt được** các FK này — phải viết raw SQL và tự giữ đồng bộ bằng tay, tức là làm **suy yếu một kiểm soát bảo mật đã chốt**. Dữ liệu ở đây là một đồ thị liên thông; các module chưa bao giờ tách rời được thật.
+2. **Lệch khỏi chính `architecture-guide.md`** — §1 và §11 (nguồn sự thật cho layout backend theo `CLAUDE.md` gốc) quy định đúng 4 project và không hề nhắc tới "module" hay "modular monolith".
+3. **Chi phí không tương xứng:** 11 module × 4 project ≈ 50 project, trong khi `Lead` / `Review` / `Category` mỗi cái chỉ có **một bảng**.
+
+Giao tiếp cross-module: đọc dữ liệu qua **Public Contract interface** (khai ở `Vsite.Application/{Module}/Interfaces/`, implement ở `Vsite.Infrastructure/{Module}/` — mẫu đang chạy: `IShopLookupService`, `IUserShopMembershipService`); **Integration Event** dành cho tác dụng phụ bất đồng bộ, không bắt buộc cho việc đọc.
 
 ---
 

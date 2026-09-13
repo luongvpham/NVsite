@@ -1,13 +1,33 @@
 {
-  "Identity": { "dependsOn": [], "phase": 1 },
-  "Shop": { "dependsOn": ["Identity"], "phase": 1 },
-  "Category": { "dependsOn": [], "phase": 1 },
-  "Listing": { "dependsOn": ["Shop", "Category"], "phase": 1 },
-  "Review": { "dependsOn": ["Listing", "Identity"], "phase": 1 },
-  "Lead": { "dependsOn": ["Listing"], "phase": 1 },
-  "Search": { "dependsOn": ["Listing", "Category"], "phase": 1 },
-  "MediaAsset": { "dependsOn": ["Shop"], "phase": 2 },
-  "Website": { "dependsOn": ["Shop", "MediaAsset"], "phase": 2 },
-  "Service": { "dependsOn": ["Shop"], "phase": 2 },
-  "Product": { "dependsOn": ["Shop", "MediaAsset"], "phase": 2 }
+  "_readme": [
+    "Danh sách module của backend và chiều phụ thuộc cho phép giữa chúng.",
+    "NGUỒN SỰ THẬT DUY NHẤT — backend/tests/ArchitectureTests/ModuleBoundaryTests.cs đọc chính file",
+    "này để enforce (Quyết định #1, #17). Thêm module mới mà quên khai ở đây thì test sẽ FAIL.",
+    "",
+    "Module = một FOLDER + NAMESPACE 'Vsite.{Domain|Application|Infrastructure|Api}.{Module}',",
+    "KHÔNG phải một .csproj riêng (sửa 2026-09-13 — xem Quyết định #1). 'dependsOn' nghĩa là",
+    "namespace của module này ĐƯỢC PHÉP phụ thuộc namespace của các module liệt kê; mọi cặp khác",
+    "bị test chặn.",
+    "",
+    "Namespace KHÔNG phải module (dùng chung, không bị luật này ràng buộc) khai ở",
+    "ModuleBoundaryTests.SharedSegments."
+  ],
+  "modules": {
+    "Identity":     { "dependsOn": [],                  "phase": 1 },
+    "Shop":         { "dependsOn": ["Identity"],        "phase": 1 },
+    "Marketplace":  { "dependsOn": ["Shop", "Identity"], "phase": 1 },
+    "Media":        { "dependsOn": ["Shop"],            "phase": 2 },
+    "Website":      { "dependsOn": ["Shop", "Media"],   "phase": 2 },
+    "Catalog":      { "dependsOn": ["Shop", "Media"],   "phase": 2 },
+    "Customer":     { "dependsOn": ["Shop"],            "phase": 2 },
+    "Booking":      { "dependsOn": ["Shop"],            "phase": 3 },
+    "Notification": { "dependsOn": [],                  "phase": 3 },
+    "Analytics":    { "dependsOn": [],                  "phase": 4 },
+    "Payment":      { "dependsOn": [],                  "phase": 4 }
+  },
+  "_notes": {
+    "Marketplace": "Gộp Category + Listing + Review + Lead + Search (04). Một cụm aggregate không tách được: Review.ListingId/Lead.ListingId là FK thật, Review.HasContacted phải query Lead (04 §6.3), Listing.RatingAvg derived từ Review (04 §6.5). Search không có entity nào — mỗi module tự đẩy dữ liệu vào ES, không có module Search kéo ngược.",
+    "Catalog": "Gộp Product (05) + Service (06). Bảng và enum tách hoàn toàn (Quyết định #40) — chỉ chung project. Sẽ phụ thuộc thêm Website khi thêm Service.DetailPageId → Page (06 §9 bước 4); lúc đó cập nhật dependsOn ở đây.",
+    "Identity": "Hiện đang tạm sở hữu bảng Shop (bản trích 03 §3.4). Khi làm module Shop phải chuyển giao — xem backend/docs/modules/identity.md."
+  }
 }

@@ -7,38 +7,49 @@ entity, exception hierarchy — đọc trước khi thêm module/entity/use-case
 
 ## Cấu trúc thư mục — nguồn sự thật để biết tạo/tìm file ở đâu
 
+**ĐÚNG 4 project cho toàn hệ** (`architecture-guide.md` §1/§11). **Module là FOLDER + NAMESPACE**,
+không phải project riêng — xem mục "Ranh giới module" bên dưới.
+
 ```
 backend/src/
-  Api/                            ← host, middleware, DI, OpenAPI document setup
-  Shared/                         ← primitives DÙNG CHUNG MỌI MODULE, thuần (không EF Core/ASP.NET Core)
-    Domain/
-      BaseEntity.cs                ← Id (protected set — chỉ gán qua constructor), DomainEvents
-      BaseAuditableEntity.cs       ← + CreatedAt/UpdatedAt/CreatedByUserId/UpdatedByUserId/IsDeleted
-      ShopEntity.cs                ← BaseEntity + ShopId (không audit)
-      ShopAuditableEntity.cs       ← BaseAuditableEntity + ShopId (dùng phổ biến hơn ShopEntity)
-      IShopScoped.cs               ← marker `ShopId` cho TenantQueryFilterExtensions tìm bằng reflection
-      BaseEvent.cs                 ← domain event, implements MediatR.INotification
-      Abstractions/ITenantContext.cs
-    Exceptions/                    ← AppException + NotFoundException/DomainException/ConflictException/ForbiddenAccessException
-    Pagination/, ReservedRoutes/   ← primitives khác đã có từ Bước 1
-  Shared.Persistence/              ← DUY NHẤT project Shared được phép reference EF Core
-    AppDbContextBase.cs            ← mọi {Module}DbContext PHẢI kế thừa từ đây, không kế thừa DbContext thẳng
-    TenantQueryFilterExtensions.cs ← Global Query Filter TỰ ĐỘNG cho IShopScoped + soft-delete, gọi 1 lần trong AppDbContextBase
-  Modules/{ModuleName}/
-    {ModuleName}.Domain/           ← không reference EF Core, MediatR (trừ BaseEvent qua Shared), ASP.NET, hay project module khác
-      Entities/{Entity}.cs         ← kế thừa BaseEntity/BaseAuditableEntity/ShopEntity/ShopAuditableEntity
-      Enums/{Name}.cs
-    {ModuleName}.Application/      ← CQRS: Commands/Queries theo feature folder (xem architecture-guide.md §3)
-    {ModuleName}.Infrastructure/
-      Persistence/{ModuleName}DbContext.cs
-      Persistence/Configurations/{Entity}Configuration.cs
-      Persistence/Migrations/
-      DependencyInjection.cs
-    {ModuleName}.Api/
+  Vsite.Domain/                   ← thuần: không EF Core, không ASP.NET Core, không Npgsql
+    Common/       BaseEntity.cs BaseAuditableEntity.cs ShopEntity.cs ShopAuditableEntity.cs
+                  IShopScoped.cs BaseEvent.cs
+    Abstractions/ ITenantContext.cs
+    Exceptions/   AppException + NotFound/Domain/Conflict/ForbiddenAccess/TooManyRequests
+    Authorization/ AuthPolicies.cs AudienceHelpers.cs
+    Pagination/  ReservedRoutes/
+    {Module}/     Entities/{Entity}.cs  Enums/{Name}.cs  ← vd. Identity/
+  Vsite.Application/              ← CQRS, chỉ phụ thuộc Domain
+    Common/       Behaviors/ValidationBehavior.cs  Exceptions/  Interfaces/{IAppDbContext,ICurrentUserContext}.cs
+    {Module}/     Interfaces/  Options/  {Feature}/Commands/{UseCase}/  {Feature}/Queries/{UseCase}/
+  Vsite.Infrastructure/
+    Persistence/  AppDbContext.cs AppDbContextFactory.cs TenantQueryFilterExtensions.cs
+                  Configurations/{Module}/{Entity}Configuration.cs
+                  Seed/  Migrations/
+    Configuration/ ReservedRoutesProvider.cs
+    {Module}/     implementation của interface khai ở Application/{Module}/Interfaces/
+    DependencyInjection.cs        ← AddInfrastructure() — điểm DUY NHẤT wiring DI
+  Vsite.Api/                      ← host: Program.cs, middleware, OpenAPI
+    Tenancy/  ExceptionHandling/  OpenApi/  Auth/
+    {Module}/{Module}Endpoints.cs
 backend/tests/
-  ArchitectureTests/
-  {ModuleName}.IntegrationTests/
+  ArchitectureTests/              ← LayeringTests (assembly) + ModuleBoundaryTests (namespace)
+  IntegrationTests/               ← Common/ + {Module}/
+  ComponentSchemaTests/
+backend/docs/modules/{module}.md  ← tài liệu từng module (module trải trên 4 project nên không
+                                    đặt CLAUDE.md trong một folder nào được)
 ```
+
+**Deploy: chỉ MỘT thứ.** `Vsite.Api` là project duy nhất `Microsoft.NET.Sdk.Web` và có `Program.cs`.
+`dotnet publish src/Vsite.Api` gom cả 4 assembly vào một output → 1 container, 1 process. Thêm module
+= thêm folder, **không** thêm deployment.
+
+**Một DbContext duy nhất** (`AppDbContext`). Module mới thêm `DbSet` vào đó + `IAppDbContext`, đặt
+`IEntityTypeConfiguration` dưới `Persistence/Configurations/{Module}/` (tự động được quét). KHÔNG
+tạo `{Module}DbContext` thứ hai — thiết kế có ≥6 FK **xuyên module** (vd.
+`Listing.(TargetPageId, ShopId) → Page(Id, ShopId)`, `04` §4.1 — một biện pháp bảo mật ở tầng DB),
+nhiều DbContext thì EF Core không diễn đạt được chúng.
 
 **Entity nào kế thừa base class nào:**
 
@@ -50,19 +61,30 @@ backend/tests/
 | `ShopAuditableEntity` | Thuộc về một shop VÀ cần audit trail — phổ biến nhất cho entity nghiệp vụ (`UserShop`, sau này `Product`/`Service`/`Booking`...) |
 
 Kế thừa `ShopEntity`/`ShopAuditableEntity` là **đủ** để có Global Query Filter theo `ShopId` —
-không viết tay `HasQueryFilter` nữa (xem `Shared.Persistence.TenantQueryFilterExtensions`).
+không viết tay `HasQueryFilter` nữa (xem `Vsite.Infrastructure.Persistence.TenantQueryFilterExtensions`).
 
 **Entity không cho set `Id` tự do:** `BaseEntity.Id` là `protected set`. Entity cần seed data với
 GUID cố định phải tự expose constructor `public {Entity}(Guid id) : base(id) { }` — xem
-`Identity.Domain.Entities.Role` + `Identity.Infrastructure.Persistence.RoleSeed`.
+`Vsite.Domain.Identity.Entities.Role` + `Vsite.Infrastructure.Persistence.Seed.RoleSeed`.
 
-## Ranh giới module (Quyết định #1)
+## Ranh giới module (Quyết định #1) ⚠️
 
-- Module **không được** reference project của module khác.
-- Cross-module giao tiếp qua **Integration Event** hoặc **Public Contract interface**, không qua reference trực tiếp.
-- Chiều phụ thuộc trong một module: `Domain ← Application ← Infrastructure ← Api`, không đảo.
-- Mọi module **được phép** reference `Shared`/`Shared.Persistence` — đây không phải module, là hạ tầng dùng chung (không tính vào rule "module không reference module khác").
-- Enforce bằng `ArchitectureTests` (NetArchTest hoặc tương đương) — test phải **fail thật** khi vi phạm, không chỉ nằm ở tài liệu (#17).
+**Module = folder + namespace `Vsite.{Domain|Application|Infrastructure|Api}.{Module}`**, KHÔNG phải
+project riêng (sửa 2026-09-13 — trước đó mỗi module có 4 `.csproj`).
+
+- **Danh sách module + chiều phụ thuộc cho phép có đúng MỘT nguồn:**
+  `docs/architecture/dependency-map.json`. Thêm module mới mà quên khai ở đó → `ModuleBoundaryTests`
+  FAIL. Không viết danh sách thứ hai ở bất kỳ đâu (#17, #24).
+- Namespace của module A chỉ được phụ thuộc namespace của module B nếu B nằm trong `A.dependsOn`.
+- Namespace dùng chung (`Common`, `Abstractions`, `Exceptions`, `Persistence`, `Tenancy`…) không bị
+  luật này ràng buộc — danh sách ở `ModuleBoundaryTests.SharedSegments`.
+- Chiều phụ thuộc giữa các tầng: `Domain ← Application ← Infrastructure ← Api`, không đảo — cái này
+  vẫn được enforce ở **compile-time** (4 assembly, ProjectReference một chiều).
+- ⚠️ Ranh giới **giữa các module** giờ chỉ còn `ModuleBoundaryTests` chặn (test-time, không phải
+  compile-time). Đó là lớp phòng thủ DUY NHẤT — thấy nó đỏ thì sửa code, **đừng nới luật**.
+- Cross-module đọc dữ liệu: khai interface ở `Vsite.Application/{Module}/Interfaces/`, implement ở
+  `Vsite.Infrastructure/{Module}/` (mẫu đang chạy: `IShopLookupService`,
+  `IUserShopMembershipService`). Không cần Integration Event bus cho việc đọc.
 
 ## Tenant security invariants (Quyết định #21) ⚠️
 
@@ -141,4 +163,24 @@ Docker chạy xác nhận sau. Xoá đúng mục khỏi file đó khi đã chạ
 
 Sample module (throwaway, đã chứng minh pipeline Bước 1) đã bị xoá — xem `docs/tasks/CLEANUP-SAMPLE.md` cho lịch sử dọn dẹp.
 
-`Identity` → `Shop` → `Category` → `Listing` → `Search` / `Review` / `Lead`. Xem `docs/architecture/dependency-map.json` và `DesignIdeal/ai-agent-development-workflow.md` §14.
+`Identity` → `Shop` → `Marketplace`. Phase 2: `Media` → `Website` → `Catalog`.
+Danh sách đầy đủ + chiều phụ thuộc: `docs/architecture/dependency-map.json` (nguồn duy nhất).
+
+| Module | Gồm | Tài liệu thiết kế |
+|---|---|---|
+| `Identity` | User, ExternalLogin, Role, UserShop, PendingRegistration, RefreshToken, PasswordResetToken | `03` |
+| `Shop` | Shop (đầy đủ), ShopDomain | `04` §2.1 |
+| `Marketplace` | ServiceCategory, Listing, ShopCategoryHistory, Review, Lead + index ES | `04` |
+| `Media` | MediaAsset + pipeline ảnh | `05` §9 |
+| `Website` | Website, Theme, Page, PageDraft, SitePublication, NavigationConfig, WebsiteTemplate | `05` §1–§12 |
+| `Catalog` | Product (+attribute/variant/image) **và** Service (+ShopServiceGroup) | `05` §13–§22, `06` |
+
+⚠️ `Catalog` gộp Product + Service ở mức project nhưng **bảng và enum tách hoàn toàn** (Quyết định
+#40). `06` §1 gọi đây là "chỗ dễ nhầm nhất trong toàn hệ" — `backend/docs/modules/catalog.md` phải
+mở đầu bằng bảng phân biệt `Listing`/`Service`/`Product` trước khi viết dòng code nào.
+
+## Tài liệu từng module
+
+| Module | File |
+|---|---|
+| Identity | `backend/docs/modules/identity.md` |

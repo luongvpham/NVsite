@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Tham chiếu DUY NHẤT được phép ở Domain (architecture-guide.md §1: "Domain depends on
+         nothing"). BaseEvent : INotification cần marker interface của MediatR — không kéo theo
+         EF Core/ASP.NET Core nên Domain vẫn thuần. LayeringTests enforce phần còn lại. -->
+    <PackageReference Include="MediatR" />
+  </ItemGroup>
+
+</Project>
