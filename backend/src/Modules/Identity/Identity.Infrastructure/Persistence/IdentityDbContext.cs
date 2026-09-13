@@ -1,3 +1,4 @@
+using Identity.Application.Common.Interfaces;
 using Identity.Domain.Entities;
 using Identity.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,7 @@ using MediatR;
 namespace Identity.Infrastructure.Persistence;
 
 public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> options, ITenantContext tenantContext, IPublisher? publisher = null)
-    : AppDbContextBase(options, tenantContext, publisher)
+    : AppDbContextBase(options, tenantContext, publisher), IIdentityDbContext
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<ExternalLogin> ExternalLogins => Set<ExternalLogin>();
@@ -16,6 +17,8 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     public DbSet<UserShop> UserShops => Set<UserShop>();
     public DbSet<Shop> Shops => Set<Shop>();
     public DbSet<PendingRegistration> PendingRegistrations => Set<PendingRegistration>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,6 +28,8 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
         modelBuilder.ApplyConfiguration(new UserShopConfiguration());
         modelBuilder.ApplyConfiguration(new ShopConfiguration());
         modelBuilder.ApplyConfiguration(new PendingRegistrationConfiguration());
+        modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
+        modelBuilder.ApplyConfiguration(new PasswordResetTokenConfiguration());
 
         modelBuilder.Entity<Role>().HasData(RoleSeed.All);
 

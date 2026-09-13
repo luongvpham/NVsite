@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.csproj" />
+    <ProjectReference Include="..\Modules\Identity\Identity.Api\Identity.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -10,21 +11,17 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <!-- ValidationExceptionHandler dùng FluentValidation.ValidationException — trước đây đến gián
-         tiếp qua Sample.Api → Sample.Application, giờ phải khai trực tiếp sau khi Sample bị xoá
-         (docs/tasks/CLEANUP-SAMPLE.md). -->
-    <PackageReference Include="FluentValidation" />
+    <!-- Shared framework bundle một bản EFCore.Relational khác version với Npgsql (qua
+         Identity.Infrastructure) — pin tường minh để tránh MSB3277 (conflict version). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Xuất OpenAPI document tĩnh lúc build — nguồn cho tools/contract-sync (backend/CLAUDE.md).
-         TẠM TẮT: Sample đã bị xoá (docs/tasks/CLEANUP-SAMPLE.md), Program.cs hiện không đăng ký
-         AddOpenApi() nào — GenerateOpenApiDocuments fail vì IDocumentProvider rỗng. Bật lại
-         "true" cùng lúc với AddOpenApi("identity", ...) ở Bước 3. -->
-    <OpenApiGenerateDocumentsOnBuild>false</OpenApiGenerateDocumentsOnBuild>
+    <!-- Xuất OpenAPI document tĩnh lúc build — nguồn cho tools/contract-sync (backend/CLAUDE.md). -->
+    <OpenApiGenerateDocumentsOnBuild>true</OpenApiGenerateDocumentsOnBuild>
     <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/obj/openapi</OpenApiDocumentsDirectory>
   </PropertyGroup>
 

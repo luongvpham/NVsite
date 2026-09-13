@@ -2,15 +2,60 @@
 
 ## Trạng thái (Bước 3)
 
-Phase 0 (hạ tầng Postgres/Redis) + Phase 1 (entity + migration + Global Query Filter) đã xong.
-Phase 2 (đăng ký/verify/đăng nhập, Gate 1 bắt đầu từ đây) + Phase 3 (auth policy + token scope test)
-chưa làm — xem plan hiện hành (`ok-ch-a-c-n-x-a-cuddly-thunder.md` nếu còn, hoặc hỏi lại kế hoạch).
-**Không có endpoint nào ở module này tính tới hiện tại** — `Identity.Api` chưa tồn tại.
+Phase 0 (hạ tầng Postgres/Redis) + Phase 1 (entity + migration + Global Query Filter) + Phase 2
+(đăng ký/verify/đăng nhập/refresh/quên-đổi mật khẩu, 6 endpoint, `IDENTITY-001` đã Gate 1) đã xong,
+kèm `Api.Tenancy.TenantResolutionMiddleware` (resolve tenant từ Host — xem mục riêng bên dưới).
+Phase 3 (auth policy `RequireGlobalScope` + test token scope) chưa làm.
+
+**6 endpoint hiện có** (`Identity.Api/IdentityEndpoints.cs`): `/auth/{register,verify-email,login,
+refresh-token,forgot-password,reset-password}` — MỘT bộ route duy nhất cho mọi context (không có
+`{shopId}` trong route nào — xem "Tenant Resolution Middleware" bên dưới). **Chưa có policy
+authorize nào** — mọi endpoint hiện AllowAnonymous, kể cả refresh-token/reset-password (đúng — đó
+chính là mục đích của chúng, không cần JWT hợp lệ trước). Phase 3 sẽ thêm `RequireGlobalScope`.
+
+## ⚠️ Tenant Resolution Middleware — đọc trước khi thêm endpoint mới
+
+`Api.Tenancy.TenantResolutionMiddleware` (root `Api`, không phải module) resolve
+`ITenantContext.AudienceKind`/`ShopId` từ **Host header** của request, chạy TRƯỚC MediatR/mọi
+handler. Cơ chế (Quyết định #7, THU HẸP LẠI — không phải bản đầy đủ):
+
+1. Nhãn đầu tiên của hostname (`spa-abc` trong `spa-abc.vsite.local:5270`) = `"admin"` → audience
+   `vsite-portal` (Quyết định #25, đã reserved).
+2. Nhãn khớp `config/reserved-routes.json` → audience `vsite-main`, khỏi query DB.
+3. Nhãn khớp một `Shop.Slug` đang tồn tại (qua `IShopLookupService`) → audience `shop:{shopId}`.
+4. Còn lại → audience `vsite-main`.
+
+**⚠️ `IShopLookupService` cache qua Redis** (Quyết định #7 — "Cache Redis: host+path → shop_id,
+invalidate khi đổi domain"), vì middleware gọi hàm này ở MỌI request: 30 phút cho slug tìm thấy, 1
+phút cho slug không tồn tại (negative cache, tránh dội DB khi domain lạ/gõ sai). **BẤT KỲ command
+nào sau này sửa `Shop.Slug` hoặc xoá/disable Shop PHẢI gọi `IShopLookupService.InvalidateAsync`**
+(cả slug cũ lẫn mới nếu đổi) NGAY sau khi `SaveChangesAsync` thành công — quên bước này nghĩa là
+middleware tiếp tục resolve sai tenant tới khi cache tự hết hạn (tối đa 30 phút).
+
+**Hệ quả cho MỌI endpoint mới ở module này (và sau này module khác dùng chung middleware):**
+- KHÔNG BAO GIỜ nhận `ShopId` từ route param hay body nữa — luôn đọc `ITenantContext` (inject vào
+  handler). Route `/shops/{shopId}/...` mà tài liệu `03`/`05` mô tả **không** áp dụng ở Bước 3 —
+  FE không có cách nào biết GUID của shop, chỉ biết domain/slug đang phục vụ trang.
+- FE gọi các endpoint này bằng **relative URL** (same-origin với domain đang phục vụ trang) —
+  KHÔNG cross-origin tới một host `api.*` cố định, vì Host header chỉ đúng khi request thực sự đi
+  tới domain của chính shop đó (Production: Caddy reverse-proxy giữ nguyên Host, Quyết định #9).
+- Ngoại lệ: `verify-email`/`reset-password` LUÔN dùng host cố định `api.vsite.vn` (03 §5) — context
+  nằm trong chính token, không phụ thuộc Host header lúc bấm link email.
+- **CHƯA resolve được custom domain thật** (`spa-abc.com` bất kỳ) — chỉ nhãn-đầu-của-host khớp
+  `Shop.Slug` (đúng cho Path `vsite.vn/{slug}` lẫn Subdomain `{slug}.vsite.vn`, và dev qua hosts
+  file `{slug}.vsite.local`). Custom domain cần bảng `ShopDomain` (module Shop đầy đủ) để match
+  CHÍNH XÁC domain — deferred, xem mục "Lệch có chủ đích" bên dưới.
+- Test dev: thêm entry hosts file Windows (`C:\Windows\System32\drivers\etc\hosts`), vd.
+  `127.0.0.1 spa-abc.vsite.local`, gọi thẳng `http://spa-abc.vsite.local:5270/auth/login` — Kestrel
+  không quan tâm hostname, chỉ quan tâm port, nên Host header đúng thật không cần Caddy.
 
 ## Invariant — vi phạm là bug, không phải lựa chọn phong cách
 
-1. `ShopId` **không bao giờ** từ request body — chỉ từ route hoặc `ITenantContext` (Quyết định
-   #21.4). Portal lấy `ShopId` từ route param (Quyết định #31).
+1. `ShopId` **không bao giờ** từ request body hay route param — CHỈ từ `ITenantContext`, resolve
+   bởi `TenantResolutionMiddleware` theo Host (Quyết định #21.4, #7 thu hẹp). Endpoint tương lai cần
+   `ShopId` cho path/route riêng (vd. Portal xem NHIỀU shop cùng lúc, `/shops/{shopId}/products`)
+   vẫn dùng route param như bình thường — điểm khác biệt duy nhất ở Identity là auth tự thân
+   (login/register/...) không có "route riêng theo shop" nữa, tất cả qua Host.
 2. `UserShop` là entity tenant-scoped DUY NHẤT ở Bước 3. `User`/`Role`/`ExternalLogin`/`Shop` là
    platform-scoped hoặc không cần Global Query Filter (Shop chưa multi-tenant theo nghĩa này).
 3. Global Query Filter fail-closed: `ITenantContext.ShopId == null` → filter không khớp hàng nào
@@ -40,12 +85,20 @@ chưa làm — xem plan hiện hành (`ok-ch-a-c-n-x-a-cuddly-thunder.md` nếu 
 - **Chưa có Social Login thật** (Google/Facebook/Zalo, Quyết định #6) — bảng `ExternalLogin` đã tạo
   đủ schema (rẻ, không cần chờ), nhưng luồng OAuth/callback/handoff-code là task riêng SAU khi
   module `Shop` đầy đủ tồn tại (cần `ShopDomain` để tra callback URL theo slug).
-- **Chưa có Tenant Resolution Middleware theo Host/custom domain** (Quyết định #7, #9) — `ShopId`
-  Phase 2/3 chỉ resolve từ JWT audience hoặc route param, không từ Host header. Middleware theo
-  domain là việc của module Website/Shop đầy đủ (Phase 2 theo `dependency-map.json`).
+- **Tenant Resolution Middleware ĐÃ có, nhưng thu hẹp** (Quyết định #7) — chỉ Path/Subdomain qua
+  `Shop.Slug` (xem mục riêng phía trên). Custom domain (`ShopDomain`, Caddy On-Demand TLS #9) vẫn
+  deferred tới khi module Shop đầy đủ tồn tại.
 - **`UserShop` không có navigation `Shop` qua base class** — `ShopAuditableEntity` (Shared) chỉ có
   `ShopId` (Guid), không navigation, vì `Shared` không được reference entity của module nào
   (Quyết định #1). Navigation `UserShop.Shop` tự khai thêm ở entity cụ thể trong module này.
+- **`RefreshToken`/`PasswordResetToken` là entity MỚI, không có trong `03`** — cần thiết để hiện
+  thực Quyết định #3 (refresh token rotation) và #6.4 (reset scoped theo audience/shop). Coi là chi
+  tiết triển khai của các quyết định đã chốt, không phải entity nghiệp vụ mới cần duyệt riêng — xem
+  `docs/tasks/IDENTITY-001/contract-diff.md` mục "Giả định tôi đã tự đặt" #5.
+- **Login bằng email/password tại shop chưa có `UserShop` → 401**, không tự tạo membership. 03 §3.3
+  "mọi lần authenticate → upsert UserShop" chỉ áp dụng cho Social Login (chưa làm) — với email/
+  password, không có `UserShop.PasswordHash` để so khớp nên không thể "login" vào một membership
+  chưa tồn tại. Phải đăng ký (`/auth/register`, cùng domain shop đó) trước.
 
 ## Base class + tổ chức thư mục (xem `backend/CLAUDE.md` cho quy ước chung mọi module)
 

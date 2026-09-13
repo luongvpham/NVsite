@@ -1,0 +1,67 @@
+using Identity.Application.Common.Interfaces;
+using Identity.Application.Common.Options;
+using Identity.Domain.Entities;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Shared.Domain.Abstractions;
+
+namespace Identity.Application.Auth.Commands.ForgotPassword;
+
+/// <summary>
+/// 03 §6.4 bước [1]-[2]. Handler KHÔNG BAO GIỜ throw vì "không tìm thấy" — âm thầm bỏ qua để giữ
+/// đúng bất biến "luôn trả cùng một thông báo".
+/// </summary>
+public sealed class ForgotPasswordHandler(IIdentityDbContext db, ITenantContext tenantContext, IJwtTokenService tokenService, IEmailSender emailSender, IOptions<AuthOptions> authOptions)
+    : IRequestHandler<ForgotPasswordCommand>
+{
+    private static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(30);
+
+    public async Task Handle(ForgotPasswordCommand request, CancellationToken cancellationToken)
+    {
+        var normalized = request.Email.Trim().ToUpperInvariant();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.EmailNormalized == normalized, cancellationToken);
+
+        if (user is null)
+        {
+            return;
+        }
+
+        var audience = tenantContext.AudienceKind switch
+        {
+            TenantAudienceKind.Main => "vsite-main",
+            TenantAudienceKind.Portal => "vsite-portal",
+            TenantAudienceKind.Shop => $"shop:{tenantContext.ShopId}",
+            _ => throw new InvalidOperationException("AudienceKind không hợp lệ."),
+        };
+
+        if (tenantContext.AudienceKind == TenantAudienceKind.Shop)
+        {
+            var isMember = await db.UserShops.IgnoreQueryFilters()
+                .AnyAsync(us => us.UserId == user.Id && us.ShopId == tenantContext.ShopId, cancellationToken);
+            if (!isMember)
+            {
+                return;
+            }
+        }
+
+        var rawToken = tokenService.GenerateOpaqueToken();
+        db.PasswordResetTokens.Add(new PasswordResetToken
+        {
+            UserId = user.Id,
+            Audience = audience,
+            ShopId = tenantContext.AudienceKind == TenantAudienceKind.Shop ? tenantContext.ShopId : null,
+            TokenHash = tokenService.HashToken(rawToken),
+            ExpiresAt = DateTimeOffset.UtcNow.Add(TokenLifetime),
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var resetUrl = $"{authOptions.Value.ApiBaseUrl.TrimEnd('/')}/auth/reset-password?token={Uri.EscapeDataString(rawToken)}";
+        await emailSender.SendAsync(
+            user.Email!,
+            "Đặt lại mật khẩu",
+            $"<p>Nhấn vào liên kết sau để đặt lại mật khẩu (hết hạn sau 30 phút):</p><p><a href=\"{resetUrl}\">{resetUrl}</a></p>",
+            cancellationToken);
+    }
+}

@@ -1,3 +1,4 @@
+using Identity.Domain;
 using Identity.Domain.Entities;
 using Identity.Domain.Enums;
 using Identity.Infrastructure.Persistence;
@@ -45,7 +46,7 @@ public sealed class DbConstraintTests(PostgresFixture postgres)
         {
             UserId = user.Id,
             ShopId = shop.Id,
-            RoleId = RoleSeed.PlatformUserId,
+            RoleId = WellKnownRoles.PlatformUserId,
             Source = UserShopSource.RegisteredOnShop,
         });
 
@@ -65,7 +66,7 @@ public sealed class DbConstraintTests(PostgresFixture postgres)
             EmailNormalized = null,
             EmailVerifiedAt = null,
             PrimaryIdentityKind = PrimaryIdentityKind.Email,
-            RoleId = RoleSeed.PlatformUserId,
+            RoleId = WellKnownRoles.PlatformUserId,
         });
 
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
@@ -82,7 +83,7 @@ public sealed class DbConstraintTests(PostgresFixture postgres)
         {
             Email = null,
             PrimaryIdentityKind = PrimaryIdentityKind.Email,
-            RoleId = RoleSeed.PlatformUserId,
+            RoleId = WellKnownRoles.PlatformUserId,
         });
 
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
@@ -130,7 +131,7 @@ public sealed class DbConstraintTests(PostgresFixture postgres)
             EmailNormalized = normalized,
             EmailVerifiedAt = DateTimeOffset.UtcNow,
             PrimaryIdentityKind = PrimaryIdentityKind.Email,
-            RoleId = RoleSeed.PlatformUserId,
+            RoleId = WellKnownRoles.PlatformUserId,
         };
     }
 }

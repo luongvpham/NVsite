@@ -1,5 +1,9 @@
 using System.Text.Json.Serialization;
 using Api.ExceptionHandling;
+using Api.OpenApi;
+using Api.Tenancy;
+using Identity.Api;
+using Shared.Domain.Abstractions;
 using Shared.ReservedRoutes;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,18 +14,24 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
-// TODO(Bước 3 — Identity): builder.Services.AddOpenApi("identity", options => options.AddSchemaTransformer<ProblemDetailsSchemaTransformer>());
 // Một document OpenAPI riêng cho mỗi module (backend/CLAUDE.md — "OpenAPI: thư viện và cách xuất document").
-// ProblemDetailsSchemaTransformer (Api/OpenApi/ProblemDetailsSchemaTransformer.cs) bắt buộc cho MỌI
-// document — error_code chỉ gắn lúc runtime qua Extensions, reflection không tự thấy được (xem ghi
-// chú trong file transformer). Sample đã bị xoá (docs/tasks/CLEANUP-SAMPLE.md) — chưa có module thật
-// nào đăng ký OpenAPI document; bật lại dòng trên khi Identity landing.
+// ProblemDetailsSchemaTransformer bắt buộc cho MỌI document — error_code chỉ gắn lúc runtime qua
+// Extensions, reflection không tự thấy được (xem ghi chú trong file transformer).
+builder.Services.AddOpenApi("identity", options => options.AddSchemaTransformer<ProblemDetailsSchemaTransformer>());
 
-builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
+builder.Services.AddExceptionHandler<AppExceptionHandler>();
+builder.Services.AddExceptionHandler<UnauthorizedAccessExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 builder.Services.AddSingleton<IReservedRoutesProvider>(_ =>
     new ReservedRoutesProvider(Path.Combine(AppContext.BaseDirectory, "config", "reserved-routes.json")));
+
+// Quyết định #7 (thu hẹp — xem TenantResolutionMiddleware). Scoped: một TenantContext per-request,
+// middleware set giá trị, mọi handler đọc qua ITenantContext (không handler nào tự resolve ShopId).
+builder.Services.AddScoped<TenantContext>();
+builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
+
+builder.Services.AddIdentityModule(builder.Configuration);
 
 // Dev only — apps/web (TanStack Start, :3000) và apps/portal (Vite CSR, :5173) gọi API
 // từ browser sau khi hydrate, khác port = khác origin. Production dùng domain thật sau Caddy,
@@ -44,8 +54,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandler();
 
-// TODO(Bước 3 — Identity): app.MapOpenApi(); — cần ít nhất 1 AddOpenApi() đã đăng ký ở trên, nếu
-// không WebApplication sẽ throw lúc build do document provider rỗng.
+// Sau CORS (preflight OPTIONS không cần resolve tenant), TRƯỚC mọi endpoint — mọi handler đọc
+// ShopId/audience qua ITenantContext, không handler nào tự parse Host/route.
+app.UseMiddleware<TenantResolutionMiddleware>();
+
+app.MapOpenApi();
+
+app.MapIdentityEndpoints();
 
 app.Run();
 
