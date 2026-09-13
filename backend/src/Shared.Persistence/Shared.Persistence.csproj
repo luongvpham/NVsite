@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -7,8 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- BaseEvent : INotification (DesignIdeal/architecture-guide.md §2) — chỉ dùng marker
-         interface của MediatR, không kéo theo EF Core/ASP.NET Core nên Domain vẫn thuần. -->
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="MediatR" />
   </ItemGroup>
 

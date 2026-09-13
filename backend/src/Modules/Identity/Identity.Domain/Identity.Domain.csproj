@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- BaseEntity/BaseAuditableEntity/ShopAuditableEntity/ITenantContext — Domain thuần, không
+         kéo theo EF Core/ASP.NET Core (chỉ MediatR marker interface, xem Shared.csproj). -->
+    <ProjectReference Include="..\..\..\Shared\Shared.csproj" />
+  </ItemGroup>
+
+</Project>

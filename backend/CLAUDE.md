@@ -1,28 +1,67 @@
 # backend — vsite
 
-.NET 9, Modular Monolith, Clean Architecture + DDD Lite. Chi tiết đầy đủ ở `DesignIdeal/02-tech-stack-and-decision.md` §1, §Quyết định #1.
+.NET 9, Modular Monolith, Clean Architecture + DDD Lite + CQRS. Chi tiết đầy đủ ở
+`DesignIdeal/02-tech-stack-and-decision.md` §1, §Quyết định #1, và **`DesignIdeal/architecture-guide.md`**
+(quy ước layout Domain/Application/Infrastructure chi tiết — feature folders, CQRS/MediatR, base
+entity, exception hierarchy — đọc trước khi thêm module/entity/use-case mới).
 
-## Cấu trúc module
+## Cấu trúc thư mục — nguồn sự thật để biết tạo/tìm file ở đâu
 
 ```
 backend/src/
-  Api/                        ← host, middleware, DI, OpenAPI document setup
-  Shared/                     ← primitives dùng chung, KHÔNG chứa logic module
+  Api/                            ← host, middleware, DI, OpenAPI document setup
+  Shared/                         ← primitives DÙNG CHUNG MỌI MODULE, thuần (không EF Core/ASP.NET Core)
+    Domain/
+      BaseEntity.cs                ← Id (protected set — chỉ gán qua constructor), DomainEvents
+      BaseAuditableEntity.cs       ← + CreatedAt/UpdatedAt/CreatedByUserId/UpdatedByUserId/IsDeleted
+      ShopEntity.cs                ← BaseEntity + ShopId (không audit)
+      ShopAuditableEntity.cs       ← BaseAuditableEntity + ShopId (dùng phổ biến hơn ShopEntity)
+      IShopScoped.cs               ← marker `ShopId` cho TenantQueryFilterExtensions tìm bằng reflection
+      BaseEvent.cs                 ← domain event, implements MediatR.INotification
+      Abstractions/ITenantContext.cs
+    Exceptions/                    ← AppException + NotFoundException/DomainException/ConflictException/ForbiddenAccessException
+    Pagination/, ReservedRoutes/   ← primitives khác đã có từ Bước 1
+  Shared.Persistence/              ← DUY NHẤT project Shared được phép reference EF Core
+    AppDbContextBase.cs            ← mọi {Module}DbContext PHẢI kế thừa từ đây, không kế thừa DbContext thẳng
+    TenantQueryFilterExtensions.cs ← Global Query Filter TỰ ĐỘNG cho IShopScoped + soft-delete, gọi 1 lần trong AppDbContextBase
   Modules/{ModuleName}/
-    {ModuleName}.Domain/      ← không reference EF Core, MediatR, ASP.NET, hay project module khác
-    {ModuleName}.Application/
+    {ModuleName}.Domain/           ← không reference EF Core, MediatR (trừ BaseEvent qua Shared), ASP.NET, hay project module khác
+      Entities/{Entity}.cs         ← kế thừa BaseEntity/BaseAuditableEntity/ShopEntity/ShopAuditableEntity
+      Enums/{Name}.cs
+    {ModuleName}.Application/      ← CQRS: Commands/Queries theo feature folder (xem architecture-guide.md §3)
     {ModuleName}.Infrastructure/
+      Persistence/{ModuleName}DbContext.cs
+      Persistence/Configurations/{Entity}Configuration.cs
+      Persistence/Migrations/
+      DependencyInjection.cs
     {ModuleName}.Api/
 backend/tests/
   ArchitectureTests/
   {ModuleName}.IntegrationTests/
 ```
 
+**Entity nào kế thừa base class nào:**
+
+| Kế thừa | Khi nào |
+|---|---|
+| `BaseEntity` | Không cần audit trail, không platform/shop-scoped cố định (vd. `PendingRegistration` — staging ngắn hạn) |
+| `BaseAuditableEntity` | Cần `CreatedAt`/`UpdatedAt`/soft-delete, KHÔNG thuộc về một shop cụ thể (platform-scoped, vd. `User`, `Role`) |
+| `ShopEntity` | Thuộc về một shop, KHÔNG cần audit trail (hiếm) |
+| `ShopAuditableEntity` | Thuộc về một shop VÀ cần audit trail — phổ biến nhất cho entity nghiệp vụ (`UserShop`, sau này `Product`/`Service`/`Booking`...) |
+
+Kế thừa `ShopEntity`/`ShopAuditableEntity` là **đủ** để có Global Query Filter theo `ShopId` —
+không viết tay `HasQueryFilter` nữa (xem `Shared.Persistence.TenantQueryFilterExtensions`).
+
+**Entity không cho set `Id` tự do:** `BaseEntity.Id` là `protected set`. Entity cần seed data với
+GUID cố định phải tự expose constructor `public {Entity}(Guid id) : base(id) { }` — xem
+`Identity.Domain.Entities.Role` + `Identity.Infrastructure.Persistence.RoleSeed`.
+
 ## Ranh giới module (Quyết định #1)
 
 - Module **không được** reference project của module khác.
 - Cross-module giao tiếp qua **Integration Event** hoặc **Public Contract interface**, không qua reference trực tiếp.
 - Chiều phụ thuộc trong một module: `Domain ← Application ← Infrastructure ← Api`, không đảo.
+- Mọi module **được phép** reference `Shared`/`Shared.Persistence` — đây không phải module, là hạ tầng dùng chung (không tính vào rule "module không reference module khác").
 - Enforce bằng `ArchitectureTests` (NetArchTest hoặc tương đương) — test phải **fail thật** khi vi phạm, không chỉ nằm ở tài liệu (#17).
 
 ## Tenant security invariants (Quyết định #21) ⚠️
