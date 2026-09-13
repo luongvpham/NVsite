@@ -17,6 +17,16 @@
 
 ---
 
+## ⚠️ 2026-09-13 — cả 3 mục dưới đây cần chạy LẠI sau refactor kiến trúc
+
+Backend vừa gộp 8 project → 4 (`Vsite.Domain`/`Application`/`Infrastructure`/`Api`), hợp nhất
+`IdentityDbContext` + `AppDbContextBase` thành MỘT `AppDbContext`, và **sinh lại migration từ đầu**
+(`InitialSchema`, thay cho `InitialIdentitySchema` đã xoá). Đây là thay đổi thật ở tầng DB và DI —
+kết quả test từ trước ngày này không còn giá trị tham chiếu, kể cả mục nào từng pass.
+
+Đường dẫn lệnh trong cả 3 mục đã được cập nhật theo cấu trúc mới. Build + `ArchitectureTests` +
+`ComponentSchemaTests` đã xanh trên máy không Docker; chỉ còn phần cần Docker là chưa xác nhận.
+
 ## Pending
 
 ### 1. Identity — Phase 1 entity/migration/tenant-isolation (IDENTITY-001)
@@ -25,7 +35,7 @@ Ngày thêm: 2026-09-13
 
 ```
 cd backend
-dotnet test tests/Identity.IntegrationTests
+dotnet test tests/IntegrationTests
 ```
 
 **Cần Docker vì:** `Testcontainers.PostgreSql` tự khởi động container Postgres thật cho mỗi lần
@@ -46,19 +56,26 @@ Docker daemon đang chạy.
 
 Ngày thêm: 2026-09-13
 
-Chưa có test tự động nào cho `Api.Tenancy.TenantResolutionMiddleware` (chỉ code-review, chưa chạy
-thật với DB thật) — verify thủ công theo các bước sau (chưa có endpoint tạo Shop nên phải insert
-tay), hoặc viết integration test mới (`WebApplicationFactory` + `Testcontainers.PostgreSql`) thay
-thế bước thủ công này nếu tiện hơn khi thực hiện:
+Chưa có test tự động nào cho `Vsite.Api.Tenancy.TenantResolutionMiddleware` (chỉ code-review, chưa
+chạy thật với DB thật) — verify thủ công theo các bước sau (chưa có endpoint tạo Shop nên phải
+insert tay), hoặc viết integration test mới (`WebApplicationFactory` + `Testcontainers.PostgreSql`)
+thay thế bước thủ công này nếu tiện hơn khi thực hiện.
 
-1. `docker compose up -d postgres redis` (từ root repo).
+⚠️ **Kiểm tra connection string TRƯỚC khi chạy.** `docker-compose.yml` dựng Postgres ở
+`localhost:5432`, user `vsite`/`vsite_dev_only`; còn `backend/src/Vsite.Api/appsettings.Development.json`
+đang trỏ `localhost:5433`, user `postgres`/`password` (Postgres cài sẵn trên máy chính, không phải
+compose). Cả `dotnet ef` lẫn app đều đọc appsettings, nên hai bên luôn khớp nhau — nhưng nếu máy
+bạn dùng compose thì phải sửa appsettings (hoặc đổi port trong compose) cho khớp, nếu không mọi
+bước dưới đây sẽ fail ở bước kết nối.
+
+1. `docker compose up -d postgres redis` (từ root repo) — hoặc dùng Postgres/Redis sẵn có trên máy.
 2. Thêm vào hosts file Windows (`C:\Windows\System32\drivers\etc\hosts`, cần quyền Admin):
    ```
    127.0.0.1  spa-abc.vsite.local
    ```
-3. `cd backend && dotnet tool run dotnet-ef database update --project src/Modules/Identity/Identity.Infrastructure --startup-project src/Modules/Identity/Identity.Infrastructure`
+3. `cd backend && dotnet tool run dotnet-ef database update --project src/Vsite.Infrastructure --startup-project src/Vsite.Api`
 4. Insert một row `Shop` test (Slug = `spa-abc`) trực tiếp vào DB (psql hoặc bất kỳ client nào).
-5. `dotnet run --project src/Api`
+5. `dotnet run --project src/Vsite.Api`
 6. `curl -X POST http://spa-abc.vsite.local:5270/auth/register -H "Content-Type: application/json" -d "{\"email\":\"a@test.com\",\"password\":\"Password123!\"}"`
    → query bảng `PendingRegistration` xác nhận `ShopId` = đúng Id của Shop `spa-abc` vừa tạo ở bước 4.
 7. `curl -X POST http://localhost:5270/auth/register -H "Content-Type: application/json" -d "{\"email\":\"b@test.com\",\"password\":\"Password123!\"}"`
@@ -82,7 +99,7 @@ Ngày thêm: 2026-09-13
 
 ```
 cd backend
-dotnet test tests/Identity.IntegrationTests --filter "FullyQualifiedName~TokenScopeTests"
+dotnet test tests/IntegrationTests --filter "FullyQualifiedName~TokenScopeTests"
 ```
 
 **Cần Docker vì:** `IdentityApiFactory` (`WebApplicationFactory<Program>`) dựng CẢ Postgres

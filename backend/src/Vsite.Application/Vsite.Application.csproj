@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vsite.Domain\Vsite.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <!-- IPasswordHasher<User> — component nhỏ của ASP.NET Core Identity, không kéo theo
+         UserManager/SignInManager (xem docs/modules/identity.md, Quyết định #3). -->
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
+    <!-- Chỉ dùng DbSet<T>/IQueryable extensions cho IAppDbContext — pattern chuẩn Clean
+         Architecture (architecture-guide.md §11 bước 2), không kéo theo Npgsql/migration. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+  </ItemGroup>
+
+</Project>

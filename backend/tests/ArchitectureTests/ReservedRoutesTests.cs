@@ -1,4 +1,5 @@
-using Shared.ReservedRoutes;
+using Vsite.Domain.ReservedRoutes;
+using Vsite.Infrastructure.Configuration;
 using Xunit;
 
 namespace ArchitectureTests;

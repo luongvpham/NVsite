@@ -1,6 +1,6 @@
 # Hạ tầng dev/test LOCAL — không phải production (Caddy/production compose là việc khác, xem
 # Quyết định #9 khi tới lúc). Kết nối qua connection string trong
-# backend/src/Api/appsettings.Development.json.
+# backend/src/Vsite.Api/appsettings.Development.json.
 services:
   postgres:
     image: postgres:16-alpine

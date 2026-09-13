@@ -20,8 +20,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Shared\Shared.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Identity\Identity.Domain\Identity.Domain.csproj" />
+    <!-- Tham chiếu CẢ 4 project để NetArchTest soi được assembly của từng tầng. Bản thân việc
+         ArchitectureTests reference Infrastructure/Api KHÔNG phải vi phạm layering — test nằm
+         ngoài chiều phụ thuộc của sản phẩm. -->
+    <ProjectReference Include="..\..\src\Vsite.Domain\Vsite.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Vsite.Application\Vsite.Application.csproj" />
+    <ProjectReference Include="..\..\src\Vsite.Infrastructure\Vsite.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Vsite.Api\Vsite.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ModuleBoundaryTests đọc file này làm nguồn sự thật danh sách module (Quyết định #1, #17). -->
+    <None Include="..\..\..\docs\architecture\dependency-map.json" Link="dependency-map.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -561,7 +561,7 @@ vsite/
 │
 ├── backend/
 │   ├── CLAUDE.md
-│   └── src/Modules/{Identity,Shop,Category,Listing,Review,Lead,Search}/
+│   └── src/Vsite.{Domain,Application,Infrastructure,Api}/{Identity,Shop,Marketplace}/
 │
 ├── apps/
 │   ├── web/     (SSR — TanStack Start)  + CLAUDE.md
