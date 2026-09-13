@@ -14,6 +14,7 @@ public sealed class IdentityDbContextFactory : IDesignTimeDbContextFactory<Ident
     /// <summary>Query filter không được đánh giá lúc sinh schema/migration nên ShopId=null là đủ.</summary>
     private sealed class DesignTimeTenantContext : ITenantContext
     {
+        public TenantAudienceKind AudienceKind => TenantAudienceKind.Main;
         public Guid? ShopId => null;
     }
 

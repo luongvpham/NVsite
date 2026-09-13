@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Library (không phải host) nhưng cần type Minimal API (IEndpointRouteBuilder...) — dùng
+         FrameworkReference thay vì Sdk.Web để tránh sinh artifact web thừa (wwwroot...). -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <!-- Shared framework bundle một bản EFCore.Relational khác version với Npgsql (qua
+         Identity.Infrastructure) — pin tường minh để tránh MSB3277 (conflict version). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Identity.Application\Identity.Application.csproj" />
+    <ProjectReference Include="..\Identity.Infrastructure\Identity.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,1 +1,8 @@
-{}
+{
+  "identity.v1.json": {
+    "sha256": "3e66f8282686a6e1c292e4efaea01cd301a4a2efaf2c3de232252a8c40c2ef3f",
+    "approvedAt": "2026-09-13T04:56:18.514Z",
+    "approvedBy": "human",
+    "taskId": "IDENTITY-001"
+  }
+}

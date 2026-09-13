@@ -119,6 +119,11 @@ Bắt buộc có, không phải tuỳ chọn:
 - **Unit test** cho handler và validator.
 - **Integration test** cho endpoint, chạy trên database thật (Testcontainers hoặc tương đương).
 
+⚠️ **Môi trường không có Docker daemon** (nhiều dev/agent chạy nhiều máy, chỉ một máy cài Docker):
+KHÔNG bỏ qua Testcontainers test — viết test đầy đủ, xác nhận build/logic đúng bằng mắt, rồi ghi
+nợ lại vào `docs/DOCKER-TEST-DEBT.md` (quy ước dùng chung, đọc file đó trước khi ghi) để máy có
+Docker chạy xác nhận sau. Xoá đúng mục khỏi file đó khi đã chạy pass thật.
+
 ---
 
 ## Definition of done (một task BE)

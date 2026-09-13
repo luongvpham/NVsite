@@ -4,6 +4,12 @@ Nền tảng SaaS Việt Nam kết hợp **danh bạ dịch vụ địa phương
 
 vsite **không xử lý giao dịch**. Đây là kênh khám phá và dẫn khách. Hai luồng doanh thu độc lập: phí duy trì website, và phí đăng tin/quảng cáo.
 
+**⚠️ Trước khi báo một task backend là "xong":** kiểm tra `docs/DOCKER-TEST-DEBT.md`. Nếu môi
+trường hiện tại không có Docker daemon, test cần Testcontainers/Postgres/Redis thật KHÔNG được coi
+là "bỏ qua" — ghi lại đúng quy ước trong file đó để máy có Docker chạy tiếp, đừng chỉ báo miệng qua
+chat. Nếu đang ở máy CÓ Docker, đọc file đó trước — có thể đang có nợ test từ session khác chờ bạn
+chạy giúp.
+
 ---
 
 ## Đọc tài liệu ở đâu

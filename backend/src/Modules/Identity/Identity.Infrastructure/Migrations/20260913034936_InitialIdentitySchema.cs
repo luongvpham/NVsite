@@ -141,6 +141,55 @@ namespace Identity.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PasswordResetToken",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Audience = table.Column<string>(type: "text", nullable: false),
+                    ShopId = table.Column<Guid>(type: "uuid", nullable: true),
+                    TokenHash = table.Column<string>(type: "text", nullable: false),
+                    ExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    ConsumedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PasswordResetToken", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PasswordResetToken_User_UserId",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RefreshToken",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Audience = table.Column<string>(type: "text", nullable: false),
+                    ShopId = table.Column<Guid>(type: "uuid", nullable: true),
+                    TokenHash = table.Column<string>(type: "text", nullable: false),
+                    ExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    RevokedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    ReplacedByTokenId = table.Column<Guid>(type: "uuid", nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefreshToken", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RefreshToken_User_UserId",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UserShop",
                 columns: table => new
                 {
@@ -208,6 +257,17 @@ namespace Identity.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PasswordResetToken_TokenHash",
+                table: "PasswordResetToken",
+                column: "TokenHash",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PasswordResetToken_UserId",
+                table: "PasswordResetToken",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PendingRegistration_EmailNormalized",
                 table: "PendingRegistration",
                 column: "EmailNormalized");
@@ -216,6 +276,17 @@ namespace Identity.Infrastructure.Migrations
                 name: "IX_PendingRegistration_ExpiresAt",
                 table: "PendingRegistration",
                 column: "ExpiresAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshToken_TokenHash",
+                table: "RefreshToken",
+                column: "TokenHash",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshToken_UserId_Audience_ShopId",
+                table: "RefreshToken",
+                columns: new[] { "UserId", "Audience", "ShopId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Role_Code_Scope",
@@ -265,7 +336,13 @@ namespace Identity.Infrastructure.Migrations
                 name: "ExternalLogin");
 
             migrationBuilder.DropTable(
+                name: "PasswordResetToken");
+
+            migrationBuilder.DropTable(
                 name: "PendingRegistration");
+
+            migrationBuilder.DropTable(
+                name: "RefreshToken");
 
             migrationBuilder.DropTable(
                 name: "UserShop");

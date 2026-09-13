@@ -1,3 +1,4 @@
+using Identity.Domain;
 using Identity.Domain.Entities;
 using Identity.Domain.Enums;
 using Identity.Infrastructure.Persistence;
@@ -39,8 +40,8 @@ public sealed class TenantIsolationTests : IAsyncLifetime
         await db.SaveChangesAsync();
 
         db.UserShops.AddRange(
-            new UserShop { UserId = _userAId, ShopId = _shopAId, RoleId = RoleSeed.CustomerId, Source = UserShopSource.RegisteredOnShop },
-            new UserShop { UserId = _userBId, ShopId = _shopBId, RoleId = RoleSeed.CustomerId, Source = UserShopSource.RegisteredOnShop }
+            new UserShop { UserId = _userAId, ShopId = _shopAId, RoleId = WellKnownRoles.CustomerId, Source = UserShopSource.RegisteredOnShop },
+            new UserShop { UserId = _userBId, ShopId = _shopBId, RoleId = WellKnownRoles.CustomerId, Source = UserShopSource.RegisteredOnShop }
         );
         await db.SaveChangesAsync();
     }
@@ -91,7 +92,7 @@ public sealed class TenantIsolationTests : IAsyncLifetime
         EmailNormalized = $"{emailLocalPart}-{id:N}@EXAMPLE.TEST".ToUpperInvariant(),
         EmailVerifiedAt = Now,
         PrimaryIdentityKind = PrimaryIdentityKind.Email,
-        RoleId = RoleSeed.PlatformUserId,
+        RoleId = WellKnownRoles.PlatformUserId,
     };
 
     private static readonly DateTimeOffset Now = DateTimeOffset.UtcNow;
