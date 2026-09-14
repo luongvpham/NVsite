@@ -1,5 +1,13 @@
 # apps/portal — vsite
 
+> **Cần nền thiết kế?** Vào `DesignIdeal/00-INDEX.md` trước (§2 nói file nào còn tin được), đừng mở
+> thẳng file `0*.md`. Quyết định `#N` → `DesignIdeal/DECISIONS.md`.
+> Phạm vi này hay cần: `01` §5.2 (quản trị shop) · `05` (builder, Phase 2) · `03` §7 (phân giải role
+> theo domain). Task chỉ sửa UI/CSS thì **không cần đọc gì**.
+>
+> ⚠️ **Màn "Khách hàng" của shop:** Portal **không bao giờ** serialize thẳng entity `User` ra
+> response — phải có DTO riêng cho góc nhìn shop. Đọc bảng hai cột ở `03` §3.3 trước khi làm màn đó.
+
 **CSR thuần** — Vite + TanStack Router, **không** cài TanStack Start (Quyết định #22, #23). Không SSR: luôn sau login, không cần SEO.
 
 Domain: `admin.vsite.vn/*` (Quyết định #25) — origin riêng biệt hoàn toàn với `apps/web`.

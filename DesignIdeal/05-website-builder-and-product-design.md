@@ -1,5 +1,11 @@
 # vsite — Thiết Kế Entity: Website Builder & Product (Phase 2)
 
+> **STATUS:** `SPEC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `§0 câu "chép sang 02" đã lỗi thời`
+> **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
+>
+> 📌 **§0 là nơi định nghĩa Quyết định `#40–#58`.** Câu "cần được chép sang `02`" trong §0 đã lỗi
+> thời — cố tình không chép, xem [`DECISIONS.md`](DECISIONS.md).
+
 > **Tài liệu liên quan:** `01-project-ideal.md` (§5.3, §6, §7) · `02-tech-stack-and-decision.md` (Quyết định #11–#17, #33–#36) · `03-identity-entity-design.md` · `04-listing-and-review-design.md`
 >
 > **Phạm vi:** hai module Phase 2 — `Website` (builder + renderer) và `Product` (hàng hoá). Module `Service` thiết kế riêng, tài liệu này chỉ tham chiếu tới nó ở phần Data Binding.

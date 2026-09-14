@@ -1,5 +1,9 @@
 # builder-renderer — vsite
 
+> **Cần nền thiết kế?** `05` §6 (shape Component Tree), §11 (Operations Engine) · `07` (manifest,
+> ⚠️ đã code — đọc `Docs/tasks/BOOTSTRAP-002/changelog.md` kèm).
+> Quyết định `#N` → `DesignIdeal/DECISIONS.md`. Trạng thái tài liệu: `DesignIdeal/00-INDEX.md` §2.
+
 ## Invariant — vi phạm là bug, không phải lựa chọn phong cách
 
 1. KHÔNG hardcode `href`. Luôn `ctx.resolveUrl(link)`. (#11)

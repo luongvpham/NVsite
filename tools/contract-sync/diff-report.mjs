@@ -33,7 +33,9 @@ function renderReport(taskId, perModule) {
     lines.push('(không có)');
   } else {
     for (const b of allBreaking) {
-      lines.push(`- **BREAKING** \`${b.operation}\` (${b.module}) — nghi ngờ bug implementation, mặc định KHÔNG phải lý do tạo v2:`);
+      // Luật xử lý BREAKING đổi theo giai đoạn — xem khung cảnh báo ở
+      // DesignIdeal/ai-agent-development-workflow.md §6. Phân loại thì không đổi.
+      lines.push(`- **BREAKING** \`${b.operation}\` (${b.module}) — chưa deploy production thì cứ sửa BE + regen FE, KHÔNG tạo v2:`);
       for (const c of b.changes.filter((c) => c.kind === 'BREAKING')) {
         lines.push(`  - ${c.detail}`);
       }

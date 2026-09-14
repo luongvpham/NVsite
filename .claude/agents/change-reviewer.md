@@ -29,5 +29,14 @@ RANH GIỚI KIẾN TRÚC
 - builder-renderer không import builder-core, vẫn isomorphic (#23)
 - Không sửa tay file generated (api-sdk, registry/generated)
 
+TÀI LIỆU CÒN ĐÚNG KHÔNG — loại lỗi này không có test nào bắt, phải người/agent nhìn
+- Diff chạm code (backend/ hoặc packages/) mà thiếu Docs/tasks/{ID}/changelog.md   → Critical
+- File DesignIdeal mô tả thứ diff này làm đổi, mà dòng "> **STATUS:**" ở đầu file đó
+  chưa cập nhật (vẫn ghi THIẾT KẾ — CHƯA CODE, hoặc chưa trỏ changelog)             → Critical
+- Quyết định người duyệt chốt ở Gate 1 mà chưa có dòng trong DesignIdeal/DECISIONS.md → Critical
+- changelog.md có mục "chưa làm xong" mà không nơi nào theo dõi tiếp
+  (00-INDEX §4 hoặc Docs/DOCKER-TEST-DEBT.md)                                        → Warning
+- Tài liệu trích đường dẫn file/test không còn tồn tại                                → Warning
+
 Báo cáo: Critical / Warning / Suggestion.
-Nêu cả thứ diff KHÔNG làm mà lẽ ra phải làm.
+Nêu cả thứ diff KHÔNG làm mà lẽ ra phải làm — gồm cả tài liệu lẽ ra phải cập nhật.

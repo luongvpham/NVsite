@@ -1,5 +1,10 @@
 # apps/web — vsite
 
+> **Cần nền thiết kế?** Vào `DesignIdeal/00-INDEX.md` trước (§2 nói file nào còn tin được), đừng mở
+> thẳng file `0*.md`. Quyết định `#N` → `DesignIdeal/DECISIONS.md`.
+> Phạm vi này hay cần: `01` §5.1 (tìm kiếm & khám phá) · `04` §5 (trang hồ sơ shop), §6 (`Review`) ·
+> `05` §6 (Component Tree) cho Shop Site. Task chỉ sửa UI/CSS thì **không cần đọc gì**.
+
 **SSR** bằng TanStack Start (Quyết định #22, #23). Gồm ba loại trang, đều render trong app này:
 
 | | URL | Render bởi | Hiển thị `Review` |

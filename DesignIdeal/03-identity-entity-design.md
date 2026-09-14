@@ -1,5 +1,19 @@
 # vsite — Thiết Kế Entity: Identity & Shop Membership
 
+> **STATUS:** `IMPLEMENTED` · **Tasks:** `IDENTITY-001` · **Changelog:** `Docs/tasks/IDENTITY-001/changelog.md` · **Stale:** `§3.1/§3.3/§5 cột PasswordSalt · §3.3 câu upsert UserShop · §4 tên ràng buộc`
+> **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
+>
+> ⚠️ **Ba chỗ trong file này không khớp code — đọc changelog trước khi làm theo:**
+> - **§3.1 / §3.3 / §5** — cột `PasswordSalt` **không tồn tại**. Dùng `PasswordHasher<User>`, salt
+>   nằm trong chính chuỗi `PasswordHash`.
+> - **§3.3** — *"Mọi lần authenticate thành công … → upsert `UserShop`"* chỉ đúng cho **Social
+>   Login**. Email/password tại shop chưa có `UserShop` → **401**, phải đăng ký trước.
+> - **§4** — ràng buộc đủ cả 6 nhưng **tên khác** tài liệu (EF đặt tên). Grep `ux_`/`uq_`/`fk_` ra
+>   rỗng **không** nghĩa là thiếu — xem bảng đối chiếu trong changelog.
+>
+> Hai entity `RefreshToken`, `PasswordResetToken` có thật trong code nhưng không có ở §3.
+> Quy ước vận hành module: `backend/docs/modules/identity.md`.
+
 > Tài liệu này chốt mô hình `User` / `ExternalLogin` / `UserShop` / `Shop` / `Role`.
 > **Supersede** Quyết định #28 trong `02-tech-stack-and-decision.md` (mô hình `UserShopCredential` + merge theo email/SĐT chưa verify).
 > Mọi thay đổi so với tài liệu này phải được ghi nhận lại tại đây.

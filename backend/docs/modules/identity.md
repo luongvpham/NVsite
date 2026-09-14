@@ -21,9 +21,9 @@ riêng bên dưới).
   theo scope của chính token đó, xem `ChangePasswordHandler`).
 
 **Test bắt buộc `03` §7.1** (token `shop:*` bị từ chối đúng chỗ) nằm ở
-`backend/tests/Identity.IntegrationTests/TokenScopeTests.cs` — đi qua `IdentityApiFactory`
+`backend/tests/IntegrationTests/Identity/TokenScopeTests.cs` — đi qua `IdentityApiFactory`
 (`WebApplicationFactory<Program>` thật, Postgres + Redis qua Testcontainers), chưa chạy pass thật
-trong sandbox này (không có Docker) — xem `docs/DOCKER-TEST-DEBT.md` mục 3.
+trong sandbox này (không có Docker) — xem `Docs/DOCKER-TEST-DEBT.md` mục 3.
 
 ## ⚠️ Tenant Resolution Middleware — đọc trước khi thêm endpoint mới
 
@@ -85,6 +85,10 @@ middleware tiếp tục resolve sai tenant tới khi cache tự hết hạn (t�
 
 ## Lệch có chủ đích so với `DesignIdeal/03-identity-entity-design.md`
 
+> 📌 Danh sách đầy đủ (kèm phần **chưa làm xong** và bảng đối chiếu ràng buộc DB) nằm ở
+> `Docs/tasks/IDENTITY-001/changelog.md`. Mục dưới đây là bản tóm tắt phục vụ người đang code trong
+> module này.
+
 - **Không có cột `PasswordSalt` riêng trên `User`/`UserShop`.** 03 §3.1/§3.3 vẽ hai cột
   `PasswordSalt`+`PasswordHash`. Thực thi dùng
   `Microsoft.AspNetCore.Identity.PasswordHasher<User>` — output của hasher này tự chứa salt +
@@ -105,9 +109,9 @@ middleware tiếp tục resolve sai tenant tới khi cache tự hết hạn (t�
   được biết entity của module nào (Quyết định #1). Navigation `UserShop.Shop` tự khai thêm ở entity
   cụ thể trong module này.
 - **`RefreshToken`/`PasswordResetToken` là entity MỚI, không có trong `03`** — cần thiết để hiện
-  thực Quyết định #3 (refresh token rotation) và #6.4 (reset scoped theo audience/shop). Coi là chi
+  thực Quyết định #3 (refresh token rotation) và `03` §6.4 (reset scoped theo audience/shop). Coi là chi
   tiết triển khai của các quyết định đã chốt, không phải entity nghiệp vụ mới cần duyệt riêng — xem
-  `docs/tasks/IDENTITY-001/contract-diff.md` mục "Giả định tôi đã tự đặt" #5.
+  `Docs/tasks/IDENTITY-001/contract-diff.md` mục "Giả định tôi đã tự đặt" #5.
 - **Login bằng email/password tại shop chưa có `UserShop` → 401**, không tự tạo membership. 03 §3.3
   "mọi lần authenticate → upsert UserShop" chỉ áp dụng cho Social Login (chưa làm) — với email/
   password, không có `UserShop.PasswordHash` để so khớp nên không thể "login" vào một membership
@@ -133,7 +137,7 @@ middleware tiếp tục resolve sai tenant tới khi cache tự hết hạn (t�
 
 - `Vsite.Domain.Identity` không chạm EF Core/ASP.NET Core (enforce bởi
   `ArchitectureTests.LayeringTests`), và không phụ thuộc namespace module khác (enforce bởi
-  `ModuleBoundaryTests` theo `docs/architecture/dependency-map.json`).
+  `ModuleBoundaryTests` theo `Docs/architecture/dependency-map.json`).
 - Composite FK `(RoleId, RoleScope)` → `Role(Id, Scope)` nằm ở tầng DB (migration), không chỉ code —
   gán role sai scope (vd. gán `Owner` làm `User.RoleId`) không ghi được vào DB.
 

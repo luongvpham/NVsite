@@ -1,5 +1,8 @@
 # vsite — Thiết Kế Entity: Service (Phase 2)
 
+> **STATUS:** `SPEC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `—`
+> **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
+
 > **Tài liệu liên quan:** `01-project-ideal.md` (§2.1, §5.2) · `02-tech-stack-and-decision.md` (#33, #34, #38) · `04-listing-and-review-design.md` (§4 — `Listing.TargetPageId`) · `05-website-builder-and-product-design.md` (#54)
 >
 > **Phạm vi:** module `Service` — danh mục dịch vụ của shop, hiển thị trên **website riêng của shop**.
