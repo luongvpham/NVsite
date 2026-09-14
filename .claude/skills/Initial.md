@@ -137,7 +137,7 @@ Báo cáo cây thư mục đã tạo và kết quả test hook. **Chờ người
    - Một enum trả về **dạng string**
    - Lưu in-memory hoặc EF InMemory. **KHÔNG migration, KHÔNG database thật.**
 
-   ⚠️ **`Sample` phải bị xoá trước khi bắt đầu Bước 3 (`Identity`).** Ghi câu này vào `backend/CLAUDE.md` và tạo `docs/tasks/CLEANUP-SAMPLE.md`. Module mẫu sống sót vào production là cách quen thuộc để rác tồn tại ba năm.
+   ⚠️ **`Sample` phải bị xoá trước khi bắt đầu Bước 3 (`Identity`).** Ghi câu này vào `backend/CLAUDE.md` và tạo `Docs/tasks/CLEANUP-SAMPLE.md`. Module mẫu sống sót vào production là cách quen thuộc để rác tồn tại ba năm.
 
 3. **Quy ước #19 áp ngay từ `Sample`:** `JsonStringEnumConverter`, đủ `[ProducesResponseType]`, ProblemDetails có `error_code`, pagination một shape, nested REST.
 
@@ -151,7 +151,7 @@ Báo cáo cây thư mục đã tạo và kết quả test hook. **Chờ người
 
 6. **Export OpenAPI theo document module** ra file, theo lựa chọn ở §1.
 
-7. **`tools/contract-sync/`** — normalize, diff, phân loại `NEW_ENDPOINT` / `ADDITIVE` / `BREAKING` / `REMOVED` / `UNCHANGED`, sinh `docs/tasks/{ID}/contract-diff.md`.
+7. **`tools/contract-sync/`** — normalize, diff, phân loại `NEW_ENDPOINT` / `ADDITIVE` / `BREAKING` / `REMOVED` / `UNCHANGED`, sinh `Docs/tasks/{ID}/contract-diff.md`.
    Script **chỉ ghi `contracts/openapi/.staging/`**. Lệnh promote tách riêng, cập nhật `contracts/contract.lock` cùng lúc.
 
 8. **Chạy thử toàn bộ vòng sync** với `Sample`: export → staging → diff (lần đầu tất cả là `NEW_ENDPOINT`) → sinh `contract-diff.md`.
@@ -163,7 +163,7 @@ Báo cáo cây thư mục đã tạo và kết quả test hook. **Chờ người
 - [ ] `contracts/openapi/.staging/sample.v1.json` sinh ra được bằng một lệnh
 - [ ] `contract-diff.md` sinh ra được, phân loại đúng
 - [ ] `backend/CLAUDE.md` đã thay đoạn "⚠️ Chưa chốt" bằng hướng dẫn thật
-- [ ] `docs/tasks/CLEANUP-SAMPLE.md` đã tạo
+- [ ] `Docs/tasks/CLEANUP-SAMPLE.md` đã tạo
 
 ### 🛑 DỪNG LẠI — GATE 1
 
@@ -222,7 +222,7 @@ Sau khi duyệt: promote staging → `contracts/openapi/sample.v1.json`, ghi `co
 
 ### 🛑 DỪNG LẠI — GATE 2
 
-Sinh `docs/tasks/BOOTSTRAP-001/review.md`. Chạy subagent `change-reviewer`. Trình người duyệt.
+Sinh `Docs/tasks/BOOTSTRAP-001/review.md`. Chạy subagent `change-reviewer`. Trình người duyệt.
 
 ---
 

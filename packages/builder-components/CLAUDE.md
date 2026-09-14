@@ -1,5 +1,10 @@
 # builder-components — vsite
 
+> **Cần nền thiết kế?** `DesignIdeal/07-component-manifest-schema.md` là tài liệu của package này —
+> ⚠️ **đã code, có lệch có chủ đích**, đọc `Docs/tasks/BOOTSTRAP-002/changelog.md` kèm.
+> Quyết định `#N` → `DesignIdeal/DECISIONS.md` (#43, #59–#67 thuộc phạm vi này).
+> Trạng thái mọi tài liệu: `DesignIdeal/00-INDEX.md` §2.
+
 ## Invariant — vi phạm là bug, không phải lựa chọn phong cách
 
 1. KHÔNG sửa file trong `generated/`. Sửa `registry/*.manifest.ts` rồi chạy `pnpm gen:registry`. (#17)
@@ -20,7 +25,7 @@
 7. Preset ảnh (`ctx.resolveImage(imageId, preset)`) và profile sanitize
    (`sanitizeRichText(html, profile)`) trong component (`src/*/​*.tsx`) là **hardcode riêng biệt**
    với giá trị khai trong manifest tương ứng — codegen KHÔNG buộc hai nơi này khớp nhau (nợ kỹ
-   thuật đã biết, xem `docs/tasks/BOOTSTRAP-002/review.md`). Khi đổi preset/profile trong manifest,
+   thuật đã biết, xem `Docs/tasks/BOOTSTRAP-002/review.md`). Khi đổi preset/profile trong manifest,
    phải tự đổi cả trong component, không có gì báo lỗi nếu quên.
 8. KHÔNG import `resolveImage`/`resolveUrl` từ đâu khác ngoài `useRenderContext()` — không hardcode
    nối chuỗi URL ảnh hay `href`. (#11, #53)
@@ -35,7 +40,7 @@
   `builder-renderer` lại cần import component từ package này để render qua `registry-map.ts`. Nếu
   context sống ở `builder-renderer`, package này phải import ngược lại → vòng lặp thật, không phải
   giả định. `packages/builder-renderer/src/context.tsx` chỉ re-export lại để giữ đúng bề mặt API tài
-  liệu mô tả. Xem thêm `docs/tasks/BOOTSTRAP-002/review.md`.
+  liệu mô tả. Xem thêm `Docs/tasks/BOOTSTRAP-002/review.md`.
 - Zod (`generated/props-schemas.ts`) và JSON Schema (`generated/props-schemas.json`) sinh **độc lập
   trực tiếp** từ manifest trong `gen-registry.ts` — không convert từ cái này sang cái kia. (#60)
 - `props-schemas` (cả hai) chỉ validate **shape** — mọi prop optional ở tầng type-schema.

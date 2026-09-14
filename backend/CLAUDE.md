@@ -1,13 +1,29 @@
 # backend — vsite
 
-.NET 9, Modular Monolith, Clean Architecture + DDD Lite + CQRS. Chi tiết đầy đủ ở
-`DesignIdeal/02-tech-stack-and-decision.md` §1, §Quyết định #1, và **`DesignIdeal/architecture-guide.md`**
-(quy ước layout Domain/Application/Infrastructure chi tiết — feature folders, CQRS/MediatR, base
-entity, exception hierarchy — đọc trước khi thêm module/entity/use-case mới).
+.NET 9, Modular Monolith, Clean Architecture + DDD Lite + CQRS.
+
+**File này là nguồn sự thật cho layout backend vsite.** `DesignIdeal/architecture-guide.md` chỉ là
+tham chiếu ngoại lai (lấy từ dự án TPCS, còn nguyên placeholder `{Entity}`/`{Project}`) — dùng để
+tham khảo pattern chung khi ở đây không nói tới, và **khi hai bên khác nhau thì file này thắng**.
+
+### Tài liệu thiết kế cho phạm vi backend
+
+Chỉ đọc khi thật sự cần nền thiết kế. Trạng thái từng file (còn tin được không) ở
+`DesignIdeal/00-INDEX.md` §2 — **đọc dòng đó trước khi mở file**.
+
+| Cần gì | Đọc |
+|---|---|
+| Một quyết định `#N` | `DesignIdeal/DECISIONS.md` — đừng quét `02` |
+| `User` `ExternalLogin` `UserShop` `Role` `PendingRegistration` | `DesignIdeal/03-identity-entity-design.md` ⚠️ có lệch — đọc `Docs/tasks/IDENTITY-001/changelog.md` kèm |
+| `Shop` (đầy đủ) `ServiceCategory` `Listing` `Review` `Lead` | `DesignIdeal/04-listing-and-review-design.md` |
+| `Website` `Page` `PageDraft` `MediaAsset` `Product` | `DesignIdeal/05-website-builder-and-product-design.md` |
+| `Service` `ShopServiceGroup` | `DesignIdeal/06-service-design.md` |
+| Quy ước vận hành module đã code | `backend/docs/modules/{module}.md` |
 
 ## Cấu trúc thư mục — nguồn sự thật để biết tạo/tìm file ở đâu
 
-**ĐÚNG 4 project cho toàn hệ** (`architecture-guide.md` §1/§11). **Module là FOLDER + NAMESPACE**,
+**ĐÚNG 4 project cho toàn hệ** — `Vsite.Domain` / `Vsite.Application` / `Vsite.Infrastructure` /
+`Vsite.Api`, chốt tại lần gộp 8→4 ngày 2026-09-13. **Module là FOLDER + NAMESPACE**,
 không phải project riêng — xem mục "Ranh giới module" bên dưới.
 
 ```
@@ -73,7 +89,7 @@ GUID cố định phải tự expose constructor `public {Entity}(Guid id) : bas
 project riêng (sửa 2026-09-13 — trước đó mỗi module có 4 `.csproj`).
 
 - **Danh sách module + chiều phụ thuộc cho phép có đúng MỘT nguồn:**
-  `docs/architecture/dependency-map.json`. Thêm module mới mà quên khai ở đó → `ModuleBoundaryTests`
+  `Docs/architecture/dependency-map.json`. Thêm module mới mà quên khai ở đó → `ModuleBoundaryTests`
   FAIL. Không viết danh sách thứ hai ở bất kỳ đâu (#17, #24).
 - Namespace của module A chỉ được phụ thuộc namespace của module B nếu B nằm trong `A.dependsOn`.
 - Namespace dùng chung (`Common`, `Abstractions`, `Exceptions`, `Persistence`, `Tenancy`…) không bị
@@ -143,7 +159,7 @@ Bắt buộc có, không phải tuỳ chọn:
 
 ⚠️ **Môi trường không có Docker daemon** (nhiều dev/agent chạy nhiều máy, chỉ một máy cài Docker):
 KHÔNG bỏ qua Testcontainers test — viết test đầy đủ, xác nhận build/logic đúng bằng mắt, rồi ghi
-nợ lại vào `docs/DOCKER-TEST-DEBT.md` (quy ước dùng chung, đọc file đó trước khi ghi) để máy có
+nợ lại vào `Docs/DOCKER-TEST-DEBT.md` (quy ước dùng chung, đọc file đó trước khi ghi) để máy có
 Docker chạy xác nhận sau. Xoá đúng mục khỏi file đó khi đã chạy pass thật.
 
 ---
@@ -156,15 +172,24 @@ Docker chạy xác nhận sau. Xoá đúng mục khỏi file đó khi đã chạ
 4. Tuân thủ đủ quy ước #19
 5. Tuân thủ đủ 5 invariant #21
 6. Export runtime OpenAPI theo document module
-7. Chạy skill `contract-sync`, sinh `docs/tasks/{ID}/contract-diff.md`
+7. Chạy skill `contract-sync`, sinh `Docs/tasks/{ID}/contract-diff.md`
 8. **Dừng lại chờ Gate 1.** Chỉ viết `brief.md` sau khi contract được duyệt
+9. **Đồng bộ tài liệu — không có bước này thì task CHƯA XONG**, kể cả khi code chạy và test xanh:
+   - Viết `Docs/tasks/{ID}/changelog.md` — từng điểm thực thi lệch so với file `DesignIdeal/`
+     tương ứng, chia rõ **"lệch có chủ đích"** và **"chưa làm xong"**. Mẫu:
+     `Docs/tasks/IDENTITY-001/changelog.md`.
+   - Cập nhật dòng `> **STATUS:**` ở đầu file `DesignIdeal/` mà task này làm lệch — trỏ changelog,
+     ghi rõ mục nào **đừng tin nữa**. Banner đó là nguồn duy nhất; `00-INDEX.md` §2 sinh ra từ nó.
+   - Quyết định mới người duyệt chốt giữa chừng → **cấp số tại `DesignIdeal/DECISIONS.md` trước**,
+     rồi mới viết nội dung ở file chuyên đề.
+   - Nợ test cần Docker → ghi vào `Docs/DOCKER-TEST-DEBT.md`, đừng báo miệng qua chat.
 
 ## Thứ tự module thật (Phase 1)
 
-Sample module (throwaway, đã chứng minh pipeline Bước 1) đã bị xoá — xem `docs/tasks/CLEANUP-SAMPLE.md` cho lịch sử dọn dẹp.
+Sample module (throwaway, đã chứng minh pipeline Bước 1) đã bị xoá — xem `Docs/tasks/CLEANUP-SAMPLE.md` cho lịch sử dọn dẹp.
 
 `Identity` → `Shop` → `Marketplace`. Phase 2: `Media` → `Website` → `Catalog`.
-Danh sách đầy đủ + chiều phụ thuộc: `docs/architecture/dependency-map.json` (nguồn duy nhất).
+Danh sách đầy đủ + chiều phụ thuộc: `Docs/architecture/dependency-map.json` (nguồn duy nhất).
 
 | Module | Gồm | Tài liệu thiết kế |
 |---|---|---|

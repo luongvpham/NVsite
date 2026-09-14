@@ -1,5 +1,12 @@
 # vsite — Tech Stack & Quyết Định Đã Chốt
 
+> **STATUS:** `INCOMPLETE_DOC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `Không chứa #40–#67 — xem DECISIONS.md`
+> **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
+>
+> ⚠️ **File này KHÔNG chứa toàn bộ quyết định.** Ở đây có `#1–#39` và `#68`.
+> `#40–#58` nằm ở `05` §0, `#59–#67` nằm ở `07` §0.
+> **Tra quyết định luôn bắt đầu từ [`DECISIONS.md`](DECISIONS.md)**, đừng quét file này.
+
 > Tài liệu này ghi lại **những gì đã thống nhất**. Mọi thay đổi so với tài liệu này cần được ghi nhận lại tại đây.
 >
 > **Tài liệu liên quan:** `01-project-ideal.md` (ý tưởng & tính năng) · `03-identity-entity-design.md` (thiết kế entity Identity/Shop chi tiết — chuẩn cho Quyết định #29/#30/#31) · `04-listing-and-review-design.md` (Listing/Review/Lead — chuẩn cho Quyết định #35/#37/#38)
@@ -23,7 +30,7 @@
 
 > **Quy ước đánh số Phase:** "MVP" = **Phase 1** trong lộ trình ở `01-project-ideal.md` mục 8. Không dùng "MVP" như một mốc riêng nằm ngoài lộ trình — xem Quyết định #39.
 
-> **Module = folder + namespace, không phải project** (Quyết định #1, sửa 2026-09-13). Danh sách dưới đây phải khớp `docs/architecture/dependency-map.json` — file đó là nguồn sự thật cho `ModuleBoundaryTests`.
+> **Module = folder + namespace, không phải project** (Quyết định #1, sửa 2026-09-13). Danh sách dưới đây phải khớp `Docs/architecture/dependency-map.json` — file đó là nguồn sự thật cho `ModuleBoundaryTests`.
 
 | Module | Gồm | Phase |
 |---|---|---|
@@ -142,7 +149,7 @@ Shop Profile **không** dùng `builder-renderer`. Đây là chỗ AI agent dễ 
 
 **Chốt:** Modular Monolith với ranh giới module nghiêm ngặt.
 
-**Ràng buộc (sửa 2026-09-13):** Module là một **folder + namespace** `Vsite.{Domain|Application|Infrastructure|Api}.{Module}`, **không** phải project `.csproj` riêng. Backend có đúng **4 project cho toàn hệ** (`Vsite.Domain` / `Vsite.Application` / `Vsite.Infrastructure` / `Vsite.Api`), theo `architecture-guide.md` §1. Namespace của module A chỉ được phụ thuộc namespace của module B nếu B nằm trong `A.dependsOn` của `docs/architecture/dependency-map.json`.
+**Ràng buộc (sửa 2026-09-13):** Module là một **folder + namespace** `Vsite.{Domain|Application|Infrastructure|Api}.{Module}`, **không** phải project `.csproj` riêng. Backend có đúng **4 project cho toàn hệ** (`Vsite.Domain` / `Vsite.Application` / `Vsite.Infrastructure` / `Vsite.Api`), theo `architecture-guide.md` §1. Namespace của module A chỉ được phụ thuộc namespace của module B nếu B nằm trong `A.dependsOn` của `Docs/architecture/dependency-map.json`.
 
 **Enforce:** `backend/tests/ArchitectureTests/ModuleBoundaryTests.cs` đọc chính `dependency-map.json` làm nguồn sự thật duy nhất (Quyết định #17) — thêm module mà quên khai ở đó thì test FAIL. Đây là lớp chặn **test-time**, yếu hơn compile-time của phương án cũ; đổi lại ba thứ dưới đây. Chiều phụ thuộc giữa **tầng** (`Domain ← Application ← Infrastructure ← Api`) vẫn được enforce ở compile-time vì 4 tầng là 4 assembly.
 
@@ -531,11 +538,17 @@ PHASE 2 · INTEGRATE
 
 Vi phạm những điều dưới đây = lỗi bảo mật, không phải lỗi code style.
 
-1. Mọi entity tenant-scoped **phải** có `ShopId`
-2. Mọi query **phải** đi qua Global Query Filter theo `TenantContext`
-3. Child resource **phải** validate ownership **trong câu query** (`WHERE ParentId = ...`), KHÔNG load rồi check ở memory
-4. **Không bao giờ** nhận `ShopId` từ request body — chỉ lấy từ route hoặc `TenantContext`
-5. Quyền theo shop kiểm tra ở **Authorization Handler**, không tin claim trong token (token cũ vẫn hiệu lực sau khi revoke quyền cho tới khi hết TTL)
+Năm invariant dưới đây được trích dẫn ở nơi khác bằng ký hiệu `#21.1` … `#21.5` — giữ nguyên số thứ tự, không chèn thêm mục vào giữa.
+
+**#21.1** — Mọi entity tenant-scoped **phải** có `ShopId`
+
+**#21.2** — Mọi query **phải** đi qua Global Query Filter theo `TenantContext`
+
+**#21.3** — Child resource **phải** validate ownership **trong câu query** (`WHERE ParentId = ...`), KHÔNG load rồi check ở memory
+
+**#21.4** — **Không bao giờ** nhận `ShopId` từ request body — chỉ lấy từ route hoặc `TenantContext`
+
+**#21.5** — Quyền theo shop kiểm tra ở **Authorization Handler**, không tin claim trong token (token cũ vẫn hiệu lực sau khi revoke quyền cho tới khi hết TTL)
 
 ---
 
@@ -923,7 +936,9 @@ Shop.ExternalUrl string?   -- NOT NULL khi Kind = ExternalOnly
 
 **Bối cảnh:** bốn tài liệu được viết ở các thời điểm khác nhau; một số mục của tài liệu sau sửa ngầm tài liệu trước mà không xoá bản cũ. Quyết định này đóng toàn bộ số đó lại, để AI agent không gặp hai câu trả lời khác nhau cho cùng một câu hỏi.
 
-**(1) "MVP" = "Phase 1".** Lộ trình ở `01-project-ideal.md` mục 8 là nguồn sự thật duy nhất cho việc *khi nào làm gì*. Mọi bảng tính năng phải ghi Phase khớp với lộ trình đó:
+Năm mục dưới đây được trích dẫn ở nơi khác bằng ký hiệu `#39.1` … `#39.5` — giữ nguyên số thứ tự, không chèn thêm mục vào giữa.
+
+**#39.1 — "MVP" = "Phase 1".** Lộ trình ở `01-project-ideal.md` mục 8 là nguồn sự thật duy nhất cho việc *khi nào làm gì*. Mọi bảng tính năng phải ghi Phase khớp với lộ trình đó:
 
 | Hạng mục | Trước đây ghi | Chốt |
 |---|---|---|
@@ -933,11 +948,11 @@ Shop.ExternalUrl string?   -- NOT NULL khi Kind = ExternalOnly
 | AI Chat Builder · tên miền riêng + SSL · booking | Phase 2 | **Phase 3** |
 | Marketplace template · nhiều chi nhánh · thanh toán/gói · phân quyền nhân viên | Phase 2 / Phase 3 | **Phase 4** |
 
-**(2) Tên app cũ bị xoá hẳn.** `customer-web` / `shop-admin` / `website-builder` chỉ được nhắc tới như *lịch sử* trong Quyết định #22. Mọi chỗ khác dùng `apps/web` và `apps/portal`.
+**#39.2 — Tên app cũ bị xoá hẳn.** `customer-web` / `shop-admin` / `website-builder` chỉ được nhắc tới như *lịch sử* trong Quyết định #22. Mọi chỗ khác dùng `apps/web` và `apps/portal`.
 
-**(3) URL trang hồ sơ shop là `vsite.vn/shop/{slug}`**, không phải `vsite.vn/{slug}` — chỗ đó thuộc về website shop (`ShopDomain.kind = Path`). Áp dụng cho cả `04-listing-and-review-design.md` §2.1 và §5.
+**#39.3 — URL trang hồ sơ shop là `vsite.vn/shop/{slug}`**, không phải `vsite.vn/{slug}` — chỗ đó thuộc về website shop (`ShopDomain.kind = Path`). Áp dụng cho cả `04-listing-and-review-design.md` §2.1 và §5.
 
-**(4) Quyền ghi `Review`:**
+**#39.4 — Quyền ghi `Review`:**
 
 | Hành động | Audience bắt buộc | Ghi chú |
 |---|---|---|
@@ -945,7 +960,7 @@ Shop.ExternalUrl string?   -- NOT NULL khi Kind = ExternalOnly
 | Shop phản hồi đánh giá | `vsite-portal` + role `Owner`/`Manager` tại shop đó | Phản hồi là thao tác quản trị, làm ở Portal — không phải ngoại lệ của quy tắc trên |
 | Shop báo cáo đánh giá vi phạm | `vsite-portal` | Không có quyền gỡ (`04` §6.6 lớp 3) |
 
-**(5) Một khái niệm — một chỗ định nghĩa.** Khi hai tài liệu cùng mô tả một entity, tài liệu **thiết kế chi tiết** thắng và tài liệu kia chỉ trỏ tới:
+**#39.5 — Một khái niệm, một chỗ định nghĩa.** Khi hai tài liệu cùng mô tả một entity, tài liệu **thiết kế chi tiết** thắng và tài liệu kia chỉ trỏ tới:
 
 | Entity | Nguồn sự thật |
 |---|---|

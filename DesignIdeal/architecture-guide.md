@@ -1,5 +1,13 @@
 # Backend Architecture Guide — Clean Architecture + CQRS (.NET)
 
+> **STATUS:** `EXTERNAL_REF` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `45 chỗ {Entity}, 10 chỗ {Project} chưa thay`
+> **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
+>
+> ⛔ **Đây không phải tài liệu của vsite.** Nó được lấy từ dự án TPCS và vẫn còn nguyên placeholder
+> chưa thay (45 chỗ `{Entity}`, 10 chỗ `{Project}`). Nguồn sự thật cho layout backend vsite là
+> [`../backend/CLAUDE.md`](../backend/CLAUDE.md). Chỉ dùng file này để tham khảo pattern chung khi
+> `backend/CLAUDE.md` không nói tới — và khi hai bên khác nhau, **`backend/CLAUDE.md` thắng**.
+
 > Audience: AI coding agents and engineers starting a **new** .NET backend project.
 > This guide distills a proven, production-tested layout (adapted from the TPCS backend in this
 > repo) into a project-agnostic reference. Replace `{Project}` with your solution prefix

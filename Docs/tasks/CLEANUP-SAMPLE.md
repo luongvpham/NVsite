@@ -17,7 +17,7 @@ production là cách quen thuộc để rác tồn tại ba năm (xem `backend/C
 - [x] Gỡ `AddOpenApi("sample")` khỏi `Program.cs`
 - [x] Xoá `contracts/openapi/sample.v1.json` + entry tương ứng trong `contracts/contract.lock`
 - [x] Xoá `contracts/openapi/.staging/sample.v1.json` nếu còn sót
-- [x] Xoá `docs/tasks/SAMPLE-001/`
+- [x] Xoá `Docs/tasks/SAMPLE-001/`
 - [x] Cập nhật `backend/CLAUDE.md` — xoá mục "Sample module (throwaway, có chủ ý)"
 - [x] `dotnet sln remove` 4 project Sample + 1 project test khỏi `backend/vsite.sln`
 

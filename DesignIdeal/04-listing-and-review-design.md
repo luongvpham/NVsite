@@ -1,5 +1,8 @@
 # vsite — Thiết Kế: Listing (tin đăng marketplace) & Review
 
+> **STATUS:** `SPEC` · **Tasks:** `SHOP-001` · **Changelog:** `—` · **Stale:** `—`
+> **Cửa vào:** [`00-INDEX.md`](00-INDEX.md) — SHOP-001 mới có `plan.md`, chưa chạm code.
+
 > Tài liệu này chốt mô hình `Shop.Kind` / `ServiceCategory` / `Listing` / `Lead` / `Review`, và mô hình doanh thu hai luồng chi phối chúng.
 >
 > **Tài liệu liên quan:** `01-project-ideal.md` (ý tưởng) · `02-tech-stack-and-decision.md` (quyết định kỹ thuật) · `03-identity-entity-design.md` (Identity/Shop membership)

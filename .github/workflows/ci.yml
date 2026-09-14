@@ -6,6 +6,21 @@ on:
     branches: [master]
 
 jobs:
+  docs-check:
+    name: Docs check
+    # ubuntu cố ý — filesystem phân biệt hoa thường. Máy dev Windows/NTFS không phân biệt,
+    # nên `docs/tasks/...` viết sai hoa vẫn resolve được ở local và chỉ vỡ ở đây.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Banner STATUS, tham chiếu quyết định, changelog theo task, đường dẫn
+        run: node tools/docs/check-docs.mjs
+      - name: 00-INDEX §2 khớp banner (sinh lại rồi so)
+        run: node tools/docs/gen-doc-index.mjs --check
+
   architecture-tests:
     name: Architecture tests
     runs-on: ubuntu-latest

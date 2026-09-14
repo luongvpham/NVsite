@@ -24,6 +24,10 @@ public static class AuthenticationSetup
             .Configure<IOptions<JwtOptions>>((bearerOptions, jwtOptionsAccessor) =>
             {
                 var jwtOptions = jwtOptionsAccessor.Value;
+                // Không cho JwtSecurityTokenHandler tự đổi tên claim (vd "sub" -> ClaimTypes.NameIdentifier)
+                // — CurrentUserContext/ShopMembershipValidationMiddleware tra bằng đúng tên claim gốc
+                // trong token ("sub", "aud").
+                bearerOptions.MapInboundClaims = false;
                 bearerOptions.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,

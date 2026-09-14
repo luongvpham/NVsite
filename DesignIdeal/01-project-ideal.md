@@ -1,5 +1,8 @@
 # vsite — Ý Tưởng Dự Án
 
+> **STATUS:** `STABLE` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `—`
+> **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
+
 > Nền tảng tìm kiếm dịch vụ địa phương theo vị trí, kèm công cụ giúp chủ shop tự tạo website riêng bằng kéo-thả và AI Chat.
 >
 > **Tài liệu liên quan:** `02-tech-stack-and-decision.md` (quyết định kỹ thuật) · `03-identity-entity-design.md` (Identity) · `04-listing-and-review-design.md` (tin đăng & đánh giá)

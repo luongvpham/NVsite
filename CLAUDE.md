@@ -2,49 +2,27 @@
 
 Nền tảng SaaS Việt Nam kết hợp **danh bạ dịch vụ địa phương** (tìm kiếm theo bản đồ, shop tự nguyện đăng tin) và **trình dựng website** cho shop nhỏ (spa, salon, phòng khám).
 
-vsite **không xử lý giao dịch**. Đây là kênh khám phá và dẫn khách. Hai luồng doanh thu độc lập: phí duy trì website, và phí đăng tin/quảng cáo.
-
-**⚠️ Trước khi báo một task backend là "xong":** kiểm tra `docs/DOCKER-TEST-DEBT.md`. Nếu môi
-trường hiện tại không có Docker daemon, test cần Testcontainers/Postgres/Redis thật KHÔNG được coi
-là "bỏ qua" — ghi lại đúng quy ước trong file đó để máy có Docker chạy tiếp, đừng chỉ báo miệng qua
-chat. Nếu đang ở máy CÓ Docker, đọc file đó trước — có thể đang có nợ test từ session khác chờ bạn
-chạy giúp.
+vsite **không xử lý giao dịch** — đây là kênh khám phá và dẫn khách. Hai luồng doanh thu độc lập: phí duy trì website, và phí đăng tin/quảng cáo.
 
 ---
 
-## Đọc tài liệu ở đâu
+## Cần nền thiết kế thì đọc ở đâu
 
-Toàn bộ thiết kế nằm trong `DesignIdeal/`. **Đừng đoán — tra bảng này rồi đọc đúng file.**
+**Cần** (hình dạng API, tên field, ngữ nghĩa nullable, ranh giới module, một quyết định `#N`):
+→ đọc [`DesignIdeal/00-INDEX.md`](DesignIdeal/00-INDEX.md) **trước**. Nó có bảng tra, và §2 nói file nào còn tin được.
 
-| Câu hỏi thuộc về | Đọc |
-|---|---|
-| Sản phẩm, tính năng, lộ trình Phase | `DesignIdeal/01-project-ideal.md` |
-| **Mọi quyết định kiến trúc (#1–#68)**, tech stack, ràng buộc dependency | `DesignIdeal/02-tech-stack-and-decision.md` |
-| `User`, `ExternalLogin`, `UserShop`, `Role`, `PendingRegistration` | `DesignIdeal/03-identity-entity-design.md` |
-| `Shop` (đầy đủ), `ServiceCategory`, `Listing`, `Review`, `Lead` | `DesignIdeal/04-listing-and-review-design.md` |
-| Website builder, `Page`, Component Tree, `MediaAsset`, `Product` | `DesignIdeal/05-website-builder-and-product-design.md` |
-| `Service`, `ShopServiceGroup` | `DesignIdeal/06-service-design.md` |
-| Component manifest schema, codegen registry | `DesignIdeal/07-component-manifest-schema.md` |
-| **Quy trình làm việc, contract, cổng duyệt** | `DesignIdeal/ai-agent-development-workflow.md` |
-| **Layout code backend** (Domain/Application/Infrastructure, CQRS, base entity, exception hierarchy) — đọc trước khi thêm module/entity/use-case mới | `DesignIdeal/architecture-guide.md` + `backend/CLAUDE.md` |
+**KHÔNG mở thẳng `DesignIdeal/0[1-7]*.md`.** Chúng nặng 23–75 KB và nhiều chỗ đã lệch code — mở nhầm `02` là mất ~26k token. Tra quyết định `#N` thì vào [`DesignIdeal/DECISIONS.md`](DesignIdeal/DECISIONS.md), đừng quét `02`.
 
-**Khi hai tài liệu mô tả cùng một entity, tài liệu thiết kế chi tiết thắng** (Quyết định #39.5). `02` là nguồn sự thật cho quyết định kiến trúc; `03`–`07` là nguồn sự thật cho entity tương ứng.
+**Không cần** (sửa CSS, đổi text, refactor trong một hàm, fix lỗi có stack trace rõ):
+→ **không đọc gì cả.** Vào thẳng code.
 
-**Nhưng tài liệu `DesignIdeal/` mô tả Ý ĐỊNH lúc thiết kế, không phải bản đã chạy được.** Sau khi một
-task hoàn thành, thực thi thật có thể lệch so với đúng file đã đọc ở trên — vì lý do kỹ thuật phát
-sinh lúc code mà lúc viết tài liệu chưa thấy được. Trước khi dựa vào một file `DesignIdeal/*.md` để
-sửa/mở rộng code đã có, **kiểm tra `docs/tasks/<TASK-ID>/changelog.md` có tồn tại không** (tên
-`TASK-ID` tra ở đầu file tài liệu tương ứng, nếu có dòng "⚠️ Đã hiện thực hoá") — file đó liệt kê
-từng điểm lệch với nguyên nhân, chia rõ "lệch có chủ đích, giữ nguyên" và "chưa làm xong, còn nợ".
-Đừng "sửa lại cho đúng tài liệu" một chỗ mà changelog đã ghi là lệch có chủ đích.
+`CLAUDE.md` của từng thư mục (`backend/`, `apps/*/`, `packages/*/`) trỏ tiếp tới đúng tài liệu của phạm vi đó — chúng tự nạp khi bạn chạm file trong thư mục, không cần tìm.
 
 ---
 
 ## Quy trình
 
-Chi tiết ở `DesignIdeal/ai-agent-development-workflow.md`. Tóm tắt:
-
-**Tuần tự BE → sync contract → FE.** Không chạy song song.
+Chi tiết ở `DesignIdeal/ai-agent-development-workflow.md`. **Tuần tự BE → sync contract → FE.** Không chạy song song.
 
 | Lane | Khi nào | Cổng |
 |---|---|---|
@@ -53,6 +31,10 @@ Chi tiết ở `DesignIdeal/ai-agent-development-workflow.md`. Tóm tắt:
 | **C — Tuần tự đầy đủ** | Module mới, màn hình lớn, chạm nhiều module | Gate 1 + Gate 2, có `brief.md` |
 
 **Chọn nhầm lane thì dừng và báo**, không âm thầm đi tiếp.
+
+**Task chạm code chưa có `Docs/tasks/{ID}/changelog.md` là task CHƯA XONG** — kể cả khi code chạy và test xanh. Xem Definition of Done ở `backend/CLAUDE.md`.
+
+**⚠️ Trước khi báo task backend "xong":** đọc `Docs/DOCKER-TEST-DEBT.md`. Không có Docker daemon thì test cần Testcontainers **không** được coi là "bỏ qua" — ghi vào file đó theo đúng quy ước. Máy CÓ Docker thì đọc file đó trước, có thể đang có nợ chờ bạn chạy giúp.
 
 ---
 
@@ -68,7 +50,7 @@ Chi tiết ở `DesignIdeal/ai-agent-development-workflow.md`. Tóm tắt:
 
 1. **Không bao giờ ghi thẳng vào `contracts/openapi/*.json`.** Script sync chỉ ghi `contracts/openapi/.staging/`. Promote là hành động riêng, sau khi người duyệt.
 2. **Không bao giờ overwrite contract bằng runtime swagger.** Swagger *đề xuất*, người *duyệt*, contract *chốt*.
-3. **BREAKING mặc định là bug implementation**, không phải lý do tạo `v2`.
+3. **BREAKING: chưa deploy production thì cứ sửa** — sửa BE, chạy lại `pnpm gen:api`, sửa lỗi compile FE. Không tạo `v2`. **Từ lần deploy production đầu tiên**, luật đảo lại: BREAKING mặc định là bug implementation. Khung cảnh báo đầy đủ ở `DesignIdeal/ai-agent-development-workflow.md` §6.
 4. **Contract sai hoặc thiếu → DỪNG và báo.** Không tự sửa, không làm tạm rồi sửa sau.
 5. **File generated không sửa tay**: `packages/api-sdk/src/generated/**`, `packages/builder-components/generated/**`.
 
@@ -93,27 +75,10 @@ Nguyên tắc nền: **codegen > skill > CLAUDE.md > hy vọng agent nhớ** (#1
 
 | Cặp khái niệm | Khác nhau ở đâu |
 |---|---|
-| **Shop Profile** (`vsite.vn/shop/{slug}`) vs **Shop Site** (`spa-abc.com`, `{slug}.vsite.vn`) | Profile do vsite render bằng mẫu thống nhất, **có hiển thị `Review`**. Site là output của `builder-renderer`, shop kiểm soát nội dung, **tuyệt đối không hiển thị `Review`**. Cả hai đều nằm trong `apps/web`. Shop Profile **không** dùng `builder-renderer` |
-| **`ServiceCategory`** vs **`ShopProductCategory`** | Cái đầu là taxonomy toàn cục do vsite quản trị, dùng cho tìm kiếm marketplace, shop chỉ được **chọn** node lá. Cái sau là cây do shop tự vẽ, chỉ dùng để điều hướng trên website riêng |
-| **`Listing`** vs **`Service`** | `Listing` là tin đăng marketplace (Phase 1). `Service` là dịch vụ hiển thị trên website shop (Phase 2). **Không auto-map giữa hai cái** (#38) |
-| **`Review`** vs **Testimonials** | `Review` là đánh giá thật của khách, neo vào `Listing`. Testimonials là nội dung shop tự nhập trong builder. Không trộn |
-
----
-
-## Anti-pattern cấm kế thừa từ VSite .NET Framework 4.8 (#36)
-
-Hệ cũ được dùng làm tham chiếu. Đọc code cũ để hiểu nghiệp vụ thì được; **sao chép những pattern dưới đây thì không.**
-
-| Cấm | Thay bằng |
-|---|---|
-| Một cột JSON `SiteConfig` chứa category + attribute + menu + home + contact | Tách bảng + `RowVersion`. Component Tree vẫn là JSON nhưng **per-page, có version** |
-| `CategoryID` kiểu int không FK, match bằng giá trị | UUID + FK thật, composite FK khi cần kiểm ownership |
-| Bitmask `Int64` cho tags/promotions | Bảng nối hoặc `text[]` + GIN index |
-| Cache toàn bộ dữ liệu tenant trong memory rồi filter bằng LINQ | Elasticsearch (#26) |
-| DTO kiểu `{ object Item; object Item2; }` | DTO có kiểu rõ ràng từng trang; SEO là field `seo` lồng bên trong |
-| Không validate server-side khi lưu dữ liệu động | FluentValidation theo schema (#19) |
-| Tham số chết trong chữ ký controller | Dọn ngay khi phát hiện — agent sẽ giả định tham số có tác dụng và viết code dựa trên đó |
-| Một action gánh nhiều nhánh rẽ theo enum | Mỗi loại trang một route/handler riêng |
+| **Shop Profile** (`vsite.vn/shop/{slug}`) vs **Shop Site** (`spa-abc.com`, `{slug}.vsite.vn`) | Profile do vsite render bằng mẫu thống nhất, **có `Review`**. Site là output của `builder-renderer`, shop kiểm soát nội dung, **tuyệt đối không có `Review`**. Cả hai ở trong `apps/web`; Profile **không** dùng `builder-renderer` |
+| **`ServiceCategory`** vs **`ShopProductCategory`** | Taxonomy toàn cục do vsite quản trị, dùng cho tìm kiếm marketplace, shop chỉ được **chọn** node lá — vs — cây do shop tự vẽ, chỉ để điều hướng trên website riêng |
+| **`Listing`** vs **`Service`** | Tin đăng marketplace (Phase 1) — vs — dịch vụ trên website shop (Phase 2). **Không auto-map** (#38) |
+| **`Review`** vs **Testimonials** | Đánh giá thật của khách, neo vào `Listing` — vs — nội dung shop tự nhập trong builder. Không trộn |
 
 ---
 
@@ -121,4 +86,4 @@ Hệ cũ được dùng làm tham chiếu. Đọc code cũ để hiểu nghiệp
 
 **Hỏi, đừng đoán.** Đặc biệt với: hình dạng API, tên field, ngữ nghĩa nullable, ranh giới module, và bất cứ thứ gì chạm tới tenant isolation.
 
-Nếu phải tự quyết một điều gì đó không hỏi được, **ghi lại nó vào mục "Giả định tôi đã tự đặt"** trong báo cáo cuối. Thứ tự quyết mà không nghĩ đến việc hỏi mới là chỗ hay sai.
+Nếu phải tự quyết một điều không hỏi được, **ghi vào mục "Giả định tôi đã tự đặt"** trong báo cáo cuối. Thứ tự quyết mà không nghĩ đến việc hỏi mới là chỗ hay sai.

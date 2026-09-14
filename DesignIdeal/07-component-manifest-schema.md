@@ -1,5 +1,11 @@
 # vsite — Component Manifest Schema & Codegen
 
+> **STATUS:** `IMPLEMENTED` · **Tasks:** `BOOTSTRAP-002` · **Changelog:** `Docs/tasks/BOOTSTRAP-002/changelog.md` · **Stale:** `§7.2 nhãn "#67 cần xác nhận" (đã chốt) · §3 vị trí context · §9 route dev harness`
+> **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
+>
+> 📌 **§0 là nơi định nghĩa Quyết định `#59–#67`.** Câu "chép sang `02`" trong §0 đã lỗi thời — cố
+> tình không chép, xem [`DECISIONS.md`](DECISIONS.md).
+
 > **Tài liệu liên quan:** `02-tech-stack-and-decision.md` (Quyết định #11, #12, #14, #16, **#17**, #19, #23) · `05-website-builder-and-product-design.md` (§6 Component Tree, §9.3 Preset, §11 Operations Engine, #43, #46, #53) · `06-service-design.md` (§7)
 >
 > **Phạm vi:** định nghĩa **shape của một component manifest**, meta-schema validate nó, tập artifact codegen sinh ra, và cơ chế enforce additive-only bằng máy. Đây là hiện thực hoá cụ thể của Quyết định #17.
@@ -10,11 +16,11 @@
 >
 > **⚠️ Đã hiện thực hoá (Bước 2, BOOTSTRAP-002).** Bản triển khai thật lệch với vài chỗ tài liệu này
 > mô tả — đọc **trước khi dựa vào tài liệu này** để sửa/mở rộng registry:
-> - `docs/tasks/BOOTSTRAP-002/changelog.md` — từng điểm lệch so với đúng tài liệu này, kèm nguyên
+> - `Docs/tasks/BOOTSTRAP-002/changelog.md` — từng điểm lệch so với đúng tài liệu này, kèm nguyên
 >   nhân; chia rõ "lệch có chủ đích, giữ nguyên" và "chưa làm xong, còn nợ". Quan trọng nhất: vị trí
 >   thật của `RenderContextValue` (§3 vẽ sai so với bản chạy được — xem lệch #1) và route dev harness
 >   thật là `/dev-registry`, không phải `/_dev/registry` (lệch #2).
-> - `docs/tasks/BOOTSTRAP-002/review.md` — đánh giá Gate 2 độc lập (change-reviewer), Warning/nợ kỹ
+> - `Docs/tasks/BOOTSTRAP-002/review.md` — đánh giá Gate 2 độc lập (change-reviewer), Warning/nợ kỹ
 >   thuật chi tiết hơn changelog.
 > - `packages/builder-components/CLAUDE.md` và `packages/builder-renderer/CLAUDE.md` — invariant thật
 >   đang được enforce trong code (lint, `check-additive.ts`), nguồn sự thật gần code hơn tài liệu này.
@@ -330,7 +336,13 @@ resolveImage: (id, preset) => `/_dev/placeholder/${preset}.svg`
 
 Chữ ký phải đúng ngay từ Bước 2 — đó là toàn bộ lý do stub tồn tại.
 
-### 7.2 `richText` — hai profile đề xuất (#67 ⚠️ cần xác nhận)
+### 7.2 `richText` — hai profile (#67 ✅ đã chốt, đã code)
+
+> ⚠️ **Nhãn "cần xác nhận" trong phần dưới đã lỗi thời.** #67 đã được chốt và hiện thực hoá ở
+> BOOTSTRAP-002: hai profile `inline` / `basic` nằm tại `config/sanitize-profiles.json`, sanitizer ở
+> `packages/builder-components/src/sanitize-html.ts`, test khẳng định ở `tests/config-files.test.ts`.
+> Nó **không còn chặn** `05` §25 #3, `06` §10 #4, hay Bước 5. Nợ duy nhất còn lại: thiếu test cho
+> scheme `data:` trong `href` (xem changelog BOOTSTRAP-002).
 
 ```json
 {

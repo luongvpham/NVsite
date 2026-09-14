@@ -1,3 +1,11 @@
+# vsite — Thứ tự triển khai
+
+> **STATUS:** `STABLE` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `—`
+> **Cửa vào:** [`00-INDEX.md`](00-INDEX.md) §3 — bảng tiến độ có trạng thái từng bước.
+>
+> Bước 1, 2, 3 đã xong. ⚠️ Dòng "chốt sanitize whitelist trước bước 5" ở Bước 5 dưới đây **đã được
+> xử lý ở Bước 2** (`config/sanitize-profiles.json`, Quyết định #67) — không còn là điều kiện chặn.
+
 1.  Framework FE + BE
       + Orval pipeline, contracts/openapi/, MSW, Zod dùng chung,
         config/reserved-routes.json, module boundary (không cross-reference)
