@@ -28,6 +28,6 @@
   "_notes": {
     "Marketplace": "Gộp Category + Listing + Review + Lead + Search (04). Một cụm aggregate không tách được: Review.ListingId/Lead.ListingId là FK thật, Review.HasContacted phải query Lead (04 §6.3), Listing.RatingAvg derived từ Review (04 §6.5). Search không có entity nào — mỗi module tự đẩy dữ liệu vào ES, không có module Search kéo ngược.",
     "Catalog": "Gộp Product (05) + Service (06). Bảng và enum tách hoàn toàn (Quyết định #40) — chỉ chung project. Sẽ phụ thuộc thêm Website khi thêm Service.DetailPageId → Page (06 §9 bước 4); lúc đó cập nhật dependsOn ở đây.",
-    "Identity": "Hiện đang tạm sở hữu bảng Shop (bản trích 03 §3.4). Khi làm module Shop phải chuyển giao — xem backend/docs/modules/identity.md."
+    "Identity": "Đã bàn giao xong bảng Shop cho module Shop (SHOP-001) — xem backend/docs/modules/identity.md và backend/docs/modules/shop.md."
   }
 }

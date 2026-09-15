@@ -23,6 +23,10 @@ public interface ITenantContext
 {
     TenantAudienceKind AudienceKind { get; }
 
-    /// <summary>Chỉ có giá trị khi <see cref="AudienceKind"/> = Shop.</summary>
+    /// <summary>Có giá trị khi <see cref="AudienceKind"/> = Shop (resolve từ Host). Từ SHOP-001,
+    /// cũng có giá trị khi Portal gọi endpoint có `{shopId}` trong route — set bởi
+    /// `Vsite.Api.Tenancy.ShopMembershipEndpointFilter` SAU KHI xác nhận membership, để Global
+    /// Query Filter hoạt động đúng (Quyết định #31). `AudienceKind` vẫn giữ nguyên `Portal` trong
+    /// trường hợp này — chỉ `ShopId` được set thêm, không đổi audience.</summary>
     Guid? ShopId { get; }
 }

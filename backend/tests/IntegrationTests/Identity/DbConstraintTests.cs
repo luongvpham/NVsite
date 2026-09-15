@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Vsite.Domain.Identity;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Domain.Identity.Enums;
+using Vsite.Domain.Shop.Entities;
+using Vsite.Domain.Shop.Enums;
 using Vsite.Infrastructure.Persistence;
 
 namespace Vsite.IntegrationTests;
@@ -104,20 +106,34 @@ public sealed class DbConstraintTests(PostgresFixture postgres)
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
     }
 
+    [Fact]
+    public async Task Check_constraint_rejects_ExternalOnly_shop_without_ExternalUrl()
+    {
+        await using var db = CreateContext();
+        await db.Database.MigrateAsync();
+
+        // 04 §2.1 — vi phạm CHECK ck_shop_external_url. SHOP-001 §4.5 yêu cầu chặn CẢ ở validator
+        // (422, xem CreateShopValidator/UpdateShopValidator) LẪN ở DB — đây là lớp phòng thủ thứ hai.
+        db.Shops.Add(NewShop(kind: ShopKind.ExternalOnly, externalUrl: null));
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
     private AppDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(postgres.ConnectionString).Options;
         return new AppDbContext(options, new TestTenantContext());
     }
 
-    private static Shop NewShop()
+    private static Shop NewShop(ShopKind kind = ShopKind.Hosted, string? externalUrl = null)
     {
         var id = Guid.NewGuid();
         return new Shop(id)
         {
             Name = "Test Shop",
             Slug = $"test-shop-{id:N}",
-            Kind = ShopKind.Hosted,
+            Kind = kind,
+            ExternalUrl = externalUrl,
         };
     }
 

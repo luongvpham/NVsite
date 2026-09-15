@@ -30,9 +30,7 @@ public sealed class UserShopConfiguration : IEntityTypeConfiguration<UserShop>
             .HasPrincipalKey(r => new { r.Id, r.Scope })
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(us => us.Shop)
-            .WithMany()
-            .HasForeignKey(us => us.ShopId)
-            .OnDelete(DeleteBehavior.Restrict);
+        // FK UserShop.ShopId → Shop khai ở ShopConfiguration (phía Shop, module Shop.dependsOn =
+        // ["Identity"]) — UserShop (Identity) không giữ navigation Shop, xem SHOP-001.
     }
 }

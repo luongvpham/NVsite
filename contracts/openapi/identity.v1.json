@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "Api | identity",
+    "title": "Vsite.Api | identity",
     "version": "1.0.0"
   },
   "paths": {
@@ -304,48 +304,6 @@
         }
       }
     },
-    "/auth/me/shops": {
-      "get": {
-        "tags": [
-          "Identity"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/MyShopDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/auth/me/change-password": {
       "post": {
         "tags": [
@@ -528,22 +486,6 @@
             "nullable": true
           },
           "audience": {
-            "type": "string"
-          }
-        }
-      },
-      "MyShopDto": {
-        "required": [
-          "shopId",
-          "roleCode"
-        ],
-        "type": "object",
-        "properties": {
-          "shopId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "roleCode": {
             "type": "string"
           }
         }

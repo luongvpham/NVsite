@@ -9,16 +9,17 @@ scope) đã xong. `IDENTITY-001` đã Gate 1 hai vòng (Round 1: 6 endpoint auth
 endpoint `/me`), kèm `Vsite.Api.Tenancy.TenantResolutionMiddleware` (resolve tenant từ Host — xem mục
 riêng bên dưới).
 
-**9 endpoint hiện có** (`Vsite.Api/Identity/IdentityEndpoints.cs`):
+**8 endpoint hiện có** (`Vsite.Api/Identity/IdentityEndpoints.cs`):
 - `/auth/{register,verify-email,login,refresh-token,forgot-password,reset-password}` —
   `AllowAnonymous` (đúng mục đích — không cần JWT hợp lệ trước để gọi các endpoint này). MỘT bộ
   route duy nhất cho mọi context (không có `{shopId}` trong route nào — xem "Tenant Resolution
   Middleware" bên dưới).
 - `GET /auth/me` — `RequireAuthorization()` (mọi audience).
-- `GET /auth/me/shops` — `RequireAuthorization(AuthPolicies.RequireGlobalScope)` — CHẶN token
-  `shop:{shopId}` (403 `INSUFFICIENT_SCOPE`), đây chính là endpoint minh hoạ/test cho Quyết định #32.
 - `POST /auth/me/change-password` — `RequireAuthorization()` (mọi audience — đổi đúng credential
   theo scope của chính token đó, xem `ChangePasswordHandler`).
+
+⚠️ **`GET /auth/me/shops` đã bị xoá ở SHOP-001** (thay bằng `GET /shops`, module `Shop`) — xem
+`Docs/tasks/SHOP-001/contract-diff.md` mục REMOVED và `changelog.md` mục A.
 
 **Test bắt buộc `03` §7.1** (token `shop:*` bị từ chối đúng chỗ) nằm ở
 `backend/tests/IntegrationTests/Identity/TokenScopeTests.cs` — đi qua `IdentityApiFactory`
@@ -141,20 +142,16 @@ middleware tiếp tục resolve sai tenant tới khi cache tự hết hạn (t�
 - Composite FK `(RoleId, RoleScope)` → `Role(Id, Scope)` nằm ở tầng DB (migration), không chỉ code —
   gán role sai scope (vd. gán `Owner` làm `User.RoleId`) không ghi được vào DB.
 
-## ⚠️ Nợ kỹ thuật đã biết — bảng `Shop` phải chuyển giao cho module `Shop`
+## ✅ Bảng `Shop` đã chuyển giao cho module `Shop` (SHOP-001)
 
-`Identity` đang **tạm sở hữu** bảng `Shop` (bản trích 03 §3.4). Khi bắt đầu module `Shop` đầy đủ
-(`04` §2.1), phải quyết ba việc **cùng lúc**, không làm tạm:
+Nợ kỹ thuật cũ ("Identity tạm sở hữu bảng Shop") đã đóng. Trạng thái hiện tại:
 
-| Việc | Hiện tại | Khi có module Shop |
-|---|---|---|
-| Entity + `DbSet<Shop>` | `Vsite.Domain/Identity/Entities/Shop.cs` | chuyển sang `Vsite.Domain/Shop/Entities/Shop.cs`; `AppDbContext.Shops` giữ nguyên (một DbContext) |
-| `IShopLookupService` impl | `Vsite.Infrastructure/Identity/ShopLookupService.cs` | chuyển sang `Vsite.Infrastructure/Shop/`; interface chuyển sang `Vsite.Application/Shop/Interfaces/` |
-| FK `UserShop.ShopId → Shop` | EF navigation `UserShop.Shop` | vẫn được — cùng một `AppDbContext` nên FK xuyên module là quan hệ EF bình thường |
+| Việc | Vị trí sau SHOP-001 |
+|---|---|
+| Entity + `DbSet<Shop>` | `Vsite.Domain/Shop/Entities/Shop.cs`; `AppDbContext.Shops` giữ nguyên (một DbContext) |
+| `IShopLookupService` + impl | Interface `Vsite.Application/Shop/Interfaces/`, impl `Vsite.Infrastructure/Shop/` |
+| FK `UserShop.ShopId → Shop` | Khai ở `ShopConfiguration` (phía Shop, `Shop.dependsOn = ["Identity"]`) — `UserShop` (Identity) chỉ giữ `ShopId` dạng `Guid` thuần, KHÔNG có navigation `UserShop.Shop` |
 
-Một `AppDbContext` duy nhất khiến việc này **rẻ hơn nhiều** so với kiến trúc nhiều DbContext trước
-2026-09-13 — chỉ là đổi chỗ file + namespace, không phải raw SQL hay migration thủ công. Nhưng
-`dependency-map.json` khai `Identity.dependsOn = []`, nên sau khi chuyển, mọi tham chiếu từ
-`Vsite.*.Identity` tới `Vsite.*.Shop` sẽ bị `ModuleBoundaryTests` chặn — phải đảo lại thành
-`Shop.dependsOn = ["Identity"]` và cho `UserShop` (thuộc Identity) giữ `ShopId` dạng `Guid` thuần,
-bỏ navigation `UserShop.Shop`.
+Chi tiết đầy đủ (bao gồm entity `Shop` 04 §2.1, 4 endpoint `/shops`, cơ chế resolve `ShopId` cho
+Portal qua `ShopMembershipEndpointFilter`): xem `backend/docs/modules/shop.md` và
+`Docs/tasks/SHOP-001/changelog.md`.

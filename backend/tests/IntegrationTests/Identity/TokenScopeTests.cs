@@ -1,15 +1,14 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Vsite.Api.Identity;
 using Vsite.Application.Identity.Auth.Dtos;
 using Vsite.Application.Identity.Auth.Queries.GetMe;
-using Vsite.Application.Identity.Auth.Queries.ListMyShops;
 using Vsite.Domain.Identity.Entities;
-using Vsite.Domain.Identity.Enums;
+using Vsite.Domain.Shop.Entities;
+using Vsite.Domain.Shop.Enums;
 using Vsite.Infrastructure.Persistence;
 
 namespace Vsite.IntegrationTests;
@@ -19,8 +18,11 @@ namespace Vsite.IntegrationTests;
 /// identity yêu cầu authentication, một test khẳng định token `shop:{shopId}` có bị từ chối đúng
 /// như bảng năng lực Quyết định #32 hay không:
 ///   - `GET /auth/me`               → CHO PHÉP mọi audience.
-///   - `GET /auth/me/shops`         → CHỈ `vsite-main`/`vsite-portal` (RequireGlobalScope).
 ///   - `POST /auth/me/change-password` → CHO PHÉP mọi audience (đổi đúng password của scope đó).
+///
+/// `GET /auth/me/shops` đã bị xoá ở SHOP-001 (thay bằng `GET /shops`, xem
+/// `Docs/tasks/SHOP-001/contract-diff.md` mục 1) — test `RequireGlobalScope` cho vai trò này giờ
+/// nằm ở test của module Shop, không còn ở đây.
 ///
 /// Đi qua toàn bộ pipeline HTTP thật (`IdentityApiFactory`) — không gọi handler trực tiếp — vì
 /// đây là test cho chính middleware/policy, không phải cho business logic của handler.
@@ -81,26 +83,6 @@ public sealed class TokenScopeTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<MeDto>();
         Assert.StartsWith("shop:", body!.Audience);
-    }
-
-    [Fact]
-    public async Task ListMyShops_allows_main_token()
-    {
-        var response = await SendAsync(HttpMethod.Get, "/auth/me/shops", host: null, token: _mainToken);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        await response.Content.ReadFromJsonAsync<IReadOnlyList<MyShopDto>>();
-    }
-
-    [Fact]
-    public async Task ListMyShops_rejects_shop_token_with_insufficient_scope()
-    {
-        // Quyết định #32 — endpoint này CHỈ cho audience global. Token shop:* phải bị chặn ở
-        // RequireGlobalScope, dù đã xác thực hợp lệ và đúng domain của chính shop đó.
-        var response = await SendAsync(HttpMethod.Get, "/auth/me/shops", host: _shopHost, token: _shopToken);
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
-        Assert.Equal("INSUFFICIENT_SCOPE", problem!.Extensions["error_code"]!.ToString());
     }
 
     [Fact]

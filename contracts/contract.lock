@@ -1,8 +1,14 @@
 {
   "identity.v1.json": {
-    "sha256": "03dda7ed57ce7caf278141773312cce3909a8ef6de738c319cc18c1dea3effbb",
-    "approvedAt": "2026-09-13T08:35:09.050Z",
+    "sha256": "77e1e507ee9cb5674a060cfd1140099b117d6b3789f3ecdcc81e0f9d3b59c92c",
+    "approvedAt": "2026-09-14T09:01:23.470Z",
     "approvedBy": "human",
-    "taskId": "IDENTITY-001"
+    "taskId": "SHOP-001"
+  },
+  "shop.v1.json": {
+    "sha256": "dc4a539023d2eb6e918681a70e9c495ff2a2d9cf3884cdc066953e8ff29d44bc",
+    "approvedAt": "2026-09-14T09:01:23.479Z",
+    "approvedBy": "human",
+    "taskId": "SHOP-001"
   }
 }

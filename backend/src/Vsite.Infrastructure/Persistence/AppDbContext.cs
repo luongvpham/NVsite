@@ -5,6 +5,7 @@ using Vsite.Domain.Abstractions;
 using Vsite.Domain.Common;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Infrastructure.Persistence.Seed;
+using ShopEntity = Vsite.Domain.Shop.Entities.Shop;
 
 namespace Vsite.Infrastructure.Persistence;
 
@@ -29,10 +30,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<ExternalLogin> ExternalLogins => Set<ExternalLogin>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserShop> UserShops => Set<UserShop>();
-    public DbSet<Shop> Shops => Set<Shop>();
     public DbSet<PendingRegistration> PendingRegistrations => Set<PendingRegistration>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+
+    // ---- Shop ----
+    public DbSet<ShopEntity> Shops => Set<ShopEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

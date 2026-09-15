@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Vsite.Domain.Identity.Entities;
+using ShopEntity = Vsite.Domain.Shop.Entities.Shop;
 
 namespace Vsite.Application.Common.Interfaces;
 
@@ -19,10 +20,12 @@ public interface IAppDbContext
     DbSet<ExternalLogin> ExternalLogins { get; }
     DbSet<Role> Roles { get; }
     DbSet<UserShop> UserShops { get; }
-    DbSet<Shop> Shops { get; }
     DbSet<PendingRegistration> PendingRegistrations { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<PasswordResetToken> PasswordResetTokens { get; }
+
+    // ---- Shop ----
+    DbSet<ShopEntity> Shops { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

@@ -3,6 +3,7 @@ using Vsite.Api.Auth;
 using Vsite.Api.Identity;
 using Vsite.Api.ExceptionHandling;
 using Vsite.Api.OpenApi;
+using Vsite.Api.Shop;
 using Vsite.Api.Tenancy;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Domain.Abstractions;
@@ -22,6 +23,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 // ProblemDetailsSchemaTransformer bắt buộc cho MỌI document — error_code chỉ gắn lúc runtime qua
 // Extensions, reflection không tự thấy được (xem ghi chú trong file transformer).
 builder.Services.AddOpenApi("identity", options => options.AddSchemaTransformer<ProblemDetailsSchemaTransformer>());
+builder.Services.AddOpenApi("shop", options => options.AddSchemaTransformer<ProblemDetailsSchemaTransformer>());
 
 builder.Services.AddExceptionHandler<AppExceptionHandler>();
 builder.Services.AddExceptionHandler<UnauthorizedAccessExceptionHandler>();
@@ -86,6 +88,7 @@ app.UseAuthorization();
 app.MapOpenApi();
 
 app.MapIdentityEndpoints();
+app.MapShopEndpoints();
 
 app.Run();
 

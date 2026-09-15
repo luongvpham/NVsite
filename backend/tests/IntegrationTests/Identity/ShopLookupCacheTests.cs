@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Vsite.Application.Identity.Interfaces;
-using Vsite.Domain.Identity.Entities;
-using Vsite.Domain.Identity.Enums;
+using Vsite.Application.Shop.Interfaces;
+using Vsite.Domain.Shop.Entities;
+using Vsite.Domain.Shop.Enums;
 using Vsite.Infrastructure.Persistence;
 
 namespace Vsite.IntegrationTests;
