@@ -317,54 +317,6 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Vsite.Domain.Identity.Entities.Shop", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ExternalUrl")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Slug")
-                        .IsUnique();
-
-                    b.ToTable("Shop", (string)null);
-                });
-
             modelBuilder.Entity("Vsite.Domain.Identity.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -514,6 +466,57 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                     b.ToTable("UserShop", (string)null);
                 });
 
+            modelBuilder.Entity("Vsite.Domain.Shop.Entities.Shop", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExternalUrl")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Shop", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_shop_external_url", "\"Kind\" <> 'ExternalOnly' OR \"ExternalUrl\" IS NOT NULL");
+                        });
+                });
+
             modelBuilder.Entity("Vsite.Domain.Identity.Entities.ExternalLogin", b =>
                 {
                     b.HasOne("Vsite.Domain.Identity.Entities.User", "User")
@@ -555,7 +558,7 @@ namespace Vsite.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Vsite.Domain.Identity.Entities.UserShop", b =>
                 {
-                    b.HasOne("Vsite.Domain.Identity.Entities.Shop", "Shop")
+                    b.HasOne("Vsite.Domain.Shop.Entities.Shop", null)
                         .WithMany()
                         .HasForeignKey("ShopId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -573,8 +576,6 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("Id", "Scope")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("Shop");
 
                     b.Navigation("User");
                 });

@@ -1,4 +1,4 @@
-using Vsite.Application.Identity.Interfaces;
+using Vsite.Application.Shop.Interfaces;
 using Vsite.Domain.Abstractions;
 using Vsite.Domain.ReservedRoutes;
 

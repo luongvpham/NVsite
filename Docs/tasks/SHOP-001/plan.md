@@ -3,7 +3,9 @@
 > **Lane C** (module mới, chạm nhiều module, có FE) → Gate 1 + Gate 2, hai session tuần tự theo
 > `DesignIdeal/ai-agent-development-workflow.md` §5. **Không làm FE song song với BE.**
 >
-> Trạng thái: **plan, chưa thực thi.** Chưa có dòng code nào.
+> Trạng thái: **Gate 1 đã duyệt (2026-09-14), contract đã promote.** Xem `contract-diff.md` +
+> `changelog.md` + `brief.md`. Session FE (§5) CHƯA bắt đầu — mở ở session riêng, theo đúng "Không
+> làm FE song song với BE".
 
 ---
 

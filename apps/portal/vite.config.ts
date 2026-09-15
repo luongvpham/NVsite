@@ -47,6 +47,19 @@ export default defineConfig({
     tailwindcss(),
     devPlaceholderImagePlugin(),
   ],
+  server: {
+    // Portal phải phục vụ tại host nhãn `admin` — nếu không TenantResolutionMiddleware resolve
+    // audience thành `vsite-main` thay vì `vsite-portal` (Docs/tasks/SHOP-001/brief.md).
+    // Cần thêm `127.0.0.1  admin.vsite.local` vào hosts file trước khi `pnpm dev`.
+    host: 'admin.vsite.local',
+    proxy: {
+      // changeOrigin: false — giữ nguyên Host header gốc (admin.vsite.local) khi proxy tới BE,
+      // đúng cơ chế Host-based tenant resolve dùng chung toàn hệ. changeOrigin: true sẽ ghi đè
+      // Host thành target (localhost:5270) và làm audience sai.
+      '/auth': { target: 'http://localhost:5270', changeOrigin: false },
+      '/shops': { target: 'http://localhost:5270', changeOrigin: false },
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,

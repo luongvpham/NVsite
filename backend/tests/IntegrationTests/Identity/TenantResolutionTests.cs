@@ -3,8 +3,8 @@ using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Vsite.Api.Identity;
-using Vsite.Domain.Identity.Entities;
-using Vsite.Domain.Identity.Enums;
+using Vsite.Domain.Shop.Entities;
+using Vsite.Domain.Shop.Enums;
 using Vsite.Infrastructure.Persistence;
 
 namespace Vsite.IntegrationTests;

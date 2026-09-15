@@ -209,3 +209,4 @@ mở đầu bằng bảng phân biệt `Listing`/`Service`/`Product` trước kh
 | Module | File |
 |---|---|
 | Identity | `backend/docs/modules/identity.md` |
+| Shop | `backend/docs/modules/shop.md` |

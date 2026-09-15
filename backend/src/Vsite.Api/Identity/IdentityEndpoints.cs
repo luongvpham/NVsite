@@ -12,7 +12,6 @@ using Vsite.Application.Identity.Auth.Commands.ResetPassword;
 using Vsite.Application.Identity.Auth.Commands.VerifyEmail;
 using Vsite.Application.Identity.Auth.Dtos;
 using Vsite.Application.Identity.Auth.Queries.GetMe;
-using Vsite.Application.Identity.Auth.Queries.ListMyShops;
 using Vsite.Domain.Authorization;
 
 namespace Vsite.Api.Identity;
@@ -82,13 +81,6 @@ public static class IdentityEndpoints
             .RequireAuthorization()
             .Produces<MeDto>()
             .ProducesProblem(StatusCodes.Status401Unauthorized);
-
-        auth.MapGet("/me/shops", async (ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new ListMyShopsQuery(), ct)))
-            .RequireAuthorization(AuthPolicies.RequireGlobalScope)
-            .Produces<IReadOnlyList<MyShopDto>>()
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status403Forbidden);
 
         auth.MapPost("/me/change-password", async (ChangePasswordRequest body, ISender sender, CancellationToken ct) =>
         {

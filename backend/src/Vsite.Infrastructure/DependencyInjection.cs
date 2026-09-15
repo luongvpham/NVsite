@@ -9,9 +9,11 @@ using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Identity.Auth.Commands.Register;
 using Vsite.Application.Identity.Interfaces;
 using Vsite.Application.Identity.Options;
+using Vsite.Application.Shop.Interfaces;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Infrastructure.Identity;
 using Vsite.Infrastructure.Persistence;
+using Vsite.Infrastructure.Shop;
 
 namespace Vsite.Infrastructure;
 
@@ -40,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
         services.AddIdentityModule(configuration);
+        services.AddShopModule();
 
         return services;
     }
@@ -56,9 +59,16 @@ public static class DependencyInjection
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IEmailSender, LoggingEmailSender>();
-        services.AddScoped<IShopLookupService, ShopLookupService>();
         services.AddScoped<IUserShopMembershipService, UserShopMembershipService>();
         services.AddScoped<ILoginAttemptThrottle, LoginAttemptThrottle>();
+
+        return services;
+    }
+
+    // ---- Shop ----
+    private static IServiceCollection AddShopModule(this IServiceCollection services)
+    {
+        services.AddScoped<IShopLookupService, ShopLookupService>();
 
         return services;
     }

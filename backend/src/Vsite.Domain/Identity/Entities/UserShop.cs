@@ -37,5 +37,4 @@ public sealed class UserShop : ShopAuditableEntity
     public DateTimeOffset? LastActiveAt { get; set; }
 
     public User? User { get; init; }
-    public Shop? Shop { get; init; }
 }

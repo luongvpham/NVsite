@@ -43,7 +43,7 @@ Chi tiết và lý do vì sao không gộp về `02`: xem đầu [`DECISIONS.md`
 | `01-project-ideal.md` | ✅ Ổn định | — | — | — |
 | `02-tech-stack-and-decision.md` | ⚠️ Tài liệu thiếu phần | — | — | Không chứa #40–#67 — xem DECISIONS.md |
 | `03-identity-entity-design.md` | ⚠️ Đã code, có lệch có chủ đích | IDENTITY-001 | [`IDENTITY-001/changelog.md`](../Docs/tasks/IDENTITY-001/changelog.md) | §3.1/§3.3/§5 cột PasswordSalt · §3.3 câu upsert UserShop · §4 tên ràng buộc |
-| `04-listing-and-review-design.md` | 📐 Thiết kế, chưa code | SHOP-001 | — | — |
+| `04-listing-and-review-design.md` | ⚠️ Đã code, có lệch có chủ đích | SHOP-001 | [`SHOP-001/changelog.md`](../Docs/tasks/SHOP-001/changelog.md) | Chỉ §2.1/§2.2 (Shop) đã code — §3 trở đi (ServiceCategory/Listing/Review/Lead) vẫn là spec, chưa có dòng code nào |
 | `05-website-builder-and-product-design.md` | 📐 Thiết kế, chưa code | — | — | §0 câu "chép sang 02" đã lỗi thời |
 | `06-service-design.md` | 📐 Thiết kế, chưa code | — | — | — |
 | `07-component-manifest-schema.md` | ⚠️ Đã code, có lệch có chủ đích | BOOTSTRAP-002 | [`BOOTSTRAP-002/changelog.md`](../Docs/tasks/BOOTSTRAP-002/changelog.md) | §7.2 nhãn "#67 cần xác nhận" (đã chốt) · §3 vị trí context · §9 route dev harness |

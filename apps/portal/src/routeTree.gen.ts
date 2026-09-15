@@ -10,11 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as DevRegistryRouteImport } from './routes/dev-registry'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as AuthenticatedShopsIndexRouteImport } from './routes/_authenticated.shops.index'
+import { Route as AuthenticatedShopsShopIdRouteImport } from './routes/_authenticated.shops.$shopId'
+import { Route as AuthenticatedShopsNewRouteImport } from './routes/_authenticated.shops.new'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevRegistryRoute = DevRegistryRouteImport.update({
@@ -22,31 +32,99 @@ const DevRegistryRoute = DevRegistryRouteImport.update({
   path: '/dev-registry',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedShopsIndexRoute = AuthenticatedShopsIndexRouteImport.update({
+  id: '/shops/',
+  path: '/shops/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedShopsShopIdRoute =
+  AuthenticatedShopsShopIdRouteImport.update({
+    id: '/shops/$shopId',
+    path: '/shops/$shopId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedShopsNewRoute = AuthenticatedShopsNewRouteImport.update({
+  id: '/shops/new',
+  path: '/shops/new',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dev-registry': typeof DevRegistryRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/shops/$shopId': typeof AuthenticatedShopsShopIdRoute
+  '/shops/new': typeof AuthenticatedShopsNewRoute
+  '/shops/': typeof AuthenticatedShopsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dev-registry': typeof DevRegistryRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/shops/$shopId': typeof AuthenticatedShopsShopIdRoute
+  '/shops/new': typeof AuthenticatedShopsNewRoute
+  '/shops': typeof AuthenticatedShopsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/dev-registry': typeof DevRegistryRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/_authenticated/shops/$shopId': typeof AuthenticatedShopsShopIdRoute
+  '/_authenticated/shops/new': typeof AuthenticatedShopsNewRoute
+  '/_authenticated/shops/': typeof AuthenticatedShopsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dev-registry'
+  fullPaths:
+    | '/'
+    | '/dev-registry'
+    | '/login'
+    | '/register'
+    | '/shops/$shopId'
+    | '/shops/new'
+    | '/shops/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dev-registry'
-  id: '__root__' | '/' | '/dev-registry'
+  to:
+    | '/'
+    | '/dev-registry'
+    | '/login'
+    | '/register'
+    | '/shops/$shopId'
+    | '/shops/new'
+    | '/shops'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/dev-registry'
+    | '/login'
+    | '/register'
+    | '/_authenticated/shops/$shopId'
+    | '/_authenticated/shops/new'
+    | '/_authenticated/shops/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   DevRegistryRoute: typeof DevRegistryRoute
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +136,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dev-registry': {
       id: '/dev-registry'
       path: '/dev-registry'
@@ -65,12 +150,66 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevRegistryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/shops/': {
+      id: '/_authenticated/shops/'
+      path: '/shops'
+      fullPath: '/shops/'
+      preLoaderRoute: typeof AuthenticatedShopsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/shops/$shopId': {
+      id: '/_authenticated/shops/$shopId'
+      path: '/shops/$shopId'
+      fullPath: '/shops/$shopId'
+      preLoaderRoute: typeof AuthenticatedShopsShopIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/shops/new': {
+      id: '/_authenticated/shops/new'
+      path: '/shops/new'
+      fullPath: '/shops/new'
+      preLoaderRoute: typeof AuthenticatedShopsNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedShopsShopIdRoute: typeof AuthenticatedShopsShopIdRoute
+  AuthenticatedShopsNewRoute: typeof AuthenticatedShopsNewRoute
+  AuthenticatedShopsIndexRoute: typeof AuthenticatedShopsIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedShopsShopIdRoute: AuthenticatedShopsShopIdRoute,
+  AuthenticatedShopsNewRoute: AuthenticatedShopsNewRoute,
+  AuthenticatedShopsIndexRoute: AuthenticatedShopsIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   DevRegistryRoute: DevRegistryRoute,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

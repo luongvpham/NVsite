@@ -1,7 +1,8 @@
 # vsite — Thiết Kế: Listing (tin đăng marketplace) & Review
 
-> **STATUS:** `SPEC` · **Tasks:** `SHOP-001` · **Changelog:** `—` · **Stale:** `—`
-> **Cửa vào:** [`00-INDEX.md`](00-INDEX.md) — SHOP-001 mới có `plan.md`, chưa chạm code.
+> **STATUS:** `IMPLEMENTED` · **Tasks:** `SHOP-001` · **Changelog:** `Docs/tasks/SHOP-001/changelog.md` · **Stale:** `Chỉ §2.1/§2.2 (Shop) đã code — §3 trở đi (ServiceCategory/Listing/Review/Lead) vẫn là spec, chưa có dòng code nào`
+> **Cửa vào:** [`00-INDEX.md`](00-INDEX.md) — §2.1/§2.2 đã code ở SHOP-001, đọc changelog trước khi
+> dựa vào phần đó. Phần còn lại của file (§3+) vẫn thuần thiết kế.
 
 > Tài liệu này chốt mô hình `Shop.Kind` / `ServiceCategory` / `Listing` / `Lead` / `Review`, và mô hình doanh thu hai luồng chi phối chúng.
 >
