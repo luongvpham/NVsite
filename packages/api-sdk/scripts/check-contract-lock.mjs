@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Kiểm sha256 của contracts/openapi/*.json khớp contracts/contract.lock TRƯỚC khi chạy Orval.
- * Lệch → dừng (workflow §11). Không tự generate với contract chưa qua Gate 1.
+ * Lệch → dừng (workflow §6). Không tự generate với contract chưa qua Gate 1.
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';

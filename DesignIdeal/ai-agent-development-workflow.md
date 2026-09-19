@@ -55,6 +55,10 @@ integration (tắt MSW, API thật)
 change-reviewer (subagent read-only)
    ↓
 🧑 GATE 2 · duyệt merge → Merge
+   ↓
+session-retro (session riêng, SAU Gate 2)  → Docs/tasks/{ID}/session-retro.md
+   ⋮  (mỗi 3–5 task)
+meta-review  → Docs/process/improvement-proposals.md → 🧑 duyệt → sửa quy trình
 ```
 
 Cả hai session **đều mở tại root monorepo** — `contracts/`, `config/`, `packages/api-sdk` nằm ở root;
@@ -233,7 +237,7 @@ FE dùng **API model**, không mirror BE Domain Entity.
 
 ---
 
-## 9. Integration và Gate 2
+## 9. Integration, Gate 2, và bước học sau Gate 2
 
 **Integration.** Tắt MSW, chạy API thật. Đây mới là chỗ bắt lỗi ngữ nghĩa — drift check chỉ so hình
 dạng. BE trả đúng schema nhưng sai ownership scoping, sai ngữ nghĩa phân trang, sai dữ liệu thì vẫn
@@ -262,6 +266,37 @@ nguồn duy nhất cho danh sách kiểm.
 
 Có mục FAIL hoặc Critical chưa xử lý → không đưa lên Gate 2.
 
+### Sau Gate 2 — bước học
+
+`changelog.md` ghi code lệch **thiết kế**. Không có chỗ nào ghi quy trình lệch **thực tế** — retro là
+chỗ đó, và là dữ liệu cho §14 mục 6 (ngưỡng phân lane).
+
+```
+mỗi task  → session-retro   → Docs/tasks/{ID}/session-retro.md
+mỗi 3–5   → meta-review     → Docs/process/improvement-proposals.md → 🧑 duyệt → sửa quy trình
+```
+
+| Bước | Nguồn duy nhất | Ghi được vào |
+|---|---|---|
+| Viết retro | skill [`session-retro`](../.claude/skills/session-retro/SKILL.md) · template [`Docs/templates/session-retro.md`](../Docs/templates/session-retro.md) | `Docs/tasks/{ID}/session-retro.md` |
+| Tổng hợp | skill [`meta-review`](../.claude/skills/meta-review/SKILL.md) + agent read-only [`meta-reviewer`](../.claude/agents/meta-reviewer.md) | `Docs/process/improvement-proposals.md` |
+
+Ba ràng buộc, cả ba đều cố ý:
+
+1. **Retro viết SAU Gate 2, ở session riêng.** Bằng chứng đáng học nhất — `change-reviewer` bắt gì,
+   người duyệt bác gì — chỉ có sau Gate 2. Và cùng lý do nêu ở trên về code review: cùng một mạch suy
+   nghĩ đã sinh ra lỗi sẽ đọc lướt qua lỗi đó.
+2. **Retro không bắt buộc với mọi session.** Điều kiện kích hoạt ở §0 của template; lane A trơn tru
+   thì một dòng "không có ma sát" là đủ. Retro cho mỗi lần sửa CSS là thuế, không phải học.
+3. **`meta-reviewer` không có quyền ghi** — cùng khuôn với `change-reviewer`. Đề xuất quy trình mà
+   agent tự promote thì không còn cổng duyệt nào; swagger đề xuất, người duyệt, contract chốt (§5)
+   áp dụng nguyên vẹn ở đây.
+
+⚠️ **Vòng lặp phải khép.** `improvement-proposals.md` có bảng thường trực *"Đã promote — theo dõi hiệu
+quả"*: mỗi rule đã nhận đều có mốc rà lại và có thể bị **gỡ**. Kèm theo là **trần ngân sách tài liệu**
+ghi ở cuối file đó. Thiếu hai thứ này thì flow chỉ là máy sinh rule, và tài liệu phình đúng cái mà
+[`00-INDEX.md`](00-INDEX.md) sinh ra để chống.
+
 ---
 
 ## 10. Rules
@@ -280,6 +315,7 @@ Có mục FAIL hoặc Critical chưa xử lý → không đưa lên Gate 2.
 | 10 | **Tenant invariants (#21) là điều kiện merge**, không phải gợi ý |
 | 11 | **Chọn nhầm lane thì dừng và báo.** Lane A là mặc định |
 | 12 | **Task chạm code phải có `changelog.md`** và banner `STATUS` đã cập nhật |
+| 13 | **Đề xuất quy trình phải qua người duyệt.** `meta-reviewer` chỉ đọc; promote là hành động riêng, và mọi rule đã promote đều có mốc rà lại để còn gỡ được |
 
 ---
 
@@ -334,6 +370,9 @@ Quyết định #17 đặt cược. Đổi lại, Bước 2 **không** được 
 | Hook chặn ghi contract/generated | `.claude/hooks/guard-write.mjs` · `guard-bash.mjs`, khai ở `.claude/settings.json` |
 | Skill sync contract | `.claude/skills/contract-sync/SKILL.md` |
 | Agent review Gate 2 | `.claude/agents/change-reviewer.md` |
+| Skill viết retro sau Gate 2 | `.claude/skills/session-retro/SKILL.md` + `Docs/templates/session-retro.md` |
+| Skill + agent tổng hợp cải tiến | `.claude/skills/meta-review/SKILL.md` + `.claude/agents/meta-reviewer.md` |
+| Trần ngân sách tài liệu | `Docs/process/improvement-proposals.md` §Trần ngân sách |
 | Ranh giới module | `Docs/architecture/dependency-map.json` + `ModuleBoundaryTests` |
 | Additive-only cho registry | `packages/builder-components/registry.lock.json` + `scripts/check-additive.ts` |
 | Tài liệu không rot | `pnpm check:docs` · `pnpm gen:doc-index` (chi tiết ở `00-INDEX.md` §5) |
@@ -351,6 +390,6 @@ Nguyên tắc nền: **codegen > skill > CLAUDE.md > hy vọng agent nhớ** (#1
 | 3 | ~~Vị trí thư mục backend~~ | ✅ `backend/` |
 | 4 | ~~Bước 2 (manifest) trước Bước 3 (Identity)~~ | ✅ Cố ý — §12 |
 | 5 | Task ID convention khi một task chạm nhiều module | ⏳ |
-| 6 | Ngưỡng phân lane A/B/C — con số cụ thể hay để cảm tính | ⏳ Chạy 3–4 task rồi rút ra, đừng chốt sớm |
+| 6 | Ngưỡng phân lane A/B/C — con số cụ thể hay để cảm tính | ⏳ Chạy 3–4 task rồi rút ra, đừng chốt sớm. **Dữ liệu đến từ `session-retro.md` §2** — chốt ở kỳ `meta-review` đầu tiên có đủ retro |
 | 7 | Branch riêng mỗi task, hay commit thẳng vào nhánh dev | ⏳ |
 | 8 | **Mốc bật lại luật BREAKING** (§6) — gắn vào lần deploy production đầu, hay sớm hơn | ⚠️ Chốt trước khi có consumer ngoài đầu tiên |

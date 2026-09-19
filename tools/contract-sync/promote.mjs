@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Promote contract sau khi Gate 1 duyệt (workflow §9). Đây là HÀNH ĐỘNG RIÊNG,
+ * Promote contract sau khi Gate 1 duyệt (workflow §6). Đây là HÀNH ĐỘNG RIÊNG,
  * tách khỏi export/diff — chỉ chạy sau khi người đã đọc contract-diff.md và đồng ý.
  *
  * Copy contracts/openapi/.staging/{module}.v{n}.json → contracts/openapi/{module}.v{n}.json,
