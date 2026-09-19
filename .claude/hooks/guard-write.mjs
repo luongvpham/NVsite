@@ -2,7 +2,7 @@
 // PreToolUse hook — matcher: Write|Edit
 // Blocks direct writes to protected contract/generated files.
 // See CLAUDE.md "Contract — ba loại, đều phải người duyệt" and
-// DesignIdeal/ai-agent-development-workflow.md §16.
+// DesignIdeal/ai-agent-development-workflow.md §13.
 
 const PROTECTED = [
   // Committed OpenAPI contracts — only the promote script may write these.

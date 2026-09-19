@@ -1,0 +1,44 @@
+Cách agent sẻ hoạt động
+ai-agent-development-workflow.md
+==============
+## 2. Luồng (lane C đầy đủ; A/B là tập con)
+
+```text
+Business requirement
+   ↓
+BƯỚC 0 · phác nhu cầu dữ liệu        (10 phút, người viết)
+   ↓
+SESSION BE · implement → test → export runtime OpenAPI
+   ↓
+skill contract-sync → diff + phân loại → Docs/tasks/{ID}/contract-diff.md
+   ↓
+🧑 GATE 1 · đọc diff, 2 phút, ký      → promote staging + ghi contract.lock
+   ↓
+session BE viết brief.md
+   ↓
+SESSION FE · pnpm gen:api → UI với MSW mock
+   ↓
+integration (tắt MSW, API thật)
+   ↓
+change-reviewer (subagent read-only)
+   ↓
+🧑 GATE 2 · duyệt merge → Merge
+   ↓
+session-retro (session riêng, SAU Gate 2)  → Docs/tasks/{ID}/session-retro.md
+   ⋮  (mỗi 3–5 task)
+meta-review  → Docs/process/improvement-proposals.md → 🧑 duyệt → sửa quy trình
+==============
+
+
+--- self improvement ---
+Gate 2 → merge
+   ↓
+[bạn mở session mới] /session-retro     → Docs/tasks/{ID}/session-retro.md
+   ⋮  (tích đủ 3–5 task)
+[bạn mở session mới] /meta-review       → spawn meta-reviewer (read-only)
+   ↓                                      → Docs/process/improvement-proposals.md
+[bạn đọc, quyết]
+   ↓
+[session khác] sửa workflow/CLAUDE.md + ghi DECISIONS.md
+   ↓
+thêm dòng vào bảng "Đã promote — theo dõi hiệu quả"   ← chỗ hay quên nhất

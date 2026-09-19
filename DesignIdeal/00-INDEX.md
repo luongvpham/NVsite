@@ -23,6 +23,7 @@
 | `Service` `ShopServiceGroup` | `06-service-design.md` |
 | Manifest schema, prop `kind`, codegen artifact | `07-component-manifest-schema.md` |
 | Quy trình, lane, Gate, contract, `brief.md` | `ai-agent-development-workflow.md` |
+| Retro sau Gate 2, cải tiến quy trình, trần ngân sách tài liệu | `ai-agent-development-workflow.md` §9 → [`../Docs/process/improvement-proposals.md`](../Docs/process/improvement-proposals.md) |
 | Layout code backend (Domain/Application/Infrastructure, CQRS) | [`../backend/CLAUDE.md`](../backend/CLAUDE.md) ← **không** phải `architecture-guide.md` |
 | Thứ tự triển khai 11 bước | [`step.md`](step.md) |
 | Nợ test cần Docker | [`../Docs/DOCKER-TEST-DEBT.md`](../Docs/DOCKER-TEST-DEBT.md) |
@@ -118,9 +119,11 @@ lệch có chủ đích.**
 - **§1, §3, §4 viết tay** — không suy ra được từ filesystem, nên không sinh. Cập nhật khi đóng một
   bước hoặc trả xong một món nợ.
 - **Cấp số quyết định mới:** tại [`DECISIONS.md`](DECISIONS.md) trước, rồi mới viết nội dung.
-- **Thư mục task:** `Docs/tasks/<TASK-ID>/` — `brief.md` · `plan.md` · `contract-diff.md` · `changelog.md` · `review.md`.
+- **Thư mục task:** `Docs/tasks/<TASK-ID>/` — `brief.md` · `plan.md` · `contract-diff.md` · `changelog.md` · `review.md` · `session-retro.md`.
   Task đã qua Gate 1 (có `brief.md` hoặc `contract-diff.md`) **bắt buộc** có `changelog.md`; task
   mẫu/không chạm code thì đặt file `.no-changelog` ghi lý do ở dòng đầu.
+  `session-retro.md` viết **sau Gate 2**, và chỉ bắt buộc đầy đủ khi thoả điều kiện kích hoạt ở
+  `Docs/templates/session-retro.md` §0 — lane A trơn tru thì một dòng là đủ.
 - **Chữ hoa đường dẫn:** thư mục là **`Docs/`**, không phải `docs/`. Windows tha, CI Linux thì không.
 - **Ký hiệu:** dấu `#` kèm số **chỉ dành cho Quyết định**. Muốn trỏ một tiểu mục thì viết đủ dạng
   `03 §6.4` — đừng gắn `#` vào số tiết, nó đụng với số hiệu quyết định và `check:docs` báo lỗi.

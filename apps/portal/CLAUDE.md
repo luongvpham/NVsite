@@ -103,4 +103,4 @@ Import `config/reserved-routes.json` build-time. Nguồn duy nhất, không vi�
 
 ## Packages Phase 2 (chưa dùng ở Bước 1)
 
-`builder-core` (state + Operations Engine) và `ai-agent` (prompt, tool schema) **chỉ** dùng bởi `apps/portal`, không phải `apps/web`. Chưa tạo ở Bước 1 — xem `DesignIdeal/ai-agent-development-workflow.md` §15.
+`builder-core` (state + Operations Engine) và `ai-agent` (prompt, tool schema) **chỉ** dùng bởi `apps/portal`, không phải `apps/web`. Chưa tạo ở Bước 1 — xem `DesignIdeal/ai-agent-development-workflow.md` §11.

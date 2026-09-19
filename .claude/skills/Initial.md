@@ -78,7 +78,7 @@ Chỗ **duy nhất** có Zod schema thật sự dùng chung FE/BE là **Componen
 ### Làm gì
 
 1. **pnpm workspace + Turborepo.** Node và pnpm pin version qua `packageManager` + `.nvmrc`.
-2. **Cây thư mục** đúng như `DesignIdeal/ai-agent-development-workflow.md` §15:
+2. **Cây thư mục**:
    ```
    backend/  apps/{web,portal}/  packages/{ui,shared,theme-engine,api-sdk}/
    contracts/openapi/.staging/   config/   docs/{tasks,architecture}/
