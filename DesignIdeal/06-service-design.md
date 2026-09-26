@@ -74,7 +74,7 @@ Hai bảng. Hết.
 | `Name` | varchar(120) | "Chăm sóc da", "Massage", "Sửa chữa tại nhà" |
 | `Slug` | varchar(140) | UNIQUE `(ShopId, Slug)` |
 | `Description` | varchar(500)? | |
-| `ImageId` | uuid? FK → `media_assets` | |
+| `ImageId` | uuid? | Bản Library trong `media_assets`. FK ghép `(ImageId, ShopId) → media_assets (Id, ShopId)` (#76); phái sinh sinh sẵn (#73) |
 | `SortOrder` | int | |
 | `IsVisible` | bool | |
 | `CreatedAt` / `UpdatedAt` | | |
@@ -102,7 +102,7 @@ Hai bảng. Hết.
 | `PriceTo` | numeric(14,2)? | |
 | `PriceNote` | varchar(200)? | "Tuỳ tình trạng xe", "Liên hệ báo giá" |
 | `DurationMinutes` | int? | Chuẩn bị sẵn cho `Booking` (Phase 3) |
-| `ImageId` | uuid? FK → `media_assets` | Dùng thư viện chung, khác `Product` (#56) |
+| `ImageId` | uuid? | Bản Library trong `media_assets`, khác `Product` (#56). FK ghép `(ImageId, ShopId) → media_assets (Id, ShopId)` (#76) |
 | `DetailPageId` | uuid? FK → `pages` | **Tuỳ chọn** — xem §6 |
 | `Status` | enum | `Draft` · `Active` · `Hidden` — **enum riêng, không dùng chung `Product.Status`** (#40) |
 | `IsFeatured` | bool | Cho component `ServiceHighlight` |
@@ -114,7 +114,9 @@ Hai bảng. Hết.
 
 **`DurationMinutes` có mặt từ Phase 2 dù chưa dùng:** `Booking` (Phase 3) cần nó để tính khung giờ. Thêm một cột nullable bây giờ tốn 0 đồng; thêm sau là migration trên bảng đang chạy.
 
-**Ảnh dùng `media_assets`** (thư viện chung), không phải bảng riêng như `product_images`. Lý do khác biệt: mỗi shop chỉ có vài dịch vụ, ảnh dịch vụ hay được dùng lại làm banner/Hero, và không có nhu cầu upload hàng loạt.
+**Ảnh dùng `media_assets`** (thư viện chung), không phải đường dẫn riêng theo entity như ảnh sản phẩm (#79). Lý do khác biệt: mỗi shop chỉ có vài dịch vụ, ảnh dịch vụ hay được dùng lại làm banner/Hero, và không có nhu cầu upload hàng loạt.
+
+**Ảnh dịch vụ là ảnh dữ liệu nghiệp vụ (#73):** `ImageId` trỏ **bản Library**; lúc upload sinh sẵn bộ phái sinh cho mọi preset mà component bind `Service`/`ServiceGroup` dùng (ví dụ `800x600,cover` của `ServiceGrid`). Render qua binding lấy phái sinh đúng preset — không clone vào tree. Muốn dùng lại ảnh dịch vụ làm Hero thì chọn từ Library → clone như mọi ảnh Library khác (#71). Chi tiết `08` §3.6.
 
 ---
 

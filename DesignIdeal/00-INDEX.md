@@ -18,7 +18,8 @@
 | Tech stack, ràng buộc dependency | `02-tech-stack-and-decision.md` §1, §2, §4 |
 | `User` `ExternalLogin` `UserShop` `Role` `PendingRegistration` | `03-identity-entity-design.md` |
 | `Shop` (đầy đủ) `ServiceCategory` `Listing` `Review` `Lead` | `04-listing-and-review-design.md` |
-| Builder: `Website` `Page` `PageDraft` Component Tree `MediaAsset` | `05-website-builder-and-product-design.md` PHẦN I |
+| Builder: `Website` `Page` `PageDraft` Component Tree | `05-website-builder-and-product-design.md` PHẦN I |
+| `MediaAsset`, Media Library, pipeline ảnh, preset, `resolveImage()`, URL `/media/*`, ảnh `Listing`/`Product`/variant | `08-media-asset-design.md` |
 | `Product` `ShopProductCategory` `ShopAttribute` variant | `05-website-builder-and-product-design.md` PHẦN II |
 | `Service` `ShopServiceGroup` | `06-service-design.md` |
 | Manifest schema, prop `kind`, codegen artifact | `07-component-manifest-schema.md` |
@@ -28,7 +29,7 @@
 | Thứ tự triển khai 11 bước | [`step.md`](step.md) |
 | Nợ test cần Docker | [`../Docs/DOCKER-TEST-DEBT.md`](../Docs/DOCKER-TEST-DEBT.md) |
 
-**Quyết định `#N` nằm ở đâu:** `#1–#39` và `#68` → `02`. `#40–#58` → `05` §0. `#59–#67` → `07` §0.
+**Quyết định `#N` nằm ở đâu:** `#1–#39` và `#68` → `02`. `#40–#58` → `05` §0. `#59–#67` → `07` §0. `#69–#81` → `08` §0.
 Chi tiết và lý do vì sao không gộp về `02`: xem đầu [`DECISIONS.md`](DECISIONS.md).
 
 ---
@@ -42,12 +43,13 @@ Chi tiết và lý do vì sao không gộp về `02`: xem đầu [`DECISIONS.md`
 | File | Trạng thái | Task đã chạm | Changelog | Đừng tin ở |
 |---|---|---|---|---|
 | `01-project-ideal.md` | ✅ Ổn định | — | — | — |
-| `02-tech-stack-and-decision.md` | ⚠️ Tài liệu thiếu phần | — | — | Không chứa #40–#67 — xem DECISIONS.md |
+| `02-tech-stack-and-decision.md` | ⚠️ Tài liệu thiếu phần | — | — | Không chứa #40–#67 và #69–#81 — xem DECISIONS.md |
 | `03-identity-entity-design.md` | ⚠️ Đã code, có lệch có chủ đích | IDENTITY-001 | [`IDENTITY-001/changelog.md`](../Docs/tasks/IDENTITY-001/changelog.md) | §3.1/§3.3/§5 cột PasswordSalt · §3.3 câu upsert UserShop · §4 tên ràng buộc |
 | `04-listing-and-review-design.md` | ⚠️ Đã code, có lệch có chủ đích | SHOP-001 | [`SHOP-001/changelog.md`](../Docs/tasks/SHOP-001/changelog.md) | Chỉ §2.1/§2.2 (Shop) đã code — §3 trở đi (ServiceCategory/Listing/Review/Lead) vẫn là spec, chưa có dòng code nào |
-| `05-website-builder-and-product-design.md` | 📐 Thiết kế, chưa code | — | — | §0 câu "chép sang 02" đã lỗi thời |
+| `05-website-builder-and-product-design.md` | 📐 Thiết kế, chưa code | — | — | — |
 | `06-service-design.md` | 📐 Thiết kế, chưa code | — | — | — |
 | `07-component-manifest-schema.md` | ⚠️ Đã code, có lệch có chủ đích | BOOTSTRAP-002 | [`BOOTSTRAP-002/changelog.md`](../Docs/tasks/BOOTSTRAP-002/changelog.md) | §7.2 nhãn "#67 cần xác nhận" (đã chốt) · §3 vị trí context · §9 route dev harness |
+| `08-media-asset-design.md` | 📐 Thiết kế, chưa code | — | — | — |
 | `ai-agent-development-workflow.md` | ✅ Quy trình đang hiệu lực | — | — | — |
 | `architecture-guide.md` | ⛔ Tham chiếu ngoại lai | — | — | 45 chỗ {Entity}, 10 chỗ {Project} chưa thay |
 | `step.md` | ✅ Ổn định | — | — | — |
@@ -66,7 +68,7 @@ lệch có chủ đích.**
 | 1 | Framework FE + BE, Orval, contracts, reserved-routes, module boundary | ✅ BOOTSTRAP-001 |
 | 2 | Component Manifest + codegen + 5 component mẫu | ✅ BOOTSTRAP-002 |
 | 3 | Identity + Role + UserShop + Shop + PendingRegistration + token scope | ✅ IDENTITY-001 ⚠️ test tích hợp **chưa chạy thật** (cần Docker) |
-| 4 | `MediaAsset` + image proxy + preset whitelist | ⬜ kế tiếp |
+| 4 | `MediaAsset` + pipeline ảnh + Media Library + 9 preset + `/media/*` (`08`) | ⬜ kế tiếp |
 | 5 | `Website` → `Theme` → `Page` → `PageDraft` + Operations Engine | ⬜ |
 | 6 | `builder-renderer` | ⬜ |
 | 7 | `NavigationConfig` | ⬜ |
@@ -91,7 +93,7 @@ lệch có chủ đích.**
 | `02` §6 #8 | Mô hình giá hai luồng doanh thu | Trước khi bật thu phí |
 | `02` §6 #9 | Ngưỡng & quy trình kiểm duyệt listing | Trước launch |
 | `02` §6 #10 | SLA khiếu nại đánh giá — **rủi ro pháp lý** | Trước launch |
-| `07` §15 #2 | Preset ảnh: hiện 6, tài liệu tự ghi cần ~12 | Bước 4 |
+| `08` §10 #1–#3 | Giới hạn upload (dung lượng/pixel) · HEIC · tên field preset trên prop `binding` | Plan Bước 4 |
 | `05` §25 #4 | Cache/TTL cho `SitePublication` | Bước 8 |
 
 ### Nợ kỹ thuật đã ghi nhận

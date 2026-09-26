@@ -1,10 +1,10 @@
 # vsite — Tech Stack & Quyết Định Đã Chốt
 
-> **STATUS:** `INCOMPLETE_DOC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `Không chứa #40–#67 — xem DECISIONS.md`
+> **STATUS:** `INCOMPLETE_DOC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `Không chứa #40–#67 và #69–#81 — xem DECISIONS.md`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
 > ⚠️ **File này KHÔNG chứa toàn bộ quyết định.** Ở đây có `#1–#39` và `#68`.
-> `#40–#58` nằm ở `05` §0, `#59–#67` nằm ở `07` §0.
+> `#40–#58` nằm ở `05` §0, `#59–#67` nằm ở `07` §0, `#69–#81` nằm ở `08` §0.
 > **Tra quyết định luôn bắt đầu từ [`DECISIONS.md`](DECISIONS.md)**, đừng quét file này.
 
 > Tài liệu này ghi lại **những gì đã thống nhất**. Mọi thay đổi so với tài liệu này cần được ghi nhận lại tại đây.
@@ -37,7 +37,7 @@
 | Identity | User, ExternalLogin, Role, UserShop, PendingRegistration, RefreshToken, PasswordResetToken | Phase 1 (MVP) |
 | Shop | Shop (đầy đủ `04` §2.1), ShopDomain | Phase 1 (MVP) |
 | **Marketplace** | ServiceCategory (#35) + Listing (#38) + Review + Lead + index/query Elasticsearch | Phase 1 (MVP) |
-| Media | MediaAsset + pipeline ảnh (`05` §9) | Phase 2 |
+| Media | MediaAsset + pipeline ảnh + Media Library (`08`). Pipeline + phục vụ `/media/*` dùng chung cho ảnh `Listing` (Phase 1) | Phase 2 |
 | Website (builder + renderer) | Website, Theme, Page, PageDraft, SitePublication, NavigationConfig, WebsiteTemplate | Phase 2 |
 | **Catalog** | Product (`05` §13–§22) **và** Service (`06`) — bảng/enum tách hoàn toàn | Phase 2 |
 | Customer | | Phase 2 |
@@ -50,7 +50,7 @@
 
 **Vì sao `Category`/`Listing`/`Review`/`Lead`/`Search` gộp thành MỘT module `Marketplace`:** năm thứ này là một cụm aggregate không tách được. `Review.ListingId` và `Lead.ListingId` là FK thật; `Review.HasContacted` phải **query `Lead`** cùng listing trong 90 ngày (`04` §6.3); `Listing.RatingAvg`/`ReviewCount` là derived từ `Review` (`04` §6.5); gỡ `Listing` phải snapshot số liệu `Review` vào `ShopCategoryHistory` (`04` §3.2); document ES gộp cả `Listing` + `ServiceCategory.categoryPath[]` + `ratingAvg` (`04` §8.2); `Listing.CategoryId` phải validate `ServiceCategory.IsLeaf` (`04` §3.1). Tách năm module là dựng Integration Event + read model cho những bảng **nằm cùng một database, có FK tới nhau, luôn deploy cùng nhau** — chi phí thuần nghi thức, không đổi lại cách ly nào. Riêng `Search` không có entity nào và nếu là module riêng sẽ **đảo ngược chiều phụ thuộc** (Search kéo dữ liệu từ mọi module); đúng chiều là mỗi module tự đẩy dữ liệu của mình vào index.
 
-**Vì sao `Product` + `Service` gộp thành `Catalog`:** hai nhánh dùng **bảng và enum tách hoàn toàn** (`Service.Status` riêng, `ShopServiceGroup` phẳng ≠ `ShopProductCategory` cây, `Service.ImageId → media_assets` ≠ `ProductImage`), nên không đụng Quyết định #40 — #40 cấm dùng chung *bảng/enum*, không cấm nằm chung project. Gộp để tránh 4 project cho 2 bảng phẳng. ⚠️ `06` §1 gọi Service-vs-Product là "chỗ dễ nhầm nhất trong toàn hệ": tài liệu module `Catalog` **phải** mở đầu bằng bảng phân biệt `Listing`/`Service`/`Product`.
+**Vì sao `Product` + `Service` gộp thành `Catalog`:** hai nhánh dùng **bảng và enum tách hoàn toàn** (`Service.Status` riêng, `ShopServiceGroup` phẳng ≠ `ShopProductCategory` cây, `Service.ImageId → media_assets` ≠ `Product.ImageUrls`), nên không đụng Quyết định #40 — #40 cấm dùng chung *bảng/enum*, không cấm nằm chung project. Gộp để tránh 4 project cho 2 bảng phẳng. ⚠️ `06` §1 gọi Service-vs-Product là "chỗ dễ nhầm nhất trong toàn hệ": tài liệu module `Catalog` **phải** mở đầu bằng bảng phân biệt `Listing`/`Service`/`Product`.
 
 **Vì sao `Review` lên MVP:** vsite không xử lý giao dịch (mục 2 của `01-project-ideal.md`), nên đánh giá là **tài sản tin cậy duy nhất** phân biệt vsite với việc lướt Google Maps hay Facebook group. Không có đánh giá thì Phase 1 không kiểm chứng được điều gì.
 

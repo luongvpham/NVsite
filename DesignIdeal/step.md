@@ -17,7 +17,8 @@
 3.  Identity + Role + UserShop + Shop + PendingRegistration
       + Global Query Filter + auth policy + bộ test token scope
 
-4.  MediaAsset + image proxy + preset whitelist
+4.  MediaAsset + pipeline ảnh (sinh lúc đặt/upload, không proxy) + Media Library + 9 preset
+      + phục vụ /media/* trên mọi domain   (08)
 
 5.  Website → Theme → Page → PageDraft + Operations Engine + Zod validate
       ⚠️ chốt sanitize whitelist (05 §25 #3) TRƯỚC bước này
@@ -30,5 +31,5 @@
       ⚠️ chốt cache/TTL (05 §25 #4) TRƯỚC bước này
 
 9.  Service (06 §9)  ← module nhỏ, test Binding Resolver end-to-end rẻ nhất
-10. Product + ProductImage + Attribute/Variant + Elasticsearch + facet
+10. Product (ảnh = ImageUrls, 08 §8) + Attribute/Variant + Elasticsearch + facet
 11. WebsiteTemplate

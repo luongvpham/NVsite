@@ -150,7 +150,9 @@ ReviewCount        int        NOT NULL DEFAULT 0
 -- nội dung, shop tự nhập cho vsite (KHÔNG map từ dữ liệu website shop)
 Title              string     NOT NULL
 Description        string     NOT NULL   -- TEXT THUẦN, không HTML (§4.3)
-ImageUrls          text[]     NOT NULL   -- >= 1 ảnh
+ImageUrls          text[]     NOT NULL   -- >= 1 ảnh; đường dẫn tương đối của file full, [0] = ảnh đại diện
+                                         -- thư mục shops/{shopId}/listings/{id}/, thumb_ 160x120, fthumb_ 640x480 (08 #79)
+                                         -- ghi: mọi phần tử phải nằm trong thư mục của listing này (08 #81)
 
 -- vị trí RIÊNG của listing
 Location           geography(Point, 4326)  NOT NULL
@@ -430,7 +432,7 @@ Denormalize sẵn (đúng nguyên tắc "giải nén một lần lúc index"):
 listingId, shopId, shopName, shopKind
 categoryId, categoryPath[]        -- cả nhánh, để filter theo node cha
 title, description
-imageUrl (ảnh đầu)
+imagePath (đường dẫn fthumb_ của ImageUrls[0] — file bất biến nên denormalize an toàn, 08 #75)
 location (geo_point), wardCode, districtCode, provinceCode
 priceFrom, priceTo, hasPriceInfo
 ratingAvg, reviewCount
