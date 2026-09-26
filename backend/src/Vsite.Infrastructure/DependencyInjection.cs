@@ -11,10 +11,12 @@ using Vsite.Application.Identity.Auth.Commands.Register;
 using Vsite.Application.Identity.Interfaces;
 using Vsite.Application.Identity.Options;
 using Vsite.Application.Media;
+using Vsite.Application.Media.Interfaces;
 using Vsite.Application.Shop.Interfaces;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Infrastructure.Identity;
 using Vsite.Infrastructure.Imaging;
+using Vsite.Infrastructure.Media;
 using Vsite.Infrastructure.Persistence;
 using Vsite.Infrastructure.Shop;
 
@@ -112,6 +114,9 @@ public static class DependencyInjection
         // thread-safe/stateless, tests thay bằng FakeTimeProvider qua override DI khi cần.
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<MediaAssetWriter>();
+
+        // T8, MEDIA-001 (#77) — Public Contract cho Bước 5 (Website/PageDraft).
+        services.AddScoped<IMediaReferenceValidator, MediaReferenceValidator>();
 
         return services;
     }
