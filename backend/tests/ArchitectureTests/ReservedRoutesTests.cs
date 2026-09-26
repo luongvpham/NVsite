@@ -20,6 +20,8 @@ public sealed class ReservedRoutesTests
 
         Assert.Contains("shop", provider.Routes.ReservedPaths);
         Assert.Contains("admin", provider.Routes.ReservedSubdomains);
+        // "media" (Quyết định #24, T3 MEDIA-001) — route /media/{key} phục vụ ảnh qua object storage.
+        Assert.Contains("media", provider.Routes.ReservedPaths);
     }
 
     private static string FindRepoRoot()

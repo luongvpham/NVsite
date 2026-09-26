@@ -5,11 +5,13 @@ using Vsite.Api.ExceptionHandling;
 using Vsite.Api.OpenApi;
 using Vsite.Api.Shop;
 using Vsite.Api.Tenancy;
+using Vsite.Application.Common.Imaging;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Domain.Abstractions;
 using Vsite.Domain.ReservedRoutes;
 using Vsite.Infrastructure;
 using Vsite.Infrastructure.Configuration;
+using Vsite.Infrastructure.Imaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +37,14 @@ builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationM
 
 builder.Services.AddSingleton<IReservedRoutesProvider>(_ =>
     new ReservedRoutesProvider(Path.Combine(AppContext.BaseDirectory, "config", "reserved-routes.json")));
+
+// Preset catalog ảnh (T3, MEDIA-001, Quyết định #78/#86) — cùng pattern link + đọc một lần lúc
+// startup như IReservedRoutesProvider ở trên. Resolve eager ngay dưới `builder.Build()` để fail
+// fast (file thiếu/sai shape thì app KHÔNG khởi động), không đợi tới request đầu tiên.
+builder.Services.AddSingleton<IImagePresetCatalog>(_ =>
+    new ImagePresetCatalog(Path.Combine(AppContext.BaseDirectory, "config", "image-presets.json")));
+builder.Services.AddSingleton<IDerivativePresetCatalog>(_ =>
+    new DerivativePresetCatalog(Path.Combine(AppContext.BaseDirectory, "generated", "derivative-presets.json")));
 
 // Quyết định #7 (thu hẹp — xem TenantResolutionMiddleware). Scoped: một TenantContext per-request,
 // middleware set giá trị, mọi handler đọc qua ITenantContext (không handler nào tự resolve ShopId).
@@ -64,6 +74,11 @@ if (builder.Environment.IsDevelopment())
 }
 
 var app = builder.Build();
+
+// Fail fast (T3, MEDIA-001): buộc resolve ngay lúc startup thay vì đợi request/handler đầu tiên
+// chạm tới — file config sai shape hoặc thiếu thì app dừng ở đây, không chạy tiếp với catalog rỗng.
+app.Services.GetRequiredService<IImagePresetCatalog>();
+app.Services.GetRequiredService<IDerivativePresetCatalog>();
 
 if (app.Environment.IsDevelopment())
 {
