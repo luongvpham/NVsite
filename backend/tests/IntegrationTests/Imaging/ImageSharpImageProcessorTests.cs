@@ -196,16 +196,67 @@ public sealed class ImageSharpImageProcessorTests
 
     // ---- Huỷ request không được báo thành ảnh hỏng ----
 
+    /// <summary>
+    /// Cancel NGAY TỪ ĐẦU sẽ ném <see cref="OperationCanceledException"/> ngay trong
+    /// `ReadCappedAsync` (bước 1) — nơi KHÔNG có try/catch và chưa từng có bug. Test đó sẽ pass dù
+    /// có xoá cả hai khối `catch (OperationCanceledException)` đã fix, nên không chứng minh được gì.
+    /// Stream này chỉ cancel token SAU KHI `ReadCappedAsync` đọc hết input (lần `ReadAsync` trả về
+    /// 0 — EOF) — token bị huỷ đúng lúc thực thi đi vào bước 3 (`Image.IdentifyAsync`), là khối
+    /// try/catch thật sự được sửa.
+    /// </summary>
+    private sealed class CancelOnEofStream(Stream inner, CancellationTokenSource cts) : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            var read = await inner.ReadAsync(buffer, CancellationToken.None);
+            if (read == 0)
+            {
+                await cts.CancelAsync();
+            }
+
+            return read;
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override void Flush() => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                inner.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+    }
+
     [Fact]
-    public async Task Cancelled_token_propagates_as_operation_canceled_not_corrupt_image()
+    public async Task Cancelled_after_read_propagates_as_operation_canceled_not_corrupt_image()
     {
         var processor = CreateProcessor();
         var bytes = ReadAsset("exif-gps.jpg");
         using var cts = new CancellationTokenSource();
-        await cts.CancelAsync();
+        using var stream = new CancelOnEofStream(new MemoryStream(bytes), cts);
 
+        // Token còn sống lúc gọi — chỉ bị cts.Cancel() từ BÊN TRONG stream, đúng lúc
+        // `ReadCappedAsync` đọc xong (EOF), TRƯỚC khi chạm `Image.IdentifyAsync`.
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => processor.LoadAsync(new MemoryStream(bytes), cts.Token));
+            () => processor.LoadAsync(stream, cts.Token));
     }
 
     // ---- Giới hạn dung lượng ----
