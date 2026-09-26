@@ -1,4 +1,4 @@
-# vsite — Registry Quyết Định (#1–#81)
+# vsite — Registry Quyết Định (#1–#86)
 
 > **File này là CHỈ MỤC, không phải nội dung.** Mỗi dòng cho bạn biết quyết định đó nói gì trong một
 > câu, nó được **định nghĩa đầy đủ ở đâu**, và nó **đã thành code chưa**. Đọc dòng ở đây trước, rồi
@@ -12,7 +12,7 @@
 ## ⚠️ Đọc trước khi tra
 
 **Không phải quyết định nào cũng nằm trong `02`.** `02` định nghĩa **#1–#39** và **#68**.
-**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#81** định nghĩa tại `08` §0.
+**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** định nghĩa tại `08` §0.
 Không chép các quyết định đó sang `02` — cố tình không làm. Chép sang `02` sẽ tạo bản
 sao thứ hai để lệch nhau; thay vào đó registry này trỏ thẳng tới nơi định nghĩa duy nhất.
 
@@ -121,6 +121,11 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#79** | Ảnh **Listing/Product** không dùng `MediaAsset`: `ImageUrls text[]` = đường dẫn file full, `[0]` = đại diện; thư mục theo entity; `thumb_` mọi ảnh, `fthumb_` chỉ ảnh đại diện (sinh khi cần). Listing 640×480/160×120 (4:3); Product rộng 600/160 theo tỉ lệ danh mục | `08` §0 · §8 | 📐 Listing (Phase 1) · ⏳ Product (Bước 10) |
 | **#80** | Ảnh variant = `ProductVariant.ImageUrls text[]` (rỗng = dùng ảnh product); file chung thư mục sản phẩm, nhiều variant dùng chung đường dẫn | `08` §0 · §8.3 | ⏳ Bước 10 |
 | **#81** | Kiểm quyền lúc **ghi** đường dẫn ảnh (prefix thư mục của đúng entity dưới `shops/{shopId}/` + file tồn tại), **không** kiểm lúc đọc | `08` §0 · §8.4 | 📐 Listing (Phase 1) · ⏳ Product (Bước 10) |
+| **#82** | Pipeline ảnh + object storage nằm ở namespace **dùng chung `Imaging`** (không thuộc module nào, thêm vào `SharedSegments`); upload logo là endpoint của `Media`, ghi `Shop.LogoId` qua Public Contract của `Shop`. `Media` giữ phase 2 | `08` §0 · §3.1 | 📐 Bước 4 |
+| **#83** | Object storage sau một interface, **hai** implementation `LocalDisk` + `S3` chọn bằng setting `Storage:Provider` (mặc định `LocalDisk`); `/media/*` do .NET phục vụ qua cùng interface | `08` §0 · §5 | 📐 Bước 4 |
+| **#84** | Thư viện xử lý ảnh: **ImageSharp** (Six Labors Split License — miễn phí khi doanh thu năm < 1M USD, vượt thì mua license) | `08` §0 | 📐 Bước 4 |
+| **#85** | Giới hạn upload **10 MB / 25 MP** (số pixel kiểm từ header, trước decode); chỉ nhận JPEG/PNG/WebP; **HEIC bị từ chối** với `error_code` riêng + hướng dẫn ở FE | `08` §0 · §3.1 | 📐 Bước 4 |
+| **#86** | Prop `binding` thêm field additive **`imagePresets`** (preset theo từng source); codegen sinh bộ phái sinh vào `packages/builder-components/generated/`, hợp với tập cố định của bề mặt vsite khai trong `config/image-presets.json` | `08` §0 · §3.6 | 📐 Bước 4 |
 
 ---
 

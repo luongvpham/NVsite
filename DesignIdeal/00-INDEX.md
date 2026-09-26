@@ -29,7 +29,7 @@
 | Thứ tự triển khai 11 bước | [`step.md`](step.md) |
 | Nợ test cần Docker | [`../Docs/DOCKER-TEST-DEBT.md`](../Docs/DOCKER-TEST-DEBT.md) |
 
-**Quyết định `#N` nằm ở đâu:** `#1–#39` và `#68` → `02`. `#40–#58` → `05` §0. `#59–#67` → `07` §0. `#69–#81` → `08` §0.
+**Quyết định `#N` nằm ở đâu:** `#1–#39` và `#68` → `02`. `#40–#58` → `05` §0. `#59–#67` → `07` §0. `#69–#86` → `08` §0.
 Chi tiết và lý do vì sao không gộp về `02`: xem đầu [`DECISIONS.md`](DECISIONS.md).
 
 ---
@@ -43,7 +43,7 @@ Chi tiết và lý do vì sao không gộp về `02`: xem đầu [`DECISIONS.md`
 | File | Trạng thái | Task đã chạm | Changelog | Đừng tin ở |
 |---|---|---|---|---|
 | `01-project-ideal.md` | ✅ Ổn định | — | — | — |
-| `02-tech-stack-and-decision.md` | ⚠️ Tài liệu thiếu phần | — | — | Không chứa #40–#67 và #69–#81 — xem DECISIONS.md |
+| `02-tech-stack-and-decision.md` | ⚠️ Tài liệu thiếu phần | — | — | Không chứa #40–#67 và #69–#86 — xem DECISIONS.md |
 | `03-identity-entity-design.md` | ⚠️ Đã code, có lệch có chủ đích | IDENTITY-001 | [`IDENTITY-001/changelog.md`](../Docs/tasks/IDENTITY-001/changelog.md) | §3.1/§3.3/§5 cột PasswordSalt · §3.3 câu upsert UserShop · §4 tên ràng buộc |
 | `04-listing-and-review-design.md` | ⚠️ Đã code, có lệch có chủ đích | SHOP-001 | [`SHOP-001/changelog.md`](../Docs/tasks/SHOP-001/changelog.md) | Chỉ §2.1/§2.2 (Shop) đã code — §3 trở đi (ServiceCategory/Listing/Review/Lead) vẫn là spec, chưa có dòng code nào |
 | `05-website-builder-and-product-design.md` | 📐 Thiết kế, chưa code | — | — | — |

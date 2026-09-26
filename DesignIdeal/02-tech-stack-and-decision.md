@@ -1,10 +1,10 @@
 # vsite — Tech Stack & Quyết Định Đã Chốt
 
-> **STATUS:** `INCOMPLETE_DOC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `Không chứa #40–#67 và #69–#81 — xem DECISIONS.md`
+> **STATUS:** `INCOMPLETE_DOC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `Không chứa #40–#67 và #69–#86 — xem DECISIONS.md`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
 > ⚠️ **File này KHÔNG chứa toàn bộ quyết định.** Ở đây có `#1–#39` và `#68`.
-> `#40–#58` nằm ở `05` §0, `#59–#67` nằm ở `07` §0, `#69–#81` nằm ở `08` §0.
+> `#40–#58` nằm ở `05` §0, `#59–#67` nằm ở `07` §0, `#69–#86` nằm ở `08` §0.
 > **Tra quyết định luôn bắt đầu từ [`DECISIONS.md`](DECISIONS.md)**, đừng quét file này.
 
 > Tài liệu này ghi lại **những gì đã thống nhất**. Mọi thay đổi so với tài liệu này cần được ghi nhận lại tại đây.
