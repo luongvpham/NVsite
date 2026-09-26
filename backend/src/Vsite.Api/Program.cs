@@ -90,6 +90,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandler();
 
+// T9, MEDIA-001 (#53, #81, #83) — phục vụ /media/* TRÊN MỌI HOST, TRƯỚC TenantResolutionMiddleware:
+// không tra Redis, không kiểm tenant, không auth (đọc ảnh luôn public). Map() branch off request
+// khớp prefix "/media" khỏi pipeline chính — request đó không bao giờ chạm TenantResolutionMiddleware
+// / Authentication / Authorization phía dưới. Vẫn nằm SAU UseExceptionHandler (phòng thủ thêm dù
+// MediaFileMiddleware tự bắt hết ArgumentException, không để lọt request nào ra ngoài thành 500).
+app.Map("/media", branch => branch.UseMiddleware<MediaFileMiddleware>());
+
 // Sau CORS (preflight OPTIONS không cần resolve tenant), TRƯỚC mọi endpoint — mọi handler đọc
 // ShopId/audience qua ITenantContext, không handler nào tự parse Host/route.
 app.UseMiddleware<TenantResolutionMiddleware>();
