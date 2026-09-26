@@ -101,4 +101,20 @@ public abstract class ObjectStorageContractTests : IAsyncLifetime
 
         Assert.Equal(0, await CountStoredObjectsAsync());
     }
+
+    /// <summary>
+    /// Cần cho rollback best-effort (R4, T5 sẽ gọi <c>DeleteAsync</c> cho các key vừa ghi khi một
+    /// bước sau đó trong cùng request fail) — DeleteAsync KHÔNG được ném khi key chưa từng tồn tại,
+    /// kể cả khi thư mục cha (LocalDisk) hay object (S3) chưa từng được tạo.
+    /// </summary>
+    [Fact]
+    public async Task Delete_on_never_stored_key_does_not_throw()
+    {
+        var key = $"shops/s1/library/never-stored-{Guid.NewGuid():N}.webp";
+
+        var exception = await Record.ExceptionAsync(
+            () => Storage.DeleteAsync(key, CancellationToken.None));
+
+        Assert.Null(exception);
+    }
 }

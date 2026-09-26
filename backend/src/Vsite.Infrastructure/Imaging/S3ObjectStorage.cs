@@ -31,6 +31,9 @@ public sealed class S3ObjectStorage : IObjectStorage
         if (!string.IsNullOrWhiteSpace(s3Options.ServiceUrl))
         {
             config.ServiceURL = s3Options.ServiceUrl;
+            // SigV4 cần AuthenticationRegion tường minh khi ký request cho endpoint tự host (MinIO)
+            // — SDK không suy được region đúng từ hostname như với S3 thật.
+            config.AuthenticationRegion = s3Options.Region;
         }
 
         _client = s3Options.AccessKey is not null && s3Options.SecretKey is not null

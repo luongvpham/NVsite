@@ -27,7 +27,14 @@ public sealed class S3StorageOptions
 {
     public string BucketName { get; init; } = "";
 
-    /// <summary>MinIO / S3-compatible endpoint. Null → dùng endpoint AWS S3 mặc định theo region.</summary>
+    /// <summary>
+    /// MinIO / S3-compatible endpoint. Null → dùng endpoint AWS S3 mặc định theo region.
+    /// Nếu trỏ vào MinIO: bản server PHẢI hỗ trợ conditional write (<c>If-None-Match</c>), thêm ở
+    /// MinIO ngay sau <c>RELEASE.2023-01-31</c> (PR minio/minio#16551, merge 2023-02-07) — dùng bản
+    /// <c>RELEASE.2023-02-xx</c> trở lên. <c>RELEASE.2023-01-31</c> (default cũ của
+    /// <c>Testcontainers.Minio</c>) im lặng bỏ qua <c>IfNoneMatch</c> và sẽ làm no-overwrite (#75)
+    /// không hoạt động — xem <c>S3ObjectStorageTests</c> để biết bản đang pin cho test.
+    /// </summary>
     public string? ServiceUrl { get; init; }
 
     public string Region { get; init; } = "ap-southeast-1";
