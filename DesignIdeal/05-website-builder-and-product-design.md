@@ -1,10 +1,11 @@
 # vsite — Thiết Kế Entity: Website Builder & Product (Phase 2)
 
-> **STATUS:** `SPEC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `§0 câu "chép sang 02" đã lỗi thời`
+> **STATUS:** `SPEC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `—`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
-> 📌 **§0 là nơi định nghĩa Quyết định `#40–#58`.** Câu "cần được chép sang `02`" trong §0 đã lỗi
-> thời — cố tình không chép, xem [`DECISIONS.md`](DECISIONS.md).
+> 📌 **§0 là nơi định nghĩa Quyết định `#40–#58`.** Không chép sang `02` — tra số ở
+> [`DECISIONS.md`](DECISIONS.md). `MediaAsset`, ảnh `Listing`/`Product` và pipeline ảnh mô tả chi tiết ở
+> [`08-media-asset-design.md`](08-media-asset-design.md) (định nghĩa `#69–#81`).
 
 > **Tài liệu liên quan:** `01-project-ideal.md` (§5.3, §6, §7) · `02-tech-stack-and-decision.md` (Quyết định #11–#17, #33–#36) · `03-identity-entity-design.md` · `04-listing-and-review-design.md`
 >
@@ -15,8 +16,6 @@
 ---
 
 ## 0. Tóm tắt quyết định mới chốt trong phiên này
-
-Các quyết định dưới đây cần được chép sang `02-tech-stack-and-decision.md` với số hiệu tương ứng.
 
 | # | Nội dung |
 |---|---|
@@ -33,11 +32,11 @@ Các quyết định dưới đây cần được chép sang `02-tech-stack-and-
 | **#50** | Attribute `Text` **không filter, không thống kê**. Chỉ hiển thị |
 | **#51** | Xoá attribute/option là **xoá mềm** (`IsArchived`), không xoá cứng |
 | **#52** | Tối đa **3 trục variant** mỗi sản phẩm |
-| **#53** | Ảnh **resize lúc upload** về cạnh dài ≤1600px, **giữ nguyên tỉ lệ gốc**, chuyển webp, strip EXIF. Không giữ file người dùng upload. Phái sinh sinh **lúc render** qua image proxy trên **một domain CDN dùng chung cho mọi shop**. Kích thước giới hạn trong whitelist preset. Component không tự dựng URL ảnh, luôn qua `resolveImage()` |
-| **#55** | **Không có bảng `MediaVariant`.** Key phái sinh là xác định (deterministic) nên object storage đã đóng vai trò index. Dọn dẹp bằng lifecycle policy của storage, không bằng Hangfire job quét DB. Quota tính trên **bản gốc**, không tính phái sinh |
-| **#56** | Ảnh sản phẩm và thư viện media là **hai hệ thống độc lập** (`product_images` vs `media_assets`). Ảnh sản phẩm chết theo sản phẩm. Muốn dùng ảnh sản phẩm trong builder, shop phải bấm **"Thêm vào thư viện"** → clone sang `MediaAsset` mới → hai bản độc lập từ đó. **Builder picker không bao giờ thấy `product_images`** |
-| **#57** | Tỉ lệ ảnh sản phẩm do **danh mục** quyết định (`ShopProductCategory.ImageRatio`), và **cắt lúc render** chứ không cắt lúc upload. Đổi tỉ lệ danh mục = đổi một dòng config, toàn bộ ảnh tự cắt lại, không phải upload lại |
-| **#58** | **Không hỗ trợ `srcset` responsive ở Phase 2.** Mỗi vị trí ảnh dùng một preset cố định, chọn ở mức ~2× độ rộng CSS lớn nhất để đủ nét trên màn retina. Hoãn được vì URL sinh từ `resolveImage()` — thêm `srcset` sau chỉ cần sửa hàm đó, không migrate dữ liệu |
+| **#53** | **Pipeline ảnh:** validate magic bytes, strip EXIF, encode webp. Không giữ file người dùng upload — bản lớn nhất được giữ là bản Library cạnh dài ≤1600px, giữ tỉ lệ gốc. Mọi file đúng kích thước **sinh sẵn lúc đặt vào slot hoặc lúc upload** — **không có image proxy runtime**. URL ảnh = **`{domain bất kỳ}/media/{đường dẫn tương đối}`**, dùng được trên site chính lẫn mọi domain của shop; `media` là reserved route (#24); đọc ảnh không kiểm tenant. Pipeline dùng chung cho `MediaAsset` và ảnh `Listing`/`Product`. Component không tự dựng URL ảnh, luôn qua `resolveImage()`. Chi tiết `08` §1, §3, §5 |
+| **#55** | **Không có bảng `MediaVariant`.** Với `media_assets`, mỗi file (bản Library, clone, phái sinh) là một record `MediaAsset` thật, phân biệt bằng `Preset` + `SourceAssetId` (`08` §2). Ảnh `Listing`/`Product` không có bảng nào — thumb suy ra từ tên file (#79). Dọn file `MediaAsset` bằng **Hangfire job quét tham chiếu** (Bước 8); dọn ảnh `Listing`/`Product` bằng xoá thư mục của entity. Không dùng lifecycle policy của storage. Quota `MediaAsset` tính trên **bản gốc** = record `SourceAssetId IS NULL`; clone và phái sinh không tính |
+| **#56** | Ảnh sản phẩm và thư viện media là **hai hệ thống độc lập**: ảnh sản phẩm là đường dẫn trong `Product.ImageUrls`/`ProductVariant.ImageUrls` (#79, #80), **không** nằm trong `media_assets`, và chết theo sản phẩm. Muốn dùng ảnh sản phẩm trong builder, shop bấm **"Thêm vào thư viện"** → copy file full sang một **bản Library** `MediaAsset` mới → từ đó hai bản độc lập; lắp vào slot thì clone từ bản Library như mọi ảnh Library khác (#71). **Builder picker không bao giờ thấy ảnh sản phẩm trực tiếp** |
+| **#57** | Tỉ lệ ảnh sản phẩm do **danh mục** quyết định (`ShopProductCategory.ImageRatio`). File full **crop theo tỉ lệ danh mục lúc upload** (shop chọn vùng crop), thumb resize giữ đúng tỉ lệ đó (#79). Đổi tỉ lệ danh mục hoặc chuyển sản phẩm sang danh mục khác thì **ảnh cũ giữ tỉ lệ cũ** — hiển thị bằng `object-fit: cover`; muốn đúng tỉ lệ mới thì upload lại. Không có job sinh lại |
+| **#58** | **Không hỗ trợ `srcset` responsive ở Phase 2.** Mỗi vị trí ảnh dùng một preset cố định, chọn ở mức ~2× độ rộng CSS lớn nhất để đủ nét trên màn retina. Hoãn được vì URL luôn sinh từ `resolveImage()` và chữ ký hàm giữ nguyên (#74) — thêm `srcset` sau là sinh thêm file cho mỗi vị trí + sửa hàm đó, không đổi component |
 | **#54** | `Service` **không có `System` page riêng** (không `ServiceListing`/`ServiceDetail`). Số dịch vụ mỗi shop nhỏ (thường 2–3), không có filter/facet/variant — hiển thị hoàn toàn qua component bind trên trang `Composable`, cùng khuôn với `Timeline`/`Gallery`. Nếu shop cần trang riêng cho một dịch vụ, họ tạo `Page` thường và lắp component — không cần route hệ thống cố định. Phù hợp với cách `Listing.TargetPageId` (`04` §4) chỉ trỏ tới `ShopHome`/`ShopPage`/`ExternalUrl`, không có đích kiểu `ServiceDetail` |
 
 ---
@@ -77,8 +76,8 @@ Gốc của module. Một shop `Hosted` có đúng một website.
 | `CurrentPublicationId` | uuid? FK → `site_publications` | Bản đang phục vụ công chúng. NULL = chưa publish lần nào |
 | `DefaultSeoTitle` | varchar(160) | Fallback khi `Page.SeoTitle` rỗng |
 | `DefaultSeoDescription` | varchar(320) | |
-| `DefaultOgImageId` | uuid? FK → `media_assets` | |
-| `FaviconAssetId` | uuid? FK → `media_assets` | |
+| `DefaultOgImageId` | uuid? | Bản Library. FK ghép `(DefaultOgImageId, ShopId) → media_assets (Id, ShopId)` (#76). Render bằng phái sinh `1200x630,cover` (#73) |
+| `FaviconAssetId` | uuid? | Bản Library. FK ghép như trên (#76). Định dạng favicon: `08` §10 |
 | `TrackingSnippets` | jsonb | `{ ga4?: string, metaPixel?: string }` — whitelist ID, **không** cho nhập HTML thô |
 | `CreatedAt` / `UpdatedAt` | timestamptz | |
 
@@ -128,7 +127,7 @@ Gốc của module. Một shop `Hosted` có đúng một website.
 | `Slug` | varchar(120) | `""` cho trang chủ. UNIQUE `(WebsiteId, Slug)` |
 | `Title` | varchar(160) | Nhãn hiển thị trong portal + nguồn mặc định cho menu |
 | `SeoTitle` / `SeoDescription` | varchar(160) / (320) | Rỗng → fallback về `Website` |
-| `OgImageId` | uuid? FK | |
+| `OgImageId` | uuid? → `media_assets` | Bản Library, phái sinh `1200x630,cover` (#73). Kiểm tenant ở handler (#77) — bảng chưa có `ShopId` để làm FK ghép |
 | `NoIndex` | bool | Mặc định `false` |
 | `IsEnabled` | bool | Tắt = không render, không lên menu, giữ nguyên dữ liệu |
 | `SortOrder` | int | Thứ tự trong danh sách quản lý (không phải thứ tự menu) |
@@ -221,7 +220,7 @@ Không phải bảng, nhưng là cấu trúc dữ liệu quan trọng nhất mod
 1. `id` duy nhất **trong phạm vi một trang**, sinh client-side (`c_` + nanoid 5 ký tự). Là target của mọi operation (#14) và của Selection Context (#16).
 2. **Không** có `schemaVersion` trên node — hệ quả trực tiếp của #43 (additive-only).
 3. `props` **không bao giờ** chứa dữ liệu nghiệp vụ đã materialize, chỉ chứa nội dung tĩnh hoặc `binding` mô tả cách lấy.
-4. Ảnh lưu bằng **id** (`imageId: "media_8891"`), không lưu URL. URL sinh lúc render — cho phép đổi CDN, đổi kích thước, xoá ảnh mà phát hiện được tham chiếu.
+4. Ảnh lưu bằng **id** (`imageId: "media_8891"`), không lưu URL. URL dựng lúc render từ `StorageKey` — cho phép đổi CDN, xoá ảnh mà phát hiện được tham chiếu. `imageId` luôn là id của **clone** đã crop đúng preset của slot (#71, `08` §3).
 5. `children` chỉ có ở component container. Manifest khai `acceptsChildren: true/false`.
 
 ---
@@ -301,84 +300,18 @@ Theo Quyết định #34: derived + manual overlay, một màn hình kéo-thả 
 
 ## 9. `MediaAsset` — thư viện media
 
-Neo vào `Shop`. Dùng cho **builder** và **listing**. **Không** dùng cho ảnh sản phẩm (#56 — xem §20).
+**Toàn bộ thiết kế ở [`08-media-asset-design.md`](08-media-asset-design.md)** — entity, ràng buộc DB,
+hai chế độ upload, Media Library + clone, ảnh dữ liệu nghiệp vụ, vòng đời file, URL, danh sách preset.
+Mục này chỉ giữ những điểm chạm với phần còn lại của tài liệu `05`:
 
-| Cột | Kiểu | Ghi chú |
+| Điểm chạm | Luật | Chi tiết |
 |---|---|---|
-| `Id` | uuid PK | |
-| `ShopId` | uuid FK | |
-| `StorageKey` | varchar(300) | Đường dẫn tương đối trên object storage. **Không phải URL** |
-| `MimeType` | varchar(80) | Sau xử lý luôn là `image/webp` |
-| `Width` / `Height` | int | Kích thước **sau resize**. Có sẵn miễn phí từ bước xử lý |
-| `SizeBytes` | bigint | Tính quota theo gói dịch vụ |
-| `AltText` | varchar(200)? | Mặc định; node trong tree có thể override |
-| `FocalPointX` / `FocalPointY` | real | 0..1, mặc định `0.5`/`0.5`. Điểm giữ lại khi cắt |
-| `OriginalFileName` | varchar(200)? | Để shop nhận ra ảnh trong picker |
-| `Purpose` | enum? | `Website` · `Listing` · `Shop`. **Chỉ để lọc mặc định trong picker**, không phải ràng buộc |
-| `Folder` | varchar(100)? | Thư mục phẳng do shop tự đặt |
-| `CreatedAt` | timestamptz | |
-| `DeletedAt` | timestamptz? | Xoá mềm |
-
-### 9.1 Xử lý lúc upload (#53)
-
-```
-File người dùng gửi lên
-  → validate MIME thật (magic bytes, KHÔNG tin phần mở rộng)
-  → strip toàn bộ EXIF
-  → resize: cạnh dài ≤ 1600px, GIỮ NGUYÊN tỉ lệ gốc
-  → encode webp (quality ~82)
-  → lưu 1 file duy nhất + ghi Width/Height/SizeBytes
-```
-
-**Không giữ file người dùng upload.** Ảnh điện thoại đời mới là 4000×3000 / ~8MB; giữ nguyên nghĩa là mỗi lần cache miss phải đọc 8MB từ storage, và shop 500 sản phẩm chiếm 4GB cho thứ không ai xem ở kích thước đó.
-
-**Vì sao giữ tỉ lệ gốc thay vì ép về một khung cố định:** ảnh dọc (thời trang) và ảnh ngang (nội thất) khác nhau về bản chất. Ép chung một khung thì hoặc cắt mất, hoặc thêm viền. Việc cắt để lại cho tầng render, nơi biết ngữ cảnh hiển thị.
-
-**Strip EXIF là bắt buộc, không phải tuỳ chọn:** ảnh chụp bằng điện thoại chứa toạ độ GPS. Shop chụp sản phẩm tại nhà riêng rồi đăng lên là lộ địa chỉ nhà. Đây là rủi ro quyền riêng tư có thật.
-
-### 9.2 URL & phái sinh (#53, #55)
-
-Một domain CDN dùng chung cho **mọi** shop, kể cả shop có custom domain:
-
-```
-https://cdn.vsite.vn/i/{preset}/{storageKey}
-https://cdn.vsite.vn/i/600x900,cover,fp0.5-0.35/shops/77/2026/03/a3f21.webp
-```
-
-| Nguyên tắc | Lý do |
-|---|---|
-| DB lưu `StorageKey`, **không** lưu URL | Đổi CDN không phải rewrite `SitePublication.Snapshot` — mà snapshot theo #41 là bất biến, sửa không được |
-| Tree lưu `imageId`, **không** lưu `StorageKey` | Thêm một lớp gián tiếp, đổi được cả cấu trúc thư mục storage |
-| Component **không bao giờ** tự nối chuỗi URL | Luôn gọi `resolveImage(assetId, preset)` — cùng tinh thần `resolveUrl()` của #11 |
-| `{preset}` phải nằm trong **whitelist** | Cho `{w}x{h}` tự do là mở cửa cho việc gọi 10.000 kích thước ngẫu nhiên và đốt sạch CPU xử lý ảnh |
-
-**Sinh lúc render, không sinh trước:** request tới → CDN có thì trả; không có thì proxy đọc bản gốc, cắt/resize theo preset, ghi vào storage, trả về, CDN cache. File nào không ai xem thì không tồn tại.
-
-**Không có bảng `MediaVariant`** (#55). Key là xác định — cùng tham số luôn ra cùng đường dẫn — nên object storage **đã là** index. Thêm bảng DB chỉ nhét một `SELECT` hoặc `INSERT` vào hot path của render mà không đổi lại được gì. Dọn dẹp bằng lifecycle policy của storage (phái sinh không được truy cập 90 ngày → tự xoá), rẻ hơn Hangfire job quét DB.
-
-**Quota tính trên bản gốc**, không tính phái sinh: phái sinh là chi phí vận hành của vsite, shop không kiểm soát được nên tính vào quota của họ là vô lý.
-
-### 9.3 Preset (whitelist)
-
-Khoảng 12 giá trị phủ toàn bộ thư viện component. Mỗi vị trí ảnh dùng **một** preset cố định (#58 — chưa hỗ trợ `srcset` ở Phase 2), chọn ở mức **~2× độ rộng CSS lớn nhất** để đủ nét trên màn retina.
-
-| Preset | Dùng cho |
-|---|---|
-| `1600x900,cover` | Hero full-width |
-| `1200x630,cover` | OG image (chuẩn Facebook) |
-| `800x800,cover` | Ảnh chính trang chi tiết sản phẩm |
-| `600xR,cover` | Thẻ sản phẩm trong lưới (`R` = tỉ lệ danh mục) |
-| `160x160,cover` | Thumbnail dải ảnh |
-| `96x96,cover` | Avatar / logo nhỏ |
-| … | … |
-
-Chọn theo độ rộng CSS (ví dụ 300px cho thẻ sản phẩm) là ảnh sẽ mờ trên **mọi** điện thoại đời mới, vì DPR ≥ 2.
-
-### 9.4 Xoá ảnh
-
-Xoá mềm (`DeletedAt`), **chỉ chủ shop xoá được**. Trước khi xoá, quét tham chiếu trong `page_drafts.Tree`, `site_publications.Snapshot`, `listings` → **cảnh báo, không chặn**.
-
-Snapshot đã publish là bất biến (#41), nên file thật phải giữ cho tới khi snapshot cuối cùng tham chiếu tới nó bị dọn (giữ 20 bản gần nhất, §7). Hangfire job dọn file mồ côi chạy sau khi dọn snapshot.
+| Tree lưu gì | `{ imageId, alt? }` — `imageId` luôn là **clone** (`IsInLibrary = false`), không bao giờ là bản Library | `08` §3, #71 |
+| Xoá node | **Chỉ** gỡ tham chiếu trong tree, không xoá record/file | `08` §4, #72 |
+| `SitePublication` | Snapshot giữ `imageId`, không giữ URL. File sống tới khi snapshot cuối cùng tham chiếu bị prune (§7) | `08` §4, §5 |
+| OG image (`Website.DefaultOgImageId`, `Page.OgImageId`, `seo.ogImageId` trong snapshot) | Ảnh dữ liệu nghiệp vụ — trỏ bản Library, render bằng phái sinh `1200x630,cover` | `08` §3.6, #73 |
+| Renderer | Chỉ gọi `resolveImage(imageId, preset)` | `08` §6, #74 |
+| Ảnh sản phẩm | **Không** nằm trong `media_assets` — đường dẫn trong `ImageUrls` | §20, #56, #79 |
 
 ---
 
@@ -439,7 +372,7 @@ Shop
  ├─1:n─ ShopAttribute
  │         └─1:n─ ShopAttributeOption
  └─1:n─ Product
-           ├─1:n─ ProductImage            → MediaAsset
+           ├─ ImageUrls text[]          (đường dẫn file, KHÔNG phải bảng, KHÔNG phải MediaAsset — #56, #79)
            ├─1:n─ ProductAttributeValue   → ShopAttribute (+ Option)
            └─1:n─ ProductVariant
                      └─1:n─ ProductVariantOption → ShopAttribute (+ Option)
@@ -468,7 +401,7 @@ Hàng hoá không lên marketplace (#48), nên cây danh mục sản phẩm là 
 | `Path` | varchar(300) | Materialized path: `/1/5/12/`. Index để query cả nhánh |
 | `Depth` | smallint | Tối đa **3** (0,1,2) |
 | `Description` | text? | Hiển thị đầu trang danh mục, tốt cho SEO |
-| `ImageId` | uuid? FK → `media_assets` | Ảnh đại diện danh mục (thuộc thư viện, không phải `product_images`) |
+| `ImageId` | uuid? | Ảnh đại diện danh mục — bản Library trong `media_assets`, không phải ảnh sản phẩm. FK ghép `(ImageId, ShopId) → media_assets (Id, ShopId)` (#76); phái sinh sinh sẵn theo #73 |
 | `ImageRatio` | enum | `R1x1` · `R2x3` · `R3x2` · `R3x4` · `R4x3` · `R16x9`. Mặc định `R1x1` (#57) |
 | `SortOrder` | int | |
 | `IsVisible` | bool | Ẩn khỏi menu/listing, không xoá dữ liệu |
@@ -480,15 +413,15 @@ Hàng hoá không lên marketplace (#48), nên cây danh mục sản phẩm là 
 
 **`ImageRatio` — tỉ lệ ảnh theo danh mục (#57):** shop bán quần áo chọn `R2x3` (ảnh dọc), shop nội thất chọn `R3x2` (ảnh ngang), shop phụ kiện chọn `R1x1`. Lưới sản phẩm nhờ đó đều tăm tắp thay vì cao thấp lộn xộn.
 
-**Cắt lúc render, không cắt lúc upload.** Ảnh lưu nguyên tỉ lệ gốc (§9.1); proxy cắt theo `ImageRatio` của danh mục + `FocalPoint` của ảnh lúc dựng URL. Kết quả hiển thị giống hệt phương án cắt-lúc-upload, nhưng:
+**Crop lúc upload.** Khi shop upload ảnh sản phẩm, dialog crop theo `ImageRatio` của danh mục; file full lưu ở đúng tỉ lệ đó, `fthumb_`/`thumb_` resize từ file full (`08` §8.2). Không có image proxy runtime (#53), không có job sinh lại.
 
-| Tình huống | Cắt lúc upload | Cắt lúc render |
-|---|---|---|
-| Shop đổi ý về tỉ lệ sau 3 tháng | 200 sản phẩm phải upload lại — phần ảnh bị cắt **không còn tồn tại** | Đổi một dòng config, ảnh tự cắt lại |
-| Chuyển sản phẩm sang danh mục khác tỉ lệ | Ảnh sai tỉ lệ, phải upload lại | Tự động đúng |
-| OG image share Facebook cần 1.9:1 | Đã cắt 2:3 rồi thì không dựng lại được ảnh ngang | Cắt từ bản gốc, bình thường |
+| Tình huống | Hệ quả (đã chấp nhận) |
+|---|---|
+| Shop đổi tỉ lệ danh mục sau 3 tháng | Ảnh cũ giữ tỉ lệ cũ, hiển thị trong khung mới bằng `object-fit: cover`. Muốn đúng tỉ lệ mới thì upload lại |
+| Chuyển sản phẩm sang danh mục khác tỉ lệ | Như trên |
+| OG image của trang sản phẩm | Dùng file full |
 
-**`FocalPoint` là thứ khiến việc này chạy được:** cắt tự động ở giữa thường cắt mất đầu người mẫu. Shop chỉ một điểm trên ảnh, mọi tỉ lệ cắt đúng chỗ.
+**Shop tự chọn vùng crop:** cắt tự động ở giữa thường cắt mất đầu người mẫu. Vùng crop chọn một lần trong dialog upload; muốn đổi thì upload lại (file bất biến, #75).
 
 **Xoá category:** chặn nếu còn sản phẩm hoặc còn category con. Bắt shop chuyển sản phẩm đi trước. Cảnh báo (không chặn) nếu có `binding.categoryId` trong tree trỏ tới.
 
@@ -532,7 +465,7 @@ Hàng hoá không lên marketplace (#48), nên cây danh mục sản phẩm là 
 | `Value` | varchar(100) | **Đổi tự do** |
 | `Code` | varchar(50) | Dùng trong URL nếu muốn `?mau-sac=do` thay vì `=41`. UNIQUE `(AttributeId, Code)` |
 | `ColorHex` | char(7)? | Cho swatch màu |
-| `ImageId` | uuid? FK | Cho swatch ảnh (vân vải) |
+| `SwatchImageUrl` | text? | Swatch ảnh (vân vải) — đường dẫn tương đối trong `shops/{shopId}/attributes/{attributeId}/`, chỉ cần `thumb_` (`08` §8, #81) |
 | `SortOrder` | int | Quan trọng với size: S < M < L, không phải alphabet |
 | `IsArchived` | bool | Xoá mềm (#51) |
 
@@ -589,7 +522,7 @@ Khai "Thương hiệu" một lần ở `CategoryId = 0`, mọi sản phẩm đ�
 | `HasVariants` | bool | Denormalized, tránh join khi render thẻ |
 | `TrackInventory` | bool | Mặc định `false` (#49) |
 | `Stock` | int? | Chỉ có nghĩa khi `TrackInventory = true` **và** `HasVariants = false` |
-| `PrimaryImageId` | uuid? FK → `product_images` | Denormalized, tránh join khi render thẻ |
+| `ImageUrls` | text[] NOT NULL DEFAULT '{}' | Đường dẫn tương đối của file full; `[0]` là ảnh đại diện — thẻ sản phẩm dùng `fthumb_` của nó, không cần join (#79) |
 | `ViewCount` | int | |
 | `PublishedAt` | timestamptz? | |
 | `CreatedAt` / `UpdatedAt` | | |
@@ -648,7 +581,7 @@ Quy tắc 5 là ranh giới rõ ràng thay cho cơ chế "variant override `SDat
 | `Price` | numeric(14,2) | NOT NULL — variant luôn có giá riêng |
 | `CompareAtPrice` | numeric(14,2)? | |
 | `Stock` | int? | Chỉ có nghĩa khi `Product.TrackInventory = true` |
-| `ImageId` | uuid? FK | Ảnh riêng cho variant (áo màu đỏ) |
+| `ImageUrls` | text[] NOT NULL DEFAULT '{}' | Ảnh riêng của variant (áo màu đỏ); rỗng = dùng `Product.ImageUrls`. File chung thư mục sản phẩm, nhiều variant được dùng chung đường dẫn (#80) |
 | `IsDefault` | bool | Variant hiển thị mặc định. Đúng một per product |
 | `IsAvailable` | bool | Tắt tạm không xoá |
 | `SortOrder` | int | |
@@ -666,55 +599,50 @@ Quy tắc 5 là ranh giới rõ ràng thay cho cơ chế "variant override `SDat
 - Tối đa **3** `AttributeId` phân biệt trong một `Product` (#52). Kiểm ở tầng handler
 - Mọi variant của cùng một product phải có **cùng tập** `AttributeId` — không có chuyện variant A có Màu+Size còn variant B chỉ có Màu
 - Tổ hợp `(AttributeId, OptionId)` là duy nhất trong một product — không hai variant cùng Đỏ/M
+- Mọi phần tử `ImageUrls` phải nằm trong `shops/{shopId}/products/{productId}/` (#81). Xoá một ảnh của sản phẩm → gỡ khỏi mọi variant trong cùng transaction (`08` §8.4)
 
 **Vì sao giới hạn 3 trục:** 3 trục × 6 option mỗi trục = 216 tổ hợp. UI nhập liệu dạng bảng đã khó dùng ở mức đó. Quá 3 là dấu hiệu shop đang mô hình hoá sai (nên tách thành nhiều sản phẩm).
 
 ---
 
-## 20. `ProductImage` — hệ thống ảnh độc lập
+## 20. Ảnh sản phẩm — đường dẫn trong `ImageUrls`, không có bảng
 
-Theo #56, ảnh sản phẩm **không** nằm trong `media_assets`. Bảng riêng, lifecycle gắn chặt sản phẩm.
+**Toàn bộ mô hình ở [`08-media-asset-design.md`](08-media-asset-design.md) §8** (#79, #80, #81). Tóm tắt:
 
-| Cột | Kiểu | Ghi chú |
-|---|---|---|
-| `Id` | uuid PK | |
-| `ProductId` | uuid FK | Cascade delete |
-| `StorageKey` | varchar(300) | Đường dẫn tương đối, thư mục riêng `shops/{id}/products/…` |
-| `Width` / `Height` | int | Sau resize |
-| `SizeBytes` | bigint | |
-| `AltText` | varchar(200)? | **Quan trọng cho SEO** — Google Image Search là nguồn traffic thật với shop bán hàng |
-| `FocalPointX` / `FocalPointY` | real | Mặc định `0.5`/`0.5` |
-| `SortOrder` | int | `0` = ảnh chính |
-| `CreatedAt` | | |
-
-**Xử lý upload giống hệt §9.1**: resize cạnh dài ≤1600, giữ tỉ lệ gốc, webp, strip EXIF. Cắt theo `ImageRatio` của danh mục xảy ra lúc render (#57).
-
-**`SortOrder = 0` là ảnh chính** — tường minh thay vì ngầm định "phần tử đầu mảng". `Product.PrimaryImageId` denormalize sẵn để render thẻ sản phẩm không cần join.
+- `Product.ImageUrls text[]` (§17) và `ProductVariant.ImageUrls text[]` (§19) lưu đường dẫn tương đối
+  của **file full**. `[0]` là ảnh đại diện.
+- Thư mục `shops/{shopId}/products/{productId}/`, tên file uuid. Thumb cùng thư mục: `thumb_` cho mọi
+  ảnh, `fthumb_` chỉ cho ảnh đại diện.
+- File full crop theo `ImageRatio` của danh mục lúc upload (#57); `fthumb_` rộng 600, `thumb_` rộng 160,
+  cao theo tỉ lệ.
+- Xoá sản phẩm = xoá thư mục.
 
 ### 20.1 Vì sao tách khỏi `media_assets`
 
-| | `product_images` | `media_assets` |
+| | Ảnh sản phẩm | `media_assets` |
 |---|---|---|
-| Vòng đời | Chết theo sản phẩm (cascade) | Độc lập, chỉ chủ shop xoá |
+| Vòng đời | Chết theo sản phẩm (xoá thư mục) | Độc lập, chỉ chủ shop xoá |
 | Reuse | Không | Có, nhiều nơi dùng chung |
 | Xuất hiện trong builder picker | **Không bao giờ** | Có |
-| Nơi upload | Form sản phẩm | Media Library |
+| Nơi upload | Form sản phẩm | Builder / Media Library |
+| Kích thước | Cố định: full + `fthumb_` + `thumb_` | Theo preset của slot |
 
 Ảnh sản phẩm được upload hàng loạt, dùng đúng một chỗ, và nên biến mất khi sản phẩm biến mất. Đưa chúng vào thư viện chung làm shop rối (ảnh sản phẩm lẫn ảnh banner) và làm việc xoá sản phẩm trở nên mơ hồ.
 
-### 20.2 Dùng ảnh sản phẩm trong builder — phải clone trước (#56)
+### 20.2 Dùng ảnh sản phẩm trong builder — phải vào thư viện trước (#56)
 
 ```
 Shop bấm "Thêm vào thư viện" trên một ảnh sản phẩm
-  → copy file sang thư mục library
-  → tạo MediaAsset MỚI (Id mới, StorageKey mới)
+  → copy file full sang một BẢN LIBRARY MediaAsset MỚI
+      { IsInLibrary: true, Preset: null, Id mới, StorageKey mới }
   → từ đây hai bản HOÀN TOÀN độc lập
-  → builder picker chỉ thấy và chỉ lưu Id của bản library
+  → lắp vào slot = chọn từ Library → clone theo preset slot (#71, `08` §3.4)
+  → tree chỉ lưu id của clone
 ```
 
-**Thứ tự thao tác là bắt buộc: clone trước, chọn sau.** Builder picker **không bao giờ** hiển thị `product_images`.
+**Thứ tự thao tác là bắt buộc: vào thư viện trước, chọn sau.** Builder picker **không bao giờ** hiển thị ảnh sản phẩm trực tiếp.
 
-**Vì sao không cho chọn trực tiếp rồi clone ngầm:** kịch bản vỡ cụ thể — shop lắp ảnh sản phẩm vào Hero → publish (snapshot v5 lưu id của ảnh **product**) → sau đó xoá sản phẩm → ảnh chết theo cascade → snapshot v5 là bất biến (#41), không sửa được → banner trang chủ vỡ vĩnh viễn. Ép clone trước nghĩa là tree **không bao giờ** chứa id thuộc `product_images`, nên không tồn tại đường nào để vỡ.
+**Vì sao không cho chọn trực tiếp rồi copy ngầm:** kịch bản vỡ cụ thể — shop lắp ảnh sản phẩm vào Hero → publish (snapshot v5 trỏ vào ảnh **product**) → sau đó xoá sản phẩm → thư mục ảnh bị xoá → snapshot v5 là bất biến (#41), không sửa được → banner trang chủ vỡ vĩnh viễn. Ép vào thư viện trước nghĩa là tree **không bao giờ** trỏ vào ảnh sản phẩm, nên không tồn tại đường nào để vỡ.
 
 Chi phí: file bị nhân đôi. Đổi lại là ranh giới sạch và không có trường hợp biên nào.
 
@@ -800,9 +728,9 @@ Thay hoàn toàn mô hình in-memory LINQ của hệ cũ (#36).
 | URL filter | toàn bộ trong path | path + querystring | Tránh duplicate content |
 | Variant override attribute cha | mơ hồ | rõ: `IsVariantAxis` quyết định nơi lưu | Bớt một lớp nhập nhằng |
 | Khuyến mãi | bitmask `Promotions` | `CompareAtPrice` | Đủ cho Phase 2 |
-| Ảnh sản phẩm | chuỗi nối bằng `\|`, parse mỗi lần build cache | bảng `product_images` có kiểu | Có width/height/alt, không parse chuỗi |
-| Thumbnail | `ImageHelper.ReplaceImg2Thumb` — đoán URL bằng nối chuỗi | image proxy + preset whitelist | Nhiều kích thước, không nhân bản quy ước tên |
-| Tỉ lệ ảnh lưới | không có, ảnh cao thấp lộn xộn | `Category.ImageRatio`, cắt lúc render | Lưới đều, đổi tỉ lệ không phải upload lại |
+| Ảnh sản phẩm | chuỗi nối bằng `\|`, parse mỗi lần build cache | `ImageUrls text[]` (#79) | Mảng có kiểu, không parse chuỗi |
+| Thumbnail | `ImageHelper.ReplaceImg2Thumb` — đoán URL bằng nối chuỗi rải rác | Ảnh website: phái sinh theo whitelist preset qua `resolveImage()`. Ảnh sản phẩm: prefix `thumb_`/`fthumb_` qua **một** hàm dùng chung FE/BE | Quy ước tên chốt một chỗ, không nối chuỗi rải rác |
+| Tỉ lệ ảnh lưới | không có, ảnh cao thấp lộn xộn | `Category.ImageRatio`, crop lúc upload | Lưới đều |
 | Trang chi tiết / listing | code cứng theo action | `System` page có tree, khoá op | #33, #46 |
 | Trang chủ / giới thiệu | widget stack `UIH_Area` | `Composable` page, tree có `children` | Nâng từ phẳng lên cây |
 | Menu | derived, sort bằng `Index` rải rác | derived + overlay, một màn kéo-thả | #34 |
@@ -814,9 +742,9 @@ Thay hoàn toàn mô hình in-memory LINQ của hệ cũ (#36).
 ## 24. Thứ tự triển khai đề xuất
 
 ```
-1. MediaAsset + image proxy + preset whitelist   (không phụ thuộc gì, Builder & Listing cần)
+1. MediaAsset + pipeline ảnh + Media Library     (không phụ thuộc gì, Builder & Listing cần — `08`)
 2. ShopProductCategory → ShopAttribute → ShopAttributeOption → CategoryAttribute
-3. Product → ProductImage → ProductAttributeValue → ProductVariant → ProductVariantOption
+3. Product → ProductAttributeValue → ProductVariant → ProductVariantOption
 4. Elasticsearch index + facet + Hangfire sync
 5. Component Registry manifest + codegen         (chặn tất cả phần Builder phía sau)
 6. Website → Theme → Page → PageDraft

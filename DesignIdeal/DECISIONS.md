@@ -1,4 +1,4 @@
-# vsite — Registry Quyết Định (#1–#68)
+# vsite — Registry Quyết Định (#1–#81)
 
 > **File này là CHỈ MỤC, không phải nội dung.** Mỗi dòng cho bạn biết quyết định đó nói gì trong một
 > câu, nó được **định nghĩa đầy đủ ở đâu**, và nó **đã thành code chưa**. Đọc dòng ở đây trước, rồi
@@ -12,8 +12,8 @@
 ## ⚠️ Đọc trước khi tra
 
 **Không phải quyết định nào cũng nằm trong `02`.** `02` định nghĩa **#1–#39** và **#68**.
-**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0. Bảng §0 của hai file đó có
-câu "cần được chép sang 02" — **câu đó đã lỗi thời, cố tình không làm.** Chép sang `02` sẽ tạo bản
+**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#81** định nghĩa tại `08` §0.
+Không chép các quyết định đó sang `02` — cố tình không làm. Chép sang `02` sẽ tạo bản
 sao thứ hai để lệch nhau; thay vào đó registry này trỏ thẳng tới nơi định nghĩa duy nhất.
 
 → Phát biểu đúng: **`DECISIONS.md` là chỉ mục quyết định; nội dung nằm ở file mà cột "Định nghĩa tại" trỏ tới.**
@@ -92,22 +92,35 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#50** | Attribute `Text` không filter, không thống kê — chỉ hiển thị | `05` §0 · §14 | ⏳ Bước 10 |
 | **#51** | Xoá attribute/option là **xoá mềm** (`IsArchived`) | `05` §0 · §14 | ⏳ Bước 10 |
 | **#52** | Tối đa **3 trục variant** mỗi sản phẩm | `05` §0 · §19 | ⏳ Bước 10 |
-| **#53** | Ảnh resize lúc upload ≤1600px, giữ tỉ lệ, webp, strip EXIF; phái sinh sinh lúc render qua image proxy; luôn qua `resolveImage()` | `05` §0 · §9.1 | 📐 Bước 4 — `config/image-presets.json` đã có (6/12 preset) |
+| **#53** | Pipeline ảnh dùng chung (magic bytes, strip EXIF, webp, ≤1600px); file đúng kích thước **sinh sẵn lúc đặt/upload — không có image proxy runtime**; URL = `{domain bất kỳ}/media/{đường dẫn}`, `media` là reserved route, đọc không kiểm tenant; luôn qua `resolveImage()` | `05` §0 · chi tiết `08` §1, §3, §5 | 📐 Bước 4 |
 | **#54** | `Service` **không** có `System` page riêng — hiển thị qua component bind trên trang `Composable` | `05` §0 · `06` §6 | 📐 Bước 9 |
-| **#55** | **Không có bảng `MediaVariant`** — key phái sinh deterministic, storage đóng vai index. Quota tính trên bản gốc | `05` §0 · §9.2 | 📐 Bước 4 |
-| **#56** | `product_images` và `media_assets` là **hai hệ độc lập**; dùng ảnh sản phẩm trong builder phải clone. Builder picker **không bao giờ** thấy `product_images` | `05` §0 · §20 | ⏳ Bước 10 |
-| **#57** | Tỉ lệ ảnh sản phẩm do **danh mục** quyết định (`ShopProductCategory.ImageRatio`), cắt lúc render | `05` §0 · §13 | ⏳ Bước 10 |
-| **#58** | **Không** hỗ trợ `srcset` responsive ở Phase 2; mỗi vị trí một preset cố định ~2× độ rộng CSS | `05` §0 · §9.3 | 📐 |
+| **#55** | **Không có bảng `MediaVariant`** — mỗi file `MediaAsset` là một record (`Preset` + `SourceAssetId`); ảnh Listing/Product không có bảng. Dọn: job quét tham chiếu (MediaAsset, Bước 8) / xoá thư mục entity (Listing/Product). Quota MediaAsset = `SourceAssetId IS NULL` | `05` §0 · chi tiết `08` §2, §4, §8 | 📐 Bước 4 |
+| **#56** | Ảnh sản phẩm (`Product.ImageUrls`) và `media_assets` là **hai hệ độc lập**; dùng ảnh sản phẩm trong builder phải "Thêm vào thư viện" (tạo bản Library) rồi mới chọn → clone (#71). Builder picker **không bao giờ** thấy ảnh sản phẩm trực tiếp | `05` §0 · §20 | ⏳ Bước 10 |
+| **#57** | Tỉ lệ ảnh sản phẩm do **danh mục** quyết định (`ShopProductCategory.ImageRatio`); file full crop theo tỉ lệ **lúc upload**; đổi tỉ lệ thì ảnh cũ giữ nguyên, không có job sinh lại | `05` §0 · §13 | ⏳ Bước 10 |
+| **#58** | **Không** hỗ trợ `srcset` responsive ở Phase 2; mỗi vị trí một preset cố định ~2× độ rộng CSS; hoãn được nhờ chữ ký `resolveImage()` giữ nguyên (#74) | `05` §0 | 📐 |
 | **#59** | Manifest là file `.ts` object literal thuần — không import runtime, không hàm, không điều kiện | `07` §0 · §4 | ✅ enforce — `meta/manifest-schema.ts` (Zod) |
 | **#60** | BE **không** port Zod sang C#; codegen sinh `props-schemas.json` (JSON Schema 2020-12) | `07` §0 · §11 | ✅ enforce — `tests/schema-equivalence.test.ts` |
 | **#61** | Props khai ở tầng `type`; `variant` chỉ khai `usesProps` / `requiresProps` | `07` §0 · §4.2 | ✅ enforce — `meta/manifest-schema.ts` |
 | **#62** | `registry.lock.json` commit vào repo; CI so lock, breaking → fail build | `07` §0 · §5 | ✅ enforce — `scripts/check-additive.ts` |
 | **#63** | `kind` của prop là **tập đóng 12 giá trị**; người viết component không được phát minh kind mới | `07` §0 · §4.3 | ✅ enforce — `meta/prop-kinds.ts` |
-| **#64** | Mọi prop `kind: "image"` **bắt buộc** khai `preset` nằm trong `config/image-presets.json` | `07` §0 · §7.1 | ✅ enforce — `gen-registry.ts` hard-fail + `tests/config-files.test.ts` |
+| **#64** | Mọi prop `kind: "image"` **bắt buộc** khai `preset` nằm trong `config/image-presets.json`; whitelist là lint build-time + bảng kích thước cho pipeline BE | `07` §0 · §7.1 | ✅ enforce — `gen-registry.ts` hard-fail + `tests/config-files.test.ts` ⚠️ config chưa khớp 9 preset của #78, sửa ở Bước 4 |
 | **#65** | Prop `kind: "binding"` khai `sources` tường minh; codegen **hard-fail** nếu chứa `"Review"` | `07` §0 · §7.4 | ✅ enforce — `gen-registry.ts` + `config/binding-sources.json` + test |
 | **#66** | Nhãn Inspector là tiếng Việt thuần ở Phase 2, không dùng i18n key | `07` §0 | ✅ đã code |
 | **#67** | Sanitize `richText` — hai profile `inline` / `basic` | `07` §0 · §7.2 | ✅ **ĐÃ CHỐT + đã code** — `config/sanitize-profiles.json` + `src/sanitize-html.ts`. ⚠️ `07` §7.2 vẫn ghi "cần xác nhận" — **nhãn đó sai, bỏ qua** |
 | **#68** | Component Registry manifest triển khai ở Bước 2, **trước** Identity | `02 §Quyết định #68` | ✅ đã xong — BOOTSTRAP-002 |
+| **#69** | **Một bảng `MediaAsset`**; `Preset IS NULL` ⟺ `IsInLibrary = true` (CHECK hai chiều); không có cột `Purpose` | `08` §0 · §2 | 📐 Bước 4 |
+| **#70** | Hai chế độ upload vào slot: tick thư viện → bản Library + clone; không tick → một record crop đúng preset, **không giữ gốc**. Không có "lưu vào thư viện" sau upload; focal point chọn trước khi crop | `08` §0 · §3.2, §3.3 | 📐 Bước 4 |
+| **#71** | Lấy ảnh từ Library **luôn clone**; tree **không bao giờ** chứa id `IsInLibrary = true`; clone chỉ sinh từ bản Library, không từ clone | `08` §0 · §3.4 | 📐 Bước 4 |
+| **#72** | Clone **không** cascade delete theo node; dọn theo retention `SitePublication` | `08` §0 · §4 | 📐 Bước 4 (không xoá) · Bước 8 (job dọn) |
+| **#73** | **Ảnh dữ liệu nghiệp vụ** (logo, Service, ServiceGroup, ProductCategory, OG, favicon) = bản Library + bộ phái sinh sinh sẵn lúc upload; preset suy ra bằng codegen từ manifest bind nguồn + tập cố định của bề mặt vsite. Không áp cho ảnh Listing/Product (#79) | `08` §0 · §3.6 | 📐 Bước 4 |
+| **#74** | `resolveImage(imageId, preset)` **giữ chữ ký**; `preset` là assertion — lệch thì cảnh báo, vẫn render | `08` §0 · §6 | 📐 Bước 4 |
+| **#75** | **File ảnh bất biến** — cấm ghi đè, áp cho mọi ảnh (`StorageKey` lẫn file Listing/Product); mọi thay đổi sinh đường dẫn mới | `08` §0 · §5 | 📐 Bước 4 |
+| **#76** | Tham chiếu ảnh vô hướng từ module khác dùng **FK ghép `(ImageId, ShopId) → media_assets (Id, ShopId)`**; code đọc qua Public Contract (#1) | `08` §0 · §2.2 | 📐 Bước 4 |
+| **#77** | Tham chiếu `MediaAsset` không có FK (tree, `Page.OgImageId`) kiểm ở handler trong **một** câu query: cùng `ShopId`, chưa xoá, đúng loại record | `08` §0 · §3.5 | 📐 Bước 4 |
+| **#78** | **9 preset** cho ảnh `MediaAsset` chốt ở `08` §7; ảnh Listing/Product không đi qua whitelist preset | `08` §0 · §7 | 📐 Bước 4 — `config/image-presets.json` đang có 6 preset cũ |
+| **#79** | Ảnh **Listing/Product** không dùng `MediaAsset`: `ImageUrls text[]` = đường dẫn file full, `[0]` = đại diện; thư mục theo entity; `thumb_` mọi ảnh, `fthumb_` chỉ ảnh đại diện (sinh khi cần). Listing 640×480/160×120 (4:3); Product rộng 600/160 theo tỉ lệ danh mục | `08` §0 · §8 | 📐 Listing (Phase 1) · ⏳ Product (Bước 10) |
+| **#80** | Ảnh variant = `ProductVariant.ImageUrls text[]` (rỗng = dùng ảnh product); file chung thư mục sản phẩm, nhiều variant dùng chung đường dẫn | `08` §0 · §8.3 | ⏳ Bước 10 |
+| **#81** | Kiểm quyền lúc **ghi** đường dẫn ảnh (prefix thư mục của đúng entity dưới `shops/{shopId}/` + file tồn tại), **không** kiểm lúc đọc | `08` §0 · §8.4 | 📐 Listing (Phase 1) · ⏳ Product (Bước 10) |
 
 ---
 

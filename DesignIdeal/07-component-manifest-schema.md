@@ -6,7 +6,7 @@
 > 📌 **§0 là nơi định nghĩa Quyết định `#59–#67`.** Câu "chép sang `02`" trong §0 đã lỗi thời — cố
 > tình không chép, xem [`DECISIONS.md`](DECISIONS.md).
 
-> **Tài liệu liên quan:** `02-tech-stack-and-decision.md` (Quyết định #11, #12, #14, #16, **#17**, #19, #23) · `05-website-builder-and-product-design.md` (§6 Component Tree, §9.3 Preset, §11 Operations Engine, #43, #46, #53) · `06-service-design.md` (§7)
+> **Tài liệu liên quan:** `02-tech-stack-and-decision.md` (Quyết định #11, #12, #14, #16, **#17**, #19, #23) · `05-website-builder-and-product-design.md` (§6 Component Tree, §11 Operations Engine, #43, #46, #53) · `08-media-asset-design.md` (§6 `resolveImage`, §7 Preset) · `06-service-design.md` (§7)
 >
 > **Phạm vi:** định nghĩa **shape của một component manifest**, meta-schema validate nó, tập artifact codegen sinh ra, và cơ chế enforce additive-only bằng máy. Đây là hiện thực hoá cụ thể của Quyết định #17.
 >
@@ -38,7 +38,7 @@ Chép sang `02-tech-stack-and-decision.md` với số hiệu tương ứng.
 | **#61** | Props khai ở tầng **`type`**. `variant` **không** có props riêng — nó chỉ khai `usesProps` (hiện gì trong Inspector) và `requiresProps` (bắt buộc phải có giá trị). Đây là cơ chế làm cho #43 (additive-only) khả thi: thêm prop optional ở type level không phá vỡ variant cũ |
 | **#62** | `registry.lock.json` **commit vào repo**. CI so manifest hiện tại với lock; đổi kiểu prop, xoá prop, xoá variant, đổi `kind` → **fail build**. #43 được enforce bằng máy, không bằng code review |
 | **#63** | `kind` của prop là **tập đóng 12 giá trị**. Thêm kind mới = sửa meta-schema + generator + Inspector, là việc của người bảo trì framework. Người viết component mới **không** được phát minh kind |
-| **#64** | Mọi prop `kind: "image"` **bắt buộc** khai `preset`, và preset phải nằm trong `config/image-presets.json` (whitelist §9.3 của `05`). Codegen fail nếu khai preset không tồn tại. Component không bao giờ tự nối URL — hệ quả trực tiếp của #53 |
+| **#64** | Mọi prop `kind: "image"` **bắt buộc** khai `preset`, và preset phải nằm trong `config/image-presets.json` (9 preset, `08` §7, #78). Codegen fail nếu khai preset không tồn tại. Whitelist có hai vai trò: **lint build-time** cho manifest, và **bảng kích thước** pipeline BE dùng để crop lúc đặt ảnh vào slot. Không có URL runtime nào nhận preset (#53). Component không bao giờ tự nối URL — luôn qua `resolveImage()` |
 | **#65** | Prop `kind: "binding"` khai `sources` tường minh. Codegen **hard-fail** nếu `sources` chứa `"Review"` — ranh giới cứng của `01` §7, chặn ở generator chứ không chỉ ở Operations Engine bước [5] |
 | **#66** | Nhãn Inspector là **tiếng Việt thuần** ở Phase 2, không dùng i18n key. Đa ngôn ngữ cho *portal* khác với đa ngôn ngữ cho *website shop* (`05` §25 #2) — trộn hai việc lúc này là tự tạo việc |
 | **#67** ⚠️ | **Sanitize profile cho `richText`** — đề xuất hai profile `inline` / `basic` ở §7.2. **Cần bạn xác nhận** trước khi code, vì nó khoá `05` §25 #3 và `06` §10 #4 |
@@ -70,7 +70,7 @@ Chép sang `02-tech-stack-and-decision.md` với số hiệu tương ứng.
 | Generator + 6 artifact sinh ra | `PageDraft`, autosave, API |
 | 4 manifest + 4 React component | Operations Engine thật (chỉ sinh `op-rules.ts` để bước 5 dùng) |
 | `builder-renderer` nhận tree JSON → React | Publish, `SitePublication`, cache |
-| `resolveImage()` / `resolveUrl()` **dạng stub** | Image proxy thật (Bước 4) |
+| `resolveImage()` / `resolveUrl()` **dạng stub** | Pipeline ảnh + `resolveImage()` thật (Bước 4, `08`) |
 | Dev harness đọc fixture (ném đi) | Undo/redo, zundo, Selection Context |
 | Lock file + CI additive check | Binding Resolver thật (Bước 9) |
 
@@ -254,7 +254,8 @@ Xoá variant            → FAIL
 Xoá option khỏi select → FAIL   (tree cũ có thể đang giữ giá trị đó)
 Siết maxLength / min   → FAIL
 Thêm vào requiresProps → FAIL   (tree cũ hợp lệ bỗng thành không hợp lệ)
-Đổi preset của image   → CẢNH BÁO (không vỡ dữ liệu, nhưng đổi layout hàng loạt site)
+Đổi preset của image   → CẢNH BÁO (không vỡ dữ liệu; ảnh cũ chạy preset drift (#74) tới khi được
+                          sinh lại — ảnh upload thẳng không sinh lại được, `08` §1)
 ```
 
 Bảy dòng `FAIL` được kiểm bằng `scripts/check-additive.ts` so với `registry.lock.json` (#62). Chạy trong CI **và** trong pre-commit hook.
@@ -295,7 +296,7 @@ generated/
 | # | Kiểm | Vì sao fail chứ không cảnh báo |
 |---|---|---|
 | 1 | `binding.sources` chứa `"Review"` | Ranh giới cứng `01` §7. Cảnh báo là sẽ bị bỏ qua (#65) |
-| 2 | `image.preset` không có trong `config/image-presets.json` | Preset ngoài whitelist = URL 404 hoặc mở cửa đốt CPU (#53, #64) |
+| 2 | `image.preset` không có trong `config/image-presets.json` | Preset ngoài whitelist = pipeline BE không biết kích thước để crop, upload vào slot đó fail lúc runtime (#53, #64) |
 | 3 | `requiresProps` ⊄ `usesProps` | Prop bắt buộc mà Inspector không hiện = shop không có cách nhập |
 | 4 | `usesProps` chứa tên không có trong `props` | Inspector crash lúc runtime |
 | 5 | `acceptsChildren: false` mà có `allowedChildTypes` | Mâu thuẫn nội tại |
@@ -325,7 +326,9 @@ avatar: {
 }
 ```
 
-Lưu trong tree: `{ "imageId": "media_8891", "alt": "..." }` — `alt` optional, rỗng thì fallback về `MediaAsset.AltText` (`05` §9).
+Lưu trong tree: `{ "imageId": "media_8891", "alt": "..." }` — `alt` optional, rỗng thì fallback về `MediaAsset.AltText`. `imageId` luôn là id của **clone** đã crop đúng `preset` của slot, không bao giờ là bản Library (#71, `08` §3).
+
+`allowFocalPoint: true` chỉ hiện điều khiển focal point **trong dialog upload / chọn ảnh**, trước khi server crop. Sau khi lưu, ảnh upload thẳng (không qua Library) không đổi focal point được nữa — `08` §1.
 
 Renderer **chỉ** được gọi `ctx.resolveImage(imageId, preset)`. Ở Bước 2 hàm này là stub:
 
@@ -334,7 +337,8 @@ Renderer **chỉ** được gọi `ctx.resolveImage(imageId, preset)`. Ở Bư�
 resolveImage: (id, preset) => `/_dev/placeholder/${preset}.svg`
 ```
 
-Chữ ký phải đúng ngay từ Bước 2 — đó là toàn bộ lý do stub tồn tại.
+Chữ ký phải đúng ngay từ Bước 2 — đó là toàn bộ lý do stub tồn tại. Thân hàm Bước 4 ở `08` §6: `preset`
+thành **assertion** — lệch với preset thật của asset thì cảnh báo và vẫn render (#74).
 
 ### 7.2 `richText` — hai profile (#67 ✅ đã chốt, đã code)
 
@@ -401,9 +405,11 @@ items: {
 }
 ```
 
-`config/binding-sources.json` là tập đóng toàn hệ: `Product`, `ProductCategory`, `Service`, `ServiceGroup`, `MediaAsset`. **`Review` không có mặt** — không phải bị đánh dấu cấm, mà là **không tồn tại** trong file. Cấm bằng cách vắng mặt mạnh hơn cấm bằng cờ, vì không có gì để ai đó bật lên.
+`config/binding-sources.json` là tập đóng toàn hệ: `Product`, `ProductCategory`, `Service`, `ServiceGroup`, `MediaAsset`, `Shop` (`Shop` thêm ở Bước 4 để bind logo — #73). **`Review` không có mặt** — không phải bị đánh dấu cấm, mà là **không tồn tại** trong file. Cấm bằng cách vắng mặt mạnh hơn cấm bằng cờ, vì không có gì để ai đó bật lên.
 
 `props` **không bao giờ** chứa dữ liệu đã materialize (`05` §6 quy tắc 3) — chỉ chứa mô tả cách lấy. Binding Resolver thật làm ở Bước 9.
+
+**Ảnh của dữ liệu bind** (logo, ảnh dịch vụ, ảnh danh mục…) không nằm trong tree — render bằng phái sinh sinh sẵn lúc upload (#73, `08` §3.6). Để codegen biết cần sinh phái sinh nào, prop `binding` sẽ có thêm **một field additive khai preset ảnh** của dữ liệu bind; codegen gom thành artifact bộ phái sinh theo nguồn. Tên field chốt ở plan Bước 4 (`08` §10 mục 3). Ảnh sản phẩm **không** đi đường này — `ProductGrid` dùng `fthumb_`/`thumb_` (#79).
 
 ---
 
@@ -802,7 +808,7 @@ Bốn trong tám dòng này đã được enforce bằng codegen hoặc lint (§
 | # | Vấn đề | Trạng thái |
 |---|---|---|
 | 1 | Whitelist sanitize `richText` — hai profile ở §7.2 | ⚠️ **Cần xác nhận trước 2.1**. Khoá `05` §25 #3 và `06` §10 #4 |
-| 2 | Danh sách preset đầy đủ (§9.3 của `05` ghi "khoảng 12", liệt kê 6) | ⚠️ Cần liệt kê đủ trước 2.1, vì codegen fail nếu preset không có trong file |
+| 2 | Danh sách preset đầy đủ | ✅ Chốt 9 preset ở `08` §7 (#78). `config/image-presets.json` cập nhật ở Bước 4 |
 | 3 | `visibleWhen` — hiện prop có điều kiện theo prop khác (ví dụ `columns` chỉ hiện khi `Gallery01`) | ⏳ Hiện dùng `usesProps` theo variant là đủ. Nếu cần điều kiện theo *giá trị* prop khác thì thêm sau — additive, không phá vỡ |
 | 4 | Responsive props (giá trị khác nhau theo breakpoint) | ⏳ Hoãn cùng `srcset` (#58). Nếu làm thì là kind mới, không sửa kind cũ |
 | 5 | Đa ngôn ngữ cho **website shop** — prop nào dịch được | ⏳ `05` §25 #2. Manifest nên có `localizable: boolean` từ đầu để không phải migrate — **cân nhắc thêm ngay ở 2.2**, rẻ hơn thêm sau |
