@@ -175,6 +175,39 @@ public sealed class ImageSharpImageProcessorTests
         Assert.Equal(1, output.Frames.Count);
     }
 
+    /// <summary>
+    /// Chứng minh `DecoderOptions.MaxFrames = 1` thực sự chặn decode ở TẦNG DECODER, không phải chỉ
+    /// xoá frame thừa SAU khi đã decode hết (khác với <see cref="Animated_webp_takes_first_frame"/>,
+    /// vốn pass dù có hay không `MaxFrames`). `animated-frame2-corrupt.webp` có frame 1 hợp lệ và
+    /// payload VP8 của frame 2 bị phá (74 byte cuối file ghi đè 0xFF) — nếu decoder đọc frame 2 thì
+    /// bắt buộc lỗi. `LoadAsync` phải thành công vì không bao giờ chạm tới byte của frame 2.
+    /// </summary>
+    [Fact]
+    public async Task Animated_webp_decode_never_touches_frame_2()
+    {
+        var processor = CreateProcessor();
+        var bytes = ReadAsset("animated-frame2-corrupt.webp");
+
+        using var source = await processor.LoadAsync(new MemoryStream(bytes), CancellationToken.None);
+
+        Assert.Equal(64, source.Width);
+        Assert.Equal(64, source.Height);
+    }
+
+    // ---- Huỷ request không được báo thành ảnh hỏng ----
+
+    [Fact]
+    public async Task Cancelled_token_propagates_as_operation_canceled_not_corrupt_image()
+    {
+        var processor = CreateProcessor();
+        var bytes = ReadAsset("exif-gps.jpg");
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => processor.LoadAsync(new MemoryStream(bytes), cts.Token));
+    }
+
     // ---- Giới hạn dung lượng ----
 
     [Fact]

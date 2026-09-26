@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using Vsite.Application.Common.Imaging;
@@ -52,6 +53,12 @@ public sealed class ImageSharpImageProcessor(IOptions<ImageUploadOptions> option
         {
             throw;
         }
+        catch (OperationCanceledException)
+        {
+            // Client huỷ request — không phải ảnh hỏng, phải để nguyên cho caller xử lý (vd. 499),
+            // không nuốt thành 422.
+            throw;
+        }
         catch (Exception)
         {
             throw new UnprocessableException(ImageErrorCodes.CorruptImage, "Không đọc được thông tin ảnh.");
@@ -65,23 +72,34 @@ public sealed class ImageSharpImageProcessor(IOptions<ImageUploadOptions> option
                 $"Ảnh có {pixels} pixel, vượt quá giới hạn {_options.MaxPixels}.");
         }
 
-        // 4) Decode thật.
+        // 4) Decode thật. `MaxFrames = 1` chặn decoder giải mã hết mọi frame của ảnh động NGAY TỪ
+        // LÚC DECODE — nếu không, một WebP/GIF vài MB nhưng hàng nghìn frame rẻ tiền trên canvas
+        // ~25MP (vẫn lọt qua kiểm pixel ở bước 3, vì IdentifyAsync chỉ đọc kích thước canvas của MỘT
+        // frame) sẽ ép ImageSharp cấp phát hàng GB RAM trước khi vòng lặp xoá frame thừa bên dưới
+        // kịp chạy. Giữ lại vòng lặp `RemoveFrame` làm lớp phòng thủ thứ hai (phòng khi decoder của
+        // một format nào đó không tôn trọng `MaxFrames`).
         Image<Rgba32> image;
         try
         {
             using var decodeStream = new MemoryStream(bytes, writable: false);
-            image = await Image.LoadAsync<Rgba32>(decodeStream, ct);
+            var decoderOptions = new DecoderOptions { MaxFrames = 1 };
+            image = await Image.LoadAsync<Rgba32>(decoderOptions, decodeStream, ct);
         }
         catch (UnknownImageFormatException)
         {
             throw new UnprocessableException(ImageErrorCodes.UnsupportedFormat, "Định dạng ảnh không được hỗ trợ.");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception)
         {
             throw new UnprocessableException(ImageErrorCodes.CorruptImage, "Dữ liệu ảnh bị hỏng, không decode được.");
         }
 
-        // R5: WebP/GIF động → chỉ lấy khung đầu tiên.
+        // R5: WebP/GIF động → chỉ lấy khung đầu tiên (fallback phòng thủ — `MaxFrames = 1` ở trên
+        // đã đảm bảo việc này ngay từ lúc decode).
         while (image.Frames.Count > 1)
         {
             image.Frames.RemoveFrame(1);
