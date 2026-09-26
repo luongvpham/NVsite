@@ -32,10 +32,11 @@ public sealed class DeleteFromLibraryHandler(IAppDbContext db, ICurrentUserConte
             .FirstOrDefaultAsync(a => a.Id == request.AssetId && a.IsInLibrary, cancellationToken)
             ?? throw new NotFoundException("MediaAsset", request.AssetId);
 
-        // Global filter đã ràng ShopId == tenant; Remove() -> AppDbContext.InterceptSoftDelete()
-        // chặn EntityState.Deleted thành Modified + IsDeleted=true. KHÔNG đụng clone/phái sinh
-        // (SourceAssetId trỏ record này) và KHÔNG gọi IObjectStorage.DeleteAsync.
-        db.MediaAssets.Remove(asset);
+        // Global filter đã ràng ShopId == tenant. `asset.SoftDeleteFromLibrary()` (KHÔNG
+        // `db.MediaAssets.Remove(asset)` — xem XML doc trên method đó vì sao Remove() làm clone mất
+        // SourceAssetId thật qua cascade fix-up của EF Core, review fix #72). KHÔNG đụng clone/phái
+        // sinh (SourceAssetId trỏ record này) và KHÔNG gọi IObjectStorage.DeleteAsync.
+        asset.SoftDeleteFromLibrary();
         await db.SaveChangesAsync(cancellationToken);
     }
 }

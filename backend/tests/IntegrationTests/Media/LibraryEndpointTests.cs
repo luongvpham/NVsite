@@ -85,10 +85,11 @@ public sealed class LibraryEndpointTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    // ---- clone asset của shop B -> 404 ----
+    // ---- caller không phải member của shopAId -> 403 (không phải kịch bản "asset của shop B" của
+    // brief — đó là test kế tiếp, `Clone_of_asset_belonging_to_a_different_shop_but_caller_is_member_returns_404`) ----
 
     [Fact]
-    public async Task Clone_of_another_shops_asset_returns_404()
+    public async Task Clone_by_a_non_member_of_the_route_shop_returns_403()
     {
         var (tokenA, shopAId) = await CreateOwnerWithShopAsync();
         var (tokenB, _) = await CreateOwnerWithShopAsync();

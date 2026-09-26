@@ -160,12 +160,16 @@ public sealed class LibraryHandlerTests : IDisposable
     }
 
     // ---- Test bắt buộc 9: xoá bản Library -> list không còn; GetAssetsByIds([cloneId]) vẫn trả
-    // clone, file clone vẫn mở được ----
+    // clone, file clone vẫn mở được. Review fix (#72): clone KHÔNG được mất SourceAssetId qua cascade
+    // fix-up của EF Core (DeleteBehavior.SetNull) — verify bằng cách đọc lại clone từ một
+    // AppDbContext MỚI (không tracking chung với context vừa xoá), và usage phải giảm đúng
+    // library.SizeBytes (clone chưa bao giờ tính vào usage vì SourceAssetId != null). ----
 
     [Fact]
     public async Task Delete_library_then_list_excludes_it_but_clone_still_resolves_and_file_still_opens()
     {
-        await using var db = CreateDbContext();
+        var dbName = Guid.NewGuid().ToString("N");
+        await using var db = CreateDbContext(dbName);
         var writer = CreateWriter(db);
         var shopId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
@@ -175,6 +179,10 @@ public sealed class LibraryHandlerTests : IDisposable
         var cloneHandler = CreateCloneHandler(db, writer);
         var clone = await cloneHandler.Handle(
             new CloneFromLibraryCommand(shopId, library.Id, CoverPreset.Name, null, null), CancellationToken.None);
+
+        var usageHandler = new GetUsageHandler(db);
+        var usageBefore = await usageHandler.Handle(new GetUsageQuery(shopId), CancellationToken.None);
+        Assert.Equal(library.SizeBytes, usageBefore.UsedBytes);
 
         var deleteHandler = new DeleteFromLibraryHandler(db, new FakeCurrentUserContext(ownerId), new FakeShopOwnershipService(isOwner: true));
         await deleteHandler.Handle(new DeleteFromLibraryCommand(shopId, library.Id), CancellationToken.None);
@@ -187,10 +195,30 @@ public sealed class LibraryHandlerTests : IDisposable
         var found = await lookupHandler.Handle(new GetAssetsByIdsQuery(shopId, [clone.Id]), CancellationToken.None);
         var foundClone = Assert.Single(found);
         Assert.Equal(clone.Id, foundClone.Id);
+        Assert.Equal(library.Id, foundClone.SourceAssetId);
+
+        // Đọc lại từ một AppDbContext MỚI, cùng InMemory database name nhưng KHÔNG chia sẻ
+        // ChangeTracker/identity map với `db` — chứng minh giá trị đã PERSIST đúng, không phải chỉ
+        // "đọc lại instance đang tracked" (điều mà `foundClone.SourceAssetId` ở trên chưa loại trừ
+        // hết, vì `GetAssetsByIdsHandler` vẫn dùng CHUNG `db`).
+        await using (var freshDb = CreateDbContext(dbName))
+        {
+            var persistedClone = await freshDb.MediaAssets.IgnoreQueryFilters().FirstAsync(a => a.Id == clone.Id);
+            Assert.Equal(library.Id, persistedClone.SourceAssetId);
+            Assert.False(persistedClone.IsDeleted);
+
+            var persistedLibrary = await freshDb.MediaAssets.IgnoreQueryFilters().FirstAsync(a => a.Id == library.Id);
+            Assert.True(persistedLibrary.IsDeleted);
+        }
 
         var stored = await _storage.OpenReadAsync(foundClone.StorageKey, CancellationToken.None);
         Assert.NotNull(stored);
         await stored!.Content.DisposeAsync();
+
+        // Library row ngừng tính vào usage (soft-deleted); clone chưa bao giờ tính (SourceAssetId !=
+        // null) — usage giảm ĐÚNG BẰNG SizeBytes của bản Library, không phải về 0 và không đổi.
+        var usageAfter = await usageHandler.Handle(new GetUsageQuery(shopId), CancellationToken.None);
+        Assert.Equal(usageBefore.UsedBytes - library.SizeBytes, usageAfter.UsedBytes);
     }
 
     // ---- delete bởi non-Owner -> 403 MEDIA_OWNER_REQUIRED ----
@@ -411,10 +439,13 @@ public sealed class LibraryHandlerTests : IDisposable
     private MediaAssetWriter CreateWriter(IAppDbContext db) =>
         new(db, _storage, TimeProvider.System, Options.Create(new ImageUploadOptions()));
 
-    private AppDbContext CreateDbContext()
+    /// <summary>Truyền <paramref name="databaseName"/> để tạo MỘT AppDbContext MỚI (ChangeTracker
+    /// rỗng) trỏ vào CÙNG InMemory database — dùng để đọc lại dữ liệu đã persist mà không bị "che" bởi
+    /// identity map của context đã dùng để ghi (xem test bắt buộc 9).</summary>
+    private AppDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .UseInMemoryDatabase(databaseName ?? Guid.NewGuid().ToString("N"))
             .Options;
         return new AppDbContext(options, _tenantContext);
     }

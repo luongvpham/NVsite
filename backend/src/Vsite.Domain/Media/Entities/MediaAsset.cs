@@ -157,6 +157,26 @@ public sealed class MediaAsset : ShopAuditableEntity
         };
     }
 
+    /// <summary>
+    /// T6, MEDIA-001 (#71/#72, review fix) — soft-delete bản Library. GỌI THẲNG method này, KHÔNG
+    /// bao giờ qua `DbSet.Remove()`: `Remove()` đưa entity vào `EntityState.Deleted`, và với FK
+    /// self-reference `SourceAssetId` cấu hình `OnDelete(DeleteBehavior.SetNull)`
+    /// (`MediaAssetConfiguration`), EF Core cascade fix-up sẽ set `SourceAssetId` của MỌI clone ĐANG
+    /// TRACKED trong CÙNG context về `null` NGAY LẬP TỨC — trước khi
+    /// `AppDbContext.InterceptSoftDelete()` kịp chặn lại state của record NÀY thành `Modified`. Kết
+    /// quả: clone bị mất `SourceAssetId` thật (không phải chỉ ở bộ nhớ) — vi phạm #72 (clone của một
+    /// bản Library đã xoá vẫn phải giữ nguyên `SourceAssetId`, không biến thành ảnh "mồ côi" trông
+    /// giống upload thẳng).
+    ///
+    /// Set `IsDeleted` trực tiếp giữ entity ở `EntityState.Modified` NGAY TỪ ĐẦU — không bao giờ đi
+    /// qua `EntityState.Deleted`, nên không kích hoạt cascade fix-up. `UpdatedAt` không cần set tay ở
+    /// đây — `AppDbContext.StampAuditFields()` tự stamp cho MỌI entry `Modified`.
+    /// </summary>
+    public void SoftDeleteFromLibrary()
+    {
+        IsDeleted = true;
+    }
+
     private static void ValidateFocal(float x, float y)
     {
         if (x is < 0f or > 1f)
