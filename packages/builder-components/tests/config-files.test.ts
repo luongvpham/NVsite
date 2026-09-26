@@ -79,11 +79,8 @@ describe('config whitelist files (§2.1)', () => {
     expect(profiles.basic?.tags).toContain('blockquote');
   });
 
-  // BLOCKED (T0.2): config/reserved-routes.json được .claude/hooks/guard-write.mjs bảo vệ —
-  // "sửa cần người duyệt, không sửa trực tiếp trong task thường" (Quyết định #24). Agent không
-  // tự bypass hook. Người duyệt thêm "media" vào reservedPaths thủ công rồi bỏ .skip ở đây.
-  // Xem .superpowers/sdd/plan/task-S0a-report.md.
-  it.skip('reserved-routes.json reservedPaths contains (#24)', () => {
+  // `media` là route phục vụ ảnh trên mọi domain (08 §5) — không shop nào được lấy slug này (#24).
+  it('reserved-routes.json reservedPaths contains media (#24)', () => {
     const config = readJson('config/reserved-routes.json') as { reservedPaths: string[] };
     expect(config.reservedPaths).toContain('media');
   });
