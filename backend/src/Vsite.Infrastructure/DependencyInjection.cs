@@ -10,6 +10,7 @@ using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Identity.Auth.Commands.Register;
 using Vsite.Application.Identity.Interfaces;
 using Vsite.Application.Identity.Options;
+using Vsite.Application.Media;
 using Vsite.Application.Shop.Interfaces;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Infrastructure.Identity;
@@ -46,6 +47,7 @@ public static class DependencyInjection
         services.AddIdentityModule(configuration);
         services.AddShopModule();
         services.AddImagingModule(configuration);
+        services.AddMediaModule();
 
         return services;
     }
@@ -96,6 +98,18 @@ public static class DependencyInjection
         {
             services.AddSingleton<IObjectStorage, LocalDiskObjectStorage>();
         }
+
+        return services;
+    }
+
+    // ---- Media (T5, MEDIA-001) ----
+    private static IServiceCollection AddMediaModule(this IServiceCollection services)
+    {
+        // TimeProvider.System — không có clock abstraction sẵn có trong codebase (T5 tự quyết,
+        // xem task-T5-report.md "Giả định tôi đã tự đặt"). Singleton: TimeProvider tự nó
+        // thread-safe/stateless, tests thay bằng FakeTimeProvider qua override DI khi cần.
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<MediaAssetWriter>();
 
         return services;
     }

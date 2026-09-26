@@ -19,4 +19,21 @@
 
 ## Pending
 
-_(rỗng)_
+### T5, MEDIA-001 — `UploadEndpointTests` (`Media/UploadEndpointTests.cs`, `MediaApiFactory`)
+
+- Lệnh chạy chính xác:
+  ```
+  dotnet test backend/tests/IntegrationTests --filter "FullyQualifiedName~UploadEndpointTests"
+  ```
+- Lý do cần Docker: `MediaApiFactory` dùng `Testcontainers.PostgreSql` + `Testcontainers.Redis` (mô
+  phỏng `ShopApiFactory`) để chạy hai endpoint `POST /shops/{shopId}/media/slot-uploads` và
+  `POST /shops/{shopId}/media/library` qua pipeline HTTP thật (auth, tenancy, ProblemDetails).
+- Đã xác nhận: build 0 lỗi/0 warning (`dotnet build backend/vsite.sln`), đọc lại bằng mắt khớp hành
+  vi handler — cùng logic đã pass thật ở `UploadHandlerTests` (EF InMemory, không cần Docker, xem
+  `backend/tests/IntegrationTests/Media/UploadHandlerTests.cs`, 7/7 test cases tương ứng: record
+  Direct, record Library+Derived, preset lạ 422, focal ngoài [0,1] 422, R4 rollback). Test HTTP
+  layer thêm: 403 SHOP_ACCESS_DENIED, field `shopId` trong multipart bị bỏ qua, và toàn bộ đi qua
+  `RequireGlobalScope` + `RequireShopMembership()` thật (JWT, ProblemDetails).
+- Ngày thêm: 2026-09-26.
+- Tiêu chí "coi là xong": chạy lệnh trên, toàn bộ test trong `UploadEndpointTests` pass thật (không
+  chỉ build) → xoá mục này.

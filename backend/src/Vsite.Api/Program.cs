@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Vsite.Api.Auth;
 using Vsite.Api.Identity;
 using Vsite.Api.ExceptionHandling;
+using Vsite.Api.Media;
 using Vsite.Api.OpenApi;
 using Vsite.Api.Shop;
 using Vsite.Api.Tenancy;
@@ -26,6 +27,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 // Extensions, reflection không tự thấy được (xem ghi chú trong file transformer).
 builder.Services.AddOpenApi("identity", options => options.AddSchemaTransformer<ProblemDetailsSchemaTransformer>());
 builder.Services.AddOpenApi("shop", options => options.AddSchemaTransformer<ProblemDetailsSchemaTransformer>());
+builder.Services.AddOpenApi("media", options => options.AddSchemaTransformer<ProblemDetailsSchemaTransformer>());
 
 builder.Services.AddExceptionHandler<AppExceptionHandler>();
 builder.Services.AddExceptionHandler<UnauthorizedAccessExceptionHandler>();
@@ -104,6 +106,7 @@ app.MapOpenApi();
 
 app.MapIdentityEndpoints();
 app.MapShopEndpoints();
+app.MapMediaEndpoints();
 
 app.Run();
 
