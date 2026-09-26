@@ -31,6 +31,7 @@ builder.Services.AddOpenApi("media", options => options.AddSchemaTransformer<Pro
 
 builder.Services.AddExceptionHandler<AppExceptionHandler>();
 builder.Services.AddExceptionHandler<UnauthorizedAccessExceptionHandler>();
+builder.Services.AddExceptionHandler<BadHttpRequestExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 // Mặc định ASP.NET Core trả 401/403 không có body khi authorization policy fail — thay bằng

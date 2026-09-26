@@ -91,12 +91,17 @@ public sealed class MediaAssetWriter(
     }
 
     /// <summary>R4 — nếu <c>SaveChangesAsync</c> ném lỗi, xoá best-effort mọi key đã ghi trong
-    /// request này rồi NÉM LẠI exception gốc (không nuốt, không bọc lại).</summary>
+    /// request này rồi NÉM LẠI exception gốc (không nuốt, không bọc lại). Thành công thì XOÁ danh
+    /// sách key đã theo dõi — writer là scoped, một scope có thể gọi nhiều lần (vd. nhiều thao tác
+    /// tuần tự trong cùng request/test); không clear thì một lần gọi SAU thất bại sẽ xoá NHẦM file
+    /// của thao tác TRƯỚC đã commit thành công (review sau T5).</summary>
     public async Task<int> SaveChangesAsync(CancellationToken ct)
     {
         try
         {
-            return await db.SaveChangesAsync(ct);
+            var result = await db.SaveChangesAsync(ct);
+            _writtenKeys.Clear();
+            return result;
         }
         catch
         {
@@ -138,6 +143,10 @@ public sealed class MediaAssetWriter(
                 // Best-effort (R4): không để lỗi dọn dẹp che mất exception gốc đang được rethrow.
             }
         }
+
+        // Xoá khỏi danh sách theo dõi SAU khi đã dọn — cùng lý do clear ở nhánh thành công của
+        // SaveChangesAsync: writer scoped có thể còn được dùng tiếp trong cùng scope.
+        _writtenKeys.Clear();
     }
 
     private static string? TruncateFileName(string? fileName) =>

@@ -12,6 +12,7 @@ using Vsite.Application.Media;
 using Vsite.Application.Media.Commands.UploadToLibrary;
 using Vsite.Application.Media.Commands.UploadToSlot;
 using Vsite.Domain.Abstractions;
+using Vsite.Domain.Exceptions;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Domain.Media.Entities;
 using Vsite.Infrastructure.Imaging;
@@ -131,19 +132,28 @@ public sealed class UploadHandlerTests : IDisposable
         Assert.Equal(library.Id, result.LibraryAsset!.Id);
     }
 
-    // ---- Preset lạ -> validator FAIL ----
+    // ---- Preset lạ -> HANDLER ném UnprocessableException("MEDIA_UNKNOWN_PRESET") ----
+    // (review sau T5: validator KHÔNG còn check preset tồn tại — ValidationException luôn bọc
+    // error_code chung "VALIDATION_ERROR", không cho phép brief's "422 MEDIA_UNKNOWN_PRESET" ở
+    // top-level. Check preset chuyển hẳn sang handler, ném đúng error_code brief yêu cầu.)
 
     [Fact]
-    public async Task UploadToSlotValidator_rejects_unknown_preset()
+    public async Task UploadToSlot_with_unknown_preset_throws_Unprocessable_MEDIA_UNKNOWN_PRESET()
     {
-        var validator = new UploadToSlotValidator(_presetCatalog);
+        await using var db = CreateDbContext();
+        var writer = CreateWriter(db);
+        var handler = new UploadToSlotHandler(_processor, _presetCatalog, writer);
+        var shopId = Guid.NewGuid();
+        _tenantContext.ShopId = shopId;
+
+        using var sourceStream = new MemoryStream(EncodeJpeg(1600, 1200));
         var command = new UploadToSlotCommand(
-            Guid.NewGuid(), new MemoryStream(), "photo.jpg", "does-not-exist", 0.5f, 0.5f, false, null);
+            shopId, sourceStream, "photo.jpg", "does-not-exist", 0.5f, 0.5f, false, null);
 
-        var result = await validator.ValidateAsync(command);
+        var ex = await Assert.ThrowsAsync<UnprocessableException>(() => handler.Handle(command, CancellationToken.None));
 
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UploadToSlotCommand.Preset));
+        Assert.Equal("MEDIA_UNKNOWN_PRESET", ex.ErrorCode);
+        Assert.Empty(await db.MediaAssets.ToListAsync());
     }
 
     // ---- Focal ngoài [0,1] -> validator FAIL ----
@@ -153,7 +163,7 @@ public sealed class UploadHandlerTests : IDisposable
     [InlineData(0.5f, -0.1f)]
     public async Task UploadToSlotValidator_rejects_focal_point_outside_0_1(float focalX, float focalY)
     {
-        var validator = new UploadToSlotValidator(_presetCatalog);
+        var validator = new UploadToSlotValidator();
         var command = new UploadToSlotCommand(
             Guid.NewGuid(), new MemoryStream(), "photo.jpg", CoverPreset.Name, focalX, focalY, false, null);
 
@@ -199,6 +209,46 @@ public sealed class UploadHandlerTests : IDisposable
         await Assert.ThrowsAsync<InvalidOperationException>(() => handler.Handle(command, CancellationToken.None));
 
         Assert.Empty(Directory.GetFiles(_storageRoot, "*", SearchOption.AllDirectories));
+    }
+
+    // ---- Review sau T5, bug #6: _writtenKeys không clear sau SaveChangesAsync thành công —
+    // writer scoped, một scope có thể gọi 2 thao tác tuần tự; thao tác THỨ HAI fail không được
+    // xoá nhầm file của thao tác THỨ NHẤT đã commit ----
+
+    [Fact]
+    public async Task Writer_does_not_delete_files_of_a_previously_committed_operation_when_a_later_save_fails()
+    {
+        await using var db = CreateDbContext();
+        var succeedThenThrowDb = new SucceedThenThrowDbContext(db, succeedCalls: 1);
+        // MỘT writer instance dùng cho CẢ HAI thao tác — mô phỏng đúng vòng đời Scoped thật (DI
+        // resolve MediaAssetWriter một lần mỗi scope/request; hai handler cùng scope share instance
+        // nếu gọi tuần tự, khác với hai request HTTP riêng biệt có scope riêng).
+        var writer = CreateWriter(succeedThenThrowDb);
+        var shopId = Guid.NewGuid();
+        _tenantContext.ShopId = shopId;
+
+        var libraryHandler = new UploadToLibraryHandler(_processor, writer);
+        using (var firstStream = new MemoryStream(EncodeJpeg(1600, 1200)))
+        {
+            await libraryHandler.Handle(new UploadToLibraryCommand(shopId, firstStream, "first.jpg", null, null), CancellationToken.None);
+        }
+
+        var firstFiles = Directory.GetFiles(_storageRoot, "*", SearchOption.AllDirectories);
+        var firstFile = Assert.Single(firstFiles);
+
+        var slotHandler = new UploadToSlotHandler(_processor, _presetCatalog, writer);
+        using (var secondStream = new MemoryStream(EncodeJpeg(1600, 1200)))
+        {
+            var secondCommand = new UploadToSlotCommand(
+                shopId, secondStream, "second.jpg", CoverPreset.Name, 0.5f, 0.5f, SaveToLibrary: false, AltText: null);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => slotHandler.Handle(secondCommand, CancellationToken.None));
+        }
+
+        // File của thao tác thứ NHẤT (đã commit) phải còn nguyên; file của thao tác thứ HAI (fail)
+        // phải bị rollback — đúng MỘT file còn lại, đúng là file cũ.
+        var remainingFiles = Directory.GetFiles(_storageRoot, "*", SearchOption.AllDirectories);
+        var remainingFile = Assert.Single(remainingFiles);
+        Assert.Equal(firstFile, remainingFile);
     }
 
     // ---- helpers ----
@@ -263,5 +313,31 @@ public sealed class UploadHandlerTests : IDisposable
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Simulated DB failure (R4 test).");
+    }
+
+    /// <summary>Decorator cho bug #6 (review sau T5): <paramref name="succeedCalls"/> lần gọi đầu
+    /// forward thật xuống <paramref name="inner"/> (thành công), MỌI lần gọi SAU đó ném lỗi — mô
+    /// phỏng "thao tác đầu commit được, thao tác sau trong CÙNG scope thì DB fail".</summary>
+    private sealed class SucceedThenThrowDbContext(IAppDbContext inner, int succeedCalls) : IAppDbContext
+    {
+        private int _calls;
+
+        public DbSet<User> Users => inner.Users;
+        public DbSet<ExternalLogin> ExternalLogins => inner.ExternalLogins;
+        public DbSet<Role> Roles => inner.Roles;
+        public DbSet<UserShop> UserShops => inner.UserShops;
+        public DbSet<PendingRegistration> PendingRegistrations => inner.PendingRegistrations;
+        public DbSet<RefreshToken> RefreshTokens => inner.RefreshTokens;
+        public DbSet<PasswordResetToken> PasswordResetTokens => inner.PasswordResetTokens;
+        public DbSet<ShopEntity> Shops => inner.Shops;
+        public DbSet<MediaAsset> MediaAssets => inner.MediaAssets;
+
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
+        {
+            _calls++;
+            return _calls <= succeedCalls
+                ? inner.SaveChangesAsync(cancellationToken)
+                : throw new InvalidOperationException("Simulated DB failure on a later save in the same scope (bug #6 regression).");
+        }
     }
 }

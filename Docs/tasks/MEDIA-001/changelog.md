@@ -23,29 +23,34 @@ thuộc phạm vi task này). Từ đây ghi tiếp theo từng task chạm code
 - **Vẫn giữ khai báo OpenAPI:** `.Accepts<UploadToSlotForm>("multipart/form-data")` /
   `.Accepts<UploadToLibraryForm>(...)` — hai class `UploadToSlotForm`/`UploadToLibraryForm` ở
   `MediaEndpoints.cs` CHỈ dùng cho schema tài liệu, không phải tham số bind thật.
-- **Chưa có test tự động cho 413** — không nằm trong danh sách test bắt buộc của brief T5; cơ chế
-  set `IHttpMaxRequestBodySizeFeature` đã verify bằng đọc code + so với tài liệu ASP.NET Core, chưa
-  có integration test xác nhận response 413 thật (nợ nhỏ, để T6+ hoặc khi có endpoint thứ ba dùng
-  chung pattern này bổ sung test).
+- **413 giờ có mapping đúng (sửa sau review):** vượt `MaxRequestBodySize` khiến Kestrel ném
+  `BadHttpRequestException` (StatusCode nội bộ = 413) NGAY TRONG `ReadFormAsync` — không phải
+  `AppException` nên `AppExceptionHandler` bỏ qua, mặc định ASP.NET Core trả 413 KHÔNG có body.
+  Thêm `Vsite.Api.ExceptionHandling.BadHttpRequestExceptionHandler` (chỉ bắt đúng case
+  `StatusCode == 413`, để nguyên các `BadHttpRequestException` khác cho framework xử lý mặc định) →
+  ProblemDetails `error_code = MEDIA_FILE_TOO_LARGE`. Test không cần Docker:
+  `BadHttpRequestExceptionHandlerTests` (gọi thẳng handler với `DefaultHttpContext`) — xác nhận PHẦN
+  DỊCH LỖI đúng, KHÔNG xác nhận TestServer/Kestrel thật sự enforce limit ở ngưỡng nào (cần Docker
+  để gửi request >11MB qua `MediaApiFactory` thật — chưa làm, xem "Chưa làm xong" bên dưới).
+- **415 cho request không phải multipart (sửa sau review):** trước đây `ReadFormAsync` trên request
+  không multipart ném `InvalidOperationException` → rơi xuống 500 mặc định, không ProblemDetails/
+  error_code (#19). Thêm `MediaEndpoints.RequireMultipart` (check `request.HasFormContentType` TRƯỚC
+  khi đọc form) ném `Vsite.Domain.Exceptions.UnsupportedMediaTypeException("MEDIA_MULTIPART_REQUIRED", …)`
+  — `AppExceptionHandler` xử lý (đã thêm nhánh 415 vào `TitleFor`). Test:
+  `AppExceptionHandlerTests` (không Docker) + `UploadEndpointTests.SlotUpload_without_multipart_content_type_returns_415_MEDIA_MULTIPART_REQUIRED` (Docker).
 
-#### 2. "Preset lạ" / "focal ngoài [0,1]" trả `error_code: VALIDATION_ERROR`, không phải mã riêng theo brief
+#### 2. (ĐÃ SỬA sau review) "Preset lạ" giờ trả đúng `error_code: MEDIA_UNKNOWN_PRESET` — không còn qua FluentValidation
 
-- **Brief nói gì:** "Preset phải có trong IImagePresetCatalog → 422 `MEDIA_UNKNOWN_PRESET`" (liệt kê
-  trong mục "Validator (FluentValidation)").
-- **Thực thi:** `UploadToSlotValidator` dùng `RuleFor(x => x.Preset).Must(...)` — khi fail, đi qua
-  `ValidationBehavior` chung → `Vsite.Application.Common.Exceptions.ValidationException`, LUÔN có
-  `error_code = "VALIDATION_ERROR"` ở top-level (per-field message có nhắc `MEDIA_UNKNOWN_PRESET` để
-  debug, nhưng không lộ ra `error_code` field của ProblemDetails).
-- **Nguyên nhân:** đây là hành vi CÓ SẴN của `ValidationException` (base class không nhận error code
-  theo từng `ValidationFailure`) — đúng tiền lệ `UpdateShopValidator.IsReserved` (slug trong danh sách
-  reserved cũng trả `VALIDATION_ERROR`/422, không có mã riêng; `ShopEndpointTests` cũng chỉ assert
-  status, không assert `error_code` cho case đó). Đổi hành vi này (cho FluentValidation gắn error code
-  riêng lên top-level `AppException.ErrorCode`) là thay đổi hạ tầng dùng chung mọi module, ngoài phạm
-  vi T5 — cần người duyệt trước khi làm.
-- **Điều kiện đảo lại:** nếu Gate 1/FE thực sự cần `error_code = MEDIA_UNKNOWN_PRESET` ở top-level,
-  cách rẻ nhất là chuyển check preset ra khỏi FluentValidation, làm ở đầu handler
-  (`UploadToSlotHandler`) và tự `throw new UnprocessableException("MEDIA_UNKNOWN_PRESET", ...)` —
-  chưa làm vì brief nhóm nó chung với các FluentValidation rule khác.
+- **Trạng thái CŨ (sai, bản T5 gốc):** `UploadToSlotValidator` check preset tồn tại bằng
+  `RuleFor(x => x.Preset).Must(...)` — lỗi đi qua `ValidationBehavior` chung, LUÔN trả
+  `error_code = "VALIDATION_ERROR"` bất kể message, không khớp brief.
+- **Sửa:** bỏ hẳn rule `Must(...)` khỏi validator (chỉ còn `NotEmpty()`). Check preset tồn tại chuyển
+  hẳn sang `UploadToSlotHandler` (đã có sẵn từ bản gốc, chỉ là bị validator che mất vì
+  `ValidationBehavior` chạy TRƯỚC handler) — handler tự `throw new UnprocessableException("MEDIA_UNKNOWN_PRESET", ...)`
+  khi `IImagePresetCatalog.TryGet` trả false. Test: `UploadHandlerTests.UploadToSlot_with_unknown_preset_throws_Unprocessable_MEDIA_UNKNOWN_PRESET`
+  (không Docker) + `UploadEndpointTests.SlotUpload_with_unknown_preset_returns_422_MEDIA_UNKNOWN_PRESET` (Docker).
+- **`FocalX`/`FocalY` ngoài [0,1] VẪN đi qua FluentValidation** (`error_code = VALIDATION_ERROR`) —
+  brief không đòi mã riêng cho case này, chỉ preset lạ mới cần `MEDIA_UNKNOWN_PRESET` cụ thể.
 
 #### 3. `MediaAssetWriter` + `TimeProvider` đăng ký ở `AddInfrastructure()`, dù `MediaAssetWriter` là type của Application
 
@@ -56,10 +61,26 @@ thuộc phạm vi task này). Từ đây ghi tiếp theo từng task chạm code
   thẳng `TimeProvider.System` làm singleton, `MediaAssetWriter` nhận qua constructor injection thay
   vì gọi `DateTimeOffset.UtcNow` trực tiếp, để test thay được bằng `FakeTimeProvider` nếu cần sau này.
 
+#### 4. `MediaAssetWriter._writtenKeys` không clear sau `SaveChangesAsync` thành công (bug, đã sửa sau review)
+
+- **Bug:** writer scoped, `_writtenKeys` cộng dồn qua nhiều lần gọi `WriteXxxAsync` trong CÙNG scope
+  nhưng KHÔNG BAO GIỜ được xoá sau khi `SaveChangesAsync` commit thành công. Hai thao tác tuần tự
+  trong cùng scope (vd. test gọi `UploadToLibraryHandler` rồi `UploadToSlotHandler` với cùng
+  `MediaAssetWriter`) — nếu thao tác THỨ HAI fail, rollback best-effort sẽ xoá NHẦM cả file của thao
+  tác THỨ NHẤT đã commit thành công từ trước.
+- **Sửa:** `SaveChangesAsync` clear `_writtenKeys` ngay sau khi `db.SaveChangesAsync` thành công;
+  `CleanupWrittenKeysAsync` cũng tự clear sau khi dọn xong (tránh double-delete lặp vô ích nếu writer
+  còn được dùng tiếp sau một lần fail).
+- Test: `UploadHandlerTests.Writer_does_not_delete_files_of_a_previously_committed_operation_when_a_later_save_fails`
+  (không Docker) — verify bằng RED/GREEN thật (revert fix → test fail đúng dự đoán, khôi phục → pass).
+
 ### Chưa làm xong (nợ kỹ thuật, không phải lệch có chủ đích)
 
 - **`UploadEndpointTests` (Media/UploadEndpointTests.cs, MediaApiFactory) chưa chạy pass thật** — máy
   làm task này không có Docker daemon. Đã ghi vào `Docs/DOCKER-TEST-DEBT.md`. Hành vi tương đương đã
   verify KHÔNG cần Docker qua `UploadHandlerTests` (EF InMemory + `ImageSharpImageProcessor` +
-  `LocalDiskObjectStorage` thật) — 7/7 pass, gồm cả rollback R4.
-- Test 413 (giới hạn 11 MB) chưa có — xem lệch #1 ở trên.
+  `LocalDiskObjectStorage` thật) — 9/9 pass sau review, gồm cả rollback R4 và bug #6.
+- **413 thật qua Kestrel/TestServer chưa verify được** — `BadHttpRequestExceptionHandlerTests` chỉ
+  xác nhận phần DỊCH lỗi → ProblemDetails đúng, không xác nhận TestServer có thật sự ném
+  `BadHttpRequestException` ở đúng ngưỡng 11MB hay không (cần Docker gửi request thật qua
+  `MediaApiFactory`, hoặc research riêng về hành vi `IHttpMaxRequestBodySizeFeature` dưới TestServer).

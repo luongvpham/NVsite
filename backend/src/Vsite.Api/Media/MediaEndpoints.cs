@@ -36,6 +36,7 @@ public static class MediaEndpoints
 
         media.MapPost("/slot-uploads", async (Guid shopId, HttpRequest request, ISender sender, CancellationToken ct) =>
         {
+            RequireMultipart(request);
             SetMaxRequestBodySize(request, MaxUploadBytes);
             var form = await request.ReadFormAsync(ct);
             var file = RequireFile(form);
@@ -61,11 +62,13 @@ public static class MediaEndpoints
             .Produces<SlotUploadResultDto>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status415UnsupportedMediaType)
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
         media.MapPost("/library", async (Guid shopId, HttpRequest request, ISender sender, CancellationToken ct) =>
         {
+            RequireMultipart(request);
             SetMaxRequestBodySize(request, MaxUploadBytes);
             var form = await request.ReadFormAsync(ct);
             var file = RequireFile(form);
@@ -88,10 +91,23 @@ public static class MediaEndpoints
             .Produces<MediaAssetDto>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status415UnsupportedMediaType)
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
         return app;
+    }
+
+    /// <summary>Review sau T5 — trước đây thiếu check này: request không phải multipart khiến
+    /// <c>ReadFormAsync</c> ném <c>InvalidOperationException</c>, không có handler nào bắt (rơi
+    /// xuống mặc định 500, không phải ProblemDetails/error_code — vi phạm #19).</summary>
+    private static void RequireMultipart(HttpRequest request)
+    {
+        if (!request.HasFormContentType)
+        {
+            throw new UnsupportedMediaTypeException(
+                "MEDIA_MULTIPART_REQUIRED", "Endpoint chỉ nhận Content-Type multipart/form-data.");
+        }
     }
 
     private static void SetMaxRequestBodySize(HttpRequest request, long bytes)

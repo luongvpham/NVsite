@@ -98,13 +98,15 @@ public sealed class UploadEndpointTests
     }
 
     [Fact]
-    public async Task SlotUpload_with_unknown_preset_returns_422()
+    public async Task SlotUpload_with_unknown_preset_returns_422_MEDIA_UNKNOWN_PRESET()
     {
         var (token, shopId) = await CreateOwnerWithShopAsync();
 
         var response = await PostSlotUploadAsync(token, shopId, preset: "does-not-exist", saveToLibrary: false);
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.Equal("MEDIA_UNKNOWN_PRESET", problem!.Extensions["error_code"]!.ToString());
     }
 
     [Fact]
@@ -115,6 +117,26 @@ public sealed class UploadEndpointTests
         var response = await PostSlotUploadAsync(token, shopId, preset: "800x600,cover", saveToLibrary: false, focalX: 1.5f);
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    // ---- Review sau T5, issue #5: request không phải multipart -> 415 ProblemDetails, không 500 ----
+
+    [Fact]
+    public async Task SlotUpload_without_multipart_content_type_returns_415_MEDIA_MULTIPART_REQUIRED()
+    {
+        var (token, shopId) = await CreateOwnerWithShopAsync();
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/shops/{shopId}/media/slot-uploads")
+        {
+            Content = JsonContent.Create(new { preset = "800x600,cover" }),
+            Headers = { Host = PortalHost },
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.UnsupportedMediaType, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.Equal("MEDIA_MULTIPART_REQUIRED", problem!.Extensions["error_code"]!.ToString());
     }
 
     [Fact]
@@ -159,7 +181,11 @@ public sealed class UploadEndpointTests
     {
         var (token, shopId) = await CreateOwnerWithShopAsync();
 
-        await using var throwingFactory = (MediaApiFactory)_factory.WithWebHostBuilder(builder =>
+        // WithWebHostBuilder trả WebApplicationFactory<Program> (DelegatedWebApplicationFactory nội
+        // bộ, KHÔNG phải MediaApiFactory) — dùng đúng type khai báo, không cast. Container
+        // Postgres/Redis của _factory được tái sử dụng (connection string đã cấu hình sẵn qua
+        // ConfigureAppConfiguration của _factory), storage vẫn dùng chung _factory.StorageRoot.
+        await using var throwingFactory = _factory.WithWebHostBuilder(builder =>
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IAppDbContext>();
@@ -172,8 +198,17 @@ public sealed class UploadEndpointTests
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await throwingClient.SendAsync(request);
 
-        Assert.True((int)response.StatusCode >= 500 || response.StatusCode == HttpStatusCode.InternalServerError);
-        Assert.Empty(Directory.GetFiles(_factory.StorageRoot, "*", SearchOption.AllDirectories));
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+
+        // KHÔNG assert cả _factory.StorageRoot rỗng — collection fixture (MediaApiCollection) share
+        // MỘT factory/storage cho toàn bộ test trong class này, test khác chạy song song/trước đó có
+        // thể để lại file hợp lệ ở shop KHÁC. Chỉ shop vừa tạo (shopId mới, riêng cho test này) mới
+        // phải rỗng sau rollback.
+        var shopDir = Path.Combine(_factory.StorageRoot, "shops", shopId.ToString());
+        var filesUnderShop = Directory.Exists(shopDir)
+            ? Directory.GetFiles(shopDir, "*", SearchOption.AllDirectories)
+            : [];
+        Assert.Empty(filesUnderShop);
     }
 
     // ---- POST /shops/{shopId}/media/library ----
