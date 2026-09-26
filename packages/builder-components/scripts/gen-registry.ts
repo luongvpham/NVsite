@@ -2,8 +2,8 @@
 /**
  * `pnpm gen:registry` — sinh artifact từ registry/*.manifest.ts (07-component-manifest-schema.md §6).
  *
- * Sinh 7 artifact: component-types.ts, props-schemas.ts (Zod), props-schemas.json (JSON Schema, #60),
- * property-panel.ts, op-rules.ts, ai-tool-schema.json, registry-map.ts.
+ * Sinh 8 artifact: component-types.ts, props-schemas.ts (Zod), props-schemas.json (JSON Schema, #60),
+ * property-panel.ts, op-rules.ts, ai-tool-schema.json, registry-map.ts, derivative-presets.json (#86).
  * check-additive vs registry.lock.json được wire vào ở 2.11 (chưa có lock file thì bỏ qua, tạo mới).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -69,6 +69,20 @@ function checkPropInvariants(typeName: string, propName: string, prop: PropDef):
     for (const source of prop.sources) {
       if (!bindingSources.includes(source)) {
         fail(`${where}: binding source '${source}' không có trong config/binding-sources.json`);
+      }
+    }
+
+    // #86 — key của imagePresets phải ⊆ sources, value phải ⊆ config/image-presets.json
+    if (prop.imagePresets) {
+      for (const [source, presets] of Object.entries(prop.imagePresets)) {
+        if (!prop.sources.includes(source)) {
+          fail(`${where}: imagePresets key '${source}' không nằm trong sources`);
+        }
+        for (const preset of presets ?? []) {
+          if (!(preset in imagePresets)) {
+            fail(`${where}: imagePresets.${source} preset '${preset}' không có trong config/image-presets.json`);
+          }
+        }
       }
     }
   }
@@ -495,6 +509,46 @@ function generateRegistryMap(manifests: ComponentManifest[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// derivative-presets.json (#86) — hợp theo từng source của mọi binding.imagePresets trong manifest
+// ∪ surfaces của config/image-presets.json. Key và preset đều sort để diff ổn định.
+// ---------------------------------------------------------------------------
+
+function collectImagePresetsBySource(props: Record<string, PropDef>, bySource: Map<string, Set<string>>): void {
+  for (const prop of Object.values(props)) {
+    if (prop.kind === 'binding' && prop.imagePresets) {
+      for (const [source, presets] of Object.entries(prop.imagePresets)) {
+        if (!bySource.has(source)) bySource.set(source, new Set());
+        const set = bySource.get(source)!;
+        for (const preset of presets ?? []) set.add(preset);
+      }
+    }
+    if (prop.kind === 'group') collectImagePresetsBySource(prop.props, bySource);
+    if (prop.kind === 'list') collectImagePresetsBySource(prop.itemProps, bySource);
+  }
+}
+
+function generateDerivativePresets(manifests: ComponentManifest[]): string {
+  const bySource = new Map<string, Set<string>>();
+
+  for (const manifest of manifests) {
+    collectImagePresetsBySource(manifest.props, bySource);
+  }
+
+  for (const [source, presets] of Object.entries(imagePresetsFile.surfaces)) {
+    if (!bySource.has(source)) bySource.set(source, new Set());
+    const set = bySource.get(source)!;
+    for (const preset of presets) set.add(preset);
+  }
+
+  const result: Record<string, string[]> = {};
+  for (const source of [...bySource.keys()].sort()) {
+    result[source] = [...bySource.get(source)!].sort();
+  }
+
+  return JSON.stringify(result, null, 2) + '\n';
+}
+
+// ---------------------------------------------------------------------------
 
 async function main() {
   const manifests = await loadManifests(PKG_ROOT);
@@ -518,13 +572,14 @@ async function main() {
   writeFileSync(path.join(GENERATED_DIR, 'op-rules.ts'), generateOpRules(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'ai-tool-schema.json'), generateAiToolSchema(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'registry-map.ts'), generateRegistryMap(manifests));
+  writeFileSync(path.join(GENERATED_DIR, 'derivative-presets.json'), generateDerivativePresets(manifests));
 
   if (!existsSync(LOCK_FILE)) {
     writeFileSync(LOCK_FILE, JSON.stringify(buildLockSnapshot(manifests), null, 2) + '\n');
     console.log('[gen-registry] registry.lock.json chưa tồn tại — đã tạo mới (lần đầu).');
   }
 
-  console.log(`[gen-registry] OK — ${manifests.length} manifest, 7 artifact sinh ra tại generated/`);
+  console.log(`[gen-registry] OK — ${manifests.length} manifest, 8 artifact sinh ra tại generated/`);
 }
 
 main().catch((error: unknown) => {

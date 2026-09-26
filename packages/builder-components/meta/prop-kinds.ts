@@ -80,6 +80,8 @@ export interface BindingPropDef extends PropDefBase {
   /** Phải là tập con của config/binding-sources.json — "Review" không có trong whitelist (#65) */
   sources: string[];
   allowFilters?: string[];
+  /** #86 — preset ảnh component hiển thị cho dữ liệu của từng source. Key ⊆ sources, value ⊆ image-presets. */
+  imagePresets?: Partial<Record<string, string[]>>;
 }
 
 /** Props hợp lệ làm item của một `list` — list không được lồng list (§4.3). */

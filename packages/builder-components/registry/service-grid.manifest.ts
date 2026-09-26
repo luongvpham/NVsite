@@ -40,6 +40,7 @@ export default {
       label: 'Nguồn dữ liệu',
       sources: ['Service', 'ServiceGroup'],
       allowFilters: ['groupId', 'sort', 'take'],
+      imagePresets: { Service: ['800x600,cover'], ServiceGroup: ['800x600,cover'] },
       group: 'Dữ liệu',
       order: 1,
       editableInSystemPage: true,

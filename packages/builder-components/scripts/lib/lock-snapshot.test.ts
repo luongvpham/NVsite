@@ -15,6 +15,7 @@ function baseHero(): LockTypeSnapshot {
       align: { kind: 'select', options: ['left', 'center'] },
       cta: { kind: 'group', props: { label: { kind: 'text', maxLength: 40 } } },
       items: { kind: 'list', minItems: 1, maxItems: 24, itemProps: { caption: { kind: 'text', maxLength: 120 } } },
+      source: { kind: 'binding', imagePresets: { Service: ['800x600,cover', '160x160,cover'] } },
     },
   };
 }
@@ -156,5 +157,24 @@ describe('checkAdditive — 6 case OK không được fail (§5)', () => {
     const result = checkAdditive(baseSnapshot(), current);
     expect(result.violations).toEqual([]);
     expect(result.warnings.some((w) => w.includes('đổi preset'))).toBe(true);
+  });
+
+  it('thêm imagePresets / thêm source mới vào binding → OK', () => {
+    const current = withHeroPatch((hero) => {
+      hero.props.source = {
+        kind: 'binding',
+        imagePresets: { Service: ['800x600,cover', '160x160,cover'], ServiceGroup: ['800x600,cover'] },
+      };
+    });
+    expect(checkAdditive(baseSnapshot(), current).violations).toEqual([]);
+  });
+
+  it('bỏ một preset khỏi binding.imagePresets → CẢNH BÁO, KHÔNG fail (#86)', () => {
+    const current = withHeroPatch((hero) => {
+      hero.props.source = { kind: 'binding', imagePresets: { Service: ['800x600,cover'] } };
+    });
+    const result = checkAdditive(baseSnapshot(), current);
+    expect(result.violations).toEqual([]);
+    expect(result.warnings.some((w) => w.includes('imagePresets') && w.includes('160x160,cover'))).toBe(true);
   });
 });

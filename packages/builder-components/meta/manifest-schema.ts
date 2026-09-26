@@ -86,6 +86,7 @@ const bindingPropDefSchema = z.object({
   kind: z.literal('binding'),
   sources: z.array(z.string()).min(1),
   allowFilters: z.array(z.string()).optional(),
+  imagePresets: z.record(z.string(), z.array(z.string()).min(1)).optional(),
   ...propDefBaseShape,
 });
 

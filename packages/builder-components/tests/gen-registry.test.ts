@@ -13,6 +13,7 @@ const GENERATED_FILES = [
   'op-rules.ts',
   'ai-tool-schema.json',
   'registry-map.ts',
+  'derivative-presets.json',
 ];
 
 function runGenRegistry() {
@@ -123,6 +124,84 @@ describe('gen-registry — nhánh FAIL của cross-manifest invariants (§6.1) k
     expect(() => {
       runGenRegistry();
     }).not.toThrow();
+  });
+});
+
+describe('gen-registry — binding.imagePresets (#86)', () => {
+  it(
+    'FAIL khi key của imagePresets không nằm trong sources',
+    () => {
+      const file = path.join(REGISTRY_DIR, 'service-grid.manifest.ts');
+      const original = readFileSync(file, 'utf8');
+      expect(original).toContain("imagePresets: { Service: ['800x600,cover'], ServiceGroup: ['800x600,cover'] },");
+      writeFileSync(
+        file,
+        original.replace(
+          "imagePresets: { Service: ['800x600,cover'], ServiceGroup: ['800x600,cover'] },",
+          "imagePresets: { Shop: ['96x96,cover'] },",
+        ),
+      );
+
+      try {
+        const { code, stderr } = runGenRegistryExpectFailure();
+        expect(code).not.toBe(0);
+        expect(stderr).toContain('imagePresets');
+      } finally {
+        writeFileSync(file, original);
+      }
+    },
+    20_000,
+  );
+
+  it(
+    'FAIL khi preset trong imagePresets không có trong config/image-presets.json',
+    () => {
+      const file = path.join(REGISTRY_DIR, 'service-grid.manifest.ts');
+      const original = readFileSync(file, 'utf8');
+      expect(original).toContain("imagePresets: { Service: ['800x600,cover'], ServiceGroup: ['800x600,cover'] },");
+      writeFileSync(
+        file,
+        original.replace(
+          "imagePresets: { Service: ['800x600,cover'], ServiceGroup: ['800x600,cover'] },",
+          "imagePresets: { Service: ['not-a-real-preset'] },",
+        ),
+      );
+
+      try {
+        const { code, stderr } = runGenRegistryExpectFailure();
+        expect(code).not.toBe(0);
+        expect(stderr).toContain('imagePresets');
+      } finally {
+        writeFileSync(file, original);
+      }
+    },
+    20_000,
+  );
+
+  it('registry/ đã được khôi phục nguyên vẹn — gen:registry lại chạy sạch', () => {
+    expect(() => {
+      runGenRegistry();
+    }).not.toThrow();
+  });
+
+  it('generated/derivative-presets.json hợp theo manifest ∪ surfaces, không trùng, đã sort', () => {
+    runGenRegistry();
+    const content = JSON.parse(readFileSync(path.join(PKG_ROOT, 'generated', 'derivative-presets.json'), 'utf8')) as Record<
+      string,
+      string[]
+    >;
+
+    // ServiceGrid.source khai imagePresets: { Service: ['800x600,cover'], ServiceGroup: ['800x600,cover'] }
+    expect(content.Service).toEqual(['800x600,cover']);
+    expect(content.ServiceGroup).toEqual(['800x600,cover']);
+    // config/image-presets.json surfaces.Shop = ['320x96,inside', '96x96,cover'] — union, sort
+    expect(content.Shop).toEqual(['320x96,inside', '96x96,cover']);
+
+    // key và preset đều sort
+    expect(Object.keys(content)).toEqual([...Object.keys(content)].sort());
+    for (const presets of Object.values(content)) {
+      expect(presets).toEqual([...new Set(presets)].sort());
+    }
   });
 });
 
