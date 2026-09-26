@@ -67,6 +67,6 @@ public sealed class UpdateShopHandler(IAppDbContext db, ICurrentUserContext curr
             await shopLookup.InvalidateAsync(request.Slug, cancellationToken);
         }
 
-        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status);
+        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status, shop.LogoId);
     }
 }

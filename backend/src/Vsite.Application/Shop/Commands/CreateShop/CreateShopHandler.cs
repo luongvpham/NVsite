@@ -42,6 +42,6 @@ public sealed class CreateShopHandler(IAppDbContext db, ICurrentUserContext curr
 
         await db.SaveChangesAsync(cancellationToken);
 
-        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status);
+        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status, shop.LogoId);
     }
 }

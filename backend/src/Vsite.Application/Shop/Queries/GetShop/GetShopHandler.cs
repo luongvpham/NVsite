@@ -13,6 +13,6 @@ public sealed class GetShopHandler(IAppDbContext db) : IRequestHandler<GetShopQu
         var shop = await db.Shops.FirstOrDefaultAsync(s => s.Id == request.ShopId, cancellationToken)
             ?? throw new NotFoundException("Shop", request.ShopId);
 
-        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status);
+        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status, shop.LogoId);
     }
 }

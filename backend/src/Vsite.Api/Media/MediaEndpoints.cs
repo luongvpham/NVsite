@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using Vsite.Api.Tenancy;
 using Vsite.Application.Media.Commands.CloneFromLibrary;
 using Vsite.Application.Media.Commands.DeleteFromLibrary;
+using Vsite.Application.Media.Commands.UploadShopLogo;
 using Vsite.Application.Media.Commands.UploadToLibrary;
 using Vsite.Application.Media.Commands.UploadToSlot;
 using Vsite.Application.Media.Dtos;
@@ -169,6 +170,34 @@ public static class MediaEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
+        // T7, MEDIA-001 (#73, #82) — `PUT /shops/{shopId}/logo`, KHÔNG dưới prefix `/media` (route
+        // riêng `/shops/{shopId}/logo`, không phải `/shops/{shopId}/media/logo`). Vẫn module Media
+        // (viết Shop.LogoId qua Public Contract `IShopLogoWriter` — Shop không reference Media).
+        app.MapPut("/shops/{shopId:guid}/logo", async (Guid shopId, HttpRequest request, ISender sender, CancellationToken ct) =>
+        {
+            RequireMultipart(request);
+            SetMaxRequestBodySize(request, MaxUploadBytes);
+            var form = await request.ReadFormAsync(ct);
+            var file = RequireFile(form);
+
+            await using var stream = file.OpenReadStream();
+            var command = new UploadShopLogoCommand(shopId, stream, file.FileName);
+
+            var result = await sender.Send(command, ct);
+            return Results.Ok(result);
+        })
+            .WithTags("Media").WithGroupName("media")
+            .RequireAuthorization(AuthPolicies.RequireGlobalScope)
+            .RequireShopMembership()
+            .DisableAntiforgery()
+            .Accepts<UploadShopLogoForm>("multipart/form-data")
+            .Produces<ShopLogoDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status415UnsupportedMediaType)
+            .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
+            .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
+
         return app;
     }
 
@@ -230,6 +259,13 @@ public sealed class UploadToLibraryForm
     public IFormFile File { get; set; } = null!;
     public string? AltText { get; set; }
     public string? Folder { get; set; }
+}
+
+/// <summary>Shape multipart cho OpenAPI của `PUT /shops/{shopId}/logo` (T7) — chỉ nhận file, không
+/// nhận focal/altText (derivative luôn focal Center, xem doc trên <see cref="UploadShopLogoCommand"/>).</summary>
+public sealed class UploadShopLogoForm
+{
+    public IFormFile File { get; set; } = null!;
 }
 
 /// <summary>Body JSON của `POST /shops/{shopId}/media/library/{assetId}/clones` (T6). Không multipart
