@@ -38,6 +38,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- ObjectStorageContractTests (T2, MEDIA-001): LocalDisk không cần Docker; S3ObjectStorageTests
+         cần MinIO container — xem Docs/DOCKER-TEST-DEBT.md. -->
+    <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="Testcontainers.Minio" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="TestAssets\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

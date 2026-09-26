@@ -18,6 +18,9 @@ backend/**/bin/
 backend/**/obj/
 backend/**/*.user
 
+# Object storage LocalDisk provider — root mặc định (T2, MEDIA-001, Quyết định #83)
+.media/
+
 # IDE
 .vs/
 .idea/

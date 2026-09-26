@@ -76,11 +76,26 @@ public static class DependencyInjection
         return services;
     }
 
-    // ---- Imaging (T1, MEDIA-001) — dùng chung cho mọi module cần xử lý ảnh upload ----
+    // ---- Imaging (T1/T2, MEDIA-001) — dùng chung cho mọi module cần xử lý ảnh upload ----
     private static IServiceCollection AddImagingModule(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<ImageUploadOptions>(configuration.GetSection(ImageUploadOptions.Section));
         services.AddScoped<IImageProcessor, ImageSharpImageProcessor>();
+
+        // IObjectStorage (T2, Quyết định #83): đúng MỘT provider theo Storage:Provider, mặc định
+        // LocalDisk. Singleton hợp lệ cho cả hai — LocalDiskObjectStorage không giữ state theo
+        // request, S3ObjectStorage bọc AmazonS3Client (bản thân đã thread-safe/khuyến nghị dùng chung).
+        services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.Section));
+        var provider = configuration.GetSection(StorageOptions.Section).Get<StorageOptions>()?.Provider
+            ?? StorageProvider.LocalDisk;
+        if (provider == StorageProvider.S3)
+        {
+            services.AddSingleton<IObjectStorage, S3ObjectStorage>();
+        }
+        else
+        {
+            services.AddSingleton<IObjectStorage, LocalDiskObjectStorage>();
+        }
 
         return services;
     }

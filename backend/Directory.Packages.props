@@ -27,6 +27,9 @@
     <PackageVersion Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.9" />
+    <!-- Object storage (T2, MEDIA-001, Quyết định #75/#83) -->
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.501.18" />
     <!-- Testing -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.2" />
@@ -36,5 +39,7 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="3.10.0" />
     <PackageVersion Include="Testcontainers.Redis" Version="3.10.0" />
+    <!-- S3ObjectStorage contract test (T2, MEDIA-001) — cùng bản với Testcontainers.PostgreSql/Redis -->
+    <PackageVersion Include="Testcontainers.Minio" Version="3.10.0" />
   </ItemGroup>
 </Project>
