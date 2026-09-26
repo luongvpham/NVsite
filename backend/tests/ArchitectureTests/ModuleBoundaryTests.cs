@@ -26,7 +26,9 @@ public sealed class ModuleBoundaryTests
     {
         ["Domain"] = ["Common", "Abstractions", "Exceptions", "Authorization", "Pagination", "ReservedRoutes"],
         ["Application"] = ["Common"],
-        ["Infrastructure"] = ["Persistence", "Configuration"],
+        // "Imaging" thêm ở T1 (MEDIA-001, Quyết định #82) — pipeline ImageSharp dùng chung cho mọi
+        // module cần xử lý ảnh (Media, sau này Listing/Product), không riêng cho module Media.
+        ["Infrastructure"] = ["Persistence", "Configuration", "Imaging"],
         ["Api"] = ["Auth", "ExceptionHandling", "OpenApi", "Tenancy"],
     };
 

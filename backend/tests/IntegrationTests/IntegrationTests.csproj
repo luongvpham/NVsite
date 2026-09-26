@@ -30,4 +30,15 @@
     <ProjectReference Include="..\..\src\Vsite.Api\Vsite.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Test đọc lại byte output (Image.Identify) để verify metadata bị xoá / dimension đúng —
+         không cần Docker, chạy trực tiếp trên IImageProcessor (T1, MEDIA-001). -->
+    <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="TestAssets\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

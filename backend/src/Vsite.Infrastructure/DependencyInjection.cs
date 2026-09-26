@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Vsite.Application.Common.Behaviors;
+using Vsite.Application.Common.Imaging;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Identity.Auth.Commands.Register;
 using Vsite.Application.Identity.Interfaces;
@@ -12,6 +13,7 @@ using Vsite.Application.Identity.Options;
 using Vsite.Application.Shop.Interfaces;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Infrastructure.Identity;
+using Vsite.Infrastructure.Imaging;
 using Vsite.Infrastructure.Persistence;
 using Vsite.Infrastructure.Shop;
 
@@ -43,6 +45,7 @@ public static class DependencyInjection
 
         services.AddIdentityModule(configuration);
         services.AddShopModule();
+        services.AddImagingModule(configuration);
 
         return services;
     }
@@ -69,6 +72,15 @@ public static class DependencyInjection
     private static IServiceCollection AddShopModule(this IServiceCollection services)
     {
         services.AddScoped<IShopLookupService, ShopLookupService>();
+
+        return services;
+    }
+
+    // ---- Imaging (T1, MEDIA-001) — dùng chung cho mọi module cần xử lý ảnh upload ----
+    private static IServiceCollection AddImagingModule(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<ImageUploadOptions>(configuration.GetSection(ImageUploadOptions.Section));
+        services.AddScoped<IImageProcessor, ImageSharpImageProcessor>();
 
         return services;
     }

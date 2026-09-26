@@ -21,6 +21,10 @@
     <!-- Identity / Auth (Quyết định #3 — không OIDC/OpenIddict, tự cấp JWT) -->
     <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="9.0.9" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
+    <!-- Pin 3.x (bản 4.x đổi license model) — Imaging pipeline (#53, #84, #85) -->
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <!-- Chỉ dùng trong test để vẽ ảnh mẫu (Fill) khi verify pipeline — không dùng ở code sản phẩm. -->
+    <PackageVersion Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.9" />
     <!-- Testing -->
