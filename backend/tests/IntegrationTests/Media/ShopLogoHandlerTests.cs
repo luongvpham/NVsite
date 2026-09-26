@@ -70,30 +70,42 @@ public sealed class ShopLogoHandlerTests : IDisposable
     [Fact]
     public async Task Upload_creates_library_plus_one_derivative_per_preset_and_sets_LogoId_in_one_SaveChanges()
     {
-        await using var db = CreateDbContext();
+        var dbName = Guid.NewGuid().ToString("N");
+        await using var db = CreateDbContext(dbName);
         var shopId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
         _tenantContext.ShopId = shopId;
         await SeedShopAsync(db, shopId);
 
-        var handler = CreateHandler(db, ownerId, isOwner: true);
+        // Decorator đếm số lần SaveChangesAsync được gọi qua đúng MỘT instance IAppDbContext này —
+        // chứng minh THẬT SỰ đúng MỘT SaveChanges cho cả insert MediaAsset lẫn update Shop.LogoId,
+        // không chỉ suy luận từ số record cuối cùng (review sau T7: test cũ không đếm call).
+        var countingDb = new CountingSaveChangesDbContext(db);
+        var handler = CreateHandler(countingDb, ownerId, isOwner: true);
 
         using var sourceStream = new MemoryStream(ReadTestAsset("logo-alpha-1000x200.png"));
         var command = new UploadShopLogoCommand(shopId, sourceStream, "logo.png");
 
         var result = await handler.Handle(command, CancellationToken.None);
 
+        Assert.Equal(1, countingDb.SaveChangesCallCount);
+
         Assert.Equal(2, result.Derivatives.Count);
         Assert.Equal(new[] { InsidePreset.Name, CoverPreset.Name }, result.Derivatives.Select(d => d.Preset).OrderBy(p => p));
         Assert.All(result.Derivatives, d => Assert.Equal(result.LibraryAsset.Id, d.SourceAssetId));
 
-        var assets = await db.MediaAssets.ToListAsync();
-        Assert.Equal(3, assets.Count); // 1 library + 2 derivatives, MỘT SaveChanges duy nhất
+        // Đọc lại từ một AppDbContext MỚI (ChangeTracker rỗng, cùng InMemory database name) — chứng
+        // minh dữ liệu đã PERSIST thật qua đúng MỘT SaveChanges, không phải chỉ còn trong bộ nhớ của
+        // context vừa ghi.
+        await using var freshDb = CreateDbContext(dbName);
+        var assets = await freshDb.MediaAssets.ToListAsync();
+        Assert.Equal(3, assets.Count); // 1 library + 2 derivatives
 
         var library = Assert.Single(assets, a => a.IsInLibrary);
         Assert.Equal(result.LibraryAsset.Id, library.Id);
+        Assert.Equal(2, assets.Count(a => !a.IsInLibrary && a.SourceAssetId == library.Id));
 
-        var shop = await db.Shops.IgnoreQueryFilters().FirstAsync(s => s.Id == shopId);
+        var shop = await freshDb.Shops.IgnoreQueryFilters().FirstAsync(s => s.Id == shopId);
         Assert.Equal(library.Id, shop.LogoId);
     }
 
@@ -213,6 +225,42 @@ public sealed class ShopLogoHandlerTests : IDisposable
 
         var after = await usageHandler.Handle(new GetUsageQuery(shopId), CancellationToken.None);
         Assert.Equal(result.LibraryAsset.SizeBytes, after.UsedBytes);
+    }
+
+    // ---- Review sau T7: preset name trong derivative catalog KHÔNG có trong IImagePresetCatalog ->
+    // InvalidOperationException (lỗi cấu hình) NÉM RA TRƯỚC khi đụng ảnh (LoadAsync/WriteLibraryAsync)
+    // -> storage rỗng, KHÔNG mồ côi file Library/derivative trước đó (fix: resolve toàn bộ preset
+    // name -> ImagePreset TRƯỚC WriteLibraryAsync, xem UploadShopLogoHandler) ----
+
+    [Fact]
+    public async Task Upload_with_derivative_preset_name_missing_from_catalog_throws_before_writing_any_file()
+    {
+        await using var db = CreateDbContext();
+        var shopId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        _tenantContext.ShopId = shopId;
+        await SeedShopAsync(db, shopId);
+
+        // _presetCatalog chỉ có InsidePreset/CoverPreset — "does-not-exist,inside" không tồn tại.
+        var handler = new UploadShopLogoHandler(
+            _processor,
+            _presetCatalog,
+            new FakeDerivativePresetCatalog(("Shop", ["does-not-exist,inside"])),
+            CreateWriter(db),
+            new ShopLogoWriter(db),
+            new FakeCurrentUserContext(ownerId),
+            new FakeShopOwnershipService(isOwner: true));
+
+        using var sourceStream = new MemoryStream(ReadTestAsset("logo-alpha-1000x200.png"));
+        var command = new UploadShopLogoCommand(shopId, sourceStream, "logo.png");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.Handle(command, CancellationToken.None));
+
+        Assert.Empty(Directory.GetFiles(_storageRoot, "*", SearchOption.AllDirectories));
+        Assert.Empty(await db.MediaAssets.ToListAsync());
+
+        var shop = await db.Shops.IgnoreQueryFilters().FirstAsync(s => s.Id == shopId);
+        Assert.Null(shop.LogoId);
     }
 
     // ---- R4: SaveChangesAsync ném lỗi -> best-effort xoá mọi file đã ghi (library + derivatives),
@@ -344,5 +392,30 @@ public sealed class ShopLogoHandlerTests : IDisposable
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Simulated DB failure (R4 test).");
+    }
+
+    /// <summary>Đếm số lần <see cref="SaveChangesAsync"/> được gọi qua instance này, forward thật
+    /// xuống <paramref name="inner"/> mỗi lần — dùng để CHỨNG MINH "đúng MỘT SaveChangesAsync cho cả
+    /// insert MediaAsset lẫn update Shop.LogoId" thay vì chỉ suy luận từ record cuối cùng trong DB
+    /// (review sau T7).</summary>
+    private sealed class CountingSaveChangesDbContext(IAppDbContext inner) : IAppDbContext
+    {
+        public int SaveChangesCallCount { get; private set; }
+
+        public DbSet<User> Users => inner.Users;
+        public DbSet<ExternalLogin> ExternalLogins => inner.ExternalLogins;
+        public DbSet<Role> Roles => inner.Roles;
+        public DbSet<UserShop> UserShops => inner.UserShops;
+        public DbSet<PendingRegistration> PendingRegistrations => inner.PendingRegistrations;
+        public DbSet<RefreshToken> RefreshTokens => inner.RefreshTokens;
+        public DbSet<PasswordResetToken> PasswordResetTokens => inner.PasswordResetTokens;
+        public DbSet<ShopEntity> Shops => inner.Shops;
+        public DbSet<MediaAsset> MediaAssets => inner.MediaAssets;
+
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
+        {
+            SaveChangesCallCount++;
+            return inner.SaveChangesAsync(cancellationToken);
+        }
     }
 }

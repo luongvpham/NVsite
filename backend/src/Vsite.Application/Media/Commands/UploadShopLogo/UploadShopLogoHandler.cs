@@ -35,7 +35,11 @@ public sealed class UploadShopLogoHandler(
         }
 
         // Artifact FULL SET (#86) — rỗng là lỗi cấu hình (startup lẽ ra đã fail fast trên file
-        // thiếu/sai shape), KHÔNG sinh logo thiếu derivative. Kiểm TRƯỚC khi đụng file/ảnh.
+        // thiếu/sai shape), KHÔNG sinh logo thiếu derivative. Resolve TOÀN BỘ preset name -> ImagePreset
+        // TRƯỚC khi đụng file/ảnh (review sau T7: trước đây TryGet chạy TRONG loop SAU
+        // WriteLibraryAsync/một số WriteDerivedAsync — lỗi cấu hình ở preset thứ N thì file của
+        // Library + derivative 1..N-1 đã ghi xong nhưng ném exception ngoài MediaAssetWriter, R4
+        // KHÔNG dọn được các key đó -> mồ côi file trên storage).
         var presetNames = derivativePresetCatalog.For(DerivativeSource);
         if (presetNames.Count == 0)
         {
@@ -44,13 +48,7 @@ public sealed class UploadShopLogoHandler(
                 "derivative-presets.json, không sinh logo thiếu.");
         }
 
-        using var source = await imageProcessor.LoadAsync(request.File, cancellationToken);
-
-        var library = await writer.WriteLibraryAsync(
-            request.ShopId, source, FocalPoint.Center.X, FocalPoint.Center.Y,
-            request.FileName, altText: null, folder: null, cancellationToken);
-
-        var derivatives = new List<MediaAsset>(presetNames.Count);
+        var presets = new List<ImagePreset>(presetNames.Count);
         foreach (var presetName in presetNames)
         {
             if (!presetCatalog.TryGet(presetName, out var preset))
@@ -60,6 +58,18 @@ public sealed class UploadShopLogoHandler(
                     "image-presets.json — lỗi cấu hình, không phải input người dùng.");
             }
 
+            presets.Add(preset);
+        }
+
+        using var source = await imageProcessor.LoadAsync(request.File, cancellationToken);
+
+        var library = await writer.WriteLibraryAsync(
+            request.ShopId, source, FocalPoint.Center.X, FocalPoint.Center.Y,
+            request.FileName, altText: null, folder: null, cancellationToken);
+
+        var derivatives = new List<MediaAsset>(presets.Count);
+        foreach (var preset in presets)
+        {
             var derived = await writer.WriteDerivedAsync(
                 library, source, preset, FocalPoint.Center.X, FocalPoint.Center.Y, cancellationToken);
             derivatives.Add(derived);

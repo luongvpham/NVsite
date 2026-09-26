@@ -3,19 +3,23 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.Processing;
 using Vsite.Api.Identity;
 using Vsite.Api.Shop;
+using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Identity.Auth.Dtos;
 using Vsite.Application.Media.Dtos;
 using Vsite.Application.Shop.Dtos;
 using Vsite.Domain.Identity;
+using Vsite.Domain.Identity.Entities;
+using Vsite.Domain.Media.Entities;
 using Vsite.Domain.Shop.Enums;
 using Vsite.Infrastructure.Persistence;
+using ShopEntity = Vsite.Domain.Shop.Entities.Shop;
 
 namespace Vsite.IntegrationTests.Media;
 
@@ -199,10 +203,19 @@ public sealed class ShopLogoTests
     {
         var (token, shopId) = await CreateOwnerWithShopAsync();
 
+        // Decorator trên IAppDbContext (cùng khuôn UploadEndpointTests.ThrowingDbContext, T5) — KHÔNG
+        // dùng ISaveChangesInterceptor: (a) chỉ override SavingChanges (sync) không chặn được đường
+        // SaveChangesAsync thật sự đi qua (base SavingChangesAsync không gọi lại bản sync), (b)
+        // AddDbContext<AppDbContext>(o => o.UseNpgsql(...)) không tự nạp ISaveChangesInterceptor đăng
+        // ký rời trong DI container — cần EnableServiceProviderCaching/AddInterceptors tường minh mà
+        // production wiring không có (và không nên đổi wiring thật chỉ để phục vụ một test). Decorator
+        // ở tầng IAppDbContext chặn được CẢ HAI writer (MediaAssetWriter lẫn ShopLogoWriter) vì cả hai
+        // cùng resolve IAppDbContext qua DI Scoped.
         await using var throwingFactory = _factory.WithWebHostBuilder(builder =>
             builder.ConfigureServices(services =>
             {
-                services.AddSingleton<ISaveChangesInterceptor>(new ThrowingSaveChangesInterceptor());
+                services.RemoveAll<IAppDbContext>();
+                services.AddScoped<IAppDbContext>(sp => new ThrowingDbContext(sp.GetRequiredService<AppDbContext>()));
             }));
         using var throwingClient = throwingFactory.CreateClient();
 
@@ -331,14 +344,23 @@ public sealed class ShopLogoTests
 
     private static string NewSlug() => $"shop-logo-{Guid.NewGuid():N}";
 
-    /// <summary>R4 qua HTTP thật: interceptor ném lỗi ngay trước khi SaveChanges commit — mô phỏng
-    /// "ghi file thành công, DB fail" ở tầng thật, không cần decorate `IAppDbContext` (khác
-    /// `UploadEndpointTests.ThrowingDbContext` vì handler này set property qua `IShopLogoWriter`,
-    /// một service KHÁC cũng dùng chung `AppDbContext` — interceptor ở tầng EF Core chặn được cả
-    /// hai đường ghi mà không cần biết implementation nào gọi SaveChanges).</summary>
-    private sealed class ThrowingSaveChangesInterceptor : SaveChangesInterceptor
+    /// <summary>R4 qua HTTP thật (cùng khuôn `UploadEndpointTests.ThrowingDbContext`, T5): forward
+    /// mọi DbSet cho instance thật, <see cref="SaveChangesAsync"/> luôn ném lỗi TRƯỚC khi chạm DB thật
+    /// — mô phỏng "ghi file thành công, DB fail". `ShopLogoWriter` VÀ `MediaAssetWriter` đều resolve
+    /// `IAppDbContext` qua DI Scoped nên cả hai đường ghi cùng thấy decorator này trong CÙNG request.</summary>
+    private sealed class ThrowingDbContext(IAppDbContext inner) : IAppDbContext
     {
-        public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result) =>
+        public DbSet<User> Users => inner.Users;
+        public DbSet<ExternalLogin> ExternalLogins => inner.ExternalLogins;
+        public DbSet<Role> Roles => inner.Roles;
+        public DbSet<UserShop> UserShops => inner.UserShops;
+        public DbSet<PendingRegistration> PendingRegistrations => inner.PendingRegistrations;
+        public DbSet<RefreshToken> RefreshTokens => inner.RefreshTokens;
+        public DbSet<PasswordResetToken> PasswordResetTokens => inner.PasswordResetTokens;
+        public DbSet<ShopEntity> Shops => inner.Shops;
+        public DbSet<MediaAsset> MediaAssets => inner.MediaAssets;
+
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Simulated DB failure (R4 endpoint test, T7).");
     }
 }
