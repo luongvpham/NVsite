@@ -83,7 +83,7 @@ describe('config whitelist files (§2.1)', () => {
   // "sửa cần người duyệt, không sửa trực tiếp trong task thường" (Quyết định #24). Agent không
   // tự bypass hook. Người duyệt thêm "media" vào reservedPaths thủ công rồi bỏ .skip ở đây.
   // Xem .superpowers/sdd/plan/task-S0a-report.md.
-  it.skip('reserved-routes.json reservedPaths contains "media" (#24)', () => {
+  it.skip('reserved-routes.json reservedPaths contains (#24)', () => {
     const config = readJson('config/reserved-routes.json') as { reservedPaths: string[] };
     expect(config.reservedPaths).toContain('media');
   });

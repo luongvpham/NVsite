@@ -20,6 +20,7 @@
     "privacy",
     "sitemap.xml",
     "robots.txt",
+	"media",
     ".well-known"
   ],
   "reservedSubdomains": ["www", "admin", "app", "help", "api", "cdn", "static"]

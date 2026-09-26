@@ -84,4 +84,6 @@ Test "registry/ đã được khôi phục nguyên vẹn" (`tests/gen-registry.t
 
 | Câu hỏi / giả định | Quyết định | Số hiệu |
 |---|---|---|
-| | | |
+| A1 | OK | |
+| A2 | OK | |
+| A2' | OK | |
