@@ -20,7 +20,11 @@ const REPO_ROOT = path.resolve(PKG_ROOT, '..', '..');
 const GENERATED_DIR = path.join(PKG_ROOT, 'generated');
 const LOCK_FILE = path.join(PKG_ROOT, 'registry.lock.json');
 
-const imagePresets = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'image-presets.json'), 'utf8')) as Record<string, unknown>;
+const imagePresetsFile = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'image-presets.json'), 'utf8')) as {
+  presets: Record<string, unknown>;
+  surfaces: Record<string, string[]>;
+};
+const imagePresets = imagePresetsFile.presets;
 const bindingSources = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'binding-sources.json'), 'utf8')) as string[];
 const sanitizeProfiles = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'sanitize-profiles.json'), 'utf8')) as Record<string, unknown>;
 

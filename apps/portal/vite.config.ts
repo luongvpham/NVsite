@@ -12,9 +12,10 @@ import { defineConfig, type Plugin } from 'vite';
  * KHÔNG phải image proxy thật (đó là Bước 4, không đổi chữ ký resolveImage).
  */
 function devPlaceholderImagePlugin(): Plugin {
-  const presets = JSON.parse(
+  const imagePresetsFile = JSON.parse(
     readFileSync(path.resolve(import.meta.dirname, '..', '..', 'config', 'image-presets.json'), 'utf8'),
-  ) as Record<string, { width: number | null; height: number | null }>;
+  ) as { presets: Record<string, { width: number | null; height: number | null }> };
+  const presets = imagePresetsFile.presets;
 
   return {
     name: 'dev-placeholder-image',
