@@ -41,9 +41,9 @@
 
   <ItemGroup>
     <!-- ObjectStorageContractTests (T2, MEDIA-001): LocalDisk không cần Docker; S3ObjectStorageTests
-         cần MinIO container — xem Docs/DOCKER-TEST-DEBT.md. -->
+         cần container S3-compatible — xem Docs/DOCKER-TEST-DEBT.md. -->
     <PackageReference Include="AWSSDK.S3" />
-    <PackageReference Include="Testcontainers.Minio" />
+    <PackageReference Include="Testcontainers.LocalStack" />
   </ItemGroup>
 
   <ItemGroup>

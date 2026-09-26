@@ -150,10 +150,28 @@ dùng thật):
 }
 ```
 
-⚠️ Trỏ vào MinIO: bản server phải hỗ trợ conditional write (`If-None-Match`), có từ ngay sau
-`RELEASE.2023-01-31` (minio/minio#16551). `RELEASE.2023-01-31` (default cũ của
-`Testcontainers.Minio`) im lặng bỏ qua `IfNoneMatch` và làm no-overwrite (#75) không hoạt động —
-xem `S3ObjectStorageTests` để biết bản đang pin cho test (`RELEASE.2025-04-22T22-12-26Z`).
+⚠️ Bất kể server S3-compatible nào: **phải hỗ trợ conditional write** (`If-None-Match`) — đây là cơ
+chế no-overwrite (#75), `S3ObjectStorage.PutAsync` dựa vào 412 `PreconditionFailed` để ném
+`ObjectAlreadyExistsException`. MinIO hỗ trợ từ ngay sau `RELEASE.2023-01-31` (minio/minio#16551);
+bản `RELEASE.2023-01-31` (default cũ của gói Testcontainers.Minio) im lặng bỏ qua `IfNoneMatch`.
+
+**Đổi provider test (2026-09-27):** `minio/minio` không còn publish image public — cả Docker Hub lẫn
+quay.io đều từ chối pull (xác nhận thủ công khi chạy full-suite Docker lần đầu, `Docs/DOCKER-TEST-DEBT.md`
+lịch sử). `S3ObjectStorageTests` (`backend/tests/IntegrationTests/Imaging/`) đổi sang
+**`localstack/localstack:4.0.3`** (gói `Testcontainers.LocalStack`, cùng bản `3.10.0` với
+`Testcontainers.PostgreSql`/`Redis`) — đã pull-verify tồn tại thật trên Docker Hub và verify LocalStack
+hỗ trợ conditional write đúng qua `Put_twice_same_key_throws_and_keeps_original_content`. Không cần
+cấu hình flexible-checksum riêng (`RequestChecksumCalculation`/`ResponseChecksumValidation`) cho
+LocalStack ở bản này — thử không set cũng pass, nên **không** thêm vào `S3ObjectStorage.cs` (production
+code không đổi). Nếu provider khác từ chối checksum mặc định của AWSSDK.S3, cấu hình hai property đó ở
+`AmazonS3Config` khi tạo client.
+
+⚠️ Thứ tự set property trên `AmazonS3Config` khi vừa dùng `ServiceURL` vừa dùng `RegionEndpoint` quan
+trọng: hai property này loại trừ nhau ở AWSSDK.S3, set property SAU sẽ âm thầm xoá property set
+TRƯỚC. Set `RegionEndpoint` trước, `ServiceURL` sau (đúng thứ tự `S3ObjectStorage` constructor) — đảo
+ngược thứ tự khiến SDK rơi về endpoint AWS thật (`https://s3.amazonaws.com`) mà không báo lỗi rõ ràng
+nào ngoài "AWS Access Key Id ... does not exist" (vì credential test không tồn tại ở AWS thật) — bẫy
+đã gặp khi viết lại `S3ObjectStorageTests` cho LocalStack.
 
 ## 7. Upload — giới hạn (`Imaging:Upload` section, `ImageUploadOptions`, Quyết định #85)
 
@@ -196,6 +214,18 @@ Focal point ngoài `[0, 1]` **không** có mã riêng — đi qua `ValidationBeh
 VALIDATION_ERROR` (cùng tiền lệ `UpdateShopValidator` reserved-slug). Binding-level 400 (guid/page
 sai định dạng) cũng không có `error_code` — đây là lỗi binding ASP.NET Core mặc định, không đi qua
 `AppExceptionHandler`.
+
+⚠️ **`MEDIA_MULTIPART_REQUIRED` (415) không đi qua `AppExceptionHandler`** dù `MediaEndpoints.RequireMultipart`
+ném `UnsupportedMediaTypeException` — 3 endpoint multipart (`slot-uploads`, `library` upload, `PUT
+.../logo`) khai `.Accepts<T>("multipart/form-data")` cho OpenAPI, và metadata đó (`IAcceptsMetadata`)
+cũng bị routing (`ConsumesMatcherPolicy`) dùng để loại endpoint khỏi candidate set khi Content-Type
+không khớp — routing tự trả 415 **trước khi endpoint chạy**, `RequireMultipart` không kịp ném gì cả,
+mặc định response rỗng body (phát hiện lúc chạy full-suite Docker lần đầu, xem
+`Docs/DOCKER-TEST-DEBT.md` lịch sử). Xử lý bằng `Vsite.Api.ExceptionHandling.UnsupportedMediaTypeStatusCodeHandler`
+qua `app.UseStatusCodePages(...)` (Program.cs, ngay sau `UseExceptionHandler`) — middleware này CHỈ
+can thiệp khi `Response.StatusCode == 415`, mọi status code khác (mọi module) đi qua nguyên vẹn.
+Không sửa `.Accepts<T>()`/không đổi OpenAPI output (đã verify hash `contracts/openapi/.staging/media.v1.json`
+không đổi trước/sau).
 
 ## 9. Base class + tổ chức thư mục
 

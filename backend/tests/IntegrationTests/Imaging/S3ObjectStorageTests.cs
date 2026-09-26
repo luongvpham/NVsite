@@ -2,28 +2,34 @@ using Amazon;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Options;
-using Testcontainers.Minio;
+using Testcontainers.LocalStack;
 using Vsite.Application.Common.Imaging;
 using Vsite.Infrastructure.Imaging;
 
 namespace Vsite.IntegrationTests.Imaging;
 
 /// <summary>
-/// Contract test cho <see cref="S3ObjectStorage"/> qua MinIO thật (Testcontainers, T2, MEDIA-001) —
-/// CẦN Docker daemon. Máy không có Docker: ghi nợ vào <c>Docs/DOCKER-TEST-DEBT.md</c> theo quy ước ở
-/// backend/CLAUDE.md, KHÔNG đánh dấu Skip.
+/// Contract test cho <see cref="S3ObjectStorage"/> qua LocalStack thật (Testcontainers, T2,
+/// MEDIA-001) — CẦN Docker daemon. Máy không có Docker: ghi nợ vào
+/// <c>Docs/DOCKER-TEST-DEBT.md</c> theo quy ước ở backend/CLAUDE.md, KHÔNG đánh dấu Skip.
+///
+/// Đổi từ MinIO (2026-09-27): minio/minio không còn publish image public trên Docker Hub lẫn
+/// quay.io (cả hai đều từ chối pull — xác nhận thủ công). LocalStack's S3 emulation (dịch vụ `s3`
+/// trong image chung `localstack/localstack`) hỗ trợ conditional write qua header
+/// <c>If-None-Match: *</c> — verify bằng test <see cref="ObjectStorageContractTests.Put_twice_same_key_throws_and_keeps_original_content"/>,
+/// pin <c>4.0.3</c>, đã pull-verify tồn tại làm tag thật trên Docker Hub (2026-09-27). Xem ghi chú
+/// ở backend/docs/modules/media.md §6 cho danh sách image đã thử.
 /// </summary>
 public sealed class S3ObjectStorageTests : ObjectStorageContractTests
 {
     private const string BucketName = "vsite-media-test";
+    private const string LocalStackImage = "localstack/localstack:4.0.3";
 
-    // Default image của Testcontainers.Minio (minio/minio:RELEASE.2023-01-31T02-24-19Z) im lặng bỏ
-    // qua PutObjectRequest.IfNoneMatch — no-overwrite (#75) sẽ không hoạt động và test này sẽ FAIL.
-    // Conditional write được thêm ngay sau đó (minio/minio#16551, merge 2023-02-07); pin một bản gần
-    // đây, đã xác nhận tồn tại làm tag release thật trên minio/minio (GitHub releases, 2026-09-26).
-    private const string MinioImage = "minio/minio:RELEASE.2025-04-22T22-12-26Z";
+    private readonly LocalStackContainer _container = new LocalStackBuilder()
+        .WithImage(LocalStackImage)
+        .WithEnvironment("SERVICES", "s3")
+        .Build();
 
-    private readonly MinioContainer _container = new MinioBuilder().WithImage(MinioImage).Build();
     private AmazonS3Client? _rawClient;
 
     protected override async Task<IObjectStorage> CreateStorageAsync()
@@ -36,16 +42,24 @@ public sealed class S3ObjectStorageTests : ObjectStorageContractTests
             ServiceUrl = _container.GetConnectionString(),
             ForcePathStyle = true,
             Region = "us-east-1",
-            AccessKey = _container.GetAccessKey(),
-            SecretKey = _container.GetSecretKey(),
+            AccessKey = "test",
+            SecretKey = "test",
         };
 
+        // ⚠️ Thứ tự set property ở đây quan trọng: AmazonS3Config coi RegionEndpoint và ServiceURL là
+        // hai cách khai endpoint loại trừ nhau — set RegionEndpoint SAU sẽ âm thầm xoá ServiceURL đã
+        // set trước đó (SDK rơi về endpoint AWS thật, https://s3.amazonaws.com — tự bắt được lúc debug
+        // spike: request thật sự đi tới AWS, LocalStack không hề nhận được request, lỗi trả về là
+        // "AWS Access Key Id ... does not exist" từ chính AWS thật vì credential "test/test" không
+        // tồn tại ở đó). Set RegionEndpoint TRƯỚC, ServiceURL SAU — cùng thứ tự với production code
+        // (<see cref="S3ObjectStorage"/> constructor).
         var config = new AmazonS3Config
         {
-            ServiceURL = s3Options.ServiceUrl,
-            ForcePathStyle = true,
             RegionEndpoint = RegionEndpoint.GetBySystemName(s3Options.Region),
+            ForcePathStyle = true,
         };
+        config.ServiceURL = s3Options.ServiceUrl;
+        config.AuthenticationRegion = s3Options.Region;
         _rawClient = new AmazonS3Client(s3Options.AccessKey, s3Options.SecretKey, config);
         await _rawClient.PutBucketAsync(BucketName);
 

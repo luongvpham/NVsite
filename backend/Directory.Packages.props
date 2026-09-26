@@ -39,7 +39,9 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="3.10.0" />
     <PackageVersion Include="Testcontainers.Redis" Version="3.10.0" />
-    <!-- S3ObjectStorage contract test (T2, MEDIA-001) — cùng bản với Testcontainers.PostgreSql/Redis -->
-    <PackageVersion Include="Testcontainers.Minio" Version="3.10.0" />
+    <!-- S3ObjectStorage contract test (T2, MEDIA-001) — cùng bản với Testcontainers.PostgreSql/Redis.
+         Đổi từ Testcontainers.Minio: minio/minio không còn publish image public (Docker Hub và
+         quay.io đều từ chối pull, xác nhận 2026-09-27) — xem backend/docs/modules/media.md §6. -->
+    <PackageVersion Include="Testcontainers.LocalStack" Version="3.10.0" />
   </ItemGroup>
 </Project>

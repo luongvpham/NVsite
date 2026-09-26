@@ -90,6 +90,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandler();
 
+// Xem doc trên UnsupportedMediaTypeStatusCodeHandler — routing tự trả 415 rỗng body cho endpoint
+// multipart khi Content-Type không khớp, TRƯỚC khi endpoint chạy, nên UseExceptionHandler (cần
+// exception) không bắt được. Đặt sớm, cùng khu vực UseExceptionHandler theo đúng khuyến nghị của
+// ASP.NET Core cho UseStatusCodePages (early trong pipeline, trước UseRouting/mapping).
+app.UseStatusCodePages(UnsupportedMediaTypeStatusCodeHandler.HandleAsync);
+
 // T9, MEDIA-001 (#53, #81, #83) — phục vụ /media/* TRÊN MỌI HOST, TRƯỚC TenantResolutionMiddleware:
 // không tra Redis, không kiểm tenant, không auth (đọc ảnh luôn public). Map() branch off request
 // khớp prefix "/media" khỏi pipeline chính — request đó không bao giờ chạm TenantResolutionMiddleware
