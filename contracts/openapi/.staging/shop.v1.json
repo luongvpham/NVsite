@@ -365,7 +365,8 @@
           "slug",
           "kind",
           "externalUrl",
-          "status"
+          "status",
+          "logoId"
         ],
         "type": "object",
         "properties": {
@@ -388,6 +389,11 @@
           },
           "status": {
             "$ref": "#/components/schemas/ShopStatus"
+          },
+          "logoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         }
       },
