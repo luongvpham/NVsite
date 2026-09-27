@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Routing;
 using Vsite.Api.Auth;
 using Vsite.Api.Identity;
 using Vsite.Api.ExceptionHandling;
@@ -94,7 +95,11 @@ app.UseExceptionHandler();
 // multipart khi Content-Type không khớp, TRƯỚC khi endpoint chạy, nên UseExceptionHandler (cần
 // exception) không bắt được. Đặt sớm, cùng khu vực UseExceptionHandler theo đúng khuyến nghị của
 // ASP.NET Core cho UseStatusCodePages (early trong pipeline, trước UseRouting/mapping).
-app.UseStatusCodePages(UnsupportedMediaTypeStatusCodeHandler.HandleAsync);
+//
+// MultipartRouteMatcher nhận thẳng app.DataSources (collection sống, chưa có endpoint nào lúc này —
+// mọi Map*Endpoints() còn ở phía dưới) — xem doc trên class đó vì sao an toàn nhờ Lazy<T>.
+var multipartRouteMatcher = new MultipartRouteMatcher(((IEndpointRouteBuilder)app).DataSources);
+app.UseStatusCodePages(context => UnsupportedMediaTypeStatusCodeHandler.HandleAsync(context, multipartRouteMatcher));
 
 // T9, MEDIA-001 (#53, #81, #83) — phục vụ /media/* TRÊN MỌI HOST, TRƯỚC TenantResolutionMiddleware:
 // không tra Redis, không kiểm tenant, không auth (đọc ảnh luôn public). Map() branch off request

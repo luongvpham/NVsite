@@ -85,6 +85,31 @@ public sealed class LibraryEndpointTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    // ---- Review sau Gate 2, D1: clones là JSON (KHÔNG multipart) — 415 do Content-Type sai KHÔNG
+    // được gắn error_code MEDIA_MULTIPART_REQUIRED (route này share path prefix /shops/{shopId}/media/
+    // với slot-uploads/library upload, vốn LÀ multipart — MultipartRouteMatcher phải phân biệt đúng
+    // theo route thật, không theo prefix). ----
+
+    [Fact]
+    public async Task Clone_with_non_json_content_type_returns_415_without_multipart_error_code()
+    {
+        var (token, shopId) = await CreateOwnerWithShopAsync();
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/shops/{shopId}/media/library/{Guid.NewGuid()}/clones")
+        {
+            Content = new StringContent("not json", System.Text.Encoding.UTF8, "text/plain"),
+            Headers = { Host = PortalHost },
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.UnsupportedMediaType, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("MEDIA_MULTIPART_REQUIRED", body, StringComparison.Ordinal);
+        Assert.Empty(body);
+    }
+
     // ---- caller không phải member của shopAId -> 403 (không phải kịch bản "asset của shop B" của
     // brief — đó là test kế tiếp, `Clone_of_asset_belonging_to_a_different_shop_but_caller_is_member_returns_404`) ----
 

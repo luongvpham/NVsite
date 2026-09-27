@@ -21,18 +21,29 @@ namespace Vsite.Api.ExceptionHandling;
 /// ai ghi response" — CHỈ can thiệp khi status = 415, mọi status code khác (401/403/404/…, của MỌI
 /// module) đi qua nguyên vẹn, không đổi hành vi.
 ///
-/// ⚠️ error_code cố định <c>MEDIA_MULTIPART_REQUIRED</c> vì hiện tại chỉ Media có endpoint multipart
-/// (nên chỉ Media có thể sinh 415 kiểu này). Module khác cần 415 với ngữ nghĩa khác thì tách handler
-/// theo route/path ở đây, đừng sửa cứng thêm nhánh else-if — xem cảnh báo tương tự ở
-/// <see cref="BadHttpRequestExceptionHandler"/>.
+/// ⚠️ Review Gate 2: bản đầu gắn <c>MEDIA_MULTIPART_REQUIRED</c> cho MỌI 415 rỗng body — SAI, vì
+/// Minimal API cũng tự gắn <c>IAcceptsMetadata</c> cho endpoint JSON suy luận (vd. `POST /auth/login`,
+/// `POST .../media/library/{assetId}/clones` — JSON, không multipart), gửi sai Content-Type cũng ra
+/// 415 rỗng body theo đúng cơ chế trên, nhưng KHÔNG phải lỗi "thiếu multipart". Gắn cứng error_code
+/// cho mọi 415 là phát biểu sai sự thật (#19). Sửa bằng <see cref="MultipartRouteMatcher"/> — chỉ gắn
+/// <c>MEDIA_MULTIPART_REQUIRED</c> khi request hiện tại thật sự khớp (method + route pattern) một
+/// endpoint đã khai <c>multipart/form-data</c>; 415 của mọi route khác đi qua nguyên vẹn, rỗng body
+/// như trước (không đổi hành vi module khác).
 /// </summary>
 public static class UnsupportedMediaTypeStatusCodeHandler
 {
-    public static Task HandleAsync(StatusCodeContext context)
+    public static Task HandleAsync(StatusCodeContext context, MultipartRouteMatcher multipartRoutes)
     {
         var response = context.HttpContext.Response;
         if (response.StatusCode != StatusCodes.Status415UnsupportedMediaType)
         {
+            return Task.CompletedTask;
+        }
+
+        if (!multipartRoutes.TargetsMultipartEndpoint(context.HttpContext.Request))
+        {
+            // 415 của route KHÔNG multipart (vd. content-type sai cho endpoint JSON) — giữ nguyên
+            // hành vi mặc định của framework (rỗng body), không suy diễn error_code nào cả.
             return Task.CompletedTask;
         }
 

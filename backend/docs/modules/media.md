@@ -221,11 +221,28 @@ ném `UnsupportedMediaTypeException` — 3 endpoint multipart (`slot-uploads`, `
 cũng bị routing (`ConsumesMatcherPolicy`) dùng để loại endpoint khỏi candidate set khi Content-Type
 không khớp — routing tự trả 415 **trước khi endpoint chạy**, `RequireMultipart` không kịp ném gì cả,
 mặc định response rỗng body (phát hiện lúc chạy full-suite Docker lần đầu, xem
-`Docs/DOCKER-TEST-DEBT.md` lịch sử). Xử lý bằng `Vsite.Api.ExceptionHandling.UnsupportedMediaTypeStatusCodeHandler`
-qua `app.UseStatusCodePages(...)` (Program.cs, ngay sau `UseExceptionHandler`) — middleware này CHỈ
-can thiệp khi `Response.StatusCode == 415`, mọi status code khác (mọi module) đi qua nguyên vẹn.
-Không sửa `.Accepts<T>()`/không đổi OpenAPI output (đã verify hash `contracts/openapi/.staging/media.v1.json`
-không đổi trước/sau).
+`Docs/DOCKER-TEST-DEBT.md` lịch sử).
+
+⚠️ **415 rỗng body KHÔNG chỉ xảy ra cho endpoint multipart** — Minimal API tự gắn `IAcceptsMetadata`
+cho MỌI endpoint có tham số body suy luận (kể cả JSON, vd. `POST /auth/login` với `LoginRequest`,
+`POST .../media/library/{assetId}/clones` với `CloneRequest`, `POST /shops`, `PATCH /shops/{shopId}`)
+— gửi sai Content-Type cho các route này cũng bị routing loại và trả 415 rỗng body theo đúng cơ chế
+trên, dù đó KHÔNG phải "thiếu multipart". Review Gate 2 (D1) bắt lỗi: bản xử lý đầu tiên gắn cứng
+`MEDIA_MULTIPART_REQUIRED` cho MỌI 415 rỗng body — phát biểu sai sự thật (#19), đổi hành vi của module
+khác (Identity, Shop) và cả endpoint JSON của chính Media (`clones`). Sửa bằng
+`Vsite.Api.ExceptionHandling.MultipartRouteMatcher`: quét một lần (lazy, từ `EndpointDataSource`) toàn
+bộ `RouteEndpoint` có `IAcceptsMetadata` chứa đúng `multipart/form-data`, rồi so khớp request hiện tại
+theo HTTP method + `RoutePattern` (`TemplateMatcher`) — **không** dùng `HttpContext.GetEndpoint()` sau
+415 (đó là endpoint tổng hợp của routing, không mang metadata thật) và **không** dùng path prefix (
+`/shops/{shopId}/media/library/{assetId}/clones` share tiền tố với route multipart thật nhưng bản
+thân là JSON).
+
+Xử lý bằng `Vsite.Api.ExceptionHandling.UnsupportedMediaTypeStatusCodeHandler` qua
+`app.UseStatusCodePages(...)` (Program.cs, ngay sau `UseExceptionHandler`) — middleware này CHỈ can
+thiệp khi `Response.StatusCode == 415` **và** `MultipartRouteMatcher` xác nhận request khớp đúng một
+route multipart thật; mọi 415 khác (route JSON sai Content-Type, module khác, …) đi qua nguyên vẹn,
+rỗng body như hành vi mặc định của framework. Không sửa `.Accepts<T>()`/không đổi OpenAPI output (đã
+verify hash `contracts/openapi/.staging/media.v1.json` không đổi trước/sau).
 
 ## 9. Base class + tổ chức thư mục
 

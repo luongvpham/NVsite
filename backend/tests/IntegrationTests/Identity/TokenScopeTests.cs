@@ -114,6 +114,28 @@ public sealed class TokenScopeTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
+    // ---- Review sau Gate 2, D1: 415 của route JSON (KHÔNG multipart) không được gắn
+    // error_code MEDIA_MULTIPART_REQUIRED — routing tự trả 415 rỗng body cho MỌI endpoint có
+    // IAcceptsMetadata không khớp Content-Type (kể cả JSON suy luận từ tham số phức hợp như
+    // LoginRequest ở đây), không riêng multipart. UnsupportedMediaTypeStatusCodeHandler phải phân
+    // biệt bằng MultipartRouteMatcher, không phải gắn cứng cho mọi 415. ----
+
+    [Fact]
+    public async Task Login_with_non_json_content_type_returns_415_without_multipart_error_code()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/auth/login")
+        {
+            Content = new StringContent("not json", System.Text.Encoding.UTF8, "text/plain"),
+        };
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.UnsupportedMediaType, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("MEDIA_MULTIPART_REQUIRED", body, StringComparison.Ordinal);
+        Assert.Empty(body);
+    }
+
     private async Task<string> RegisterVerifyLoginAsync(string? host, string email, string password)
     {
         await PostAsync(host, "/auth/register", new RegisterRequest(email, password, "Test User"));
