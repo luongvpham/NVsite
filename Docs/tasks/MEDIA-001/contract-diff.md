@@ -133,4 +133,19 @@ không, và Orval xử lý `MediaAssetDto2` có cần fix thêm ở tầng codeg
 
 ## Người duyệt đã quyết
 
-(điền lúc Gate 1 — để trống cho người duyệt)
+Gate 1 duyệt 2026-09-27: **chấp nhận toàn bộ contract-diff nguyên trạng.** Người duyệt yêu cầu chạy
+test Docker trước khi promote + viết `brief.md`.
+
+| Câu hỏi / giả định | Quyết định | Số hiệu |
+|---|---|---|
+| BREAKING `ShopDto.logoId` (nullable, luôn có mặt) | Chấp nhận, không tạo `v2` | Rule contract #3 (chưa production) — không cấp mới |
+| A3 `IsDeleted` thay `DeletedAt`; bảng `MediaAsset` | Chấp nhận | Không cấp mới — lệch có chủ đích ghi ở `changelog.md` |
+| A4 lỗi từ chối ảnh = 422 + `error_code`; 413 chỉ khi vượt request limit | Chấp nhận | #19 · #85 |
+| A5 không upscale, `Preset` vẫn ghi preset slot | Chấp nhận | #74 (preset là assertion) |
+| A6 `GetAssetsByIds` trả cả asset soft-delete cùng shop | Chấp nhận | #72 |
+| A7 picker hiện thẳng bản Library | Chấp nhận | Không cấp mới — tối ưu để sau |
+| A8 `Cache-Control: max-age=3600` tới Bước 8 | Chấp nhận | `08` §10 #7 (Bước 8) |
+| A9 test không container ở `IntegrationTests/Imaging/` | Chấp nhận | Không cấp mới — tổ chức test |
+| A10 LocalDisk mặc định `<repo>/.media/` | Chấp nhận | #83 |
+| A11 xoá bản Library đang là logo: chỉ cảnh báo | Chấp nhận | `08` §4 ("cảnh báo, không chặn") |
+| `MediaAssetDto2` trùng + form fields thiếu `required` | Kiểm khi chạy `pnpm gen:api` ở S2; nếu Orval sinh type trùng thì sửa ở BE (schema transformer) trước khi FE bám vào | Không cấp mới — việc của S2 |
