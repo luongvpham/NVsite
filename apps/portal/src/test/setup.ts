@@ -6,6 +6,11 @@ import { server } from './msw-server';
 // mỗi lần điều hướng, chỉ log noise, không phải lỗi test thật.
 window.scrollTo = () => {};
 
+// jsdom không hiện thực createObjectURL/revokeObjectURL — dialog upload-to-slot dùng nó để xem
+// trước ảnh vừa chọn trước khi gửi (MEDIA-001 F2).
+URL.createObjectURL = () => 'blob:mock-preview';
+URL.revokeObjectURL = () => {};
+
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
 });

@@ -2,3 +2,4 @@
 // msw/@faker-js/faker vào bundle production (apps/web SSR, apps/portal build).
 export * from './generated/identity/identity/identity.msw';
 export * from './generated/shop/shop/shop.msw';
+export * from './generated/media/media/media.msw';

@@ -15,3 +15,25 @@ export * from './generated/shop/model/shopStatus';
 export * from './generated/shop/model/shopSummaryDto';
 export * from './generated/shop/model/updateShopRequest';
 export * from './generated/shop/shop.zod';
+
+// media: cùng lý do tránh TS2308 như identity/shop — ProblemDetails/HttpValidationProblemDetails
+// (và HttpValidationProblemDetailsErrors) trùng shape với bản identity đã export ở trên, nên chỉ
+// export chọn lọc, không export * cả thư mục model.
+export * from './generated/media/media/media';
+export * from './generated/media/model/cloneRequest';
+export * from './generated/media/model/getShopsShopIdMediaAssetsParams';
+export * from './generated/media/model/getShopsShopIdMediaLibraryParams';
+export * from './generated/media/model/iFormFile';
+export * from './generated/media/model/mediaAssetDto';
+export * from './generated/media/model/mediaReferenceDto';
+export * from './generated/media/model/mediaReferenceKind';
+export * from './generated/media/model/mediaReferencesDto';
+export * from './generated/media/model/mediaUsageDto';
+export * from './generated/media/model/pagedResultOfMediaAssetDto';
+export * from './generated/media/model/shopLogoDto';
+export * from './generated/media/model/slotUploadResultDto';
+export * from './generated/media/model/slotUploadResultDtoLibraryAsset';
+export * from './generated/media/model/uploadShopLogoForm';
+export * from './generated/media/model/uploadToLibraryForm';
+export * from './generated/media/model/uploadToSlotForm';
+export * from './generated/media/media.zod';
