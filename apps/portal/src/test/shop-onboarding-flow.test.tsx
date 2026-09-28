@@ -28,7 +28,7 @@ describe('SHOP-001 onboarding flow', () => {
       ),
       http.post('/shops', async ({ request }) => {
         const body = (await request.json()) as { name: string; slug: string; kind: ShopDto['kind']; externalUrl: string | null };
-        const created: ShopDto = { id: 'shop-1', status: 'Draft', ...body };
+        const created: ShopDto = { id: 'shop-1', status: 'Draft', logoId: null, ...body };
         shops.push(created);
         return HttpResponse.json(created);
       }),

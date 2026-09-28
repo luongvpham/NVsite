@@ -7,9 +7,9 @@ import { defineConfig, type Plugin } from 'vite';
 
 /**
  * TẠM THỜI — chỉ phục vụ /_dev/dev-hero-preview (xoá cùng lúc ở Sub-phase B 2.9).
- * ctx.resolveImage() ở Bước 2 là stub trả về URL `/_dev/placeholder/{preset}.svg` (07 §7.1) —
- * middleware này sinh SVG placeholder đúng kích thước preset để xem được bằng mắt lúc dev,
- * KHÔNG phải image proxy thật (đó là Bước 4, không đổi chữ ký resolveImage).
+ * ctx.resolveImage() khi imageId KHÔNG có trong mediaMap vẫn trả về `/_dev/placeholder/{preset}.svg`
+ * (Bước 4, #74) — middleware này sinh SVG placeholder đúng kích thước preset để xem được bằng mắt
+ * lúc dev. Ảnh thật (imageId có trong mediaMap) đi qua proxy `/media` bên dưới, không qua đây.
  */
 function devPlaceholderImagePlugin(): Plugin {
   const imagePresetsFile = JSON.parse(
@@ -59,6 +59,9 @@ export default defineConfig({
       // Host thành target (localhost:5270) và làm audience sai.
       '/auth': { target: 'http://localhost:5270', changeOrigin: false },
       '/shops': { target: 'http://localhost:5270', changeOrigin: false },
+      // Ảnh không đi qua API — mọi ảnh phục vụ tại /media/{storageKey} (brief MEDIA-001).
+      // Chỉ resolveImage() được nối chuỗi /media/.
+      '/media': { target: 'http://localhost:5270', changeOrigin: false },
     },
   },
   test: {

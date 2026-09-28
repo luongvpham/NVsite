@@ -7,7 +7,14 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [
     tanstackStart(), // MUST come before react()
-    nitro(),
+    nitro({
+      devProxy: {
+        // Ảnh không đi qua API — phục vụ tại /media/{storageKey} trên mọi domain, kể cả
+        // {slug}.vsite.local:3000 (brief MEDIA-001). changeOrigin: false — giữ nguyên Host header
+        // gốc, đúng cơ chế Host-based tenant resolve dùng chung toàn hệ (xem apps/portal/vite.config.ts).
+        '/media': { target: 'http://localhost:5270', changeOrigin: false },
+      },
+    }),
     viteReact(),
     tailwindcss(),
   ],
