@@ -3,7 +3,7 @@ import { Button, Dialog } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
 import { usePostShopsShopIdMediaSlotUploads, type MediaAssetDto } from '@vsite/api-sdk';
 import { getErrorMessage, HEIC_UNSUPPORTED_GUIDANCE } from '../../lib/error-messages';
-import { ACCEPT_ATTR, fitOfPreset, MAX_FILE_SIZE_BYTES } from '../../lib/media-validation';
+import { ACCEPT_ATTR, fileSchema, fitOfPreset } from '../../lib/media-validation';
 
 export interface UploadSlotDialogProps {
   shopId: string;
@@ -59,14 +59,9 @@ export function UploadSlotDialog({ shopId, preset, open, onClose, onUploaded }: 
       setPreviewUrl(null);
       return;
     }
-    if (selected.size > MAX_FILE_SIZE_BYTES) {
-      setClientError('File vượt quá 10 MB, vui lòng chọn ảnh nhỏ hơn');
-      setFile(null);
-      setPreviewUrl(null);
-      return;
-    }
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(selected.type)) {
-      setClientError('Định dạng không hỗ trợ. Chỉ nhận JPEG, PNG, WEBP');
+    const result = fileSchema.safeParse(selected);
+    if (!result.success) {
+      setClientError(result.error.issues[0]?.message ?? 'Ảnh không hợp lệ');
       setFile(null);
       setPreviewUrl(null);
       return;

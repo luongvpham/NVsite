@@ -2,9 +2,16 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import type { MediaAssetDto, PagedResultOfMediaAssetDto } from '@vsite/api-sdk';
+import { mediaUrl } from '@vsite/builder-components';
 import { renderWithQuery } from '../../test/render-with-query';
 import { server } from '../../test/msw-server';
 import { MediaLibraryPicker } from './media-library-picker';
+
+function makeFile(name: string, sizeBytes: number, type: string): File {
+  const file = new File([new Uint8Array(1)], name, { type });
+  Object.defineProperty(file, 'size', { value: sizeBytes });
+  return file;
+}
 
 function asset(id: string): MediaAssetDto {
   return {
@@ -42,7 +49,40 @@ describe('MediaLibraryPicker (F3)', () => {
 
     expect(screen.getByText('Đang tải thư viện...')).toBeInTheDocument();
     await screen.findByText(/Đã dùng/);
-    expect(screen.getAllByRole('img')).toHaveLength(2);
+    const thumbnails = screen.getAllByRole('img');
+    expect(thumbnails).toHaveLength(2);
+    // src phải đi qua mediaUrl() (packages/builder-components) — không tự nối chuỗi /media/ lần hai.
+    expect(thumbnails[0]).toHaveAttribute('src', mediaUrl('shop-1/a1.jpg'));
+  });
+
+  it('ẩn nút Xoá khi isOwner không được truyền (mặc định false, fail-safe)', async () => {
+    server.use(
+      http.get('*/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([asset('a1')]))),
+      http.get('*/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+    );
+    renderWithQuery(
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
+    );
+
+    await screen.findAllByRole('img');
+    expect(screen.queryByRole('button', { name: 'Xoá' })).not.toBeInTheDocument();
+  });
+
+  it('báo lỗi client khi upload thẳng vào thư viện với file vượt quá 10MB, không gọi API', async () => {
+    server.use(
+      http.get('*/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([]))),
+      http.get('*/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+    );
+    renderWithQuery(
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
+    );
+
+    const bigFile = makeFile('big.jpg', 11 * 1024 * 1024, 'image/jpeg');
+    fireEvent.change(screen.getByLabelText('Tải ảnh lên thư viện', { selector: 'input' }), {
+      target: { files: [bigFile] },
+    });
+
+    expect(await screen.findByText(/vượt quá 10 MB/)).toBeInTheDocument();
   });
 
   it('hiện trạng thái rỗng khi thư viện chưa có ảnh', async () => {
@@ -108,7 +148,7 @@ describe('MediaLibraryPicker (F3)', () => {
       http.delete('*/shops/:shopId/media/library/:assetId', () => new HttpResponse(null, { status: 204 })),
     );
     renderWithQuery(
-      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" isOwner open onClose={vi.fn()} onSelect={vi.fn()} />,
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'Xoá' }));

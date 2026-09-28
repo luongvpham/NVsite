@@ -2,6 +2,7 @@ import { type MouseEvent, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dialog } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
+import { mediaUrl } from '@vsite/builder-components';
 import {
   getGetShopsShopIdMediaLibraryAssetIdReferencesQueryOptions,
   getGetShopsShopIdMediaLibraryQueryKey,
@@ -15,7 +16,7 @@ import {
 } from '@vsite/api-sdk';
 import { getErrorMessage } from '../../lib/error-messages';
 import { formatBytes } from '../../lib/format-bytes';
-import { ACCEPT_ATTR, fitOfPreset, MAX_FILE_SIZE_BYTES } from '../../lib/media-validation';
+import { ACCEPT_ATTR, fileSchema, fitOfPreset } from '../../lib/media-validation';
 
 const PAGE_SIZE = 24;
 
@@ -23,7 +24,8 @@ export interface MediaLibraryPickerProps {
   shopId: string;
   /** Preset của slot đang chọn ảnh cho — dùng để gọi clone (#71: luôn clone, không đặt id Library vào tree). */
   preset: string;
-  /** MVP chỉ ẩn nút xoá khi biết chắc không phải Owner — mặc định `true` (giả định tự đặt, xem báo cáo). */
+  /** Fail-safe: mặc định `false` — ẩn nút xoá cho tới khi caller (F5) xác nhận role Owner thật,
+   * chỉ bật khi biết chắc là Owner, không suy đoán. */
   isOwner?: boolean;
   open: boolean;
   onClose: () => void;
@@ -34,7 +36,7 @@ export interface MediaLibraryPickerProps {
  * F3 — picker Media Library: danh sách phân trang, upload thẳng vào thư viện, chọn ảnh → clone vào
  * slot, xoá (cảnh báo tham chiếu nhưng không chặn), hiện dung lượng đã dùng.
  */
-export function MediaLibraryPicker({ shopId, preset, isOwner = true, open, onClose, onSelect }: MediaLibraryPickerProps) {
+export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onClose, onSelect }: MediaLibraryPickerProps) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -84,12 +86,9 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = true, open, onClo
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      setUploadError('File vượt quá 10 MB, vui lòng chọn ảnh nhỏ hơn');
-      return;
-    }
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setUploadError('Định dạng không hỗ trợ. Chỉ nhận JPEG, PNG, WEBP');
+    const result = fileSchema.safeParse(file);
+    if (!result.success) {
+      setUploadError(result.error.issues[0]?.message ?? 'Ảnh không hợp lệ');
       return;
     }
     setUploadError(null);
@@ -188,7 +187,7 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = true, open, onClo
                     onClick={() => { openCloneStep(asset); }}
                   >
                     <img
-                      src={`/media/${asset.storageKey}`}
+                      src={mediaUrl(asset.storageKey)}
                       alt={asset.altText ?? 'Ảnh thư viện'}
                       loading="lazy"
                       className="aspect-square w-full object-cover"
@@ -235,7 +234,7 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = true, open, onClo
             <p className="text-sm font-medium">Xác nhận chọn ảnh</p>
             <div className="relative cursor-crosshair overflow-hidden rounded border border-border" onClick={handleFocalClick}>
               <img
-                src={`/media/${selectedForClone.storageKey}`}
+                src={mediaUrl(selectedForClone.storageKey)}
                 alt="Xem trước"
                 className="block max-h-56 w-full object-contain"
               />

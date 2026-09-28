@@ -1,6 +1,12 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { RenderContextProvider, useRenderContext, type MediaRef } from './context';
+import { mediaUrl, RenderContextProvider, useRenderContext, type MediaRef } from './context';
+
+describe('mediaUrl', () => {
+  it('nối storageKey thành /media/{storageKey} — duy nhất một nơi biết quy ước URL này', () => {
+    expect(mediaUrl('shops/s1/media/abc.webp')).toBe('/media/shops/s1/media/abc.webp');
+  });
+});
 
 function withProvider(mediaMap: Readonly<Record<string, MediaRef>>) {
   return ({ children }: { children: React.ReactNode }) => (
@@ -15,7 +21,7 @@ describe('resolveImage (F1 — thân thật, #74)', () => {
     };
     const { result } = renderHook(() => useRenderContext(), { wrapper: withProvider(mediaMap) });
 
-    expect(result.current.resolveImage('img-1', 'hero')).toBe('/media/shops/s1/media/abc.webp');
+    expect(result.current.resolveImage('img-1', 'hero')).toBe(mediaUrl('shops/s1/media/abc.webp'));
   });
 
   it('imageId không có trong mediaMap → placeholder theo preset yêu cầu', () => {

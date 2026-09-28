@@ -16,7 +16,10 @@ function isAcceptedMimeType(mimeType: string): mimeType is AcceptedMimeType {
   return (ACCEPTED_MIME_TYPES as readonly string[]).includes(mimeType);
 }
 
-const requiredFileSchema = z
+/** Export riêng để component gọi thẳng `.safeParse(file)` ngay trong handler chọn file — một nơi
+ * duy nhất định nghĩa luật ≤10MB + mime, không để mỗi dialog tự chép lại (Definition of Done:
+ * "validation bằng Zod sinh từ contract"). */
+export const fileSchema = z
   .instanceof(File, { message: 'Vui lòng chọn một ảnh' })
   .refine((file) => file.size <= MAX_FILE_SIZE_BYTES, 'File vượt quá 10 MB, vui lòng chọn ảnh nhỏ hơn')
   .refine((file) => isAcceptedMimeType(file.type), 'Định dạng không hỗ trợ. Chỉ nhận JPEG, PNG, WEBP');
@@ -29,12 +32,12 @@ export function fitOfPreset(preset: string): 'cover' | 'inside' | null {
 }
 
 export const slotUploadClientSchema = postShopsShopIdMediaSlotUploadsBody.extend({
-  file: requiredFileSchema,
+  file: fileSchema,
   preset: z.string().min(1, 'Thiếu preset'),
 });
 export type SlotUploadClientValues = z.infer<typeof slotUploadClientSchema>;
 
 export const libraryUploadClientSchema = postShopsShopIdMediaLibraryBody.extend({
-  file: requiredFileSchema,
+  file: fileSchema,
 });
 export type LibraryUploadClientValues = z.infer<typeof libraryUploadClientSchema>;

@@ -28,6 +28,17 @@ export interface RenderContextValue {
 const PLACEHOLDER_PRESET_PATH = (preset: string) => `/_dev/placeholder/${preset}.svg`;
 
 /**
+ * Duy nhất một nơi biết cách nối `storageKey` thành URL ảnh thật (brief MEDIA-001 §"Ảnh không đi
+ * qua API" — "Chỉ resolveImage() được nối chuỗi /media/"). `resolveImage` gọi hàm này bên trong.
+ * Export riêng để nơi cần hiện ảnh KHÔNG qua tree/mediaMap (vd. Media Library picker ở apps/portal
+ * — ảnh thư viện chưa có `imageId` trong tree) vẫn dùng đúng một quy ước URL, không tự nối chuỗi
+ * `/media/` lần thứ hai. Thuần, isomorphic — không đụng window/document (#23).
+ */
+export function mediaUrl(storageKey: string): string {
+  return `/media/${storageKey}`;
+}
+
+/**
  * Bước 4 — thân thật. Isomorphic, KHÔNG đụng window/document (#23).
  * - imageId không có trong mediaMap → placeholder theo preset yêu cầu (dev-only, giữ nguyên
  *   `devPlaceholderImagePlugin` ở apps/portal làm SVG đúng kích thước).
@@ -48,7 +59,7 @@ export function createResolveImage(
         `[resolveImage] preset lệch cho imageId="${imageId}": mediaRef.preset="${mediaRef.preset}", yêu cầu="${preset}". Vẫn trả ảnh gốc.`,
       );
     }
-    return `/media/${mediaRef.storageKey}`;
+    return mediaUrl(mediaRef.storageKey);
   };
 }
 
