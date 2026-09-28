@@ -26,9 +26,23 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 // Một document OpenAPI riêng cho mỗi module (backend/CLAUDE.md — "OpenAPI: thư viện và cách xuất document").
 // ProblemDetailsSchemaTransformer bắt buộc cho MỌI document — error_code chỉ gắn lúc runtime qua
 // Extensions, reflection không tự thấy được (xem ghi chú trong file transformer).
-builder.Services.AddOpenApi("identity", options => options.AddSchemaTransformer<ProblemDetailsSchemaTransformer>());
-builder.Services.AddOpenApi("shop", options => options.AddSchemaTransformer<ProblemDetailsSchemaTransformer>());
-builder.Services.AddOpenApi("media", options => options.AddSchemaTransformer<ProblemDetailsSchemaTransformer>());
+// DuplicateNullableSchemaOccurrenceTagger + DuplicateNullableSchemaDocumentTransformer cũng bắt
+// buộc cho MỌI document, và LUÔN đăng ký cùng nhau — Microsoft.AspNetCore.OpenApi tự sinh schema
+// trùng lặp hậu tố số (XDto2, …) khi cùng CLR type vừa nullable vừa non-nullable (MEDIA-001:
+// MediaAssetDto2), Orval không tự gộp lại (xem ghi chú trong file transformer, gồm cả lý do một
+// document transformer đơn lẻ KHÔNG đủ để fix việc này).
+builder.Services.AddOpenApi("identity", options => options
+    .AddSchemaTransformer<ProblemDetailsSchemaTransformer>()
+    .AddSchemaTransformer<DuplicateNullableSchemaOccurrenceTagger>()
+    .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
+builder.Services.AddOpenApi("shop", options => options
+    .AddSchemaTransformer<ProblemDetailsSchemaTransformer>()
+    .AddSchemaTransformer<DuplicateNullableSchemaOccurrenceTagger>()
+    .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
+builder.Services.AddOpenApi("media", options => options
+    .AddSchemaTransformer<ProblemDetailsSchemaTransformer>()
+    .AddSchemaTransformer<DuplicateNullableSchemaOccurrenceTagger>()
+    .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
 
 builder.Services.AddExceptionHandler<AppExceptionHandler>();
 builder.Services.AddExceptionHandler<UnauthorizedAccessExceptionHandler>();
