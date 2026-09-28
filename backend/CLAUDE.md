@@ -136,6 +136,29 @@ Cách làm:
 4. **Xuất ra file lúc build/CLI** — dùng `Microsoft.Extensions.ApiDescription.Server` (package MSBuild có sẵn của .NET 9 cho OpenAPI) để generate file tĩnh `{module}.json` cho từng document vào `contracts/openapi/.staging/` khi chạy `dotnet build` hoặc một target MSBuild riêng (`dotnet build /t:GenerateOpenApiDocuments` hoặc script wrapper trong `tools/contract-sync/`). Đây là điều kiện bắt buộc theo skill bootstrap — thiếu bước này thì `tools/contract-sync` không có gì để diff.
 5. Naming file: `contracts/openapi/.staging/{module}.v{n}.json`, `{module}` = tên document ở bước 1 (lowercase, khớp tên module), `{n}` bắt đầu từ `1`.
 
+### Property object nullable → `allOf` + `nullable` (Quyết định #87)
+
+`Microsoft.AspNetCore.OpenApi` sinh **schema trùng** (`XDto2`) khi cùng một CLR type xuất hiện vừa
+nullable vừa non-null trong một document — Orval biến hai schema giống hệt nhau thành hai TS type
+không tương thích, FE phải tự chọn dùng cái nào (phát hiện lúc MEDIA-001 §F1, xem
+`Docs/tasks/MEDIA-001-D2/contract-diff.md`).
+
+**Chặn triệt để bằng transformer dùng chung**, đăng ký cho **mọi** document module, không sửa từng
+DTO tay: `backend/src/Vsite.Api/OpenApi/DuplicateNullableSchemaDocumentTransformer.cs` — chứa cả
+`DuplicateNullableSchemaOccurrenceTagger` (schema transformer, gắn cờ + tắt `Nullable` trước khi
+schema được chốt vào store) và `DuplicateNullableSchemaDocumentTransformer` (document transformer,
+viết lại node đã gắn cờ thành `{ "allOf": [ { "$ref": ... } ], "nullable": true }`). Ref id lấy theo
+`OpenApiOptions.CreateSchemaReferenceId` đã cấu hình cho đúng document, không tính lại bằng tay —
+nếu một id bị hai CLR type khác nhau cùng chiếm thì **throw lúc generate**, không âm thầm trỏ nhầm
+type.
+
+**Hệ quả áp dụng cho mọi module kể từ #87:** property object nullable **không còn** ở dạng phẳng
+`{ "$ref": ..., "nullable": true }` (OpenAPI 3.0 vốn không hợp lệ theo cách đó) mà luôn là
+`{ "allOf": [ { "$ref": ... } ], "nullable": true }`. JSON runtime server trả về **không đổi** — chỉ
+hình dạng schema OpenAPI thay đổi. FE cần biết: Orval sinh `X | null`, một type duy nhất.
+
+Ràng buộc với .NET 9 / OpenAPI.NET v1 (có `TODO` trong code, xem lại khi lên .NET 10).
+
 ## Quy tắc normalize khi diff contract ✅ Đã chốt
 
 `tools/contract-sync/` áp dụng đúng bộ tối thiểu sau trước khi so sánh hai bên (runtime vs committed):

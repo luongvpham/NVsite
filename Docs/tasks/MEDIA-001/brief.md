@@ -3,12 +3,15 @@
 ## Contract
 
 ```
-contracts/openapi/media.v1.json   (sha256: d54b796bc9d109475e661424db7782e0b394897544332f42f7ab9bd46f9b2968)  ← module mới
+contracts/openapi/media.v1.json   (sha256: b92afa6af967e5b4ca688ce6ad55c1fac095846cae2f30fd1e3646a72d8211fb)
 contracts/openapi/shop.v1.json    (sha256: 26e390e0d15943bfc987d099287be1c5ffa5c6ce28835f7bae66dae3833c1fcc)  ← ShopDto + logoId
 ```
 
-Duyệt Gate 1 ngày 2026-09-27 (`contract-diff.md` §"Người duyệt đã quyết"). **Kiểm sha256 với
-`contracts/contract.lock` trước khi chạy `pnpm gen:api`. Lệch thì dừng lại, không đoán.**
+Duyệt Gate 1 ngày 2026-09-27 (`contract-diff.md` §"Người duyệt đã quyết"); `media` promote lại ngày
+2026-09-28 sau khi gộp schema trùng `MediaAssetDto2` (`Docs/tasks/MEDIA-001-D2/contract-diff.md`,
+Quyết định #87 — property object nullable giờ luôn dạng `{ allOf: [$ref], nullable: true }`, JSON
+runtime không đổi). **Kiểm sha256 với `contracts/contract.lock` trước khi chạy `pnpm gen:api`. Lệch
+thì dừng lại, không đoán.**
 
 ### Module `media`: 9 endpoint, tất cả dưới `/shops/{shopId}/…`, JWT Portal + membership
 

@@ -834,87 +834,6 @@
           }
         }
       },
-      "MediaAssetDto2": {
-        "required": [
-          "id",
-          "storageKey",
-          "mimeType",
-          "width",
-          "height",
-          "sizeBytes",
-          "altText",
-          "focalPointX",
-          "focalPointY",
-          "originalFileName",
-          "folder",
-          "isInLibrary",
-          "preset",
-          "sourceAssetId",
-          "createdAt"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "storageKey": {
-            "type": "string"
-          },
-          "mimeType": {
-            "type": "string"
-          },
-          "width": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "height": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "sizeBytes": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "altText": {
-            "type": "string",
-            "nullable": true
-          },
-          "focalPointX": {
-            "type": "number",
-            "format": "float"
-          },
-          "focalPointY": {
-            "type": "number",
-            "format": "float"
-          },
-          "originalFileName": {
-            "type": "string",
-            "nullable": true
-          },
-          "folder": {
-            "type": "string",
-            "nullable": true
-          },
-          "isInLibrary": {
-            "type": "boolean"
-          },
-          "preset": {
-            "type": "string",
-            "nullable": true
-          },
-          "sourceAssetId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "nullable": true
-      },
       "MediaReferenceDto": {
         "required": [
           "kind"
@@ -1045,7 +964,12 @@
             "$ref": "#/components/schemas/MediaAssetDto"
           },
           "libraryAsset": {
-            "$ref": "#/components/schemas/MediaAssetDto2"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaAssetDto"
+              }
+            ],
+            "nullable": true
           }
         }
       },

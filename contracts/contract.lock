@@ -12,9 +12,9 @@
     "taskId": "MEDIA-001"
   },
   "media.v1.json": {
-    "sha256": "d54b796bc9d109475e661424db7782e0b394897544332f42f7ab9bd46f9b2968",
-    "approvedAt": "2026-09-27T11:39:02.581Z",
+    "sha256": "b92afa6af967e5b4ca688ce6ad55c1fac095846cae2f30fd1e3646a72d8211fb",
+    "approvedAt": "2026-09-28T14:53:30.424Z",
     "approvedBy": "VietLuong Pham",
-    "taskId": "MEDIA-001"
+    "taskId": "MEDIA-001-D2"
   }
 }

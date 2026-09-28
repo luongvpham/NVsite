@@ -1,4 +1,4 @@
-# vsite — Registry Quyết Định (#1–#86)
+# vsite — Registry Quyết Định (#1–#87)
 
 > **File này là CHỈ MỤC, không phải nội dung.** Mỗi dòng cho bạn biết quyết định đó nói gì trong một
 > câu, nó được **định nghĩa đầy đủ ở đâu**, và nó **đã thành code chưa**. Đọc dòng ở đây trước, rồi
@@ -126,6 +126,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#84** | Thư viện xử lý ảnh: **ImageSharp** (Six Labors Split License — miễn phí khi doanh thu năm < 1M USD, vượt thì mua license) | `08` §0 | 📐 Bước 4 |
 | **#85** | Giới hạn upload **10 MB / 25 MP** (số pixel kiểm từ header, trước decode); chỉ nhận JPEG/PNG/WebP; **HEIC bị từ chối** với `error_code` riêng + hướng dẫn ở FE | `08` §0 · §3.1 | 📐 Bước 4 |
 | **#86** | Prop `binding` thêm field additive **`imagePresets`** (preset theo từng source); codegen sinh bộ phái sinh vào `packages/builder-components/generated/`, hợp với tập cố định của bề mặt vsite khai trong `config/image-presets.json` | `08` §0 · §3.6 | 📐 Bước 4 |
+| **#87** | Property object nullable trong OpenAPI luôn xuất dạng `{ allOf: [$ref], nullable: true }`, không phải object trùng `XDto2`. Chặn bằng transformer dùng chung, đăng ký cho mọi document module | `backend/CLAUDE.md` §OpenAPI | ✅ enforce — `DuplicateNullableSchema*Transformer` + test |
 
 ---
 
