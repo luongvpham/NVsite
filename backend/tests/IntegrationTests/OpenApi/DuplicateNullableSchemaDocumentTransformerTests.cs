@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Vsite.Api.OpenApi;
 
@@ -34,8 +35,15 @@ public sealed class DuplicateNullableSchemaDocumentTransformerTests
         },
     };
 
-    private static async Task RunTaggerAsync(OpenApiSchema schema, Type clrType, string documentName = "test")
+    private static async Task RunTaggerAsync(
+        OpenApiSchema schema,
+        Type clrType,
+        string documentName = "test",
+        Action<OpenApiOptions>? configureOptions = null)
     {
+        var services = new ServiceCollection();
+        services.AddOptions();
+        services.Configure<OpenApiOptions>(documentName, configureOptions ?? (_ => { }));
         var tagger = new DuplicateNullableSchemaOccurrenceTagger();
         var context = new OpenApiSchemaTransformerContext
         {
@@ -43,7 +51,7 @@ public sealed class DuplicateNullableSchemaDocumentTransformerTests
             JsonTypeInfo = JsonSerializerOptions.Default.GetTypeInfo(clrType),
             JsonPropertyInfo = null,
             ParameterDescription = null,
-            ApplicationServices = new ServiceCollection().BuildServiceProvider(),
+            ApplicationServices = services.BuildServiceProvider(),
         };
         await tagger.TransformAsync(schema, context, CancellationToken.None);
     }
@@ -57,7 +65,7 @@ public sealed class DuplicateNullableSchemaDocumentTransformerTests
 
         Assert.False(schema.Nullable);
         Assert.NotNull(schema.Annotations);
-        Assert.Equal("MediaAssetDto", schema.Annotations[DuplicateNullableSchemaOccurrenceTaggerTestAccessor.AnnotationKey]);
+        Assert.Equal("MediaAssetDto", schema.Annotations[DuplicateNullableSchemaOccurrenceTagger.AnnotationKey]);
     }
 
     [Fact]
@@ -385,10 +393,115 @@ public sealed class DuplicateNullableSchemaDocumentTransformerTests
         Assert.True(resultSchema.Nullable);
         Assert.Equal("MediaAssetDto", resultSchema.AllOf[0].Reference.Id);
     }
-}
 
-/// <summary>Chỉ để test đọc đúng annotation key nội bộ (internal, cùng assembly Vsite.Api).</summary>
-internal static class DuplicateNullableSchemaOccurrenceTaggerTestAccessor
-{
-    public const string AnnotationKey = "x-vsite-duplicate-nullable-ref-id";
+    [Fact]
+    public async Task Tagger_resolves_document_configured_CreateSchemaReferenceId_instead_of_the_static_default()
+    {
+        const string documentName = nameof(Tagger_resolves_document_configured_CreateSchemaReferenceId_instead_of_the_static_default);
+
+        var schema = MediaAssetSchema(nullable: true);
+        await RunTaggerAsync(
+            schema,
+            typeof(MediaAssetDto),
+            documentName,
+            options => options.CreateSchemaReferenceId = _ => "CustomConfiguredId");
+
+        Assert.Equal("CustomConfiguredId", schema.Annotations[DuplicateNullableSchemaOccurrenceTagger.AnnotationKey]);
+    }
+
+    [Fact]
+    public async Task Tagger_throws_when_two_distinct_CLR_types_resolve_to_the_same_reference_id()
+    {
+        // Mô phỏng đúng rủi ro reviewer nêu: một options.CreateSchemaReferenceId tuỳ biến (hoặc
+        // default bị trùng do hai type khác namespace cùng simple name) khiến hai CLR type KHÁC
+        // NHAU tính ra CÙNG một reference id — tagger phải NÉM exception ngay lúc generate thay vì
+        // âm thầm trỏ $ref của type này sang schema của type kia.
+        const string documentName = nameof(Tagger_throws_when_two_distinct_CLR_types_resolve_to_the_same_reference_id);
+        void ForceCollision(OpenApiOptions options) => options.CreateSchemaReferenceId = _ => "CollidingId";
+
+        var first = MediaAssetSchema(nullable: true);
+        await RunTaggerAsync(first, typeof(FooDto), documentName, ForceCollision);
+        Assert.Equal("CollidingId", first.Annotations[DuplicateNullableSchemaOccurrenceTagger.AnnotationKey]);
+
+        var second = MediaAssetSchema(nullable: true);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => RunTaggerAsync(second, typeof(FooDto2), documentName, ForceCollision));
+
+        Assert.Contains("CollidingId", ex.Message);
+        Assert.Contains(documentName, ex.Message);
+        // Schema thứ hai không bị nửa-vời sửa (không tắt Nullable/không gắn tag) khi guard chặn nó.
+        Assert.True(second.Nullable);
+        Assert.Null(second.Annotations);
+    }
+
+    [Fact]
+    public async Task Tagger_does_not_throw_for_the_same_CLR_type_seen_multiple_times_with_the_same_document()
+    {
+        const string documentName = nameof(Tagger_does_not_throw_for_the_same_CLR_type_seen_multiple_times_with_the_same_document);
+
+        var first = MediaAssetSchema(nullable: true);
+        await RunTaggerAsync(first, typeof(MediaAssetDto), documentName);
+
+        var second = MediaAssetSchema(nullable: true);
+        await RunTaggerAsync(second, typeof(MediaAssetDto), documentName);
+
+        Assert.Equal("MediaAssetDto", first.Annotations[DuplicateNullableSchemaOccurrenceTagger.AnnotationKey]);
+        Assert.Equal("MediaAssetDto", second.Annotations[DuplicateNullableSchemaOccurrenceTagger.AnnotationKey]);
+    }
+
+    [Fact]
+    public void Staged_media_document_has_no_digit_suffixed_twin_schema_with_identical_properties()
+    {
+        // Guard rẻ tiền chạy trực tiếp trên contracts/openapi/.staging/media.v1.json (file task
+        // MEDIA-001-D2 thực sự sửa) — không đọc contracts/openapi/media.v1.json (bản đã promote,
+        // CHƯA được fix này chạm tới, đợi Gate 1 duyệt lại). Không hard-code path tuyệt đối: tìm
+        // repo root qua pnpm-workspace.yaml, giống pattern FindRepoRoot() ở các test khác trong
+        // repo (vd Imaging/ImagePresetCatalogTests.cs).
+        var stagingPath = Path.Combine(FindRepoRoot(), "contracts", "openapi", ".staging", "media.v1.json");
+        using var stream = File.OpenRead(stagingPath);
+        using var doc = JsonDocument.Parse(stream);
+
+        if (!doc.RootElement.TryGetProperty("components", out var components)
+            || !components.TryGetProperty("schemas", out var schemas))
+        {
+            return;
+        }
+
+        var byName = schemas.EnumerateObject().ToDictionary(p => p.Name, p => p.Value);
+
+        foreach (var name in byName.Keys)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(name, @"^(?<base>.+?)(?<suffix>[0-9]+)$");
+            if (!match.Success || !byName.TryGetValue(match.Groups["base"].Value, out var baseSchema))
+            {
+                continue;
+            }
+
+            var candidate = byName[name];
+            var baseProps = PropertyNamesOf(baseSchema);
+            var candidateProps = PropertyNamesOf(candidate);
+
+            Assert.False(
+                baseProps.SetEquals(candidateProps) && baseProps.Count > 0,
+                $"'{name}' trông như bản trùng lặp của '{match.Groups["base"].Value}' (cùng tập " +
+                "property) — đúng dạng bug MediaAssetDto2 mà DuplicateNullableSchemaOccurrenceTagger " +
+                "/ DuplicateNullableSchemaDocumentTransformer phải ngăn. Chạy lại `pnpm contract:export media shop identity`?");
+        }
+    }
+
+    private static HashSet<string> PropertyNamesOf(JsonElement schema) =>
+        schema.TryGetProperty("properties", out var props)
+            ? props.EnumerateObject().Select(p => p.Name).ToHashSet()
+            : new HashSet<string>();
+
+    private static string FindRepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "pnpm-workspace.yaml")))
+        {
+            dir = dir.Parent;
+        }
+
+        return dir?.FullName ?? throw new InvalidOperationException("Không tìm thấy repo root (pnpm-workspace.yaml).");
+    }
 }
