@@ -366,7 +366,8 @@
           "kind",
           "externalUrl",
           "status",
-          "logoId"
+          "logoId",
+          "logoUrl"
         ],
         "type": "object",
         "properties": {
@@ -394,6 +395,10 @@
             "type": "string",
             "format": "uuid",
             "nullable": true
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -418,7 +423,8 @@
           "slug",
           "kind",
           "status",
-          "roleCode"
+          "roleCode",
+          "logoUrl"
         ],
         "type": "object",
         "properties": {
@@ -440,6 +446,10 @@
           },
           "roleCode": {
             "type": "string"
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
           }
         }
       },

@@ -77,3 +77,6 @@ Cần xác nhận lại trước khi promote `shop.v1`:
 
 | # | Mục | Quyết định | Ngày |
 |---|---|---|---|
+| 1 | Đổi `logoStorageKey` → `logoUrl` có tiền tố `/media/` (thay #88 cũ) | ok | 2026-09-29 |
+| 2 | Thêm `ShopSummaryDto.logoUrl` (`GET /shops`, tra theo lô) | ok | 2026-09-29 |
+| 3 | `ImagePaths.MediaUrl` / `MediaPathPrefix` làm nguồn duy nhất của prefix | ok | 2026-09-29 |

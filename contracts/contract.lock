@@ -6,10 +6,10 @@
     "taskId": "SHOP-001"
   },
   "shop.v1.json": {
-    "sha256": "26e390e0d15943bfc987d099287be1c5ffa5c6ce28835f7bae66dae3833c1fcc",
-    "approvedAt": "2026-09-27T11:39:02.586Z",
+    "sha256": "aa88da74fa557bfd2e8d9ff0c95262d7483607718ac834129626ee4a09f83032",
+    "approvedAt": "2026-09-29T15:01:00.035Z",
     "approvedBy": "VietLuong Pham",
-    "taskId": "MEDIA-001"
+    "taskId": "MEDIA-001-D4"
   },
   "media.v1.json": {
     "sha256": "4ac4d8be8bec410b3e51cd7275c6f0ba31425abb7f675369d108274bca9fad02",

@@ -4,13 +4,14 @@
 
 ```
 contracts/openapi/media.v1.json   (sha256: 4ac4d8be8bec410b3e51cd7275c6f0ba31425abb7f675369d108274bca9fad02)
-contracts/openapi/shop.v1.json    (sha256: 26e390e0d15943bfc987d099287be1c5ffa5c6ce28835f7bae66dae3833c1fcc)  ← ShopDto + logoId
+contracts/openapi/shop.v1.json    (sha256: aa88da74fa557bfd2e8d9ff0c95262d7483607718ac834129626ee4a09f83032)  ← ShopDto/ShopSummaryDto + logoId + logoUrl
 ```
 
 Lịch sử duyệt contract:
 - **2026-09-27** Gate 1 (`contract-diff.md` §"Người duyệt đã quyết").
 - **2026-09-28** `media` promote lại sau khi gộp schema trùng `MediaAssetDto2` (`Docs/tasks/MEDIA-001-D2/contract-diff.md`; Quyết định #87 — property object nullable giờ luôn dạng `{ allOf: [$ref], nullable: true }`, JSON runtime không đổi).
 - **2026-09-29** `media` thêm `GET …/library/{assetId}/derivatives` (`Docs/tasks/MEDIA-001-D3/contract-diff.md`).
+- **2026-09-29** `shop`: `ShopDto` và `ShopSummaryDto` thêm `logoUrl` (`Docs/tasks/MEDIA-001-D4/contract-diff.md`; #88).
 
 **Kiểm sha256 với `contracts/contract.lock` trước khi chạy `pnpm gen:api`. Lệch thì dừng lại, không đoán.**
 
