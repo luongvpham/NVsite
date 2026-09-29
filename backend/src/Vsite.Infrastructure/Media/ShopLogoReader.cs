@@ -44,10 +44,10 @@ public sealed class ShopLogoReader(IAppDbContext db) : IShopLogoReader
         }
 
         // Một câu SQL: join Shop (Id, LogoId) với phái sinh — cặp (ShopId, SourceAssetId) được ép NGAY trong
-        // query, không lọc lại sau. Media dependsOn Shop nên đọc `Shop` ở Infrastructure.Media là hợp lệ.
+        // query, không lọc lại sau. `IgnoreQueryFilters()` tắt filter của CẢ query nên `!s.IsDeleted` cho Shop viết tay. Media dependsOn Shop nên đọc `Shop` ở Infrastructure.Media là hợp lệ.
         var rows = await (
             from s in db.Shops
-            where shopIds.Contains(s.Id) && s.LogoId != null
+            where shopIds.Contains(s.Id) && !s.IsDeleted && s.LogoId != null
             join a in db.MediaAssets.IgnoreQueryFilters()
                 on new { ShopId = s.Id, SourceAssetId = s.LogoId }
                 equals new { a.ShopId, a.SourceAssetId }

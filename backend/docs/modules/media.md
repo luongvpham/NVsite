@@ -79,8 +79,10 @@ Thứ tự xử lý mỗi request (R1, R2 test T9):
    (`immutable` hoãn tới Bước 8 khi file thật sự bất biến end-to-end — xem A8, `Docs/tasks/MEDIA-001/plan.md` §10),
    `X-Content-Type-Options: nosniff`.
 
-DB lưu **đường dẫn tương đối**, không lưu URL — chỉ `resolveImage()` (FE, `builder-renderer`) thêm
-tiền tố `/media/`. Component không bao giờ tự nối chuỗi URL.
+DB lưu **đường dẫn tương đối**, không lưu URL. Ảnh trong nội dung builder vẫn đi qua `resolveImage()` (FE,
+`builder-renderer`), component không bao giờ tự nối chuỗi URL. Field DTO tên `*Url` dành cho Portal (vd. `logoUrl`,
+#88) do BE trả sẵn có tiền tố `/media/` qua `ImagePaths.MediaUrl` — FE dùng nguyên trạng, KHÔNG bọc thêm; ảnh
+thư viện ngoài tree dùng helper FE `mediaUrl(storageKey)`.
 
 ## 4. Logo shop — `Media → IShopLogoWriter` (T7, #73, #76, #82)
 

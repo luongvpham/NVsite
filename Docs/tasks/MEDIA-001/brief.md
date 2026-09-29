@@ -33,7 +33,7 @@ PUT    /shops/{shopId}/logo                               multipart: file; chỉ
 - `MediaAssetDto = { id, storageKey, mimeType, width, height, sizeBytes, altText, focalPointX, focalPointY, originalFileName, folder, isInLibrary, preset, sourceAssetId, createdAt }`
 - `ShopDto` có thêm `logoId: string | null` và (D4, #88) `logoUrl: string | null` — `/media/{storageKey}` của phái sinh `320x96,inside` (đường dẫn tương đối theo domain, BE trả sẵn có tiền tố), `null` khi chưa có logo hoặc chưa có phái sinh. `ShopSummaryDto` (`GET /shops`) cũng có `logoUrl` (tra theo lô). Response luôn có các field này, giá trị có thể là `null`.
 
-**Ảnh không đi qua API.** Mọi ảnh phục vụ tại `/media/{storageKey}`, trên mọi domain. Chỉ `resolveImage()` được nối chuỗi `/media/`.
+**Ảnh không đi qua API.** Mọi ảnh phục vụ tại `/media/{storageKey}`, trên mọi domain. Ảnh trong nội dung builder vẫn đi qua `resolveImage()`. Field DTO tên `*Url` dành cho Portal (vd. `logoUrl`) do BE trả sẵn có tiền tố `/media/` (`ImagePaths.MediaUrl`) — FE dùng nguyên trạng, KHÔNG bọc thêm (tránh `/media//media/…`). Ảnh thư viện ngoài tree dùng helper FE `mediaUrl(storageKey)`.
 
 ## Việc FE cần làm
 

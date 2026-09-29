@@ -74,7 +74,7 @@ Mọi task đều phải tuân các ràng buộc sau:
 - Lỗi trả ProblemDetails có `error_code`. Phân trang dùng đúng shape `{ items, total, page, pageSize }`.
 - File ảnh bất biến (#75): `IObjectStorage.PutAsync` **không ghi đè**. Key đã tồn tại thì ném lỗi, không ghi lặng lẽ.
 - `MimeType` sau xử lý luôn là `image/webp`, quality 82. Bản Library và file full có cạnh dài ≤ 1600px, **không upscale**.
-- DB lưu **đường dẫn tương đối**, không lưu URL. Chỉ `resolveImage` thêm tiền tố `/media/`.
+- DB lưu **đường dẫn tương đối**, không lưu URL. Ảnh trong nội dung builder đi qua `resolveImage`; field DTO `*Url` cho Portal (vd. `logoUrl`, #88) do BE trả sẵn có tiền tố `/media/` (`ImagePaths.MediaUrl`).
 - Không sửa tay `packages/api-sdk/src/generated/**` và `packages/builder-components/generated/**`.
 - Không ghi thẳng `contracts/openapi/*.json`; hook `guard-bash.mjs` chặn cả lệnh đọc đường dẫn contract, nên dùng Read/Grep.
 - Bước 4 **không xoá file nào**, ngoài thao tác shop chủ động xoá khỏi Library (và đó cũng chỉ là soft delete) (`08` §4).

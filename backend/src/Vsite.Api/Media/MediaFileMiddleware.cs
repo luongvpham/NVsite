@@ -5,7 +5,7 @@ namespace Vsite.Api.Media;
 
 /// <summary>
 /// T9, MEDIA-001 (#53, #81, #83) — phục vụ <c>/media/{key}</c> trên MỌI host qua
-/// <see cref="IObjectStorage"/>. Gắn bằng <c>app.Map("/media", ...)</c> TRƯỚC
+/// <see cref="IObjectStorage"/>. Gắn bằng <c>app.Map(ImagePaths.MediaPathPrefix, ...)</c> (hằng dùng chung với <c>ImagePaths.MediaUrl</c>) TRƯỚC
 /// <c>TenantResolutionMiddleware</c> trong <c>Program.cs</c>: không tra Redis, không kiểm tenant
 /// (#81 — đọc ảnh luôn public), không auth. Middleware này là TERMINAL trong branch <c>/media</c> —
 /// không gọi <c>next</c>, luôn tự set response.
@@ -17,7 +17,7 @@ namespace Vsite.Api.Media;
 ///    nguyên <c>%2F</c> không decode trong <c>Request.Path</c> (tránh nhầm lẫn path segment), nhưng
 ///    <c>%5C</c>/<c>%2E</c>... vẫn được decode bình thường — nên phải tự kiểm raw target, không tin
 ///    <see cref="HttpRequest.Path"/> cho việc này.
-/// 3. Lấy key từ <see cref="HttpRequest.Path"/> đã decode (phần còn lại sau khi <c>Map("/media")</c>
+/// 3. Lấy key từ <see cref="HttpRequest.Path"/> đã decode (phần còn lại sau khi <c>Map(ImagePaths.MediaPathPrefix)</c>
 ///    cắt tiền tố) — decode CHỈ MỘT LẦN (đây là decode của chính ASP.NET Core, không tự
 ///    <c>Uri.UnescapeDataString</c> thêm lần nữa).
 /// 4. <see cref="ImagePaths.ValidateKey"/> — sai (không bắt đầu <c>shops/</c>, chứa <c>..</c>,

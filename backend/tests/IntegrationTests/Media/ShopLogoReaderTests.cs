@@ -242,6 +242,28 @@ public sealed class ShopLogoReaderTests
     }
 
     [Fact]
+    public async Task Batch_excludes_soft_deleted_shop_even_with_logo_and_derivative()
+    {
+        await using var db = CreateDb();
+        var live = Guid.NewGuid();
+        var dead = Guid.NewGuid();
+        var srcLive = NewLibrary(live);
+        var srcDead = NewLibrary(dead);
+        var hdrLive = NewDerived(srcLive, Header);
+        db.MediaAssets.AddRange(srcLive, srcDead, hdrLive, NewDerived(srcDead, Header));
+        var deadShop = NewShop(dead, srcDead.Id);
+        db.Shops.AddRange(NewShop(live, srcLive.Id), deadShop);
+        await db.SaveChangesAsync();
+        deadShop.IsDeleted = true;
+        await db.SaveChangesAsync();
+
+        var result = await new ShopLogoReader(db).GetLogoUrlsAsync([live, dead], CancellationToken.None);
+
+        Assert.Equal("/media/" + hdrLive.StorageKey, Assert.Single(result).Value);
+        Assert.False(result.ContainsKey(dead));
+    }
+
+    [Fact]
     public async Task Batch_with_empty_input_returns_empty()
     {
         await using var db = CreateDb();
