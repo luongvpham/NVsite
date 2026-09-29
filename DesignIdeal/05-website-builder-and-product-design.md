@@ -5,7 +5,7 @@
 >
 > 📌 **§0 là nơi định nghĩa Quyết định `#40–#58`.** Không chép sang `02` — tra số ở
 > [`DECISIONS.md`](DECISIONS.md). `MediaAsset`, ảnh `Listing`/`Product` và pipeline ảnh mô tả chi tiết ở
-> [`08-media-asset-design.md`](08-media-asset-design.md) (định nghĩa `#69–#86`).
+> [`08-media-asset-design.md`](08-media-asset-design.md) (định nghĩa `#69–#86` và `#88`).
 
 > **Tài liệu liên quan:** `01-project-ideal.md` (§5.3, §6, §7) · `02-tech-stack-and-decision.md` (Quyết định #11–#17, #33–#36) · `03-identity-entity-design.md` · `04-listing-and-review-design.md`
 >

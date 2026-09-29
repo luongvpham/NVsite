@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Shop.Dtos;
+using Vsite.Application.Shop.Interfaces;
 using Vsite.Domain.Exceptions;
 using Vsite.Domain.Identity;
 using Vsite.Domain.Identity.Entities;
@@ -10,7 +11,7 @@ using ShopEntity = Vsite.Domain.Shop.Entities.Shop;
 
 namespace Vsite.Application.Shop.Commands.CreateShop;
 
-public sealed class CreateShopHandler(IAppDbContext db, ICurrentUserContext currentUser)
+public sealed class CreateShopHandler(IAppDbContext db, ICurrentUserContext currentUser, IShopLogoReader logoReader)
     : IRequestHandler<CreateShopCommand, ShopDto>
 {
     public async Task<ShopDto> Handle(CreateShopCommand request, CancellationToken cancellationToken)
@@ -42,6 +43,8 @@ public sealed class CreateShopHandler(IAppDbContext db, ICurrentUserContext curr
 
         await db.SaveChangesAsync(cancellationToken);
 
-        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status, shop.LogoId);
+        var logoStorageKey = await logoReader.GetLogoStorageKeyAsync(shop.Id, shop.LogoId, cancellationToken);
+
+        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status, shop.LogoId, logoStorageKey);
     }
 }

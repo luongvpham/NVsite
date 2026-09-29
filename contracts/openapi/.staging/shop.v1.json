@@ -366,7 +366,8 @@
           "kind",
           "externalUrl",
           "status",
-          "logoId"
+          "logoId",
+          "logoStorageKey"
         ],
         "type": "object",
         "properties": {
@@ -393,6 +394,10 @@
           "logoId": {
             "type": "string",
             "format": "uuid",
+            "nullable": true
+          },
+          "logoStorageKey": {
+            "type": "string",
             "nullable": true
           }
         }

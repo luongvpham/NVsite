@@ -1,4 +1,4 @@
-# vsite — Registry Quyết Định (#1–#87)
+# vsite — Registry Quyết Định (#1–#88)
 
 > **File này là CHỈ MỤC, không phải nội dung.** Mỗi dòng cho bạn biết quyết định đó nói gì trong một
 > câu, nó được **định nghĩa đầy đủ ở đâu**, và nó **đã thành code chưa**. Đọc dòng ở đây trước, rồi
@@ -12,7 +12,7 @@
 ## ⚠️ Đọc trước khi tra
 
 **Không phải quyết định nào cũng nằm trong `02`.** `02` định nghĩa **#1–#39** và **#68**.
-**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** định nghĩa tại `08` §0.
+**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** và **#88** định nghĩa tại `08` §0, **#87** tại `backend/CLAUDE.md` §OpenAPI.
 Không chép các quyết định đó sang `02` — cố tình không làm. Chép sang `02` sẽ tạo bản
 sao thứ hai để lệch nhau; thay vào đó registry này trỏ thẳng tới nơi định nghĩa duy nhất.
 
@@ -127,6 +127,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#85** | Giới hạn upload **10 MB / 25 MP** (số pixel kiểm từ header, trước decode); chỉ nhận JPEG/PNG/WebP; **HEIC bị từ chối** với `error_code` riêng + hướng dẫn ở FE | `08` §0 · §3.1 | 📐 Bước 4 |
 | **#86** | Prop `binding` thêm field additive **`imagePresets`** (preset theo từng source); codegen sinh bộ phái sinh vào `packages/builder-components/generated/`, hợp với tập cố định của bề mặt vsite khai trong `config/image-presets.json` | `08` §0 · §3.6 | 📐 Bước 4 |
 | **#87** | Property object nullable trong OpenAPI luôn xuất dạng `{ allOf: [$ref], nullable: true }`, không phải object trùng `XDto2`. Chặn bằng transformer dùng chung, đăng ký cho mọi document module | `backend/CLAUDE.md` §OpenAPI | ✅ enforce — `DuplicateNullableSchema*Transformer` + test |
+| **#88** | `ShopDto` trả sẵn **`logoStorageKey`** = đường dẫn **tương đối** của phái sinh `320x96,inside` của logo (`null` nếu chưa có logo hoặc chưa có phái sinh); API **không** trả URL có tiền tố — chỉ `mediaUrl()` / `resolveImage()` thêm `/media/`. `Shop` đọc qua port do chính `Shop` khai báo (`IShopLogoReader`), adapter nằm ở `Media` (Shop không reference Media). Endpoint `GET …/library/{assetId}/derivatives` vẫn giữ cho các nguồn ảnh nghiệp vụ khác | `08` §0 · §3.6 | 📐 Bước 4 |
 
 ---
 

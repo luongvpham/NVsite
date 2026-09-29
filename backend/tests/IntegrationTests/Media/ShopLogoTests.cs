@@ -92,6 +92,50 @@ public sealed class ShopLogoTests
         Assert.Equal(dto!.LibraryAsset.Id, shop!.LogoId);
     }
 
+    // ---- D4 (#88): ShopDto.logoStorageKey = storageKey tương đối của phái sinh 320x96,inside ----
+
+    [Fact]
+    public async Task GetShop_before_any_logo_has_null_logoStorageKey()
+    {
+        var (token, shopId) = await CreateOwnerWithShopAsync();
+
+        var shop = await (await GetShopAsync(token, shopId)).Content.ReadFromJsonAsync<ShopDto>(JsonOptions);
+
+        Assert.Null(shop!.LogoId);
+        Assert.Null(shop.LogoStorageKey);
+    }
+
+    [Fact]
+    public async Task GetShop_and_PatchShop_after_logo_return_header_derivative_storageKey_readable_via_media()
+    {
+        var (token, shopId) = await CreateOwnerWithShopAsync();
+        var upload = await (await PutLogoAsync(token, shopId, "logo.png")).Content.ReadFromJsonAsync<ShopLogoDto>(JsonOptions);
+        var expectedKey = Assert.Single(upload!.Derivatives, d => d.Preset == "320x96,inside").StorageKey;
+
+        var shop = await (await GetShopAsync(token, shopId)).Content.ReadFromJsonAsync<ShopDto>(JsonOptions);
+
+        Assert.Equal(upload.LibraryAsset.Id, shop!.LogoId);
+        Assert.Equal(expectedKey, shop.LogoStorageKey);
+        Assert.False(shop.LogoStorageKey!.StartsWith('/'));
+        Assert.DoesNotContain("/media/", shop.LogoStorageKey);
+
+        var mediaRequest = new HttpRequestMessage(HttpMethod.Get, "/media/" + shop.LogoStorageKey) { Headers = { Host = "vsite.local" } };
+        var mediaResponse = await _client.SendAsync(mediaRequest);
+        Assert.Equal(HttpStatusCode.OK, mediaResponse.StatusCode);
+
+        var patch = new HttpRequestMessage(HttpMethod.Patch, $"/shops/{shopId}")
+        {
+            Content = JsonContent.Create(new UpdateShopRequest("Renamed Logo Shop", shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status)),
+            Headers = { Host = PortalHost },
+        };
+        patch.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var patchResponse = await _client.SendAsync(patch);
+        Assert.Equal(HttpStatusCode.OK, patchResponse.StatusCode);
+        var patched = await patchResponse.Content.ReadFromJsonAsync<ShopDto>(JsonOptions);
+        Assert.Equal("Renamed Logo Shop", patched!.Name);
+        Assert.Equal(expectedKey, patched.LogoStorageKey);
+    }
+
     // ---- logo PNG trong suốt 1000×200 -> phái sinh 320x96,inside có kích thước 320×64, giữ alpha ----
 
     [Fact]

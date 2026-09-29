@@ -117,6 +117,7 @@ public static class DependencyInjection
 
         // T8, MEDIA-001 (#77) — Public Contract cho Bước 5 (Website/PageDraft).
         services.AddScoped<IMediaReferenceValidator, MediaReferenceValidator>();
+        services.AddScoped<IShopLogoReader, ShopLogoReader>(); // #88 — adapter cho port của Shop
 
         return services;
     }
