@@ -23,6 +23,7 @@ import type {
 import type {
   CloneRequest,
   GetShopsShopIdMediaAssetsParams,
+  GetShopsShopIdMediaLibraryAssetIdDerivativesParams,
   GetShopsShopIdMediaLibraryParams,
   HttpValidationProblemDetails,
   MediaAssetDto,
@@ -487,6 +488,107 @@ export function useGetShopsShopIdMediaLibraryAssetIdReferences<TData = Awaited<R
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetShopsShopIdMediaLibraryAssetIdReferencesQueryOptions(shopId,assetId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getShopsShopIdMediaLibraryAssetIdDerivatives = (
+    shopId: string,
+    assetId: string,
+    params?: GetShopsShopIdMediaLibraryAssetIdDerivativesParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<MediaAssetDto[]>(
+      {url: `/shops/${shopId}/media/library/${assetId}/derivatives`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetShopsShopIdMediaLibraryAssetIdDerivativesQueryKey = (shopId?: string,
+    assetId?: string,
+    params?: GetShopsShopIdMediaLibraryAssetIdDerivativesParams,) => {
+    return [
+    `/shops/${shopId}/media/library/${assetId}/derivatives`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getGetShopsShopIdMediaLibraryAssetIdDerivativesQueryOptions = <TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(shopId: string,
+    assetId: string,
+    params?: GetShopsShopIdMediaLibraryAssetIdDerivativesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetShopsShopIdMediaLibraryAssetIdDerivativesQueryKey(shopId,assetId,params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>> = ({ signal }) => getShopsShopIdMediaLibraryAssetIdDerivatives(shopId,assetId,params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(shopId && assetId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetShopsShopIdMediaLibraryAssetIdDerivativesQueryResult = NonNullable<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>>
+export type GetShopsShopIdMediaLibraryAssetIdDerivativesQueryError = ProblemDetails | HttpValidationProblemDetails
+
+
+export function useGetShopsShopIdMediaLibraryAssetIdDerivatives<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+ shopId: string,
+    assetId: string,
+    params: undefined |  GetShopsShopIdMediaLibraryAssetIdDerivativesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>,
+          TError,
+          Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetShopsShopIdMediaLibraryAssetIdDerivatives<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+ shopId: string,
+    assetId: string,
+    params?: GetShopsShopIdMediaLibraryAssetIdDerivativesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>,
+          TError,
+          Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetShopsShopIdMediaLibraryAssetIdDerivatives<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+ shopId: string,
+    assetId: string,
+    params?: GetShopsShopIdMediaLibraryAssetIdDerivativesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetShopsShopIdMediaLibraryAssetIdDerivatives<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+ shopId: string,
+    assetId: string,
+    params?: GetShopsShopIdMediaLibraryAssetIdDerivativesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetShopsShopIdMediaLibraryAssetIdDerivativesQueryOptions(shopId,assetId,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

@@ -4,6 +4,7 @@
 
 export * from './cloneRequest';
 export * from './getShopsShopIdMediaAssetsParams';
+export * from './getShopsShopIdMediaLibraryAssetIdDerivativesParams';
 export * from './getShopsShopIdMediaLibraryParams';
 export * from './httpValidationProblemDetails';
 export * from './httpValidationProblemDetailsErrors';

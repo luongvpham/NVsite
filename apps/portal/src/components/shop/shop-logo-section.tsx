@@ -1,67 +1,35 @@
 import { type ChangeEvent, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getErrorCode } from '@vsite/shared';
-import { mediaUrl } from '@vsite/builder-components';
-import {
-  getGetShopsShopIdQueryKey,
-  useGetShopsShopIdMediaAssets,
-  usePutShopsShopIdLogo,
-  type ShopLogoDto,
-} from '@vsite/api-sdk';
+import { getGetShopsQueryKey, useGetShopsShopId, usePutShopsShopIdLogo } from '@vsite/api-sdk';
 import { getErrorMessage, HEIC_UNSUPPORTED_GUIDANCE } from '../../lib/error-messages';
 import { ACCEPT_ATTR, fileSchema } from '../../lib/media-validation';
 
-/** Phái sinh dùng để hiện logo trên trang sửa shop (F4 brief — "hiện logo qua phái sinh 320x96,inside"). */
-const LOGO_DISPLAY_PRESET = '320x96,inside';
-
 export interface ShopLogoSectionProps {
   shopId: string;
-  /** `ShopDto.logoId` — theo thiết kế brief F4, đây là id của chính bản phái sinh `320x96,inside`
-   * (không phải id bản gốc trong thư viện): `GET .../media/assets?ids=` trả thẳng MediaAssetDto có
-   * `storageKey` dùng được ngay, không cần bước tra "derivatives của asset gốc" (endpoint đó không
-   * tồn tại trong 9 endpoint media — xem báo cáo). */
-  logoId: string | null;
   isOwner: boolean;
 }
 
 /**
- * F4 — logo trong trang sửa shop. Nút tải logo chỉ hiện khi `isOwner` (role Owner, xem
- * `lib/shop-role.ts`). Ba trạng thái đủ: loading (đang tra logoId → asset), error (tra lỗi),
- * empty (shop chưa có logo).
+ * F4/F6 — logo trong trang sửa shop. Nguồn duy nhất của ảnh là `ShopDto.logoUrl` (BE trả sẵn URL
+ * đã có tiền tố `/media/`, #88) — dùng nguyên trạng, KHÔNG bọc `mediaUrl()`. Sau khi upload thành
+ * công, refetch shop query để đọc `logoUrl` mới từ server (server state là nguồn duy nhất).
+ * Nút tải logo chỉ hiện khi `isOwner`.
  */
-export function ShopLogoSection({ shopId, logoId, isOwner }: ShopLogoSectionProps) {
+export function ShopLogoSection({ shopId, isOwner }: ShopLogoSectionProps) {
   const queryClient = useQueryClient();
   const [clientError, setClientError] = useState<string | null>(null);
-  // Hiện ngay ảnh vừa upload từ response, không đợi round-trip GET assets?ids= lần nữa (#71-style:
-  // response mutation là nguồn dữ liệu tức thời; invalidate query bên dưới để lần tải trang sau
-  // logoId mới khớp cache).
-  const [justUploadedStorageKey, setJustUploadedStorageKey] = useState<string | null>(null);
-  // true khi response upload KHÔNG có phái sinh 320x96,inside — `justUploadedStorageKey` khi đó là
-  // fallback `libraryAsset.storageKey` (bản gốc, sai kích thước hiển thị). Phải cảnh báo rõ, không
-  // được âm thầm hiện ảnh sai cỡ như hiện logo đúng cỡ (cùng quy ước với case "Không tìm thấy ảnh
-  // logo." bên dưới — review MEDIA-001 F4/F5, ~:236-242).
-  const [uploadDerivativeMissing, setUploadDerivativeMissing] = useState(false);
-
-  const assetsQuery = useGetShopsShopIdMediaAssets(
-    shopId,
-    { ids: logoId ? [logoId] : [] },
-    { query: { enabled: !!logoId } },
-  );
+  const shopQuery = useGetShopsShopId(shopId);
 
   const uploadMutation = usePutShopsShopIdLogo({
     mutation: {
-      onSuccess: (result: ShopLogoDto) => {
-        const derivative = result.derivatives.find((d) => d.preset === LOGO_DISPLAY_PRESET);
-        if (!derivative) {
-          // Không nên xảy ra (BE luôn sinh đủ phái sinh cho preset của Shop, config/image-presets.json)
-          // — vẫn hiện tạm bằng bản gốc để không chặn hẳn UI, nhưng phải cảnh báo rõ (không âm thầm
-          // thay thế bằng ảnh sai kích thước) — xem `uploadDerivativeMissing` bên dưới.
-          console.warn(`[ShopLogoSection] response logo upload thiếu phái sinh "${LOGO_DISPLAY_PRESET}"`);
-        }
-        setUploadDerivativeMissing(!derivative);
-        setJustUploadedStorageKey(derivative?.storageKey ?? result.libraryAsset.storageKey);
+      onSuccess: async () => {
         setClientError(null);
-        void queryClient.invalidateQueries({ queryKey: getGetShopsShopIdQueryKey(shopId) });
+        // Giữ mutation ở trạng thái pending tới khi logoUrl mới về, để UI không nhấp nháy ảnh cũ.
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: shopQuery.queryKey }),
+          queryClient.invalidateQueries({ queryKey: getGetShopsQueryKey() }),
+        ]);
       },
     },
   });
@@ -81,41 +49,25 @@ export function ShopLogoSection({ shopId, logoId, isOwner }: ShopLogoSectionProp
 
   const errorCode = getErrorCode(uploadMutation.error);
   const isHeicError = errorCode === 'MEDIA_HEIC_UNSUPPORTED';
-  const displayStorageKey = justUploadedStorageKey ?? assetsQuery.data?.[0]?.storageKey ?? null;
-  const isLoadingExisting = !justUploadedStorageKey && !!logoId && assetsQuery.isPending;
-  const isErrorExisting = !justUploadedStorageKey && !!logoId && assetsQuery.isError;
-  const isEmpty = !justUploadedStorageKey && !logoId;
+  const logoUrl = shopQuery.data?.logoUrl ?? null;
 
   return (
     <section className="mt-8 border-t border-border pt-6">
       <h2 className="text-sm font-semibold text-foreground">Logo</h2>
 
-      {isLoadingExisting && <p className="mt-2 text-sm text-muted-foreground">Đang tải logo...</p>}
+      {shopQuery.isPending && <p className="mt-2 text-sm text-muted-foreground">Đang tải logo...</p>}
 
-      {isErrorExisting && (
+      {shopQuery.isError && !shopQuery.data && (
         <p className="mt-2 text-sm text-destructive" role="alert">
-          {getErrorMessage(getErrorCode(assetsQuery.error))}
+          {getErrorMessage(getErrorCode(shopQuery.error))}
         </p>
       )}
 
-      {!justUploadedStorageKey && !!logoId && assetsQuery.isSuccess && !displayStorageKey && (
-        <p className="mt-2 text-sm text-destructive" role="alert">
-          Không tìm thấy ảnh logo.
-        </p>
-      )}
+      {shopQuery.data && !logoUrl && <p className="mt-2 text-sm text-muted-foreground">Chưa có logo</p>}
 
-      {isEmpty && <p className="mt-2 text-sm text-muted-foreground">Shop chưa có logo.</p>}
-
-      {justUploadedStorageKey && uploadDerivativeMissing && (
-        <p className="mt-2 text-sm text-destructive" role="alert">
-          Không tìm thấy phái sinh {LOGO_DISPLAY_PRESET} trong phản hồi tải lên — ảnh hiển thị bên dưới
-          là bản gốc, có thể sai kích thước.
-        </p>
-      )}
-
-      {displayStorageKey && (
+      {logoUrl && (
         <img
-          src={mediaUrl(displayStorageKey)}
+          src={logoUrl}
           alt="Logo shop"
           className="mt-2 max-h-24 max-w-[320px] rounded border border-border object-contain"
         />

@@ -39,6 +39,8 @@ export const getPostShopsShopIdMediaLibraryAssetIdClonesResponseMock = (override
 
 export const getGetShopsShopIdMediaLibraryAssetIdReferencesResponseMock = (overrideResponse: Partial< MediaReferencesDto > = {}): MediaReferencesDto => ({references: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({kind: faker.helpers.arrayElement(Object.values(MediaReferenceKind))})), ...overrideResponse})
 
+export const getGetShopsShopIdMediaLibraryAssetIdDerivativesResponseMock = (): MediaAssetDto[] => (Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({id: faker.string.uuid(), storageKey: faker.string.alpha({length: {min: 10, max: 20}}), mimeType: faker.string.alpha({length: {min: 10, max: 20}}), width: faker.number.int({min: undefined, max: undefined}), height: faker.number.int({min: undefined, max: undefined}), sizeBytes: faker.number.int({min: undefined, max: undefined}), altText: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), focalPointX: faker.number.float({min: undefined, max: undefined, fractionDigits: 2}), focalPointY: faker.number.float({min: undefined, max: undefined, fractionDigits: 2}), originalFileName: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), folder: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), isInLibrary: faker.datatype.boolean(), preset: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), sourceAssetId: faker.helpers.arrayElement([faker.string.uuid(), null]), createdAt: `${faker.date.past().toISOString().split('.')[0]}Z`})))
+
 export const getGetShopsShopIdMediaAssetsResponseMock = (): MediaAssetDto[] => (Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({id: faker.string.uuid(), storageKey: faker.string.alpha({length: {min: 10, max: 20}}), mimeType: faker.string.alpha({length: {min: 10, max: 20}}), width: faker.number.int({min: undefined, max: undefined}), height: faker.number.int({min: undefined, max: undefined}), sizeBytes: faker.number.int({min: undefined, max: undefined}), altText: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), focalPointX: faker.number.float({min: undefined, max: undefined, fractionDigits: 2}), focalPointY: faker.number.float({min: undefined, max: undefined, fractionDigits: 2}), originalFileName: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), folder: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), isInLibrary: faker.datatype.boolean(), preset: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), sourceAssetId: faker.helpers.arrayElement([faker.string.uuid(), null]), createdAt: `${faker.date.past().toISOString().split('.')[0]}Z`})))
 
 export const getGetShopsShopIdMediaUsageResponseMock = (overrideResponse: Partial< MediaUsageDto > = {}): MediaUsageDto => ({usedBytes: faker.number.int({min: undefined, max: undefined}), ...overrideResponse})
@@ -116,6 +118,18 @@ export const getGetShopsShopIdMediaLibraryAssetIdReferencesMockHandler = (overri
   }, options)
 }
 
+export const getGetShopsShopIdMediaLibraryAssetIdDerivativesMockHandler = (overrideResponse?: MediaAssetDto[] | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<MediaAssetDto[]> | MediaAssetDto[]), options?: RequestHandlerOptions) => {
+  return http.get('*/shops/:shopId/media/library/:assetId/derivatives', async (info) => {await delay(1000);
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetShopsShopIdMediaLibraryAssetIdDerivativesResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
 export const getDeleteShopsShopIdMediaLibraryAssetIdMockHandler = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
   return http.delete('*/shops/:shopId/media/library/:assetId', async (info) => {await delay(1000);
   if (typeof overrideResponse === 'function') {await overrideResponse(info); }
@@ -156,6 +170,7 @@ export const getMediaMock = () => [
   getGetShopsShopIdMediaLibraryMockHandler(),
   getPostShopsShopIdMediaLibraryAssetIdClonesMockHandler(),
   getGetShopsShopIdMediaLibraryAssetIdReferencesMockHandler(),
+  getGetShopsShopIdMediaLibraryAssetIdDerivativesMockHandler(),
   getDeleteShopsShopIdMediaLibraryAssetIdMockHandler(),
   getGetShopsShopIdMediaAssetsMockHandler(),
   getGetShopsShopIdMediaUsageMockHandler()

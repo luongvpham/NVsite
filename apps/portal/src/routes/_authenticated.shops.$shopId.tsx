@@ -38,7 +38,7 @@ function EditShopPage() {
       {shopQuery.isSuccess && (
         <>
           <EditShopForm shopId={shopId} shop={shopQuery.data} />
-          <ShopLogoSection shopId={shopId} logoId={shopQuery.data.logoId} isOwner={isOwner} />
+          <ShopLogoSection shopId={shopId} isOwner={isOwner} />
         </>
       )}
     </main>

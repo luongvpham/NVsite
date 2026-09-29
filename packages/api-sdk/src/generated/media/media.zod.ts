@@ -206,6 +206,35 @@ export const getShopsShopIdMediaLibraryAssetIdReferencesResponse = zod.object({
 })
 
 
+export const getShopsShopIdMediaLibraryAssetIdDerivativesParams = zod.object({
+  "shopId": zod.string().uuid(),
+  "assetId": zod.string().uuid()
+})
+
+export const getShopsShopIdMediaLibraryAssetIdDerivativesQueryParams = zod.object({
+  "preset": zod.string().optional()
+})
+
+export const getShopsShopIdMediaLibraryAssetIdDerivativesResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "storageKey": zod.string(),
+  "mimeType": zod.string(),
+  "width": zod.number(),
+  "height": zod.number(),
+  "sizeBytes": zod.number(),
+  "altText": zod.string().nullable(),
+  "focalPointX": zod.number(),
+  "focalPointY": zod.number(),
+  "originalFileName": zod.string().nullable(),
+  "folder": zod.string().nullable(),
+  "isInLibrary": zod.boolean(),
+  "preset": zod.string().nullable(),
+  "sourceAssetId": zod.string().uuid().nullable(),
+  "createdAt": zod.string().datetime({})
+})
+export const getShopsShopIdMediaLibraryAssetIdDerivativesResponse = zod.array(getShopsShopIdMediaLibraryAssetIdDerivativesResponseItem)
+
+
 export const deleteShopsShopIdMediaLibraryAssetIdParams = zod.object({
   "shopId": zod.string().uuid(),
   "assetId": zod.string().uuid()

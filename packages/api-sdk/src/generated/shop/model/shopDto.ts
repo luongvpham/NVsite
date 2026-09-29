@@ -14,4 +14,6 @@ export interface ShopDto {
   status: ShopStatus;
   /** @nullable */
   logoId: string | null;
+  /** @nullable */
+  logoUrl: string | null;
 }
