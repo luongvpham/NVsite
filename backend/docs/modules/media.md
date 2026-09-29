@@ -6,7 +6,7 @@
 9 preset + `/media/*` file serving + shop logo đã xong (T1–T9). `MEDIA-001` ở Gate 1
 (`Docs/tasks/MEDIA-001/contract-diff.md`), chưa có `brief.md`.
 
-**9 endpoint hiện có** (`Vsite.Api/Media/MediaEndpoints.cs`, tất cả `RequireGlobalScope` +
+**10 endpoint hiện có** (`Vsite.Api/Media/MediaEndpoints.cs`, tất cả `RequireGlobalScope` +
 `.RequireShopMembership()`):
 
 | Method | Path | Policy | Trả về |
@@ -16,10 +16,18 @@
 | GET | `/shops/{shopId}/media/library?page&pageSize` | member | `PagedResult<MediaAssetDto>` |
 | POST | `/shops/{shopId}/media/library/{assetId}/clones` | member | `MediaAssetDto` |
 | GET | `/shops/{shopId}/media/library/{assetId}/references` | member | `MediaReferencesDto` |
+| GET | `/shops/{shopId}/media/library/{assetId}/derivatives?preset` | member | `MediaAssetDto[]` |
 | DELETE | `/shops/{shopId}/media/library/{assetId}` | Owner | 204 |
 | GET | `/shops/{shopId}/media/assets?ids=…` | member | `MediaAssetDto[]` |
 | GET | `/shops/{shopId}/media/usage` | member | `MediaUsageDto { usedBytes }` |
 | PUT | `/shops/{shopId}/logo` | Owner | `ShopLogoDto` |
+
+`GET .../derivatives` (MEDIA-001 D3, #73): tra phái sinh (`IsInLibrary=false`, `SourceAssetId = assetId`)
+của một bản Library, tuỳ chọn lọc `preset` chính xác (chứa dấu phẩy, vd `320x96,inside` — client phải
+URL-encode; không lọc thì trả tất cả, sắp `Preset` rồi `CreatedAt`). `IgnoreQueryFilters()` + `ShopId`
+route + `!IsDeleted` viết tay trên CHÍNH dòng phái sinh, không đọc dòng nguồn: bản Library đã soft
+delete (kể cả là `Shop.LogoId`, A11) vẫn resolve được. Id lạ / của shop khác / không có phái sinh →
+`200 []`, không bao giờ 404. `preset` > 40 ký tự → 422; tên preset lạ không bị từ chối (trả `[]`).
 
 Ngoài ra `GET /media/{relativePath}` (mọi host, không qua OpenAPI — xem §4) phục vụ file tĩnh.
 

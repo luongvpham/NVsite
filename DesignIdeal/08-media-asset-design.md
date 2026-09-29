@@ -244,6 +244,9 @@ Render
   → trả StorageKey của phái sinh
 ```
 
+Portal (không đi qua resolver) tra cùng cặp này bằng `GET /shops/{shopId}/media/library/{assetId}/derivatives?preset=`
+— vẫn trả phái sinh khi bản Library đã soft delete (A11); id lạ/của shop khác → `[]`, không 404.
+
 **Bộ phái sinh của một nguồn** = hợp của hai tập:
 
 1. **Codegen từ manifest:** mọi preset mà component bind nguồn đó dùng để hiển thị ảnh. Hiện prop
@@ -490,7 +493,7 @@ Builder picker **không bao giờ** thấy ảnh sản phẩm trực tiếp.
 | Entity `MediaAsset` + migration + ràng buộc §2.1 | Upload ảnh `Listing` (làm cùng module Listing) và `Product` (Bước 10) — nhưng dùng lại pipeline + hàm quy ước tên của Bước 4 |
 | Pipeline **dùng chung**: giới hạn kích thước → magic bytes → strip EXIF → resize/crop → webp; hàm quy ước tên `thumb_`/`fthumb_` (§8.1) | Image proxy runtime — **không tồn tại** trong thiết kế |
 | Hai chế độ upload vào slot (#70) + chọn từ Library → clone (#71) | `srcset` / responsive (#58) |
-| API: upload, list library, chọn-từ-library (clone), soft delete | Job dọn file mồ côi (Bước 8) |
+| API: upload, list library, chọn-từ-library (clone), soft delete, tra phái sinh theo (bản Library, preset) (`.../library/{assetId}/derivatives`) | Job dọn file mồ côi (Bước 8) |
 | Thay thân `resolveImage()`, giữ chữ ký · phục vụ `/media/*` + reserved route `media` (§5) | Job re-crop khi đổi `ImageRatio` — **không có**, đổi tỉ lệ thì upload lại (#57) |
 | `config/image-presets.json` đủ 9 preset (#78) | Media Library UI đầy đủ (folder, search, bulk) — MVP chỉ list + upload + xoá |
 | `Shop.LogoId` + FK ghép + bộ phái sinh logo (#73, #76) | Bảng `MediaVariant` — **cố ý không có** (#55) |

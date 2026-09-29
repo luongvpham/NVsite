@@ -12,6 +12,7 @@ using Vsite.Application.Media.Commands.UploadToLibrary;
 using Vsite.Application.Media.Commands.UploadToSlot;
 using Vsite.Application.Media.Dtos;
 using Vsite.Application.Media.Queries.GetAssetsByIds;
+using Vsite.Application.Media.Queries.GetDerivatives;
 using Vsite.Application.Media.Queries.GetReferences;
 using Vsite.Application.Media.Queries.GetUsage;
 using Vsite.Application.Media.Queries.ListLibrary;
@@ -135,6 +136,19 @@ public static class MediaEndpoints
             .Produces<MediaReferencesDto>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        // MEDIA-001 D3 (#73) — tra (bản Library gốc, preset) → phái sinh cho Portal (vd. logo shop
+        // `320x96,inside` từ Shop.LogoId). `preset` chứa dấu phẩy nên client phải URL-encode; binding
+        // string? từ query không tách theo dấu phẩy. Id lạ/của shop khác/không có phái sinh -> 200 [].
+        media.MapGet("/library/{assetId:guid}/derivatives", async (
+            Guid shopId, Guid assetId, string? preset, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetDerivativesQuery(shopId, assetId, preset), ct)))
+            .RequireAuthorization(AuthPolicies.RequireGlobalScope)
+            .RequireShopMembership()
+            .Produces<IReadOnlyList<MediaAssetDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
         // Owner-only — kiểm tra RoleId ở handler (cùng khuôn UpdateShopHandler), không phải policy
         // ASP.NET Core riêng ở tầng endpoint. RequireShopMembership() chỉ xác nhận membership bất kỳ.
