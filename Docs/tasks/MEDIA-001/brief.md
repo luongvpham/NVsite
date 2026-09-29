@@ -3,17 +3,18 @@
 ## Contract
 
 ```
-contracts/openapi/media.v1.json   (sha256: b92afa6af967e5b4ca688ce6ad55c1fac095846cae2f30fd1e3646a72d8211fb)
+contracts/openapi/media.v1.json   (sha256: 4ac4d8be8bec410b3e51cd7275c6f0ba31425abb7f675369d108274bca9fad02)
 contracts/openapi/shop.v1.json    (sha256: 26e390e0d15943bfc987d099287be1c5ffa5c6ce28835f7bae66dae3833c1fcc)  ← ShopDto + logoId
 ```
 
-Duyệt Gate 1 ngày 2026-09-27 (`contract-diff.md` §"Người duyệt đã quyết"); `media` promote lại ngày
-2026-09-28 sau khi gộp schema trùng `MediaAssetDto2` (`Docs/tasks/MEDIA-001-D2/contract-diff.md`,
-Quyết định #87 — property object nullable giờ luôn dạng `{ allOf: [$ref], nullable: true }`, JSON
-runtime không đổi). **Kiểm sha256 với `contracts/contract.lock` trước khi chạy `pnpm gen:api`. Lệch
-thì dừng lại, không đoán.**
+Lịch sử duyệt contract:
+- **2026-09-27** Gate 1 (`contract-diff.md` §"Người duyệt đã quyết").
+- **2026-09-28** `media` promote lại sau khi gộp schema trùng `MediaAssetDto2` (`Docs/tasks/MEDIA-001-D2/contract-diff.md`; Quyết định #87 — property object nullable giờ luôn dạng `{ allOf: [$ref], nullable: true }`, JSON runtime không đổi).
+- **2026-09-29** `media` thêm `GET …/library/{assetId}/derivatives` (`Docs/tasks/MEDIA-001-D3/contract-diff.md`).
 
-### Module `media`: 9 endpoint, tất cả dưới `/shops/{shopId}/…`, JWT Portal + membership
+**Kiểm sha256 với `contracts/contract.lock` trước khi chạy `pnpm gen:api`. Lệch thì dừng lại, không đoán.**
+
+### Module `media`: 10 endpoint, tất cả dưới `/shops/{shopId}/…`, JWT Portal + membership
 
 ```
 POST   /shops/{shopId}/media/slot-uploads                 multipart: file, preset, focalX, focalY, saveToLibrary, altText?  → SlotUploadResultDto
@@ -21,6 +22,7 @@ POST   /shops/{shopId}/media/library                      multipart: file, altTe
 GET    /shops/{shopId}/media/library?page&pageSize        (pageSize mặc định 24, tối đa 100)                                → PagedResult<MediaAssetDto>
 POST   /shops/{shopId}/media/library/{assetId}/clones     JSON { preset, focalX?, focalY? }                                  → MediaAssetDto
 GET    /shops/{shopId}/media/library/{assetId}/references                                                                   → { references: [{ kind: "ShopLogo" }] }
+GET    /shops/{shopId}/media/library/{assetId}/derivatives?preset=   (preset tuỳ chọn, một giá trị, vd. "320x96,inside" — URL-encode) → MediaAssetDto[]  (phái sinh của bản Library; id lạ/shop khác → [] chứ không 404)
 DELETE /shops/{shopId}/media/library/{assetId}            chỉ Owner                                                          → 204
 GET    /shops/{shopId}/media/assets?ids=a&ids=b           (lặp tham số, ≤ 200 id, KHÔNG phải "a,b")                          → MediaAssetDto[]
 GET    /shops/{shopId}/media/usage                                                                                          → { usedBytes }
