@@ -1,6 +1,6 @@
 # vsite — Component Manifest Schema & Codegen
 
-> **STATUS:** `IMPLEMENTED` · **Tasks:** `BOOTSTRAP-002` · **Changelog:** `Docs/tasks/BOOTSTRAP-002/changelog.md` · **Stale:** `§7.2 nhãn "#67 cần xác nhận" (đã chốt) · §3 vị trí context · §9 route dev harness`
+> **STATUS:** `IMPLEMENTED` · **Tasks:** `BOOTSTRAP-002,MEDIA-001` · **Changelog:** `Docs/tasks/BOOTSTRAP-002/changelog.md` · **Stale:** `§7.2 nhãn "#67 cần xác nhận" (đã chốt) · §3 vị trí context · §9 route dev harness · §3 và §7.1 config/image-presets.json nay là {presets, surfaces} và resolveImage đã là bản thật, không còn stub · §7.4 binding.imagePresets đã code (xem Docs/tasks/MEDIA-001/changelog.md mục 4, 15)`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
 > 📌 **§0 là nơi định nghĩa Quyết định `#59–#67`.** Câu "chép sang `02`" trong §0 đã lỗi thời — cố

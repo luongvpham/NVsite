@@ -1,6 +1,6 @@
 # vsite — MediaAsset, Media Library, ảnh Listing/Product & pipeline ảnh (Bước 4)
 
-> **STATUS:** `SPEC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `—`
+> **STATUS:** `IMPLEMENTED` · **Tasks:** `MEDIA-001` · **Changelog:** `Docs/tasks/MEDIA-001/changelog.md` · **Stale:** `§2 và §3.5 tên bảng media_assets, cột DeletedAt, tên index ux_* (thực tế: bảng MediaAsset, IsDeleted, index tên EF) · §3.6 ví dụ Shop có 1200x630,cover (thực tế chỉ 320x96,inside + 96x96,cover) · §5 và §10 mục 7 Cache-Control immutable (thực tế max-age=3600) · §3.5 và §9 test 6/7 chưa được chặn ở tầng request — IMediaReferenceValidator chưa nối handler nào (Bước 5) · §4 quét tham chiếu mới chỉ Shop.LogoId · §9 tiêu chí dừng chưa được chạy tay trên API + UI thật`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
 > 📌 **§0 là nơi định nghĩa Quyết định `#69–#86` và `#88`.** Các quyết định cũ còn hiệu lực về ảnh (`#53`
