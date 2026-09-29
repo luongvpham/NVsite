@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { colorTokens } from '@vsite/theme-engine';
 import { setAtPath, type PathSegment } from './path-utils';
 import type { PropertyPanelField } from './types';
@@ -8,14 +9,33 @@ import type { PropertyPanelField } from './types';
  * là việc của module Website ở Bước 5+) — mục tiêu ở đây là group/order/kind đủ để không phải
  * sửa meta-schema sau này.
  */
+/** Ảnh chọn qua `media-picker` — hình dạng tree value cho prop `kind: 'image'` (#71, MEDIA-001). */
+export interface ImagePickerValue {
+  imageId?: string;
+  alt?: string;
+}
+
+/**
+ * Cắm control media picker thật (upload/thư viện) từ nơi gọi (apps/portal, F5), thay cho STUB
+ * text-input mặc định bên dưới. `Inspector` (package này) chỉ render ReactNode được truyền vào —
+ * không tự import dialog/API nào, giữ đúng isomorphic (#23): việc gọi API/mở dialog nằm ở
+ * apps/portal, không ở builder-components.
+ */
+export type RenderMediaPicker = (ctx: {
+  field: PropertyPanelField;
+  value: ImagePickerValue;
+  onChange: (value: ImagePickerValue) => void;
+}) => ReactNode;
+
 export interface InspectorProps {
   fields: PropertyPanelField[];
   values: Record<string, unknown>;
   onChange: (path: PathSegment[], value: unknown) => void;
   pathPrefix?: PathSegment[];
+  renderMediaPicker?: RenderMediaPicker;
 }
 
-export function Inspector({ fields, values, onChange, pathPrefix = [] }: InspectorProps) {
+export function Inspector({ fields, values, onChange, pathPrefix = [], renderMediaPicker }: InspectorProps) {
   const groups = new Map<string, PropertyPanelField[]>();
   for (const field of fields) {
     const list = groups.get(field.group) ?? [];
@@ -40,6 +60,7 @@ export function Inspector({ fields, values, onChange, pathPrefix = [] }: Inspect
                   onChange={(v) => {
                     onChange([...pathPrefix, field.name], v);
                   }}
+                  renderMediaPicker={renderMediaPicker}
                 />
               ))}
           </div>
@@ -53,10 +74,12 @@ function FieldControl({
   field,
   value,
   onChange,
+  renderMediaPicker,
 }: {
   field: PropertyPanelField;
   value: unknown;
   onChange: (value: unknown) => void;
+  renderMediaPicker?: RenderMediaPicker;
 }) {
   const label = (
     <label className="block text-sm font-medium">
@@ -186,8 +209,16 @@ function FieldControl({
       );
 
     case 'media-picker': {
-      // STUB — media picker thật cần MediaAsset (Bước 4). Nhập imageId trực tiếp để test pipeline.
-      const imageValue = (value as { imageId?: string; alt?: string } | undefined) ?? {};
+      const imageValue = (value as ImagePickerValue | undefined) ?? {};
+      if (renderMediaPicker) {
+        return (
+          <div>
+            {label}
+            {renderMediaPicker({ field, value: imageValue, onChange })}
+          </div>
+        );
+      }
+      // Fallback STUB (không có caller cắm media picker thật) — nhập imageId trực tiếp.
       return (
         <div>
           {label}
@@ -253,6 +284,7 @@ function FieldControl({
                     next[i] = setAtPath(item as Record<string, unknown>, path, v);
                     onChange(next);
                   }}
+                  renderMediaPicker={renderMediaPicker}
                 />
                 <button
                   type="button"
@@ -290,6 +322,7 @@ function FieldControl({
             onChange={(path, v) => {
               onChange(setAtPath((value as Record<string, unknown> | undefined) ?? {}, path, v));
             }}
+            renderMediaPicker={renderMediaPicker}
           />
         </div>
       );

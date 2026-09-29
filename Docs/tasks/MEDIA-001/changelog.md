@@ -84,3 +84,49 @@ thuộc phạm vi task này). Từ đây ghi tiếp theo từng task chạm code
   xác nhận phần DỊCH lỗi → ProblemDetails đúng, không xác nhận TestServer có thật sự ném
   `BadHttpRequestException` ở đúng ngưỡng 11MB hay không (cần Docker gửi request thật qua
   `MediaApiFactory`, hoặc research riêng về hành vi `IHttpMaxRequestBodySizeFeature` dưới TestServer).
+
+## F4/F5 — Logo shop (portal) + nối `dev-registry` vào dialog/picker thật
+
+### Lệch có chủ đích / quyết định tự đặt (không phải bug)
+
+#### 1. Owner signal cho nút "Tải logo mới" — tái dùng `ShopSummaryDto.roleCode` từ `GET /shops`, không phải field mới
+
+- **Vấn đề:** `ShopDto` (`GET /shops/{shopId}`, dùng ở trang sửa shop) không có field role nào.
+  Brief F4 giả định "đã có owner/role signal trên màn đó từ SHOP-001" nhưng thực tế màn sửa shop
+  chưa từng dùng field đó.
+- **Tra ra:** `ShopSummaryDto` (`GET /shops`, danh sách shop) có `roleCode: string` — đã hiện ở
+  `_authenticated.shops.index.tsx` (`{shop.roleCode}`), đúng là "signal có sẵn từ SHOP-001" mà brief
+  nhắc tới, chỉ là ở route khác. Trang sửa shop (`_authenticated.shops.$shopId.tsx`) giờ gọi thêm
+  `useGetShops()`, tìm shop theo id, so `roleCode === 'Owner'`.
+- **Giả định tôi tự đặt:** literal string `roleCode` cho Owner là `"Owner"` — `roleCode` là chuỗi tự
+  do trong contract (không phải enum), nhưng `SHOP-001/brief.md` dùng nhất quán "Owner" (bảng quyền
+  PATCH, message `SHOP_OWNER_REQUIRED`) và `MEDIA-001/brief.md` lặp lại đúng chữ đó cho
+  `MEDIA_OWNER_REQUIRED`/upload logo. Suy luận từ tài liệu đã duyệt, không phải bịa — nhưng CHƯA có
+  xác nhận trực tiếp từ BE/contract rằng đây đúng là literal string được serialize. Xem
+  `apps/portal/src/lib/shop-role.ts`. **Cần người duyệt xác nhận** nếu giá trị thật khác "Owner".
+
+#### 2. `ShopDto.logoId` được hiểu là id của chính phái sinh `320x96,inside`, không phải id bản gốc trong thư viện
+
+- **Vấn đề:** brief F4 nói "hiện logo qua phái sinh 320x96,inside, lấy qua `ShopLogoDto.derivatives`
+  hoặc `assets?ids=`" nhưng không nói rõ `logoId` trỏ tới asset nào. 9 endpoint media không có
+  endpoint "lấy derivatives của asset gốc theo id gốc" — nếu `logoId` là id bản gốc trong thư viện
+  thì không có cách nào tra ra derivative `320x96,inside` của nó qua contract hiện tại.
+- **Quyết định:** hiểu `logoId` là id của CHÍNH bản phái sinh `320x96,inside` (BE lưu id derivative
+  đó vào `ShopDto.logoId`, không phải id bản gốc) — khi đó `GET /shops/{shopId}/media/assets?ids={logoId}`
+  trả thẳng `MediaAssetDto` có `storageKey` dùng ngay, khớp với gợi ý "check GET assets?ids= as the
+  lookup" trong task brief. Nếu giả định này sai (logoId thực ra là id bản gốc), `ShopLogoSection`
+  (`apps/portal/src/components/shop/shop-logo-section.tsx`) sẽ hiện "Không tìm thấy ảnh logo." thay vì
+  lỗi âm thầm — không tự đoán thêm một endpoint không tồn tại để lấp. **Cần người duyệt BE xác nhận.**
+
+#### 3. `Inspector` (builder-components) thêm prop `renderMediaPicker` để F5 cắm dialog/picker thật vào field ảnh
+
+- **Không đổi hành vi mặc định:** prop optional, không có thì `Inspector` vẫn dùng STUB nhập imageId
+  tay như cũ (backward-compatible, không có consumer nào khác của `Inspector` ngoài `dev-registry.tsx`
+  tại thời điểm này).
+- **Lý do đặt ở `builder-components` thay vì viết lại `Inspector` riêng trong `apps/portal`:**
+  `Inspector` đệ quy qua `repeater`/`fieldset` để tới field ảnh lồng trong `Gallery.items[].image` —
+  viết lại toàn bộ logic đệ quy đó ở portal để chỉ đổi một `case` là trùng lặp thật. `Inspector.tsx`
+  vẫn giữ isomorphic (#23): không tự import dialog/API nào, chỉ render `ReactNode` được `apps/portal`
+  truyền vào qua `renderMediaPicker`.
+- Không đổi `resolveImage`, không đổi manifest hay `registry.lock.json` — `check:registry-additive`
+  chạy sạch.
