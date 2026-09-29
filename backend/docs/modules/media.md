@@ -98,15 +98,19 @@ FK ghép `Shop(LogoId, Id) → MediaAsset(Id, ShopId)` (Quyết định #76) kha
 tự order INSERT `MediaAsset` trước UPDATE `Shop.LogoId` nhờ composite FK — không cần tự sắp thứ tự
 lệnh (chứng minh bằng `ShopLogoTests`, xem Docker debt bên dưới).
 
-**Đọc logo cho `ShopDto` (D4, #88) — `Shop → IShopLogoReader ← Media`.** `ShopDto.logoStorageKey` là
-storage key **tương đối** của phái sinh `320x96,inside` (hằng `LogoPresets.Header`, ở
+**Đọc logo cho `ShopDto` (D4, #88) — `Shop → IShopLogoReader ← Media`.** `ShopDto.logoUrl` và
+`ShopSummaryDto.logoUrl` là `/media/{storageKey}` (dựng bởi `ImagePaths.MediaUrl` — cùng hằng `MediaPathPrefix`
+với route mount `/media` ở `Program.cs`) của phái sinh `320x96,inside` (hằng `LogoPresets.Header`, ở
 `Vsite.Application/Media/LogoPresets.cs`; test khẳng định `IDerivativePresetCatalog.For("Shop")` chứa nó).
-Port `IShopLogoReader` do `Shop` khai báo (`Application/Shop/Interfaces`), adapter
+Port `IShopLogoReader` do `Shop` khai báo (`Application/Shop/Interfaces`; `GetLogoUrlAsync` cho một shop,
+`GetLogoUrlsAsync` tra theo lô cho `GET /shops`), adapter
 `Vsite.Infrastructure.Media.ShopLogoReader` (đăng ký trong `AddMediaModule`) — chiều ngược với
 `IShopLogoWriter`. Query dùng `IgnoreQueryFilters()` + `ShopId == shopId` + `!IsDeleted` +
 `SourceAssetId == logoId` + `Preset` trong CÙNG câu (giống `GetDerivativesHandler`), lấy dòng đầu theo
 `CreatedAt, Id`; bản Library đã soft delete vẫn resolve (A11). `LogoId` null hoặc không thấy phái sinh →
-`null`, không ném. `ShopSummaryDto` (`GET /shops`) chưa mang logo.
+`null`, không ném. Bản theo lô là ĐÚNG MỘT câu SQL: join `Shop (Id, LogoId)` với `MediaAsset`
+(`IgnoreQueryFilters`, `Preset`, `!IsDeleted`) nên cặp (ShopId, SourceAssetId) được ép trong query; shop không có logo
+vắng mặt trong kết quả (`ShopLogoBatchSqlCountTests`, Docker).
 
 Đọc ngược chiều (Media cần biết ai là owner của shop để authorize `DELETE`/`PUT logo`) đi qua
 `Vsite.Application.Shop.Interfaces.IShopOwnershipService` (Public Contract khác, cùng mẫu

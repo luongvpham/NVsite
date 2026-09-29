@@ -43,7 +43,7 @@
 | **#84** | **Thư viện xử lý ảnh là ImageSharp** — thuần managed, có sẵn auto-orient, xoá metadata, encoder webp. License Six Labors Split: miễn phí khi doanh thu năm < 1M USD; vượt ngưỡng phải mua license thương mại |
 | **#85** | **Giới hạn upload: file ≤ 10 MB, ảnh ≤ 25 megapixel** — số pixel đọc từ header **trước khi decode** (chặn decompression bomb). Chỉ nhận JPEG / PNG / WebP (nhận diện bằng magic bytes). **HEIC bị từ chối** với `error_code` riêng; FE đặt `accept` là JPEG/PNG/WebP để iOS tự chuyển và hiện hướng dẫn khi gặp lỗi này |
 | **#86** | **Prop `binding` thêm field additive `imagePresets`** — preset ảnh theo từng source (`Partial<Record<source, preset[]>>`), mỗi preset phải có trong whitelist (#64). Codegen gom thành **bộ phái sinh theo nguồn** ghi vào `packages/builder-components/generated/`, hợp với **tập cố định của bề mặt vsite** khai trong `config/image-presets.json`. BE đọc artifact đó lúc startup |
-| **#88** | `ShopDto` trả sẵn **`logoStorageKey`** = đường dẫn **tương đối** của phái sinh `320x96,inside` của logo (`null` nếu chưa có logo hoặc chưa có phái sinh); API **không** trả URL có tiền tố — chỉ `mediaUrl()` / `resolveImage()` thêm `/media/`. `Shop` đọc qua port do chính `Shop` khai báo (`IShopLogoReader`), adapter nằm ở `Media` (Shop không reference Media). Endpoint `GET …/library/{assetId}/derivatives` vẫn giữ cho các nguồn ảnh nghiệp vụ khác |
+| **#88** | `ShopDto` **và `ShopSummaryDto`** (`GET /shops`) trả sẵn **`logoUrl`** = `"/media/" + storageKey` của phái sinh `320x96,inside` của logo (đường dẫn tương đối theo domain, dùng được trên mọi host; `null` nếu chưa có logo hoặc chưa có phái sinh). **Field DTO tên `*Url` mà Portal nhận do BE trả sẵn có tiền tố `/media/`**; DB vẫn chỉ lưu key tương đối; nội dung ảnh trong builder vẫn đi qua `resolveImage()`. Prefix + hàm dựng URL nằm ở MỘT chỗ BE (`ImagePaths.MediaUrl`, cùng hằng với route mount `/media`). `Shop` đọc qua port do chính `Shop` khai báo (`IShopLogoReader`, có bản tra theo lô một câu SQL cho `GET /shops`), adapter nằm ở `Media` (Shop không reference Media). Endpoint `GET …/library/{assetId}/derivatives` vẫn giữ cho các nguồn ảnh nghiệp vụ khác |
 
 **Quyết định cũ đã viết đè theo mô hình này** (giữ số, nội dung mới — xem `05` §0, `07` §0):
 `#53` (pipeline + URL `{domain}/media/{path}`, không image proxy runtime), `#55` (không `MediaVariant`,
@@ -245,9 +245,10 @@ Render
   → trả StorageKey của phái sinh
 ```
 
-Portal (không đi qua resolver) đọc logo shop qua **`ShopDto.logoStorageKey`** (#88) — storage key **tương đối**
-của phái sinh `320x96,inside`, `null` nếu chưa có logo/phái sinh; FE chỉ việc `mediaUrl(shop.logoStorageKey)`.
-`Shop` lấy giá trị qua port `IShopLogoReader` do chính `Shop` khai báo, adapter nằm ở `Media` (Shop không
+Portal (không đi qua resolver) đọc logo shop qua **`ShopDto.logoUrl`** và **`ShopSummaryDto.logoUrl`** (#88) —
+`/media/{storageKey}` của phái sinh `320x96,inside`, `null` nếu chưa có logo/phái sinh; FE dùng thẳng
+`<img src={shop.logoUrl}>`. `Shop` lấy giá trị qua port `IShopLogoReader` do chính `Shop` khai báo (một bản tra
+đơn cho `ShopDto`, một bản tra theo lô một câu SQL cho `GET /shops`), adapter nằm ở `Media` (Shop không
 reference Media). Với các nguồn ảnh nghiệp vụ khác, Portal tra cùng cặp `(SourceAssetId, Preset)` bằng
 `GET /shops/{shopId}/media/library/{assetId}/derivatives?preset=` — vẫn trả phái sinh khi bản Library đã soft
 delete (A11); id lạ/của shop khác → `[]`, không 404.
@@ -321,7 +322,7 @@ https://spa-abc.com/media/shops/77/products/9c1e…/thumb_5b7d….webp
 | Tầng phía trước (.NET / Caddy) chuyển `/media/*` thẳng về object storage, **không** qua xử lý ảnh | Không có image proxy runtime (#53) — chỉ phục vụ file tĩnh. Đặt CDN phía trước sau này không đổi URL |
 | DB lưu **đường dẫn tương đối**, **không** lưu URL có domain | Cùng một ảnh dùng được trên mọi domain của shop; đổi hạ tầng không phải rewrite `SitePublication.Snapshot` (#41) |
 | Tree lưu `imageId`, **không** lưu `StorageKey` | Một lớp gián tiếp: đổi được cấu trúc thư mục của ảnh website |
-| Component **không bao giờ** tự nối chuỗi URL | Luôn `resolveImage(imageId, preset)` — cùng tinh thần `resolveUrl()` của #11. Chính `resolveImage` thêm tiền tố `/media/` |
+| Component **không bao giờ** tự nối chuỗi URL | Ảnh trong nội dung builder luôn đi qua `resolveImage(imageId, preset)` — cùng tinh thần `resolveUrl()` của #11; chính `resolveImage` thêm tiền tố `/media/`. Field DTO tên `*Url` mà Portal nhận (vd. `ShopDto.logoUrl`, #88) do BE trả sẵn với tiền tố `/media/` (đường dẫn tương đối theo domain, chạy trên mọi host); prefix và hàm dựng nằm ở MỘT chỗ BE (`ImagePaths.MediaUrl`) |
 | File bất biến (#75) | Cache-Control `immutable` được — chốt cùng cache publish ở Bước 8 |
 
 ---

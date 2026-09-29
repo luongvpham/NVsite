@@ -92,34 +92,33 @@ public sealed class ShopLogoTests
         Assert.Equal(dto!.LibraryAsset.Id, shop!.LogoId);
     }
 
-    // ---- D4 (#88): ShopDto.logoStorageKey = storageKey tương đối của phái sinh 320x96,inside ----
+    // ---- D4 (#88): ShopDto.logoUrl = "/media/" + storageKey của phái sinh 320x96,inside ----
 
     [Fact]
-    public async Task GetShop_before_any_logo_has_null_logoStorageKey()
+    public async Task GetShop_before_any_logo_has_null_logoUrl()
     {
         var (token, shopId) = await CreateOwnerWithShopAsync();
 
         var shop = await (await GetShopAsync(token, shopId)).Content.ReadFromJsonAsync<ShopDto>(JsonOptions);
 
         Assert.Null(shop!.LogoId);
-        Assert.Null(shop.LogoStorageKey);
+        Assert.Null(shop.LogoUrl);
     }
 
     [Fact]
-    public async Task GetShop_and_PatchShop_after_logo_return_header_derivative_storageKey_readable_via_media()
+    public async Task GetShop_and_PatchShop_after_logo_return_prefixed_logoUrl_readable_via_media()
     {
         var (token, shopId) = await CreateOwnerWithShopAsync();
         var upload = await (await PutLogoAsync(token, shopId, "logo.png")).Content.ReadFromJsonAsync<ShopLogoDto>(JsonOptions);
         var expectedKey = Assert.Single(upload!.Derivatives, d => d.Preset == "320x96,inside").StorageKey;
+        var expectedUrl = "/media/" + expectedKey;
 
         var shop = await (await GetShopAsync(token, shopId)).Content.ReadFromJsonAsync<ShopDto>(JsonOptions);
 
         Assert.Equal(upload.LibraryAsset.Id, shop!.LogoId);
-        Assert.Equal(expectedKey, shop.LogoStorageKey);
-        Assert.False(shop.LogoStorageKey!.StartsWith('/'));
-        Assert.DoesNotContain("/media/", shop.LogoStorageKey);
+        Assert.Equal(expectedUrl, shop.LogoUrl);
 
-        var mediaRequest = new HttpRequestMessage(HttpMethod.Get, "/media/" + shop.LogoStorageKey) { Headers = { Host = "vsite.local" } };
+        var mediaRequest = new HttpRequestMessage(HttpMethod.Get, shop.LogoUrl) { Headers = { Host = "vsite.local" } };
         var mediaResponse = await _client.SendAsync(mediaRequest);
         Assert.Equal(HttpStatusCode.OK, mediaResponse.StatusCode);
 
@@ -133,7 +132,46 @@ public sealed class ShopLogoTests
         Assert.Equal(HttpStatusCode.OK, patchResponse.StatusCode);
         var patched = await patchResponse.Content.ReadFromJsonAsync<ShopDto>(JsonOptions);
         Assert.Equal("Renamed Logo Shop", patched!.Name);
-        Assert.Equal(expectedKey, patched.LogoStorageKey);
+        Assert.Equal(expectedUrl, patched.LogoUrl);
+    }
+
+    [Fact]
+    public async Task ListShops_returns_logoUrl_per_shop_null_without_logo_and_resolves_when_source_soft_deleted()
+    {
+        var token = await RegisterVerifyLoginGlobalAsync(NewEmail());
+        var noLogo = await CreateShopDtoAsync(token, "No Logo");
+        var softDeleted = await CreateShopDtoAsync(token, "Soft Deleted Source");
+        var normal = await CreateShopDtoAsync(token, "Normal");
+
+        var uploadSoft = (await (await PutLogoAsync(token, softDeleted.Id, "logo.png")).Content.ReadFromJsonAsync<ShopLogoDto>(JsonOptions))!;
+        var uploadNormal = (await (await PutLogoAsync(token, normal.Id, "logo.png")).Content.ReadFromJsonAsync<ShopLogoDto>(JsonOptions))!;
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var source = await db.MediaAssets.IgnoreQueryFilters().FirstAsync(a => a.Id == uploadSoft.LibraryAsset.Id);
+            source.SoftDeleteFromLibrary();
+            await db.SaveChangesAsync();
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/shops") { Headers = { Host = PortalHost } };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var list = (await response.Content.ReadFromJsonAsync<List<ShopSummaryDto>>(JsonOptions))!;
+
+        static string HeaderUrl(ShopLogoDto u) => "/media/" + Assert.Single(u.Derivatives, d => d.Preset == "320x96,inside").StorageKey;
+        Assert.Equal(3, list.Count);
+        Assert.Null(list.Single(s => s.Id == noLogo.Id).LogoUrl);
+        Assert.Equal(HeaderUrl(uploadSoft), list.Single(s => s.Id == softDeleted.Id).LogoUrl);
+        Assert.Equal(HeaderUrl(uploadNormal), list.Single(s => s.Id == normal.Id).LogoUrl);
+    }
+
+    private async Task<ShopDto> CreateShopDtoAsync(string token, string name)
+    {
+        var response = await CreateShopAsync(token, new CreateShopRequest(name, NewSlug(), ShopKind.Hosted, null));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<ShopDto>(JsonOptions))!;
     }
 
     // ---- logo PNG trong suốt 1000×200 -> phái sinh 320x96,inside có kích thước 320×64, giữ alpha ----

@@ -6,6 +6,15 @@ namespace Vsite.Application.Common.Imaging;
 /// </summary>
 public static class ImagePaths
 {
+    /// <summary>Prefix đường dẫn phục vụ file ảnh (#53). Nguồn DUY NHẤT: <c>Program.cs</c> mount
+    /// <c>/media</c> bằng đúng hằng này và <see cref="MediaUrl"/> sinh URL từ nó — đường phục vụ và URL
+    /// sinh ra không thể lệch nhau.</summary>
+    public const string MediaPathPrefix = "/media";
+
+    /// <summary>URL tương đối theo domain (<c>/media/{storageKey}</c>) cho field DTO tên <c>*Url</c> trả cho
+    /// Portal (#88). DB vẫn chỉ lưu key tương đối.</summary>
+    public static string MediaUrl(string storageKey) => $"{MediaPathPrefix}/{storageKey}";
+
     /// <summary>Key cho ảnh website (banner, ảnh trong nội dung) — <c>shops/{shopId}/website/{yyyy}/{MM}/{uuid}.webp</c>.</summary>
     public static string NewWebsiteKey(Guid shopId, DateTimeOffset now) =>
         $"shops/{shopId}/website/{now:yyyy}/{now:MM}/{Guid.NewGuid()}.webp";

@@ -19,7 +19,7 @@ public sealed class ShopLogoReaderTests
     private readonly FakeTenantContext _tenant = new();
 
     [Fact]
-    public async Task Logo_set_and_derivative_exists_returns_its_StorageKey()
+    public async Task Logo_set_and_derivative_exists_returns_media_prefixed_url()
     {
         await using var db = CreateDb();
         var shopId = Guid.NewGuid();
@@ -30,10 +30,10 @@ public sealed class ShopLogoReaderTests
         db.MediaAssets.AddRange(source, header, square);
         await db.SaveChangesAsync();
 
-        var key = await new ShopLogoReader(db).GetLogoStorageKeyAsync(shopId, source.Id, CancellationToken.None);
+        var key = await new ShopLogoReader(db).GetLogoUrlAsync(shopId, source.Id, CancellationToken.None);
 
-        Assert.Equal(header.StorageKey, key);
-        Assert.DoesNotContain("/media/", key);
+        Assert.Equal("/media/" + header.StorageKey, key);
+        Assert.StartsWith("/media/shops/", key);
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public sealed class ShopLogoReaderTests
         var shopId = Guid.NewGuid();
         _tenant.ShopId = shopId;
 
-        Assert.Null(await new ShopLogoReader(db).GetLogoStorageKeyAsync(shopId, null, CancellationToken.None));
+        Assert.Null(await new ShopLogoReader(db).GetLogoUrlAsync(shopId, null, CancellationToken.None));
     }
 
     [Fact]
@@ -56,8 +56,8 @@ public sealed class ShopLogoReaderTests
         db.MediaAssets.AddRange(source, NewDerived(source, "96x96,cover"));
         await db.SaveChangesAsync();
 
-        Assert.Null(await new ShopLogoReader(db).GetLogoStorageKeyAsync(shopId, source.Id, CancellationToken.None));
-        Assert.Null(await new ShopLogoReader(db).GetLogoStorageKeyAsync(shopId, Guid.NewGuid(), CancellationToken.None));
+        Assert.Null(await new ShopLogoReader(db).GetLogoUrlAsync(shopId, source.Id, CancellationToken.None));
+        Assert.Null(await new ShopLogoReader(db).GetLogoUrlAsync(shopId, Guid.NewGuid(), CancellationToken.None));
     }
 
     [Fact]
@@ -73,9 +73,9 @@ public sealed class ShopLogoReaderTests
         source.SoftDeleteFromLibrary();
         await db.SaveChangesAsync();
 
-        var key = await new ShopLogoReader(db).GetLogoStorageKeyAsync(shopId, source.Id, CancellationToken.None);
+        var key = await new ShopLogoReader(db).GetLogoUrlAsync(shopId, source.Id, CancellationToken.None);
 
-        Assert.Equal(header.StorageKey, key);
+        Assert.Equal("/media/" + header.StorageKey, key);
     }
 
     [Fact]
@@ -92,8 +92,8 @@ public sealed class ShopLogoReaderTests
 
         var reader = new ShopLogoReader(db);
 
-        Assert.Null(await reader.GetLogoStorageKeyAsync(shopA, sourceA.Id, CancellationToken.None));
-        Assert.Equal(forgedB.StorageKey, await reader.GetLogoStorageKeyAsync(shopB, sourceA.Id, CancellationToken.None));
+        Assert.Null(await reader.GetLogoUrlAsync(shopA, sourceA.Id, CancellationToken.None));
+        Assert.Equal("/media/" + forgedB.StorageKey, await reader.GetLogoUrlAsync(shopB, sourceA.Id, CancellationToken.None));
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public sealed class ShopLogoReaderTests
         dead.SoftDeleteFromLibrary();
         await db.SaveChangesAsync();
 
-        Assert.Null(await new ShopLogoReader(db).GetLogoStorageKeyAsync(shopId, source.Id, CancellationToken.None));
+        Assert.Null(await new ShopLogoReader(db).GetLogoUrlAsync(shopId, source.Id, CancellationToken.None));
     }
 
     [Fact]
@@ -131,8 +131,8 @@ public sealed class ShopLogoReaderTests
         var reader = new ShopLogoReader(db);
 
         Assert.True(header1.CreatedAt < header2.CreatedAt);
-        Assert.Equal(header2.StorageKey, await reader.GetLogoStorageKeyAsync(shopId, source2.Id, CancellationToken.None));
-        Assert.Equal(header1.StorageKey, await reader.GetLogoStorageKeyAsync(shopId, source1.Id, CancellationToken.None));
+        Assert.Equal("/media/" + header2.StorageKey, await reader.GetLogoUrlAsync(shopId, source2.Id, CancellationToken.None));
+        Assert.Equal("/media/" + header1.StorageKey, await reader.GetLogoUrlAsync(shopId, source1.Id, CancellationToken.None));
     }
 
     [Fact]
@@ -147,10 +147,118 @@ public sealed class ShopLogoReaderTests
         await db.SaveChangesAsync();
 
         _tenant.ShopId = null;
-        Assert.Equal(header.StorageKey, await new ShopLogoReader(db).GetLogoStorageKeyAsync(shopId, source.Id, CancellationToken.None));
+        Assert.Equal("/media/" + header.StorageKey, await new ShopLogoReader(db).GetLogoUrlAsync(shopId, source.Id, CancellationToken.None));
 
         _tenant.ShopId = Guid.NewGuid();
-        Assert.Equal(header.StorageKey, await new ShopLogoReader(db).GetLogoStorageKeyAsync(shopId, source.Id, CancellationToken.None));
+        Assert.Equal("/media/" + header.StorageKey, await new ShopLogoReader(db).GetLogoUrlAsync(shopId, source.Id, CancellationToken.None));
+    }
+
+    // ---- batch path (GetLogoUrlsAsync, dùng cho GET /shops) ----
+
+    [Fact]
+    public async Task Batch_resolves_each_shop_to_its_own_logo_and_omits_shops_without_logo()
+    {
+        await using var db = CreateDb();
+        var shopA = Guid.NewGuid();
+        var shopB = Guid.NewGuid();
+        var shopC = Guid.NewGuid();
+        var srcA = NewLibrary(shopA);
+        var srcB = NewLibrary(shopB);
+        var hdrA = NewDerived(srcA, Header);
+        var hdrB = NewDerived(srcB, Header);
+        db.MediaAssets.AddRange(srcA, srcB, hdrA, hdrB, NewDerived(srcA, "96x96,cover"));
+        db.Shops.AddRange(NewShop(shopA, srcA.Id), NewShop(shopB, srcB.Id), NewShop(shopC, null));
+        await db.SaveChangesAsync();
+
+        var result = await new ShopLogoReader(db).GetLogoUrlsAsync([shopA, shopB, shopC], CancellationToken.None);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("/media/" + hdrA.StorageKey, result[shopA]);
+        Assert.Equal("/media/" + hdrB.StorageKey, result[shopB]);
+        Assert.False(result.ContainsKey(shopC));
+    }
+
+    [Fact]
+    public async Task Batch_uses_Shop_LogoId_to_pick_between_two_sources_in_same_shop()
+    {
+        await using var db = CreateDb();
+        var shopId = Guid.NewGuid();
+        var source1 = NewLibrary(shopId);
+        var header1 = NewDerived(source1, Header);
+        db.MediaAssets.AddRange(source1, header1);
+        await db.SaveChangesAsync();
+        await Task.Delay(20);
+        var source2 = NewLibrary(shopId);
+        var header2 = NewDerived(source2, Header);
+        db.MediaAssets.AddRange(source2, header2);
+        db.Shops.Add(NewShop(shopId, source2.Id));
+        await db.SaveChangesAsync();
+
+        var result = await new ShopLogoReader(db).GetLogoUrlsAsync([shopId], CancellationToken.None);
+
+        Assert.Equal("/media/" + header2.StorageKey, result[shopId]);
+    }
+
+    [Fact]
+    public async Task Batch_never_returns_another_shops_derivative_even_with_same_SourceAssetId()
+    {
+        await using var db = CreateDb();
+        var shopA = Guid.NewGuid();
+        var shopB = Guid.NewGuid();
+        var sourceA = NewLibrary(shopA);
+        var forgedB = NewDerived(sourceA, Header, shopIdOverride: shopB);
+        db.MediaAssets.AddRange(sourceA, forgedB);
+        db.Shops.AddRange(NewShop(shopA, sourceA.Id), NewShop(shopB, sourceA.Id));
+        await db.SaveChangesAsync();
+
+        var result = await new ShopLogoReader(db).GetLogoUrlsAsync([shopA, shopB], CancellationToken.None);
+
+        // shop A: source A nhưng không có phái sinh nào thuộc A; shop B: phái sinh thuộc B trỏ source A.
+        Assert.False(result.ContainsKey(shopA));
+        Assert.Equal("/media/" + forgedB.StorageKey, result[shopB]);
+    }
+
+    [Fact]
+    public async Task Batch_resolves_when_source_soft_deleted_but_excludes_soft_deleted_derivative()
+    {
+        await using var db = CreateDb();
+        var shopA = Guid.NewGuid();
+        var shopB = Guid.NewGuid();
+        var srcA = NewLibrary(shopA);
+        var hdrA = NewDerived(srcA, Header);
+        var srcB = NewLibrary(shopB);
+        var hdrB = NewDerived(srcB, Header);
+        db.MediaAssets.AddRange(srcA, hdrA, srcB, hdrB);
+        db.Shops.AddRange(NewShop(shopA, srcA.Id), NewShop(shopB, srcB.Id));
+        await db.SaveChangesAsync();
+        srcA.SoftDeleteFromLibrary();
+        hdrB.SoftDeleteFromLibrary();
+        await db.SaveChangesAsync();
+
+        var result = await new ShopLogoReader(db).GetLogoUrlsAsync([shopA, shopB], CancellationToken.None);
+
+        Assert.Equal("/media/" + hdrA.StorageKey, result[shopA]);
+        Assert.False(result.ContainsKey(shopB));
+    }
+
+    [Fact]
+    public async Task Batch_with_empty_input_returns_empty()
+    {
+        await using var db = CreateDb();
+
+        Assert.Empty(await new ShopLogoReader(db).GetLogoUrlsAsync([], CancellationToken.None));
+    }
+
+    private static Vsite.Domain.Shop.Entities.Shop NewShop(Guid id, Guid? logoId)
+    {
+        var shop = new Vsite.Domain.Shop.Entities.Shop(id)
+        {
+            Name = "S",
+            Slug = $"s-{id:N}",
+            Kind = Vsite.Domain.Shop.Enums.ShopKind.Hosted,
+        };
+        shop.LogoId = logoId;
+        return shop;
     }
 
     [Fact]

@@ -14,8 +14,8 @@ public sealed class GetShopHandler(IAppDbContext db, IShopLogoReader logoReader)
         var shop = await db.Shops.FirstOrDefaultAsync(s => s.Id == request.ShopId, cancellationToken)
             ?? throw new NotFoundException("Shop", request.ShopId);
 
-        var logoStorageKey = await logoReader.GetLogoStorageKeyAsync(shop.Id, shop.LogoId, cancellationToken);
+        var logoUrl = await logoReader.GetLogoUrlAsync(shop.Id, shop.LogoId, cancellationToken);
 
-        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status, shop.LogoId, logoStorageKey);
+        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status, shop.LogoId, logoUrl);
     }
 }

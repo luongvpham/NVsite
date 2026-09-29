@@ -67,8 +67,8 @@ public sealed class UpdateShopHandler(IAppDbContext db, ICurrentUserContext curr
             await shopLookup.InvalidateAsync(request.Slug, cancellationToken);
         }
 
-        var logoStorageKey = await logoReader.GetLogoStorageKeyAsync(shop.Id, shop.LogoId, cancellationToken);
+        var logoUrl = await logoReader.GetLogoUrlAsync(shop.Id, shop.LogoId, cancellationToken);
 
-        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status, shop.LogoId, logoStorageKey);
+        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status, shop.LogoId, logoUrl);
     }
 }

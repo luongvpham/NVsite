@@ -367,7 +367,7 @@
           "externalUrl",
           "status",
           "logoId",
-          "logoStorageKey"
+          "logoUrl"
         ],
         "type": "object",
         "properties": {
@@ -396,7 +396,7 @@
             "format": "uuid",
             "nullable": true
           },
-          "logoStorageKey": {
+          "logoUrl": {
             "type": "string",
             "nullable": true
           }
@@ -423,7 +423,8 @@
           "slug",
           "kind",
           "status",
-          "roleCode"
+          "roleCode",
+          "logoUrl"
         ],
         "type": "object",
         "properties": {
@@ -445,6 +446,10 @@
           },
           "roleCode": {
             "type": "string"
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
           }
         }
       },

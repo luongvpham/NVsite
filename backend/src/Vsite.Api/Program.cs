@@ -120,7 +120,7 @@ app.UseStatusCodePages(context => UnsupportedMediaTypeStatusCodeHandler.HandleAs
 // khớp prefix "/media" khỏi pipeline chính — request đó không bao giờ chạm TenantResolutionMiddleware
 // / Authentication / Authorization phía dưới. Vẫn nằm SAU UseExceptionHandler (phòng thủ thêm dù
 // MediaFileMiddleware tự bắt hết ArgumentException, không để lọt request nào ra ngoài thành 500).
-app.Map("/media", branch => branch.UseMiddleware<MediaFileMiddleware>());
+app.Map(Vsite.Application.Common.Imaging.ImagePaths.MediaPathPrefix, branch => branch.UseMiddleware<MediaFileMiddleware>());
 
 // Sau CORS (preflight OPTIONS không cần resolve tenant), TRƯỚC mọi endpoint — mọi handler đọc
 // ShopId/audience qua ITenantContext, không handler nào tự parse Host/route.

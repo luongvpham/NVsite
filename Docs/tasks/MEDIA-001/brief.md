@@ -31,7 +31,7 @@ PUT    /shops/{shopId}/logo                               multipart: file; chỉ
 
 - `SlotUploadResultDto = { asset, libraryAsset? }`. **`asset` là record đặt vào tree.** Khi có tick "Lưu vào thư viện", `asset` là clone và `libraryAsset` là bản gốc trong thư viện.
 - `MediaAssetDto = { id, storageKey, mimeType, width, height, sizeBytes, altText, focalPointX, focalPointY, originalFileName, folder, isInLibrary, preset, sourceAssetId, createdAt }`
-- `ShopDto` có thêm `logoId: string | null` và (D4, #88) `logoStorageKey: string | null` — storage key **tương đối** của phái sinh `320x96,inside`, `null` khi chưa có logo hoặc chưa có phái sinh; KHÔNG phải URL. Response luôn có cả hai field, giá trị có thể là `null`. `ShopSummaryDto` (`GET /shops`) không đổi.
+- `ShopDto` có thêm `logoId: string | null` và (D4, #88) `logoUrl: string | null` — `/media/{storageKey}` của phái sinh `320x96,inside` (đường dẫn tương đối theo domain, BE trả sẵn có tiền tố), `null` khi chưa có logo hoặc chưa có phái sinh. `ShopSummaryDto` (`GET /shops`) cũng có `logoUrl` (tra theo lô). Response luôn có các field này, giá trị có thể là `null`.
 
 **Ảnh không đi qua API.** Mọi ảnh phục vụ tại `/media/{storageKey}`, trên mọi domain. Chỉ `resolveImage()` được nối chuỗi `/media/`.
 
@@ -53,7 +53,7 @@ Theo plan §8, các mục F1–F5 ([plan.md](plan.md)):
    - Danh sách có phân trang, upload vào thư viện, clone vào slot.
    - Xoá: gọi `references` trước, có tham chiếu thì **cảnh báo nhưng không chặn**.
    - Hiện dung lượng đã dùng.
-5. **F4 · logo** trong trang sửa shop: nút upload chỉ hiện với Owner. Hiện logo bằng `mediaUrl(shop.logoStorageKey)` (phái sinh `320x96,inside`, BE trả sẵn trong `ShopDto`, #88); ngay sau khi upload có thể dùng `ShopLogoDto.derivatives`.
+5. **F4 · logo** trong trang sửa shop: nút upload chỉ hiện với Owner. Hiện logo bằng `<img src={shop.logoUrl}>` trực tiếp (phái sinh `320x96,inside`, BE trả sẵn URL có `/media/`, #88; không cần `mediaUrl()`); ngay sau khi upload có thể dùng `ShopLogoDto.derivatives`.
 6. **F5 · `dev-registry`:** Hero/Gallery dùng dialog và picker thật. Tải lại trang thì điền `mediaMap` qua `GET …/media/assets?ids=`.
 
 ## Mã lỗi FE phải xử lý (ProblemDetails `error_code`)
