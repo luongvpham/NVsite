@@ -36,6 +36,11 @@ export function ShopLogoSection({ shopId, logoId, isOwner }: ShopLogoSectionProp
   // response mutation là nguồn dữ liệu tức thời; invalidate query bên dưới để lần tải trang sau
   // logoId mới khớp cache).
   const [justUploadedStorageKey, setJustUploadedStorageKey] = useState<string | null>(null);
+  // true khi response upload KHÔNG có phái sinh 320x96,inside — `justUploadedStorageKey` khi đó là
+  // fallback `libraryAsset.storageKey` (bản gốc, sai kích thước hiển thị). Phải cảnh báo rõ, không
+  // được âm thầm hiện ảnh sai cỡ như hiện logo đúng cỡ (cùng quy ước với case "Không tìm thấy ảnh
+  // logo." bên dưới — review MEDIA-001 F4/F5, ~:236-242).
+  const [uploadDerivativeMissing, setUploadDerivativeMissing] = useState(false);
 
   const assetsQuery = useGetShopsShopIdMediaAssets(
     shopId,
@@ -49,9 +54,11 @@ export function ShopLogoSection({ shopId, logoId, isOwner }: ShopLogoSectionProp
         const derivative = result.derivatives.find((d) => d.preset === LOGO_DISPLAY_PRESET);
         if (!derivative) {
           // Không nên xảy ra (BE luôn sinh đủ phái sinh cho preset của Shop, config/image-presets.json)
-          // — vẫn hiện được bằng bản gốc thay vì chặn UI hoàn toàn, giống quy ước cảnh báo của resolveImage.
+          // — vẫn hiện tạm bằng bản gốc để không chặn hẳn UI, nhưng phải cảnh báo rõ (không âm thầm
+          // thay thế bằng ảnh sai kích thước) — xem `uploadDerivativeMissing` bên dưới.
           console.warn(`[ShopLogoSection] response logo upload thiếu phái sinh "${LOGO_DISPLAY_PRESET}"`);
         }
+        setUploadDerivativeMissing(!derivative);
         setJustUploadedStorageKey(derivative?.storageKey ?? result.libraryAsset.storageKey);
         setClientError(null);
         void queryClient.invalidateQueries({ queryKey: getGetShopsShopIdQueryKey(shopId) });
@@ -98,6 +105,13 @@ export function ShopLogoSection({ shopId, logoId, isOwner }: ShopLogoSectionProp
       )}
 
       {isEmpty && <p className="mt-2 text-sm text-muted-foreground">Shop chưa có logo.</p>}
+
+      {justUploadedStorageKey && uploadDerivativeMissing && (
+        <p className="mt-2 text-sm text-destructive" role="alert">
+          Không tìm thấy phái sinh {LOGO_DISPLAY_PRESET} trong phản hồi tải lên — ảnh hiển thị bên dưới
+          là bản gốc, có thể sai kích thước.
+        </p>
+      )}
 
       {displayStorageKey && (
         <img

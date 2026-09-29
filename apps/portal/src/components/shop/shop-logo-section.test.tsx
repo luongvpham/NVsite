@@ -89,6 +89,26 @@ describe('ShopLogoSection (F4)', () => {
     });
   });
 
+  it('upload thành công nhưng response thiếu phái sinh 320x96,inside → hiện cảnh báo, không âm thầm dùng ảnh gốc', async () => {
+    const responseBody: ShopLogoDto = {
+      libraryAsset: { ...baseAsset, id: 'logo-library-1', isInLibrary: true, preset: null, storageKey: 'shop-1/logo-original.jpg' },
+      // Chỉ có phái sinh khác — KHÔNG có 320x96,inside.
+      derivatives: [{ ...baseAsset, id: 'logo-derivative-2', preset: '96x96,cover', storageKey: 'shop-1/logo-96x96.jpg' }],
+    };
+    server.use(
+      http.put('*/shops/:shopId/logo', () => HttpResponse.json(responseBody)),
+    );
+    renderWithQuery(<ShopLogoSection shopId="shop-1" logoId={null} isOwner />);
+
+    const file = makeFile('logo.jpg', 1024, 'image/jpeg');
+    fireEvent.change(screen.getByLabelText('Tải logo mới', { selector: 'input' }), { target: { files: [file] } });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Không tìm thấy phái sinh 320x96,inside/);
+    // Ảnh vẫn hiện (fallback bản gốc) nhưng đi kèm cảnh báo ở trên, không phải thay thế âm thầm.
+    const img = await screen.findByAltText('Logo shop');
+    expect(img).toHaveAttribute('src', '/media/shop-1/logo-original.jpg');
+  });
+
   it('báo lỗi client khi chọn file vượt quá 10MB, không gọi API', () => {
     renderWithQuery(<ShopLogoSection shopId="shop-1" logoId={null} isOwner />);
     const bigFile = makeFile('big.jpg', 11 * 1024 * 1024, 'image/jpeg');
