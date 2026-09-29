@@ -113,6 +113,47 @@ public sealed class ShopLogoReaderTests
     }
 
     [Fact]
+    public async Task Replaced_logo_two_sources_in_same_shop_each_resolve_to_their_own_derivative()
+    {
+        await using var db = CreateDb();
+        var shopId = Guid.NewGuid();
+        _tenant.ShopId = shopId;
+        var source1 = NewLibrary(shopId);
+        var header1 = NewDerived(source1, Header);
+        db.MediaAssets.AddRange(source1, header1);
+        await db.SaveChangesAsync();
+        await Task.Delay(20);
+        var source2 = NewLibrary(shopId);
+        var header2 = NewDerived(source2, Header);
+        db.MediaAssets.AddRange(source2, header2);
+        await db.SaveChangesAsync();
+
+        var reader = new ShopLogoReader(db);
+
+        Assert.True(header1.CreatedAt < header2.CreatedAt);
+        Assert.Equal(header2.StorageKey, await reader.GetLogoStorageKeyAsync(shopId, source2.Id, CancellationToken.None));
+        Assert.Equal(header1.StorageKey, await reader.GetLogoStorageKeyAsync(shopId, source1.Id, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Resolves_regardless_of_ambient_tenant_context_because_filters_are_ignored()
+    {
+        await using var db = CreateDb();
+        var shopId = Guid.NewGuid();
+        _tenant.ShopId = shopId;
+        var source = NewLibrary(shopId);
+        var header = NewDerived(source, Header);
+        db.MediaAssets.AddRange(source, header);
+        await db.SaveChangesAsync();
+
+        _tenant.ShopId = null;
+        Assert.Equal(header.StorageKey, await new ShopLogoReader(db).GetLogoStorageKeyAsync(shopId, source.Id, CancellationToken.None));
+
+        _tenant.ShopId = Guid.NewGuid();
+        Assert.Equal(header.StorageKey, await new ShopLogoReader(db).GetLogoStorageKeyAsync(shopId, source.Id, CancellationToken.None));
+    }
+
+    [Fact]
     public void Derivative_preset_catalog_for_Shop_contains_the_header_logo_preset()
     {
         var catalog = new DerivativePresetCatalog(
