@@ -61,6 +61,30 @@ public sealed class SoftDeletedMembershipTests
     }
 
     [Fact]
+    public async Task ListShops_does_not_list_soft_deleted_shop_or_soft_deleted_role_but_lists_control_shop()
+    {
+        await using var db = CreateDb();
+        var (controlShop, user, _) = await SeedAsync(db);
+
+        // Membership còn sống (Active, !IsDeleted) nhưng bản thân Shop đã bị xoá mềm.
+        var deletedShop = new ShopEntity(Guid.NewGuid()) { Name = "Gone", Slug = $"gone-{Guid.NewGuid():N}", Kind = ShopKind.Hosted, IsDeleted = true };
+        db.Shops.Add(deletedShop);
+        db.UserShops.Add(new UserShop { UserId = user, ShopId = deletedShop.Id, RoleId = WellKnownRoles.OwnerId, Source = UserShopSource.ShopCreator });
+
+        // Membership còn sống trỏ tới một Role đã bị xoá mềm.
+        var deletedRoleId = Guid.NewGuid();
+        db.Roles.Add(new Role(deletedRoleId) { Code = "Ghost", Name = "Ghost", Scope = RoleScope.Shop, IsDeleted = true });
+        var ghostShop = new ShopEntity(Guid.NewGuid()) { Name = "Ghost", Slug = $"ghost-{Guid.NewGuid():N}", Kind = ShopKind.Hosted };
+        db.Shops.Add(ghostShop);
+        db.UserShops.Add(new UserShop { UserId = user, ShopId = ghostShop.Id, RoleId = deletedRoleId, Source = UserShopSource.ShopCreator });
+        await db.SaveChangesAsync();
+
+        var list = await new ListShopsHandler(db, new FakeUser(user), new EmptyReader()).Handle(new ListShopsQuery(), default);
+
+        Assert.Equal(controlShop.Id, Assert.Single(list).Id);
+    }
+
+    [Fact]
     public async Task UpdateShop_by_soft_deleted_owner_is_forbidden()
     {
         await using var db = CreateDb();
