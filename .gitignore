@@ -4,6 +4,7 @@ node_modules/
 dist/
 .output/
 .turbo/
+*.tsbuildinfo
 *.log
 npm-debug.log*
 pnpm-debug.log*

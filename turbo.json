@@ -18,7 +18,7 @@
     "gen:api": {
       "cache": true,
       "inputs": ["$TURBO_ROOT$/contracts/openapi/**"],
-      "outputs": ["src/**"]
+      "outputs": ["src/generated/**"]
     },
     "gen:registry": {
       "cache": true,
