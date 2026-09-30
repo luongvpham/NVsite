@@ -14,7 +14,7 @@ namespace Vsite.IntegrationTests;
 /// <c>DuplicateNullableSchemaDocumentTransformerTests.cs</c>) — dựng một <c>WebApplication</c> tối
 /// giản riêng (KHÔNG dùng <c>Vsite.Api.Program</c>, vốn kéo theo Redis/Postgres qua
 /// <c>TenantResolutionMiddleware</c> ngay cả cho request tới <c>/openapi</c> — xác nhận bằng thực
-/// nghiệm lúc điều tra bug này, xem task-D2-report.md) chạy trên
+/// nghiệm lúc điều tra bug này, xem `Docs/tasks/MEDIA-001-D2/changelog.md`) chạy trên
 /// <see cref="Microsoft.AspNetCore.TestHost.TestServer"/> (in-memory, không cần Docker/socket
 /// thật), map một endpoint trả về DTO có shape giống hệt <c>SlotUploadResultDto</c> (một property
 /// non-null + một property nullable CÙNG type), rồi gọi thật <c>GET /openapi/{name}.json</c> và

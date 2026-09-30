@@ -59,8 +59,9 @@ export default defineConfig({
       // Host thành target (localhost:5270) và làm audience sai.
       '/auth': { target: 'http://localhost:5270', changeOrigin: false },
       '/shops': { target: 'http://localhost:5270', changeOrigin: false },
-      // Ảnh không đi qua API — mọi ảnh phục vụ tại /media/{storageKey} (brief MEDIA-001).
-      // Chỉ resolveImage() được nối chuỗi /media/.
+      // Ảnh không đi qua API — mọi ảnh phục vụ tại /media/{storageKey} (#88). Ảnh trong nội dung
+      // builder: qua resolveImage(); field DTO đặt tên *Url (vd. ShopDto.logoUrl) BE trả sẵn có
+      // tiền tố /media/ nên dùng nguyên; storageKey thô của Library (chưa có imageId) qua mediaUrl().
       '/media': { target: 'http://localhost:5270', changeOrigin: false },
     },
   },

@@ -3,7 +3,7 @@ import { Button, Dialog } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
 import { usePostShopsShopIdMediaSlotUploads, type MediaAssetDto } from '@vsite/api-sdk';
 import { getErrorMessage, HEIC_UNSUPPORTED_GUIDANCE } from '../../lib/error-messages';
-import { ACCEPT_ATTR, fileSchema, fitOfPreset } from '../../lib/media-validation';
+import { ACCEPT_ATTR, fileSchema, fitOfPreset, isHeicFile } from '../../lib/media-validation';
 
 export interface UploadSlotDialogProps {
   shopId: string;
@@ -23,6 +23,7 @@ export function UploadSlotDialog({ shopId, preset, open, onClose, onUploaded }: 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [clientHeic, setClientHeic] = useState(false);
   const [focalX, setFocalX] = useState(0.5);
   const [focalY, setFocalY] = useState(0.5);
   const [saveToLibrary, setSaveToLibrary] = useState(false);
@@ -54,6 +55,7 @@ export function UploadSlotDialog({ shopId, preset, open, onClose, onUploaded }: 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const selected = event.target.files?.[0] ?? null;
     setClientError(null);
+    setClientHeic(false);
     if (!selected) {
       setFile(null);
       setPreviewUrl(null);
@@ -62,6 +64,7 @@ export function UploadSlotDialog({ shopId, preset, open, onClose, onUploaded }: 
     const result = fileSchema.safeParse(selected);
     if (!result.success) {
       setClientError(result.error.issues[0]?.message ?? 'Ảnh không hợp lệ');
+      setClientHeic(isHeicFile(selected));
       setFile(null);
       setPreviewUrl(null);
       return;
@@ -117,9 +120,10 @@ export function UploadSlotDialog({ shopId, preset, open, onClose, onUploaded }: 
         </div>
 
         {clientError && (
-          <p className="text-sm text-destructive" role="alert">
-            {clientError}
-          </p>
+          <div className="text-sm text-destructive" role="alert">
+            <p>{clientError}</p>
+            {clientHeic && <p className="mt-1">{HEIC_UNSUPPORTED_GUIDANCE}</p>}
+          </div>
         )}
 
         {previewUrl && (

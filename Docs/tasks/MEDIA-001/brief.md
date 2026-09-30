@@ -40,8 +40,7 @@ PUT    /shops/{shopId}/logo                               multipart: file; chỉ
 
 Theo plan §8, các mục F1–F5 ([plan.md](plan.md)):
 
-1. `pnpm gen:api`. **Kiểm ngay hai điểm lạ của OpenAPI** (contract-diff §"quirks"):
-   - Schema `MediaAssetDto2` là bản trùng của `MediaAssetDto`. Nếu Orval sinh ra 2 type TS trùng lặp, **dừng lại và báo** (quyết định Gate 1: sửa ở BE bằng schema transformer trước khi FE bám vào). Không tự viết type alias để lấp.
+1. `pnpm gen:api`. **Kiểm ngay điểm lạ còn lại của OpenAPI** (contract-diff §"quirks"; quirk `MediaAssetDto2` đã được D2 / #87 loại bỏ ở BE — không còn schema trùng, không cần xử lý gì ở FE):
    - Form multipart không có `required`, nên `file` và `preset` sinh ra là optional. FE tự validate (Zod) cho hai field đó.
 2. **F1 · `resolveImage`:** thay thân hàm, **giữ chữ ký** `(imageId, preset)` (#74). Thêm `mediaMap` vào `RenderContextValue`. Preset lệch thì `console.warn` nhưng vẫn render. Không được đụng `window`/`document` (#23). Thêm proxy `/media` vào `apps/portal` và `apps/web` (dev), giữ `changeOrigin: false`.
 3. **F2 · dialog upload vào slot:**

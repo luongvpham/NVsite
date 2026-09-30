@@ -14,7 +14,7 @@ namespace Vsite.IntegrationTests.ExceptionHandling;
 /// <c>IHttpMaxRequestBodySizeFeature</c> giống Kestrel thật hay không (không kiểm tra được — cần
 /// Docker để dựng <c>MediaApiFactory</c> gửi request &gt;11MB thật). Test này chỉ xác nhận PHẦN
 /// DỊCH LỖI → ProblemDetails là đúng, không xác nhận Kestrel/TestServer THẬT SỰ ném lỗi ở ngưỡng
-/// nào — ghi rõ trong `task-T5-report.md`.
+/// nào — ghi ở `Docs/tasks/MEDIA-001/changelog.md` mục "Chưa làm xong" #7.
 /// </summary>
 public sealed class BadHttpRequestExceptionHandlerTests
 {

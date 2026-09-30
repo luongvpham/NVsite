@@ -102,6 +102,24 @@ describe('UploadSlotDialog (F2)', () => {
     expect(await screen.findByText(HEIC_UNSUPPORTED_GUIDANCE)).toBeInTheDocument();
   });
 
+  it('chọn file HEIC: client chặn và hiện hướng dẫn HEIC (S4)', () => {
+    renderWithQuery(<UploadSlotDialog shopId="shop-1" preset="1600x900,cover" open onClose={vi.fn()} onUploaded={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('Chọn ảnh'), { target: { files: [makeFile('a.heic', 1024, 'image/heic')] } });
+
+    expect(screen.getByText(/Định dạng không hỗ trợ/)).toBeInTheDocument();
+    expect(screen.getByText(HEIC_UNSUPPORTED_GUIDANCE)).toBeInTheDocument();
+  });
+
+  it('file sai định dạng khác (không phải HEIC) không hiện hướng dẫn HEIC', () => {
+    renderWithQuery(<UploadSlotDialog shopId="shop-1" preset="1600x900,cover" open onClose={vi.fn()} onUploaded={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('Chọn ảnh'), { target: { files: [makeFile('a.gif', 1024, 'image/gif')] } });
+
+    expect(screen.getByText(/Định dạng không hỗ trợ/)).toBeInTheDocument();
+    expect(screen.queryByText(HEIC_UNSUPPORTED_GUIDANCE)).not.toBeInTheDocument();
+  });
+
   it('lỗi MEDIA_FILE_TOO_LARGE từ server hiện message riêng', async () => {
     server.use(
       http.post('*/shops/:shopId/media/slot-uploads', () =>

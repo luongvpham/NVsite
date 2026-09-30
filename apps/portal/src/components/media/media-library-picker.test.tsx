@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import type { MediaAssetDto, PagedResultOfMediaAssetDto } from '@vsite/api-sdk';
 import { mediaUrl } from '@vsite/builder-components';
+import { HEIC_UNSUPPORTED_GUIDANCE } from '../../lib/error-messages';
 import { renderWithQuery } from '../../test/render-with-query';
 import { server } from '../../test/msw-server';
 import { MediaLibraryPicker } from './media-library-picker';
@@ -85,6 +86,23 @@ describe('MediaLibraryPicker (F3)', () => {
     expect(await screen.findByText(/vượt quá 10 MB/)).toBeInTheDocument();
   });
 
+  it('chọn file HEIC ở upload thư viện: client chặn và hiện hướng dẫn HEIC (S4)', async () => {
+    server.use(
+      http.get('*/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([]))),
+      http.get('*/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+    );
+    renderWithQuery(
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Tải ảnh lên thư viện', { selector: 'input' }), {
+      target: { files: [makeFile('a.heif', 1024, 'image/heif')] },
+    });
+
+    expect(await screen.findByText(/Định dạng không hỗ trợ/)).toBeInTheDocument();
+    expect(screen.getByText(HEIC_UNSUPPORTED_GUIDANCE)).toBeInTheDocument();
+  });
+
   it('hiện trạng thái rỗng khi thư viện chưa có ảnh', async () => {
     server.use(
       http.get('*/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([]))),
@@ -154,6 +172,10 @@ describe('MediaLibraryPicker (F3)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Xoá' }));
 
     expect(await screen.findByText(/đang được dùng ở 1 nơi/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ảnh sẽ ẩn khỏi thư viện; các nơi đang dùng vẫn hiển thị bình thường\./),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/có thể hiển thị lỗi/)).not.toBeInTheDocument();
     const confirmDialog = screen.getByRole('alertdialog');
     fireEvent.click(within(confirmDialog).getByRole('button', { name: 'Xoá' }));
 

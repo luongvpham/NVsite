@@ -31,7 +31,7 @@ sửa cùng task này (thêm mục "Property object nullable → `allOf` + `null
   `IOptionsMonitor<OpenApiOptions>`, fallback về default chỉ khi không có custom delegate. Nếu một
   id bị hai CLR type khác nhau cùng chiếm thì `throw InvalidOperationException` lúc generate — không
   âm thầm trỏ nhầm type.
-- **Nguyên nhân:** review Gate 1 nội bộ (`.superpowers/sdd/plan/progress.md`) phát hiện dùng thẳng
+- **Nguyên nhân:** review Gate 1 nội bộ (ghi chép quy trình, không commit) phát hiện dùng thẳng
   default id có thể sai nếu tương lai có custom `CreateSchemaReferenceId`, hoặc hai type trùng tên ở
   hai module khác nhau.
 

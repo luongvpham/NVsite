@@ -28,11 +28,11 @@ export interface RenderContextValue {
 const PLACEHOLDER_PRESET_PATH = (preset: string) => `/_dev/placeholder/${preset}.svg`;
 
 /**
- * Duy nhất một nơi biết cách nối `storageKey` thành URL ảnh thật (brief MEDIA-001 §"Ảnh không đi
- * qua API" — "Chỉ resolveImage() được nối chuỗi /media/"). `resolveImage` gọi hàm này bên trong.
- * Export riêng để nơi cần hiện ảnh KHÔNG qua tree/mediaMap (vd. Media Library picker ở apps/portal
- * — ảnh thư viện chưa có `imageId` trong tree) vẫn dùng đúng một quy ước URL, không tự nối chuỗi
- * `/media/` lần thứ hai. Thuần, isomorphic — không đụng window/document (#23).
+ * Duy nhất một nơi FE nối `storageKey` thô thành URL ảnh (#88). Ảnh trong nội dung builder đi qua
+ * `resolveImage()` (gọi hàm này bên trong); `storageKey` thô của Library (chưa có `imageId` trong
+ * tree — vd. Media Library picker ở apps/portal) dùng hàm này trực tiếp. Field DTO đặt tên `*Url`
+ * (vd. `ShopDto.logoUrl`) thì BE trả sẵn có tiền tố `/media/` — dùng nguyên, KHÔNG qua hàm này
+ * (nối lần hai sẽ thành `/media//media/…`). Thuần, isomorphic — không đụng window/document (#23).
  */
 export function mediaUrl(storageKey: string): string {
   return `/media/${storageKey}`;

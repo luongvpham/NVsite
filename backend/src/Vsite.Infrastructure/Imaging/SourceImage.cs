@@ -84,6 +84,8 @@ internal sealed class SourceImage(Image<Rgba32> image, ImageUploadOptions option
     /// nhỏ nếu crop lớn hơn khung yêu cầu (R3) — ảnh nhỏ hơn preset giữ nguyên kích thước crop thật.</summary>
     private static void ApplyCover(Image<Rgba32> img, int targetWidth, int targetHeight, FocalPoint focal)
     {
+        // Kích thước crop luôn ≥ 1px: ảnh 1×N hoặc N×1 với preset dọc/ngang làm phép làm tròn ra 0 →
+        // Crop ném ngoại lệ → HTTP 500 (final fix S1).
         var targetAspect = (double)targetWidth / targetHeight;
         var srcAspect = (double)img.Width / img.Height;
 
@@ -91,12 +93,12 @@ internal sealed class SourceImage(Image<Rgba32> image, ImageUploadOptions option
         if (srcAspect > targetAspect)
         {
             cropHeight = img.Height;
-            cropWidth = Math.Min(img.Width, (int)Math.Round(img.Height * targetAspect));
+            cropWidth = Math.Clamp((int)Math.Round(img.Height * targetAspect), 1, img.Width);
         }
         else
         {
             cropWidth = img.Width;
-            cropHeight = Math.Min(img.Height, (int)Math.Round(img.Width / targetAspect));
+            cropHeight = Math.Clamp((int)Math.Round(img.Width / targetAspect), 1, img.Height);
         }
 
         var centerX = (int)Math.Round(focal.X * img.Width);

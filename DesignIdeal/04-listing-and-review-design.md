@@ -1,6 +1,6 @@
 # vsite — Thiết Kế: Listing (tin đăng marketplace) & Review
 
-> **STATUS:** `IMPLEMENTED` · **Tasks:** `SHOP-001,MEDIA-001` · **Changelog:** `Docs/tasks/SHOP-001/changelog.md` · **Stale:** `Chỉ §2.1/§2.2 (Shop) đã code — §3 trở đi (ServiceCategory/Listing/Review/Lead) vẫn là spec, chưa có dòng code nào · §2.1 Shop chưa liệt kê LogoId (FK ghép, MEDIA-001) và logoUrl trên ShopDto/ShopSummaryDto (xem Docs/tasks/MEDIA-001/changelog.md mục 13)`
+> **STATUS:** `IMPLEMENTED` · **Tasks:** `SHOP-001,MEDIA-001` · **Changelog:** `Docs/tasks/MEDIA-001/changelog.md` · **Stale:** `Changelog trước MEDIA-001: Docs/tasks/SHOP-001/changelog.md (banner chỉ nhận một đường dẫn) · Chỉ §2.1/§2.2 (Shop) đã code — §3 trở đi (ServiceCategory/Listing/Review/Lead) vẫn là spec, chưa có dòng code nào · §2.1 Shop chưa liệt kê LogoId (FK ghép, MEDIA-001) và logoUrl trên ShopDto/ShopSummaryDto (xem Docs/tasks/MEDIA-001/changelog.md mục 13)`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md) — §2.1/§2.2 đã code ở SHOP-001, đọc changelog trước khi
 > dựa vào phần đó. Phần còn lại của file (§3+) vẫn thuần thiết kế.
 

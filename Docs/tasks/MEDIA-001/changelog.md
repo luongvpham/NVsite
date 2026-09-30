@@ -127,8 +127,9 @@ Docker chạy thật cho toàn bộ lớp Testcontainers — `Docs/DOCKER-TEST-D
 - **Thực thi (A8):** `public, max-age=3600` cho tới Bước 8 (cache publish). Middleware
   `MediaFileMiddleware` mount bằng `app.Map(ImagePaths.MediaPathPrefix, …)` **trước**
   `TenantResolutionMiddleware` (đọc không kiểm tenant, #53): chỉ GET/HEAD (405 + `Allow` cho phương
-  thức khác), kiểm `RawTarget` trước khi ASP.NET giải mã (chặn `%2F`, `%2e`) rồi `ValidateKey`; key
-  phải bắt đầu bằng `shops/`.
+  thức khác), kiểm `RawTarget` trước khi ASP.NET giải mã (chỉ từ chối `%2f` và `%5c`, không phân biệt hoa
+  thường) rồi `ValidateKey`; `..` bị chặn bởi `ImagePaths.ValidateKey` + `LocalDiskObjectStorage.ResolvePath`,
+  không phải bởi kiểm `RawTarget`. Key phải bắt đầu bằng `shops/`.
 - **Điều kiện đảo lại:** Bước 8 chốt cache/TTL (`05` §25 #4) thì đổi sang `immutable`.
 
 ### API
@@ -244,6 +245,15 @@ dùng chung đăng ký cho mọi document module, ghi ở `backend/CLAUDE.md` §
   biết fit; sai nếu sau này đặt tên preset không theo khuôn.
 - Focal point ở F2 là **một dấu chấm** click trên ảnh, chưa có khung crop (xem "Chưa làm xong" mục 6).
 
+#### 17. Giả định phụ của T5 (trước đây nằm trong comment code)
+
+- **Clock:** không có abstraction thời gian sẵn có nên `AddMediaModule` đăng ký `TimeProvider.System`
+  (Singleton, stateless); test thay bằng `FakeTimeProvider` qua override DI.
+- **Validator upload-to-slot:** chỉ kiểm focal ∈ [0, 1] và `Preset` không rỗng. Kiểm preset tồn tại nằm
+  ở `UploadToSlotHandler` vì `ValidationException` luôn trả `VALIDATION_ERROR` chung, còn brief đòi mã
+  `MEDIA_UNKNOWN_PRESET` ở top-level ProblemDetails. `FileName` cắt còn 200 ký tự ở `MediaAssetWriter`
+  (khớp `MaxLength(200)` của cột), không phải lỗi validation.
+
 ---
 
 ## Chưa làm xong (nợ kỹ thuật, không phải lệch có chủ đích)
@@ -261,6 +271,12 @@ Mọi mục dưới đây đã có chỗ theo dõi — cột cuối là nơi **�
 | 7 | **Giới hạn 413 thật qua Kestrel chưa được chứng minh.** `BadHttpRequestExceptionHandlerTests` chỉ chứng minh phần dịch lỗi; không test nào gửi request > 11 MB qua server thật. Cùng bài nghiệm thu tay mục 5 | `00-INDEX.md` §4 (gộp vào dòng nghiệm thu tay) |
 | 8 | **`tools/contract-sync` mù với response dạng mảng:** `extractSchemaRefs` chỉ đi theo `$ref` cấp cao nhất nên thay đổi ở `GET /shops`, `…/derivatives`, `…/assets?ids=` hiện là "UNCHANGED". D4 phải kiểm staging bằng tay. Cần task riêng (đi theo `items.$ref`/`allOf` + diff dự phòng `components.schemas`) và ghi chú vào skill `contract-sync` | `00-INDEX.md` §4 |
 | 9 | **Lỗ hổng #19 có từ trước:** 400 do model-binding (guid/page/JSON sai) và 415 của endpoint JSON không có `error_code`; `page` tràn số → `Skip` âm → 500. D1 chỉ scope 415 cho route multipart, không đổi module khác | `00-INDEX.md` §4 |
+| 10 | **`UploadShopLogoHandler` để lại file mồ côi** nếu shop biến mất giữa lúc kiểm tra và lúc ghi (race NotFound) — dọn ở job mồ côi (mục 3) | mục 3 |
+| 11 | **`MediaAsset.SourceAssetId` không phải FK ghép** `(SourceAssetId, ShopId)` — ràng buộc "bản gốc cùng shop" chưa được DB bảo vệ | (chưa có nơi khác) |
+| 12 | **`MediaAssetWriter`: lỗi sau commit** — trường hợp cạnh khi lỗi xảy ra sau khi transaction đã commit, rollback bù chưa được xử lý | (chưa có nơi khác) |
+| 13 | **`config/reserved-routes.json` dùng tab để thụt lề** — file chỉ người sửa được (hook bảo vệ) | người duyệt |
+| 14 | **`dev-registry` `useEffect` deps** chưa đầy đủ — code tạm (xem mục 15 ở phần Frontend phía trên) | mục 15 ở phần Frontend |
+| 15 | **Audit `UserShops.IgnoreQueryFilters()` thiếu `!IsDeleted`** ở các handler Identity có từ trước (Login, RefreshToken, Register, ChangePassword, ForgotPassword, ResetPassword, VerifyEmail). MEDIA-001 chỉ sửa 4 chỗ cổng Media/Shop | `00-INDEX.md` §4 |
 
 ### Các "minor" đã hoãn có chủ đích (review ghi nhận, không ảnh hưởng đúng/sai tenant)
 

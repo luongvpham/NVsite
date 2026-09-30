@@ -4,9 +4,10 @@ import type { ComponentNode, ImagePickerValue, MediaRef } from '@vsite/builder-c
 import { Inspector, mediaUrl, propertyPanel, setAtPath } from '@vsite/builder-components';
 import type { PropertyPanelField } from '@vsite/builder-components';
 import { RenderContextProvider, RenderTree } from '@vsite/builder-renderer';
-import { useGetShopsShopIdMediaAssets, type MediaAssetDto } from '@vsite/api-sdk';
+import { useGetShops, useGetShopsShopIdMediaAssets, type MediaAssetDto } from '@vsite/api-sdk';
 import { UploadSlotDialog } from '../components/media/upload-slot-dialog';
 import { MediaLibraryPicker } from '../components/media/media-library-picker';
+import { isShopOwner } from '../lib/shop-role';
 
 /**
  * `/_dev/registry` (07 §10) — đặt tại `/dev-registry` vì TanStack Router dùng prefix `_` cho
@@ -118,7 +119,7 @@ function walkForImageIds(value: unknown, acc: Set<string>): void {
  * (MediaLibraryPicker, F3, luôn tạo bản clone mới — #71). Cả hai trả về `MediaAssetDto` dùng ngay
  * để điền `mediaMap` (không cần round-trip `assets?ids=` cho ảnh vừa chọn trong phiên này).
  */
-function ImagePickerControl({
+export function ImagePickerControl({
   shopId,
   preset,
   value,
@@ -134,6 +135,9 @@ function ImagePickerControl({
   onAssetResolved: (asset: MediaAssetDto) => void;
 }) {
   const [mode, setMode] = useState<'closed' | 'upload' | 'library'>('closed');
+  // Nút Xoá của picker chỉ hiện cho Owner: signal duy nhất là roleCode của `GET /shops` (cùng cách màn sửa shop).
+  const shopsQuery = useGetShops();
+  const isOwner = isShopOwner(shopsQuery.data, shopId);
   const hasShopId = shopId.trim().length > 0;
   const currentRef = value.imageId ? mediaMap[value.imageId] : undefined;
 
@@ -205,6 +209,7 @@ function ImagePickerControl({
         <MediaLibraryPicker
           shopId={shopId}
           preset={preset}
+          isOwner={isOwner}
           open
           onClose={() => {
             setMode('closed');

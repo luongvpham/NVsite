@@ -3,7 +3,7 @@ using Vsite.Domain.Media.Entities;
 namespace Vsite.Application.Media.Dtos;
 
 /// <summary>T5, MEDIA-001 — shape trả về cho mọi endpoint đọc/ghi <see cref="MediaAsset"/> (bảng
-/// endpoint module ở `task-T5-brief.md` cuối file).</summary>
+/// endpoint module ở `backend/docs/modules/media.md`).</summary>
 public sealed record MediaAssetDto(
     Guid Id,
     string StorageKey,

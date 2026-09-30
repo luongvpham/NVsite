@@ -14,9 +14,9 @@ import {
   usePostShopsShopIdMediaLibraryAssetIdClones,
   type MediaAssetDto,
 } from '@vsite/api-sdk';
-import { getErrorMessage } from '../../lib/error-messages';
+import { getErrorMessage, HEIC_UNSUPPORTED_GUIDANCE } from '../../lib/error-messages';
 import { formatBytes } from '../../lib/format-bytes';
-import { ACCEPT_ATTR, fileSchema, fitOfPreset } from '../../lib/media-validation';
+import { ACCEPT_ATTR, fileSchema, fitOfPreset, isHeicFile } from '../../lib/media-validation';
 
 const PAGE_SIZE = 24;
 
@@ -40,6 +40,7 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadHeic, setUploadHeic] = useState(false);
   const [selectedForClone, setSelectedForClone] = useState<MediaAssetDto | null>(null);
   const [cloneFocal, setCloneFocal] = useState({ x: 0.5, y: 0.5 });
   const [pendingDelete, setPendingDelete] = useState<{ asset: MediaAssetDto; referenceCount: number } | null>(null);
@@ -89,9 +90,11 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
     const result = fileSchema.safeParse(file);
     if (!result.success) {
       setUploadError(result.error.issues[0]?.message ?? 'Ảnh không hợp lệ');
+      setUploadHeic(isHeicFile(file));
       return;
     }
     setUploadError(null);
+    setUploadHeic(false);
     uploadMutation.mutate({ shopId, data: { file } });
   }
 
@@ -159,9 +162,10 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
 
         {uploadMutation.isPending && <p className="text-sm text-muted-foreground">Đang tải ảnh lên...</p>}
         {uploadError && (
-          <p role="alert" className="text-sm text-destructive">
-            {uploadError}
-          </p>
+          <div role="alert" className="text-sm text-destructive">
+            <p>{uploadError}</p>
+            {uploadHeic && <p className="mt-1">{HEIC_UNSUPPORTED_GUIDANCE}</p>}
+          </div>
         )}
 
         {libraryQuery.isPending && <p className="text-muted-foreground">Đang tải thư viện...</p>}
@@ -265,7 +269,7 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
           <div role="alertdialog" className="space-y-2 rounded border border-destructive/50 bg-destructive/10 p-3">
             <p className="text-sm">
               {pendingDelete.referenceCount > 0
-                ? `Ảnh này đang được dùng ở ${pendingDelete.referenceCount} nơi (vd. logo shop). Xoá vẫn được thực hiện, các nơi đó có thể hiển thị lỗi.`
+                ? `Ảnh này đang được dùng ở ${pendingDelete.referenceCount} nơi (vd. logo shop). Ảnh sẽ ẩn khỏi thư viện; các nơi đang dùng vẫn hiển thị bình thường.`
                 : 'Xoá ảnh này khỏi thư viện?'}
             </p>
             {deleteMutation.isError && (

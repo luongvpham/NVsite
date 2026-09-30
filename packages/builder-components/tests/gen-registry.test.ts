@@ -53,7 +53,7 @@ describe('gen-registry — codegen là hàm thuần (§9)', () => {
         expect(second[file], `${file} khác nhau giữa hai lần chạy`).toBe(first[file]);
       }
     },
-    20_000, // spawn 2 tsx process con — chậm hơn 5000ms mặc định khi máy đang bận
+    60_000, // spawn 2 tsx process con — chậm hơn 5000ms mặc định; 20_000 từng timeout khi turbo chạy song song
   );
 });
 

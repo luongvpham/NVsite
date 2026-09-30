@@ -110,7 +110,7 @@ public static class DependencyInjection
     private static IServiceCollection AddMediaModule(this IServiceCollection services)
     {
         // TimeProvider.System — không có clock abstraction sẵn có trong codebase (T5 tự quyết,
-        // xem task-T5-report.md "Giả định tôi đã tự đặt"). Singleton: TimeProvider tự nó
+        // xem `Docs/tasks/MEDIA-001/changelog.md` mục 17). Singleton: TimeProvider tự nó
         // thread-safe/stateless, tests thay bằng FakeTimeProvider qua override DI khi cần.
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<MediaAssetWriter>();

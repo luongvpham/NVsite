@@ -302,6 +302,22 @@ public sealed class ImageSharpImageProcessorTests
         Assert.Equal(900, encoded.Height);
     }
 
+    [Theory]
+    [InlineData(1, 400, 1600, 600)] // 1px rộng + preset ngang 2.67:1 → cropHeight làm tròn ra 0 (trước fix: 500)
+    [InlineData(400, 1, 400, 1000)] // 1px cao + preset dọc 2:5 → cropWidth làm tròn ra 0 (trước fix: 500)
+    [InlineData(1, 400, 800, 1000)]
+    [InlineData(400, 1, 1600, 900)]
+    [InlineData(1, 1, 96, 96)]
+    public async Task Cover_on_one_pixel_image_does_not_throw_and_yields_valid_image(int w, int h, int targetW, int targetH)
+    {
+        using var source = await CreateProcessor().LoadAsync(new MemoryStream(EncodePng(w, h)), CancellationToken.None);
+
+        var encoded = await source.RenderAsync(new ImageTransform.Cover(targetW, targetH, FocalPoint.Center), CancellationToken.None);
+
+        Assert.True(encoded.Width >= 1 && encoded.Height >= 1);
+        Assert.True(encoded.Width <= targetW && encoded.Height <= targetH);
+    }
+
     [Fact]
     public async Task Cover_never_upscales()
     {

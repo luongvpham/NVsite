@@ -2,7 +2,7 @@ using FluentValidation;
 
 namespace Vsite.Application.Media.Commands.UploadToSlot;
 
-/// <summary>T5, MEDIA-001 — brief `task-T5-brief.md`. Focal ngoài [0, 1] → 422
+/// <summary>T5, MEDIA-001 — brief T5. Focal ngoài [0, 1] → 422
 /// (`ValidationBehavior` ném <c>Vsite.Application.Common.Exceptions.ValidationException</c>, cùng
 /// envelope <c>VALIDATION_ERROR</c> dùng chung mọi module — xem
 /// <c>UpdateShopValidator.IsReserved</c> cho tiền lệ "422 nhưng không có error_code riêng per-rule").

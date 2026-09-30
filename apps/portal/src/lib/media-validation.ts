@@ -16,6 +16,13 @@ function isAcceptedMimeType(mimeType: string): mimeType is AcceptedMimeType {
   return (ACCEPTED_MIME_TYPES as readonly string[]).includes(mimeType);
 }
 
+/** iPhone chụp HEIC/HEIF mặc định — nhận diện để hiện đúng hướng dẫn chuyển định dạng ngay ở client,
+ * cùng text với lỗi server `MEDIA_HEIC_UNSUPPORTED` (`HEIC_UNSUPPORTED_GUIDANCE`). */
+export function isHeicFile(file: File): boolean {
+  const type = file.type.toLowerCase();
+  return type === 'image/heic' || type === 'image/heif';
+}
+
 /** Export riêng để component gọi thẳng `.safeParse(file)` ngay trong handler chọn file — một nơi
  * duy nhất định nghĩa luật ≤10MB + mime, không để mỗi dialog tự chép lại (Definition of Done:
  * "validation bằng Zod sinh từ contract"). */

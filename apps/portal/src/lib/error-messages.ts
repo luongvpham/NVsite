@@ -32,7 +32,7 @@ const FALLBACK_MESSAGE = 'Có lỗi xảy ra, vui lòng thử lại.';
 
 /** Hướng dẫn riêng cho MEDIA_HEIC_UNSUPPORTED — chi tiết hơn message một dòng ở ERROR_MESSAGES,
  * hiện thêm bên dưới trong dialog upload (text cuối cùng để người duyệt Gate 2 chỉnh, theo
- * task-F23-brief.md). */
+ * brief F2/F3 — `Docs/tasks/MEDIA-001/brief.md`). */
 export const HEIC_UNSUPPORTED_GUIDANCE =
   'Trên iPhone: Cài đặt → Camera → Định dạng → Tương thích nhất, hoặc chọn ảnh qua nút Chọn ảnh';
 

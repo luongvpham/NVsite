@@ -255,17 +255,17 @@ delete (A11); id lạ/của shop khác → `[]`, không 404.
 
 **Bộ phái sinh của một nguồn** = hợp của hai tập:
 
-1. **Codegen từ manifest:** mọi preset mà component bind nguồn đó dùng để hiển thị ảnh. Hiện prop
-   `binding` chỉ khai `sources` — **cần thêm một field additive** để manifest khai preset ảnh của
-   dữ liệu bind (#43). Đây là thay đổi Component Registry, qua duyệt contract ở Bước 4.
+1. **Codegen từ manifest:** mọi preset mà component bind nguồn đó dùng để hiển thị ảnh. Prop `binding`
+   khai thêm field additive **`imagePresets`** (map nguồn → danh sách preset, ví dụ
+   `ServiceGrid.source`: `{ Service: ['800x600,cover'], ServiceGroup: ['800x600,cover'] }`, #43/#86).
+   Đây là thay đổi Component Registry đã qua duyệt contract ở Bước 4.
 2. **Tập cố định của bề mặt vsite** không đi qua manifest: Shop Profile (`vsite.vn/shop/{slug}`),
    OG image.
 
 Ví dụ artifact sinh ra: `{ "Service": ["800x600,cover"], "Shop": ["320x96,inside", "1200x630,cover"], … }`.
 Artifact nằm ở `packages/builder-components/generated/`, tập cố định của bề mặt vsite khai trong `config/image-presets.json` (#86).
 
-**Nguồn `Shop` cần thêm vào `config/binding-sources.json`** để component bind được logo — hiện file
-chưa có `Shop`.
+**Nguồn `Shop` có trong `config/binding-sources.json`** (đã thêm ở Bước 4) để component bind được logo.
 
 **Component mới dùng preset chưa có trong bộ** → job sinh bù phái sinh từ bản Library. Luôn làm được,
 vì ảnh nghiệp vụ luôn có bản Library.
@@ -384,8 +384,8 @@ Chọn theo độ rộng CSS (ví dụ 300px cho thẻ sản phẩm) là ảnh m
 
 **Việc Bước 4 phải làm với config:** thêm `fit: "inside"`, thêm 4 preset mới (`1600x600,cover`,
 `1200x1200,inside`, `800x600,cover`, `320x96,inside`), **bỏ** `600xR,cover` (không manifest nào dùng).
-Hai preset manifest đang dùng (`1600x900,cover`, `800x800,cover`) giữ nguyên — `registry.lock.json`
-không đổi.
+Hai preset manifest đang dùng (`1600x900,cover`, `800x800,cover`) giữ nguyên. `registry.lock.json`
+**có đổi** ở Bước 4: `ServiceGrid.source` thêm `imagePresets` (additive, `check-additive` vẫn qua).
 
 ---
 

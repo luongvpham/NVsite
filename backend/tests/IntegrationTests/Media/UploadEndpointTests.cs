@@ -25,7 +25,7 @@ namespace Vsite.IntegrationTests.Media;
 
 /// <summary>
 /// T5, MEDIA-001 — test bắt buộc cho `POST /shops/{shopId}/media/slot-uploads` và
-/// `POST /shops/{shopId}/media/library` (`task-T5-brief.md`). Đi qua pipeline HTTP thật
+/// `POST /shops/{shopId}/media/library` (brief T5 — bảng endpoint ở `backend/docs/modules/media.md`). Đi qua pipeline HTTP thật
 /// (`MediaApiFactory`, Postgres + Redis Testcontainers) — CẦN Docker daemon, xem
 /// `Docs/DOCKER-TEST-DEBT.md`. Verify hành vi handler KHÔNG cần Docker ở
 /// `UploadHandlerTests` (EF InMemory) cùng thư mục.

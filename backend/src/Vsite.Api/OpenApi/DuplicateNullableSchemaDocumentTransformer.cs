@@ -18,7 +18,7 @@ namespace Vsite.Api.OpenApi;
 /// document (ví dụ MEDIA-001: <c>SlotUploadResultDto.LibraryAsset</c> là <c>MediaAssetDto?</c> trong
 /// khi các chỗ khác dùng <c>MediaAssetDto</c> không-null). Orval không tự gộp hai schema này — nó
 /// sinh ra hai type TS không tương thích cho cùng một khái niệm (xem
-/// <c>.superpowers/sdd/plan/task-F1-report.md</c>; Gate 1: sửa ở BE bằng transformer, không vá ở
+/// <c>Docs/tasks/MEDIA-001-D2/changelog.md</c>; Gate 1: sửa ở BE bằng transformer, không vá ở
 /// FE).
 ///
 /// <para>

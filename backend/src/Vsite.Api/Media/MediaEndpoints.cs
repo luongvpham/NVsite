@@ -23,8 +23,8 @@ using Vsite.Domain.Pagination;
 namespace Vsite.Api.Media;
 
 /// <summary>
-/// T5, MEDIA-001 (#70) — hai endpoint upload đầu tiên của module Media (`task-T5-brief.md` cuối
-/// file có bảng endpoint đầy đủ; T6–T9 thêm phần còn lại lên trên module này). Cả hai endpoint đều
+/// T5, MEDIA-001 (#70) — hai endpoint upload đầu tiên của module Media (bảng endpoint đầy đủ ở
+/// `backend/docs/modules/media.md`; T6–T9 thêm phần còn lại lên trên module này). Cả hai endpoint đều
 /// multipart, `.DisableAntiforgery()` (API dùng JWT bearer, không cookie) và giới hạn dung lượng
 /// request ~11 MB (Kestrel trả 413 nếu vượt).
 ///
@@ -35,7 +35,7 @@ namespace Vsite.Api.Media;
 ///
 /// Binding form: đọc <c>HttpRequest.ReadFormAsync</c> THẲNG trong handler thay vì dùng
 /// <c>[FromForm]</c> complex-type auto-binding (Giả định tôi đã tự đặt — xem
-/// `task-T5-report.md`): argument binding của Minimal API chạy TRƯỚC endpoint filter, nên nếu bind
+/// `Docs/tasks/MEDIA-001/changelog.md` mục 8): argument binding của Minimal API chạy TRƯỚC endpoint filter, nên nếu bind
 /// qua `[FromForm]` complex type thì `IHttpMaxRequestBodySizeFeature` set trong handler sẽ set QUÁ
 /// TRỄ — form đã bị đọc hết trước đó. Đọc form thủ công cho phép set giới hạn NGAY TRƯỚC lần đọc
 /// body đầu tiên trong cùng request.
