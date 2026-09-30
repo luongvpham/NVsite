@@ -24,7 +24,7 @@ using ShopEntity = Vsite.Domain.Shop.Entities.Shop;
 namespace Vsite.IntegrationTests.Media;
 
 /// <summary>
-/// T7, MEDIA-001 (#73, #82) — test bắt buộc cho `PUT /shops/{shopId}/logo` (`task-T7-brief.md`). Đi
+/// T7, MEDIA-001 (#73, #82) — test bắt buộc cho `PUT /shops/{shopId}/logo` (brief T7, xem `Docs/tasks/MEDIA-001/brief.md`). Đi
 /// qua pipeline HTTP thật (`MediaApiFactory`, Postgres + Redis Testcontainers) — CẦN Docker daemon,
 /// xem `Docs/DOCKER-TEST-DEBT.md`. Verify hành vi handler KHÔNG cần Docker ở
 /// `ShopLogoHandlerTests` (EF InMemory) cùng thư mục.
@@ -258,6 +258,22 @@ public sealed class ShopLogoTests
         Assert.Equal("SHOP_ACCESS_DENIED", problem!.Extensions["error_code"]!.ToString());
     }
 
+    // ---- C2 (#21): Owner đã bị xoá mềm membership -> 403 SHOP_ACCESS_DENIED ----
+
+    [Fact]
+    public async Task Upload_by_owner_with_soft_deleted_membership_returns_403()
+    {
+        var email = NewEmail();
+        var token = await RegisterVerifyLoginGlobalAsync(email);
+        var shop = await CreateShopDtoAsync(token, "Soft Deleted Owner");
+        Assert.Equal(HttpStatusCode.OK, (await PutLogoAsync(token, shop.Id, "logo.png")).StatusCode);
+
+        await SoftDeleteMembershipAsync(await GetUserIdAsync(email), shop.Id);
+
+        var response = await PutLogoAsync(token, shop.Id, "logo.png");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     // ---- request không phải multipart -> 415 MEDIA_MULTIPART_REQUIRED ----
 
     [Fact]
@@ -320,6 +336,17 @@ public sealed class ShopLogoTests
     }
 
     // ---- helpers ----
+
+    /// <summary>Xoá mềm membership bằng SQL (Status vẫn Active, Role vẫn Owner) — mô phỏng `Remove()` của
+    /// AppDbContext. MEDIA-001 final fix C2 (#21): membership đã xoá mềm KHÔNG còn cấp quyền.</summary>
+    private async Task SoftDeleteMembershipAsync(Guid userId, Guid shopId)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var rows = await db.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE "UserShop" SET "IsDeleted" = true WHERE "UserId" = {userId} AND "ShopId" = {shopId}""");
+        Assert.Equal(1, rows);
+    }
 
     private async Task<HttpResponseMessage> PutLogoAsync(string token, Guid shopId, string testAssetFileName)
     {

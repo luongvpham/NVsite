@@ -31,7 +31,7 @@ public sealed class UpdateShopHandler(IAppDbContext db, ICurrentUserContext curr
         // phải đọc dữ liệu trong một tenant đã biết trước.
         var membership = await db.UserShops.IgnoreQueryFilters()
             .FirstOrDefaultAsync(
-                us => us.UserId == currentUser.UserId && us.ShopId == request.ShopId && us.Status == UserShopStatus.Active,
+                us => us.UserId == currentUser.UserId && us.ShopId == request.ShopId && !us.IsDeleted && us.Status == UserShopStatus.Active,
                 cancellationToken)
             ?? throw new ForbiddenAccessException("SHOP_ACCESS_DENIED", "Không có quyền truy cập shop này.");
 

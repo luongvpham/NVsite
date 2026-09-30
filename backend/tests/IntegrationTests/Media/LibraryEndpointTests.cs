@@ -22,7 +22,7 @@ namespace Vsite.IntegrationTests.Media;
 
 /// <summary>
 /// T6, MEDIA-001 (#55, #71, #72) — test bắt buộc cho nhóm endpoint `library`/`assets`/`usage`
-/// (`task-T6-brief.md`). Đi qua pipeline HTTP thật (`MediaApiFactory`, Postgres + Redis
+/// (brief T6, xem `Docs/tasks/MEDIA-001/brief.md`). Đi qua pipeline HTTP thật (`MediaApiFactory`, Postgres + Redis
 /// Testcontainers) — CẦN Docker daemon, xem `Docs/DOCKER-TEST-DEBT.md`. Verify hành vi handler KHÔNG
 /// cần Docker ở `LibraryHandlerTests` (EF InMemory) cùng thư mục.
 ///
@@ -168,9 +168,10 @@ public sealed class LibraryEndpointTests
         var found = await lookupResponse.Content.ReadFromJsonAsync<List<MediaAssetDto>>(JsonOptions);
         var foundClone = Assert.Single(found!);
         Assert.Equal(clone.Id, foundClone.Id);
+        Assert.Equal(library.Id, foundClone.SourceAssetId);
 
         // File clone vẫn mở được qua IObjectStorage — HTTP `/media/{key}` là T9, chưa tồn tại
-        // (Ruling task-T6-brief.md: assert bằng OpenReadAsync/tồn tại file trên đĩa, không phải HTTP).
+        // (Ruling của brief T6: assert bằng OpenReadAsync/tồn tại file trên đĩa, không phải HTTP).
         var storagePath = Path.Combine(_factory.StorageRoot, foundClone.StorageKey.Replace('/', Path.DirectorySeparatorChar));
         Assert.True(File.Exists(storagePath));
     }
@@ -194,6 +195,24 @@ public sealed class LibraryEndpointTests
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
         Assert.Equal("MEDIA_OWNER_REQUIRED", problem!.Extensions["error_code"]!.ToString());
+    }
+
+    // ---- C2 (#21): Owner đã bị xoá mềm membership -> mọi endpoint Media 403 (cổng membership) ----
+
+    [Fact]
+    public async Task Owner_with_soft_deleted_membership_gets_403_on_media_read_and_delete()
+    {
+        var email = NewEmail();
+        var token = await RegisterVerifyLoginGlobalAsync(email);
+        var shop = (await (await CreateShopAsync(token, new CreateShopRequest("Soft Deleted Owner", NewSlug(), ShopKind.Hosted, null)))
+            .Content.ReadFromJsonAsync<ShopDto>(JsonOptions))!;
+        var library = await UploadLibraryAsync(token, shop.Id);
+        Assert.Equal(HttpStatusCode.OK, (await GetLibraryAsync(token, shop.Id)).StatusCode);
+
+        await SoftDeleteMembershipAsync(await GetUserIdAsync(email), shop.Id);
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await GetLibraryAsync(token, shop.Id)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await DeleteAsync(token, shop.Id, library.Id)).StatusCode);
     }
 
     // ---- usage trước/sau clone và trước/sau upload logo (sinh phái sinh) KHÔNG đổi; sau upload
@@ -277,6 +296,17 @@ public sealed class LibraryEndpointTests
     }
 
     // ---- helpers ----
+
+    /// <summary>Xoá mềm membership bằng SQL (Status vẫn Active, Role vẫn Owner) — mô phỏng `Remove()` của
+    /// AppDbContext. MEDIA-001 final fix C2 (#21): membership đã xoá mềm KHÔNG còn cấp quyền.</summary>
+    private async Task SoftDeleteMembershipAsync(Guid userId, Guid shopId)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var rows = await db.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE "UserShop" SET "IsDeleted" = true WHERE "UserId" = {userId} AND "ShopId" = {shopId}""");
+        Assert.Equal(1, rows);
+    }
 
     private async Task<HttpResponseMessage> PostCloneAsync(string token, Guid shopId, Guid assetId, string preset)
     {
@@ -400,7 +430,7 @@ public sealed class LibraryEndpointTests
         return userId;
     }
 
-    /// <summary>Ruling task-T6-brief.md: "Phase 1 chỉ có Owner, nên dựng membership role khác bằng
+    /// <summary>Ruling của brief T6: "Phase 1 chỉ có Owner, nên dựng membership role khác bằng
     /// SQL trong test" — không có endpoint "invite member" ở Phase 1, insert thẳng bằng SQL.</summary>
     private async Task InsertStaffMembershipAsync(Guid userId, Guid shopId)
     {

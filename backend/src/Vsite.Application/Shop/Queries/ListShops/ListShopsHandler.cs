@@ -18,7 +18,7 @@ public sealed class ListShopsHandler(IAppDbContext db, ICurrentUserContext curre
             from us in db.UserShops.IgnoreQueryFilters()
             join s in db.Shops on us.ShopId equals s.Id
             join r in db.Roles on us.RoleId equals r.Id
-            where us.UserId == currentUser.UserId && us.Status == UserShopStatus.Active
+            where us.UserId == currentUser.UserId && !us.IsDeleted && us.Status == UserShopStatus.Active
             select new { s.Id, s.Name, s.Slug, s.Kind, s.Status, RoleCode = r.Code };
 
         var shops = await query.ToListAsync(cancellationToken);
