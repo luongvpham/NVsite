@@ -180,6 +180,13 @@ Bắt buộc có, không phải tuỳ chọn:
 - **Unit test** cho handler và validator.
 - **Integration test** cho endpoint, chạy trên database thật (Testcontainers hoặc tương đương).
 
+⚠️ **Tiền đề build backend (fresh clone / CI):** `Vsite.Api.csproj` link file
+`packages/builder-components/generated/derivative-presets.json` — artifact codegen, **gitignored**
+(không commit). Thiếu file thì `dotnet build`/`dotnet test` dừng với lỗi rõ ràng (target
+`EnsureDerivativePresetsArtifact`). Chạy trước:
+`pnpm install && pnpm --filter @vsite/builder-components run gen:registry`. Mọi CI job build/chạy
+`Vsite.Api` (`be-tests`, `architecture-tests`, `contract-check`) đều có bước này — job mới cũng phải có.
+
 ⚠️ **Môi trường không có Docker daemon** (nhiều dev/agent chạy nhiều máy, chỉ một máy cài Docker):
 KHÔNG bỏ qua Testcontainers test — viết test đầy đủ, xác nhận build/logic đúng bằng mắt, rồi ghi
 nợ lại vào `Docs/DOCKER-TEST-DEBT.md` (quy ước dùng chung, đọc file đó trước khi ghi) để máy có

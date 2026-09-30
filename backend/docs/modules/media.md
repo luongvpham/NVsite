@@ -1,10 +1,17 @@
 # Media — vsite
 
-## Trạng thái (MEDIA-001, Bước 4)
+## Trạng thái (MEDIA-001)
 
 `MediaAsset` + pipeline ảnh (upload → resize/crop → strip EXIF → encode `webp`) + Media Library +
-9 preset + `/media/*` file serving + shop logo đã xong (T1–T9). `MEDIA-001` ở Gate 1
-(`Docs/tasks/MEDIA-001/contract-diff.md`), chưa có `brief.md`.
+9 preset + `/media/*` file serving + shop logo đã xong (T1–T9), cùng các task con D2 (OpenAPI nullable,
+#87), D3 (endpoint derivatives), D4 (`logoUrl`, #88) và frontend F1–F6. Task **đã đóng**: `brief.md`
+tồn tại, contract (`media.v1.json`, `shop.v1.json`) đã qua Gate 1 và promote. Chi tiết, các quyết định
+tự đặt và mục "Chưa làm xong" ở `Docs/tasks/MEDIA-001/changelog.md`.
+
+**Tiền đề build:** `Vsite.Api` link `packages/builder-components/generated/derivative-presets.json`
+(artifact codegen, gitignored, nguồn sự thật của preset cần pre-generate — #86). Fresh clone/CI phải chạy
+`pnpm install && pnpm --filter @vsite/builder-components run gen:registry` trước `dotnet build`; thiếu
+file thì build dừng với thông báo chỉ đúng lệnh này.
 
 **10 endpoint hiện có** (`Vsite.Api/Media/MediaEndpoints.cs`, tất cả `RequireGlobalScope` +
 `.RequireShopMembership()`):

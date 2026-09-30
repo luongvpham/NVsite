@@ -47,4 +47,14 @@
     <None Include="..\..\..\packages\builder-components\generated\derivative-presets.json" Link="generated\derivative-presets.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- derivative-presets.json nằm trong packages/builder-components/generated/ (gitignored, do codegen
+       sinh). Fresh clone chưa có file → thiếu target này thì MSBuild báo MSB3030 khó hiểu. -->
+  <Target Name="EnsureDerivativePresetsArtifact" BeforeTargets="BeforeBuild;AssignTargetPaths">
+    <PropertyGroup>
+      <_DerivativePresetsFile>$(MSBuildProjectDirectory)\..\..\..\packages\builder-components\generated\derivative-presets.json</_DerivativePresetsFile>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_DerivativePresetsFile)')"
+           Text="Thiếu packages/builder-components/generated/derivative-presets.json (artifact codegen, gitignored) - chạy `pnpm install` rồi `pnpm --filter @vsite/builder-components run gen:registry` trước khi build backend. / Missing generated derivative-presets.json: run `pnpm --filter @vsite/builder-components run gen:registry` before building the backend." />
+  </Target>
+
 </Project>
