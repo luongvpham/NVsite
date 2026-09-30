@@ -52,7 +52,7 @@ Review toàn nhánh (opus, độc lập, chỉ đọc), rồi một lượt re-r
 
 ## Điểm cần anh quyết trước khi merge
 
-1. **Nghiệm thu tay `08` §9 trên API thật** (bắt buộc theo workflow trước Gate 2). `dev-registry` có ô nhập Shop ID để chạy. Kiểm:
+1. **Nghiệm thu tay `08` §9 trên API thật** (bắt buộc theo workflow trước Gate 2). **Làm theo từng bước ở [`acceptance.md`](acceptance.md).** Khi soạn hướng dẫn đó đã phát hiện và sửa thêm hai lỗi FE mà mọi test đều không bắt được (proxy `apps/web` không hoạt động và host `*.vsite.local` bị chặn 403; không có link nội bộ nào tới `/dev-registry`), xem `changelog.md` mục 18. Nội dung cần kiểm:
    - upload vào Hero ở **cả hai chế độ** → ảnh đúng kích thước preset;
    - chọn ảnh Library cho một ô Gallery → sinh clone độc lập (id khác bản Library);
    - upload logo → có `logoUrl`, tải lại trang vẫn hiện đúng;

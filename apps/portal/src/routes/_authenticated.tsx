@@ -25,9 +25,20 @@ function AuthenticatedLayout() {
   return (
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
-        <Link to="/shops" className="font-semibold text-foreground">
-          vsite portal
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link to="/shops" className="font-semibold text-foreground">
+            vsite portal
+          </Link>
+          {/* Chỉ ở dev: /dev-registry nằm NGOÀI layout này và cần token, mà token chỉ sống trong bộ
+              nhớ (Quyết định #3) — gõ URL lên thanh địa chỉ sẽ tải lại trang và mất phiên. Link nội bộ
+              này là đường duy nhất để mở nó khi đã đăng nhập (nghiệm thu tay MEDIA-001, 08 §9).
+              Xoá cùng /dev-registry ở Bước 5. */}
+          {import.meta.env.DEV && (
+            <Link to="/dev-registry" className="text-sm text-muted-foreground underline">
+              dev-registry
+            </Link>
+          )}
+        </div>
         <Button
           variant="outline"
           size="sm"

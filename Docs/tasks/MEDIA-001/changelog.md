@@ -254,6 +254,24 @@ dùng chung đăng ký cho mọi document module, ghi ở `backend/CLAUDE.md` §
   `MEDIA_UNKNOWN_PRESET` ở top-level ProblemDetails. `FileName` cắt còn 200 ký tự ở `MediaAssetWriter`
   (khớp `MaxLength(200)` của cột), không phải lỗi validation.
 
+#### 18. Hai lỗi FE chỉ lộ khi dựng thử nghiệm thu tay (đã sửa, không test tự động nào bắt được)
+
+Phát hiện lúc chuẩn bị `Docs/tasks/MEDIA-001/acceptance.md` bằng cách chạy thật `apps/web` và soi
+`apps/portal`. Cả hai đều là lỗi của F1/F5 mà review từng task không thể thấy vì chỉ đọc mã:
+
+- **`apps/web`: proxy `/media` không hoạt động, và host `{slug}.vsite.local` bị chặn 403.**
+  F1 khai `nitro({ devProxy: { '/media': … } })`, nhưng với TanStack Start + `nitro/vite` request
+  `/media/…` vẫn bị SSR của app trả 404 HTML, không bao giờ tới API (so sánh: API trả 404 trống, web
+  trả HTML giống hệt một route không tồn tại). Ngoài ra Vite mặc định chặn hostname lạ nên
+  `http://spa-abc.vsite.local:3000` trả `403 Blocked request`. Đã đổi sang `server.proxy` của Vite
+  (cùng cơ chế `apps/portal`) và thêm `server.allowedHosts: ['.vsite.local']`. Đã kiểm: host shop → 200,
+  host lạ → vẫn 403, `/media/…` giờ ra 404 trống đúng dạng API. **Chưa kiểm dương tính bằng một ảnh thật**
+  — đó là bước 8 của `acceptance.md`.
+- **`apps/portal`: không có đường nội bộ nào mở `/dev-registry` khi đã đăng nhập.** Trang đó nằm ngoài
+  layout `_authenticated` và cần token, mà token chỉ sống trong bộ nhớ (Quyết định #3) nên gõ URL sẽ mất
+  phiên; link duy nhất tới nó nằm ở trang chủ `/`, không có nút đăng nhập. Đã thêm link `dev-registry`
+  chỉ hiện khi `import.meta.env.DEV` ở thanh đầu trang sau đăng nhập. Xoá cùng `/dev-registry` ở Bước 5.
+
 ---
 
 ## Chưa làm xong (nợ kỹ thuật, không phải lệch có chủ đích)
