@@ -81,6 +81,12 @@ banner STATUS** nào. Quy ước mới ghi ở `backend/CLAUDE.md` và `backend/
 
 ---
 
+## Kiểm chứng
+
+2026-10-09 — `dotnet test backend/vsite.sln` chạy thật trên Docker (Testcontainers), trên nhánh
+REFACTOR-DB-001 (chứa commit của task này): IntegrationTests 296 pass / 0 fail / 1 skip có sẵn,
+gồm các test endpoint 403 non-Owner (`LibraryEndpointTests`, `ShopLogoTests`, `ShopEndpointTests`).
+
 ## Chưa làm xong / để task khác
 
 1. **`User`, `UserShop` vẫn dùng setter public.** Làm cùng task audit `IgnoreQueryFilters` của

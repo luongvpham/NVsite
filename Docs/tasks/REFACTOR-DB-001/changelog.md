@@ -88,6 +88,13 @@ P1 `DeletedAt`, unique slug/soft delete). Nhánh tách từ `feature/REFACTOR-BE
 
 ## Kiểm chứng
 
+**2026-10-09 — chạy thật trên Docker (Testcontainers: `postgres:16-alpine`, Redis, LocalStack):**
+`dotnet test backend/vsite.sln` → IntegrationTests **296 pass / 0 fail / 1 skip** (skip là
+`[Fact(Skip=…)]` có sẵn của SHOP-001), ArchitectureTests 8/8, ComponentSchemaTests 12/12. Bao gồm
+cả hai nhánh REFACTOR-BE-001 + REFACTOR-DB-001. Mục nợ trong `Docs/DOCKER-TEST-DEBT.md` đã xoá.
+
+Lần chạy trước đó, khi máy chưa có Docker daemon (giữ lại để biết cách làm khi thiếu Docker):
+
 Máy không có Docker daemon, nhưng có cài PostgreSQL 16.4. Mình dựng một cluster tạm (`initdb` trong
 scratchpad, cổng 55432, không đụng service Postgres của máy) và vá **tạm** `PostgresFixture` cùng 3
 `*ApiFactory`: đọc connection string từ biến môi trường, thay Redis bằng

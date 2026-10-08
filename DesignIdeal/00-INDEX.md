@@ -99,7 +99,7 @@ lệch có chủ đích.**
 
 | Nguồn | Nợ |
 |---|---|
-| [`DOCKER-TEST-DEBT.md`](../Docs/DOCKER-TEST-DEBT.md) | REFACTOR-BE-001 + REFACTOR-DB-001: 284/296 đã pass trên Postgres thật (cài local, không phải Testcontainers); còn 12 test cần Docker thật (S3/LocalStack, cache Redis) |
+| [`DOCKER-TEST-DEBT.md`](../Docs/DOCKER-TEST-DEBT.md) | Đang rỗng — REFACTOR-BE-001 + REFACTOR-DB-001 đã chạy pass thật trên Docker (2026-10-09, 296/297, 1 skip có sẵn) |
 | `MEDIA-001/changelog.md` "Chưa làm xong" #5, #7 | **Nghiệm thu tay tiêu chí dừng `08` §9 chưa ai chạy** trên API + UI thật: upload vào Hero ở cả hai chế độ đúng kích thước preset; chọn Library cho slot Gallery ra clone độc lập; logo sinh đủ phái sinh và còn sau reload; `/media/…` đọc được trên `admin.vsite.local` và `{slug}.vsite.local:3000`; giới hạn 413 (>11 MB) qua Kestrel thật |
 | `MEDIA-001/changelog.md` "Chưa làm xong" #8 | `tools/contract-sync` mù với response dạng mảng (`GET /shops`, `…/derivatives`, `…/assets?ids=` hiện luôn "UNCHANGED"): cần **task riêng** sửa `extractSchemaRefs` (đi theo `items.$ref`/`allOf` + diff dự phòng `components.schemas`) và ghi chú vào skill `contract-sync` |
 | `MEDIA-001/changelog.md` "Chưa làm xong" #6 | Khung crop theo tỉ lệ preset ở dialog upload/chọn ảnh — F2 mới có dấu chấm focal point |
