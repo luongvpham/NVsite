@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Vsite.Application.Identity;
 using Vsite.Application.Identity.Interfaces;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Domain.Identity.Enums;
@@ -14,10 +15,12 @@ public sealed class UserShopMembershipService(AppDbContext db) : IUserShopMember
     public Task<Guid?> FindActiveRoleIdAsync(Guid userId, Guid shopId, CancellationToken cancellationToken) =>
         ActiveMembership(userId, shopId).Select(us => (Guid?)us.RoleId).FirstOrDefaultAsync(cancellationToken);
 
-    // IgnoreQueryFilters — đây CHÍNH LÀ bước xác lập tenant hợp lệ hay không, không phải đọc dữ liệu
-    // trong một tenant đã biết trước, nên không dựa vào Global Query Filter — và vì thế phải lọc
-    // `!IsDeleted` tường minh (#21).
+    // Đây CHÍNH LÀ bước xác lập tenant hợp lệ hay không (chưa có tenant context) — đọc xuyên shop qua
+    // helper, điều kiện "membership còn hiệu lực" nằm sẵn trong đó. Thêm điều kiện User còn Active
+    // (#90): chạy MỖI request (middleware + endpoint filter) nên token shop của tài khoản bị đình
+    // chỉ mất hiệu lực ngay, không đợi access token hết hạn. Helper tắt filter của CẢ câu query nên
+    // `!u.IsDeleted` của User phải viết tay.
     private IQueryable<UserShop> ActiveMembership(Guid userId, Guid shopId) =>
-        db.UserShops.IgnoreQueryFilters()
-            .Where(us => us.UserId == userId && us.ShopId == shopId && !us.IsDeleted && us.Status == UserShopStatus.Active);
+        db.UserShops.ActiveAcrossShops().Where(us => us.UserId == userId && us.ShopId == shopId
+            && db.Users.Any(u => u.Id == us.UserId && !u.IsDeleted && u.Status == UserStatus.Active));
 }

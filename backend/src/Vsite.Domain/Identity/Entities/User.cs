@@ -10,9 +10,16 @@ namespace Vsite.Domain.Identity.Entities;
 /// `PasswordHash` dùng <c>Microsoft.AspNetCore.Identity.PasswordHasher&lt;User&gt;</c> — định dạng
 /// output của hasher này đã tự chứa salt + iteration count trong MỘT chuỗi, nên KHÔNG có cột
 /// `PasswordSalt` riêng như bản vẽ ban đầu ở 03 §3.1 (lệch có chủ đích — xem CLAUDE.md module).
+///
+/// `PasswordHash`/`LastLoginAt` chỉ gán lúc khởi tạo, sau đó đổi qua method (REFACTOR-AUTHZ-001).
+/// Các field hồ sơ (tên, email, phone…) vẫn setter public — chưa có luồng sửa hồ sơ nào để đặt
+/// invariant.
 /// </summary>
 public sealed class User : BaseAuditableEntity
 {
+    private string? _passwordHash;
+    private DateTimeOffset? _lastLoginAt;
+
     public User()
     {
     }
@@ -35,7 +42,7 @@ public sealed class User : BaseAuditableEntity
     public string? CCCD { get; set; }
     public DateTimeOffset? CCCDVerifiedAt { get; set; }
 
-    public string? PasswordHash { get; set; }
+    public string? PasswordHash { get => _passwordHash; init => _passwordHash = value; }
 
     public required Guid RoleId { get; set; }
 
@@ -44,7 +51,15 @@ public sealed class User : BaseAuditableEntity
 
     public UserStatus Status { get; set; } = UserStatus.Active;
 
-    public DateTimeOffset? LastLoginAt { get; set; }
+    public DateTimeOffset? LastLoginAt { get => _lastLoginAt; init => _lastLoginAt = value; }
+
+    /// <summary>Chỉ tài khoản `Active` được đăng nhập / làm mới token (REFACTOR-AUTHZ-001 — trước đây
+    /// `Suspended` vẫn đăng nhập được vì không chỗ nào kiểm).</summary>
+    public bool CanSignIn => Status == UserStatus.Active;
+
+    public void SetPassword(string passwordHash) => _passwordHash = passwordHash;
+
+    public void RecordLogin(DateTimeOffset at) => _lastLoginAt = at;
 
     public ICollection<ExternalLogin> ExternalLogins { get; init; } = [];
     public ICollection<UserShop> UserShops { get; init; } = [];

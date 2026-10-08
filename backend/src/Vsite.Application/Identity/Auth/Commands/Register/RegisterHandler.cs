@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Vsite.Application.Common.Interfaces;
+using Vsite.Application.Identity;
 using Vsite.Application.Identity.Interfaces;
 using Vsite.Application.Identity.Options;
 using Vsite.Domain.Abstractions;
@@ -44,11 +45,11 @@ public sealed class RegisterHandler(
                     "Email này đã có tài khoản. Vui lòng đăng nhập hoặc dùng Quên mật khẩu.");
             }
 
-            // IgnoreQueryFilters: đây là kiểm tra CHÉO tenant có chủ đích (user đã có membership ở
-            // ĐÚNG shop này chưa), không phải đọc dữ liệu tenant hiện tại — Global Query Filter
-            // (fail-closed theo TenantContext) sẽ luôn trả rỗng ở bước đăng ký (chưa có JWT/tenant
-            // context nào được resolve), nên phải bypass filter một cách tường minh ở đây.
-            var hasMembership = await db.UserShops.IgnoreQueryFilters()
+            // Đọc xuyên shop (chưa có tenant context ở bước đăng ký) qua helper. Tính MỌI trạng thái
+            // chưa xoá — Suspended/Invited cũng chặn, để đăng ký lại không lách được lệnh đình chỉ
+            // của shop (REFACTOR-AUTHZ-001, người duyệt chốt). Membership ĐÃ XOÁ MỀM thì cho đi tiếp:
+            // VerifyEmail sẽ khôi phục dòng cũ.
+            var hasMembership = await db.UserShops.AcrossShops()
                 .AnyAsync(us => us.UserId == existingUser.Id && us.ShopId == shopId, cancellationToken);
 
             if (hasMembership)
@@ -59,7 +60,7 @@ public sealed class RegisterHandler(
                     "Email này đã có tài khoản tại shop này. Vui lòng đăng nhập hoặc dùng Quên mật khẩu.");
             }
 
-            // Nhánh còn lại (CÓ user, CHƯA có UserShop ở shop này) — rơi xuống, vẫn tạo
+            // Nhánh còn lại (CÓ user, CHƯA có UserShop còn sống ở shop này) — rơi xuống, vẫn tạo
             // PendingRegistration như thể đăng ký mới, đúng "ảo giác tách biệt" 03 §3.3/§6.1.
         }
 

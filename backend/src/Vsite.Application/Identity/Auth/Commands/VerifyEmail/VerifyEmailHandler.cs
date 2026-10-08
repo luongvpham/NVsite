@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Vsite.Application.Common.Interfaces;
+using Vsite.Application.Identity;
 using Vsite.Application.Identity.Interfaces;
+using Vsite.Domain.Authorization;
 using Vsite.Domain.Exceptions;
 using Vsite.Domain.Identity;
 using Vsite.Domain.Identity.Entities;
@@ -13,6 +15,10 @@ namespace Vsite.Application.Identity.Auth.Commands.VerifyEmail;
 /// 03 §6.1 bước [3]-[5]. Một `SaveChangesAsync` DUY NHẤT cho toàn bộ thay đổi (tạo User nếu chưa
 /// có + tạo UserShop nếu context shop + đánh dấu ConsumedAt) — EF Core tự bọc trong MỘT transaction,
 /// đúng yêu cầu "trong MỘT transaction" của tài liệu.
+///
+/// Context shop (REFACTOR-AUTHZ-001): chưa có membership → tạo mới; membership đã XOÁ MỀM → khôi
+/// phục dòng cũ (unique index <c>(user_id, shop_id)</c> không lọc soft delete — trước đây nhánh này
+/// INSERT trùng và ra 500); membership còn sống (kể cả Suspended/Invited) → không đụng tới.
 /// </summary>
 public sealed class VerifyEmailHandler(IAppDbContext db, IJwtTokenService tokenService)
     : IRequestHandler<VerifyEmailCommand, VerifyEmailResult>
@@ -43,26 +49,39 @@ public sealed class VerifyEmailHandler(IAppDbContext db, IJwtTokenService tokenS
                 PrimaryIdentityKind = PrimaryIdentityKind.Email,
                 RoleId = WellKnownRoles.PlatformUserId,
                 FullName = pending.FullName,
-            };
 
-            // ⚠️ CHỈ ghi password vào User khi context là vsite.vn. Context shop KHÔNG BAO GIỜ đụng
-            // User.PasswordHash — 03 §6.1 cảnh báo đây là lỗi nguy hiểm nhất của luồng đăng ký.
-            if (pending.ShopId is null)
-            {
-                user.PasswordHash = pending.PasswordHash;
-            }
+                // ⚠️ CHỈ ghi password vào User khi context là vsite.vn. Context shop KHÔNG BAO GIỜ đụng
+                // User.PasswordHash — 03 §6.1 cảnh báo đây là lỗi nguy hiểm nhất của luồng đăng ký.
+                PasswordHash = pending.ShopId is null ? pending.PasswordHash : null,
+            };
 
             db.Users.Add(user);
         }
 
         if (pending.ShopId is not null)
         {
-            // IgnoreQueryFilters — kiểm tra membership là thao tác hệ thống, chưa có tenant context
-            // nào được resolve ở luồng verify-email (chưa có JWT).
-            var alreadyMember = await db.UserShops.IgnoreQueryFilters()
-                .AnyAsync(us => us.UserId == user.Id && us.ShopId == pending.ShopId, cancellationToken);
+            // Đọc xuyên shop kể cả dòng đã xoá mềm (chưa có tenant context ở luồng verify-email).
+            var existing = await db.UserShops.IncludingDeletedAcrossShops()
+                .FirstOrDefaultAsync(us => us.UserId == user.Id && us.ShopId == pending.ShopId, cancellationToken);
 
-            if (!alreadyMember)
+            if (existing is { IsDeleted: true })
+            {
+                existing.RestoreAsCustomer(pending.PasswordHash);
+                shopMembershipCreated = true;
+
+                // Khôi phục = mật khẩu mới → thu hồi mọi refresh token cũ của scope shop này (cùng
+                // nguyên tắc ResetPassword/ChangePassword, #21.5). Xoá mềm membership KHÔNG thu hồi
+                // token, nên không có bước này thì một refresh token cũ chưa dùng tới sẽ sống lại.
+                var audience = AudienceHelpers.ForShop(pending.ShopId.Value);
+                var staleTokens = await db.RefreshTokens
+                    .Where(t => t.UserId == user.Id && t.Audience == audience && t.ShopId == pending.ShopId && t.RevokedAt == null)
+                    .ToListAsync(cancellationToken);
+                foreach (var token in staleTokens)
+                {
+                    token.RevokedAt = now;
+                }
+            }
+            else if (existing is null)
             {
                 db.UserShops.Add(new UserShop
                 {

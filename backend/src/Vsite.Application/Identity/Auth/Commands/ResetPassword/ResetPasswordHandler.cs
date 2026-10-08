@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Vsite.Application.Common.Interfaces;
+using Vsite.Application.Identity;
 using Vsite.Application.Identity.Interfaces;
 using Vsite.Domain.Exceptions;
 
@@ -31,22 +32,30 @@ public sealed class ResetPasswordHandler(IAppDbContext db, IPasswordHasher<Vsite
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == resetToken.UserId, cancellationToken)
             ?? throw new DomainException("RESET_TOKEN_INVALID", "Tài khoản không tồn tại.");
 
+        // Token phát trước khi tài khoản bị đình chỉ không được đổi mật khẩu — nếu đình chỉ vì bị
+        // chiếm tài khoản, mật khẩu của kẻ tấn công không được "sống sót" tới lúc mở lại (#90).
+        if (!user.CanSignIn)
+        {
+            throw new DomainException("RESET_TOKEN_INVALID", "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
+        }
+
         var newHash = passwordHasher.HashPassword(user, request.NewPassword);
         string whereChanged;
 
         if (resetToken.ShopId is null)
         {
-            user.PasswordHash = newHash;
+            user.SetPassword(newHash);
             whereChanged = "tài khoản vsite.vn của bạn";
         }
         else
         {
-            // IgnoreQueryFilters — thao tác hệ thống, không phải đọc dữ liệu theo tenant context request hiện tại.
-            var userShop = await db.UserShops.IgnoreQueryFilters()
+            // Đọc xuyên shop qua helper — membership đã xoá/đình chỉ sau khi phát token thì token mất
+            // hiệu lực (REFACTOR-AUTHZ-001).
+            var userShop = await db.UserShops.ActiveAcrossShops()
                 .FirstOrDefaultAsync(us => us.UserId == user.Id && us.ShopId == resetToken.ShopId, cancellationToken)
                 ?? throw new DomainException("RESET_TOKEN_INVALID", "Membership không tồn tại.");
 
-            userShop.PasswordHash = newHash;
+            userShop.SetPassword(newHash);
             whereChanged = $"tài khoản tại shop {resetToken.ShopId}";
         }
 

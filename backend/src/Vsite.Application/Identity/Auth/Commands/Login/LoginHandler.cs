@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Vsite.Application.Common.Interfaces;
+using Vsite.Application.Identity;
 using Vsite.Application.Identity.Auth.Dtos;
 using Vsite.Application.Identity.Interfaces;
 using Vsite.Domain.Abstractions;
@@ -28,6 +29,9 @@ public sealed class LoginHandler(
 {
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
 
+    // PasswordHasher<User> không đọc field nào của instance — chỉ cần một User hợp lệ để gọi.
+    private static readonly User TimingDummy = new() { PrimaryIdentityKind = Vsite.Domain.Identity.Enums.PrimaryIdentityKind.Email, RoleId = Guid.Empty };
+
     public async Task<AuthTokenResult> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         var normalized = request.Email.Trim().ToUpperInvariant();
@@ -49,6 +53,13 @@ public sealed class LoginHandler(
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.EmailNormalized == normalized, cancellationToken);
 
+        // Tài khoản bị đình chỉ toàn cục đi CÙNG nhánh 401 với "sai mật khẩu" — không lộ trạng thái
+        // tài khoản cho người đoán email (REFACTOR-AUTHZ-001).
+        if (user is not null && !user.CanSignIn)
+        {
+            user = null;
+        }
+
         UserShop? userShop = null;
         string? passwordHashToVerify = null;
 
@@ -56,8 +67,9 @@ public sealed class LoginHandler(
         {
             if (tenantContext.AudienceKind == TenantAudienceKind.Shop)
             {
-                // IgnoreQueryFilters — chưa có JWT/tenant context nào resolve ở bước login.
-                userShop = await db.UserShops.IgnoreQueryFilters()
+                // Đọc xuyên shop (chưa có tenant context ở bước login) qua helper — chỉ membership
+                // CÒN HIỆU LỰC: đã xoá mềm hoặc Suspended/Invited coi như không có, rơi vào 401 chung.
+                userShop = await db.UserShops.ActiveAcrossShops()
                     .FirstOrDefaultAsync(us => us.UserId == user.Id && us.ShopId == tenantContext.ShopId, cancellationToken);
 
                 // Chưa có UserShop → chưa từng đặt password riêng ở shop này, không có gì để so
@@ -71,6 +83,13 @@ public sealed class LoginHandler(
             }
         }
 
+        if (user is null || passwordHashToVerify is null)
+        {
+            // Vẫn tốn đúng một lượt PBKDF2 như nhánh sai mật khẩu — không để thời gian phản hồi lộ
+            // "email này có tài khoản đang hoạt động / có membership ở shop" (#90).
+            passwordHasher.HashPassword(TimingDummy, request.Password);
+        }
+
         if (user is null || passwordHashToVerify is null ||
             passwordHasher.VerifyHashedPassword(user, passwordHashToVerify, request.Password) == PasswordVerificationResult.Failed)
         {
@@ -81,14 +100,11 @@ public sealed class LoginHandler(
         await loginAttemptThrottle.ResetAsync(throttleKey, cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
-        user.LastLoginAt = now;
-        if (userShop is not null)
-        {
-            userShop.LastActiveAt = now;
-        }
+        user.RecordLogin(now);
+        userShop?.MarkActive(now);
 
         // #27: ownerShopIds CHỈ để render UI shop switcher, không bao giờ dùng để authorize.
-        var ownerShopIds = await db.UserShops.IgnoreQueryFilters()
+        var ownerShopIds = await db.UserShops.ActiveAcrossShops()
             .Where(us => us.UserId == user.Id && us.RoleId == WellKnownRoles.OwnerId)
             .Select(us => us.ShopId)
             .ToListAsync(cancellationToken);

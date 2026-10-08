@@ -1,9 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Vsite.Application.Common.Interfaces;
+using Vsite.Application.Identity;
 using Vsite.Application.Shop.Dtos;
 using Vsite.Application.Shop.Interfaces;
-using Vsite.Domain.Identity.Enums;
 
 namespace Vsite.Application.Shop.Queries.ListShops;
 
@@ -12,15 +12,14 @@ public sealed class ListShopsHandler(IAppDbContext db, ICurrentUserContext curre
 {
     public async Task<IReadOnlyList<ShopSummaryDto>> Handle(ListShopsQuery request, CancellationToken cancellationToken)
     {
-        // IgnoreQueryFilters trên UserShop — đúng ý nghĩa endpoint là đọc XUYÊN shop (chỉ cho phép
-        // ở RequireGlobalScope, enforce ở tầng endpoint/policy, không phải ở đây).
-        // IgnoreQueryFilters tắt filter của CẢ query (kể cả Shops/Roles được join) nên `!IsDeleted`
-        // của UserShop, Shop và Role đều phải viết tay (#21).
+        // Đọc UserShop XUYÊN shop qua helper (đúng ý nghĩa endpoint, chỉ cho phép ở RequireGlobalScope).
+        // Helper bỏ query filter cho CẢ câu query (kể cả Shops/Roles được join) nên `!IsDeleted` của
+        // Shop và Role vẫn phải viết tay (#21); điều kiện của UserShop đã nằm trong helper.
         var query =
-            from us in db.UserShops.IgnoreQueryFilters()
+            from us in db.UserShops.ActiveAcrossShops()
             join s in db.Shops on us.ShopId equals s.Id
             join r in db.Roles on us.RoleId equals r.Id
-            where us.UserId == currentUser.UserId && !us.IsDeleted && !s.IsDeleted && !r.IsDeleted && us.Status == UserShopStatus.Active
+            where us.UserId == currentUser.UserId && !s.IsDeleted && !r.IsDeleted
             select new { s.Id, s.Name, s.Slug, s.Kind, s.Status, RoleCode = r.Code };
 
         var shops = await query.ToListAsync(cancellationToken);

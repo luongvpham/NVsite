@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Vsite.Application.Common.Interfaces;
+using Vsite.Application.Identity;
 using Vsite.Application.Identity.Auth.Dtos;
 using Vsite.Application.Identity.Interfaces;
 using Vsite.Domain.Identity;
@@ -11,6 +12,10 @@ namespace Vsite.Application.Identity.Auth.Commands.RefreshToken;
 /// Quyết định #3 — rotation: mỗi lần refresh, token cũ bị revoke NGAY và một token mới được phát.
 /// Nếu một token ĐÃ revoke bị đem đi refresh lần nữa (reuse) → coi là dấu hiệu bị đánh cắp, revoke
 /// TOÀN BỘ token cùng (UserId, Audience, ShopId) — không chỉ token đang dùng.
+///
+/// REFACTOR-AUTHZ-001 (người duyệt chốt "từ chối + thu hồi"): tài khoản không còn `Active`, hoặc
+/// token audience shop mà membership ở shop đó đã xoá mềm/không còn `Active` → 401 và thu hồi toàn
+/// bộ token cùng scope. Trước đây vẫn cấp access token mới, chỉ dựa vào middleware chặn request sau.
 /// </summary>
 public sealed class RefreshTokenHandler(IAppDbContext db, IJwtTokenService tokenService)
     : IRequestHandler<RefreshTokenCommand, AuthTokenResult>
@@ -38,10 +43,16 @@ public sealed class RefreshTokenHandler(IAppDbContext db, IJwtTokenService token
             throw new UnauthorizedAccessException("Refresh token đã hết hạn.");
         }
 
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == existing.UserId, cancellationToken)
-            ?? throw new UnauthorizedAccessException("Tài khoản không tồn tại.");
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == existing.UserId, cancellationToken);
+        if (user is null || !user.CanSignIn ||
+            (existing.ShopId is not null && !await db.UserShops.ActiveAcrossShops()
+                .AnyAsync(us => us.UserId == existing.UserId && us.ShopId == existing.ShopId, cancellationToken)))
+        {
+            await RevokeAllAsync(existing.UserId, existing.Audience, existing.ShopId, cancellationToken);
+            throw new UnauthorizedAccessException("Phiên đăng nhập không còn hiệu lực.");
+        }
 
-        var ownerShopIds = await db.UserShops.IgnoreQueryFilters()
+        var ownerShopIds = await db.UserShops.ActiveAcrossShops()
             .Where(us => us.UserId == user.Id && us.RoleId == WellKnownRoles.OwnerId)
             .Select(us => us.ShopId)
             .ToListAsync(cancellationToken);
