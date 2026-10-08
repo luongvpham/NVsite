@@ -1,4 +1,4 @@
-# vsite — Registry Quyết Định (#1–#88)
+# vsite — Registry Quyết Định (#1–#89)
 
 > **File này là CHỈ MỤC, không phải nội dung.** Mỗi dòng cho bạn biết quyết định đó nói gì trong một
 > câu, nó được **định nghĩa đầy đủ ở đâu**, và nó **đã thành code chưa**. Đọc dòng ở đây trước, rồi
@@ -12,7 +12,7 @@
 ## ⚠️ Đọc trước khi tra
 
 **Không phải quyết định nào cũng nằm trong `02`.** `02` định nghĩa **#1–#39** và **#68**.
-**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** và **#88** định nghĩa tại `08` §0, **#87** tại `backend/CLAUDE.md` §OpenAPI.
+**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** và **#88** định nghĩa tại `08` §0, **#87** tại `backend/CLAUDE.md` §OpenAPI, **#89** tại `ai-agent-development-workflow.md` §6.
 Không chép các quyết định đó sang `02` — cố tình không làm. Chép sang `02` sẽ tạo bản
 sao thứ hai để lệch nhau; thay vào đó registry này trỏ thẳng tới nơi định nghĩa duy nhất.
 
@@ -128,6 +128,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#86** | Prop `binding` thêm field additive **`imagePresets`** (preset theo từng source); codegen sinh bộ phái sinh vào `packages/builder-components/generated/`, hợp với tập cố định của bề mặt vsite khai trong `config/image-presets.json` | `08` §0 · §3.6 | ✅ enforce — `gen-registry.test.ts` (fail khi key ngoài `sources` / preset ngoài whitelist) + artifact `derivative-presets.json` + `DerivativePresetCatalog_For_Shop_Matches_Artifact` |
 | **#87** | Property object nullable trong OpenAPI luôn xuất dạng `{ allOf: [$ref], nullable: true }`, không phải object trùng `XDto2`. Chặn bằng transformer dùng chung, đăng ký cho mọi document module | `backend/CLAUDE.md` §OpenAPI | ✅ enforce — `DuplicateNullableSchema*Transformer` + test |
 | **#88** | `ShopDto` **và `ShopSummaryDto`** (`GET /shops`) trả sẵn **`logoUrl`** = `"/media/" + storageKey` của phái sinh `320x96,inside` của logo (đường dẫn tương đối theo domain, dùng được trên mọi host; `null` nếu chưa có logo hoặc chưa có phái sinh). **Field DTO tên `*Url` mà Portal nhận do BE trả sẵn có tiền tố `/media/`**; DB vẫn chỉ lưu key tương đối; nội dung ảnh trong builder vẫn đi qua `resolveImage()`. Prefix + hàm dựng URL nằm ở MỘT chỗ BE (`ImagePaths.MediaUrl`, cùng hằng với route mount `/media`). `Shop` đọc qua port do chính `Shop` khai báo (`IShopLogoReader`, có bản tra theo lô một câu SQL cho `GET /shops`), adapter nằm ở `Media` (Shop không reference Media). Endpoint `GET …/library/{assetId}/derivatives` vẫn giữ cho các nguồn ảnh nghiệp vụ khác | `08` §0 · §3.6 · §5 | ✅ enforce — `ShopLogoTests` (`GetShop_and_PatchShop_after_logo_return_prefixed_logoUrl_readable_via_media`, `ListShops_returns_logoUrl_…`) + `ShopLogoBatchSqlCountTests` (một câu SQL) + `ImagePathsMediaUrlTests` + `ModuleBoundaryTests` (Shop không reference Media) |
+| **#89** | **Gate 1 gọn trước production:** `contract-diff.md` chỉ ghi endpoint/field mới, auth, giả định, câu hỏi, bảng quyết định — không phân tích nhãn `BREAKING`. Chỉ thêm và **không có câu hỏi** → promote ngay, người đọc lại sau; có câu hỏi hoặc `REMOVED` → dừng. Checklist Gate 1 bắt buộc chốt mọi "Câu hỏi mở" của `data-needs.md` và chạy thử Orval trên staging. **Đảo lại** từ lần deploy production đầu tiên (sửa cùng Rule 5) | `ai-agent-development-workflow.md` §6 | ✅ quy trình — skill `contract-sync` bước 5–6 |
 
 ---
 

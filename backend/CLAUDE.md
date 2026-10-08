@@ -203,7 +203,7 @@ Docker chạy xác nhận sau. Xoá đúng mục khỏi file đó khi đã chạ
 5. Tuân thủ đủ 5 invariant #21
 6. Export runtime OpenAPI theo document module
 7. Chạy skill `contract-sync`, sinh `Docs/tasks/{ID}/contract-diff.md`
-8. **Dừng lại chờ Gate 1.** Chỉ viết `brief.md` sau khi contract được duyệt
+8. **Gate 1** (gọn trước production, #89): có câu hỏi/`REMOVED` thì dừng chờ duyệt; chỉ thêm và không câu hỏi thì promote. `brief.md` viết sau promote
 9. **Đồng bộ tài liệu — không có bước này thì task CHƯA XONG**, kể cả khi code chạy và test xanh:
    - Viết `Docs/tasks/{ID}/changelog.md` — từng điểm thực thi lệch so với file `DesignIdeal/`
      tương ứng, chia rõ **"lệch có chủ đích"** và **"chưa làm xong"**. Mẫu:

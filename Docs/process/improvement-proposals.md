@@ -18,7 +18,12 @@ Mỗi lần chạy `meta-review`, agent phải rà mọi dòng `⏳` đã tới 
 
 | # | Đề xuất | Ngày promote | Sửa ở file nào | Rà lại sau | Kết quả |
 |---|---|---|---|---|---|
-| — | *(chưa có dòng nào — flow này vừa dựng)* | — | — | — | — |
+| P1 | **Gate 1 gọn trước production (#89):** bỏ phân tích nhãn `BREAKING`; chỉ thêm + không câu hỏi → promote ngay. Bằng chứng: MEDIA-001 có 4 lần Gate 1, mỗi lần chờ người 4.7–6.2 giờ, phần diff không bắt được lỗi nào | 2026-10-08 | workflow §5 §6 §10 (Rule 3, 5) · skill `contract-sync` · `CLAUDE.md` · `backend/CLAUDE.md` DoD 8 | Sau 2 task lane B/C — đo: số lần dừng Gate 1, lỗi contract lọt sang FE | ⏳ chưa tới hạn |
+| P2 | **Checklist Gate 1:** chốt mọi "Câu hỏi mở" của `data-needs.md` + chạy thử Orval trên staging. Bằng chứng: MEDIA-001 phải mở lại contract 3 lần (D2 `MediaAssetDto2`, D3/D4 logo) vì hai việc này | 2026-10-08 | workflow §6 Checklist · skill `contract-sync` bước 4 | Sau 2 task lane B/C — đo: số lần promote lại contract trong cùng task | ⏳ chưa tới hạn |
+| P3 | **Lane C cần Docker** trước session BE. Bằng chứng: MEDIA-001 phải viết hai bộ test; 13 test fail chỉ lộ khi Docker mới có | 2026-10-08 | workflow §4 | Task lane C kế tiếp | ⏳ chưa tới hạn |
+| P4 | **Smoke chạy app thật sau task FE đầu tiên.** Bằng chứng: hai lỗi FE của MEDIA-001 (proxy `apps/web`, không có đường tới `/dev-registry`) chỉ lộ khi soạn hướng dẫn nghiệm thu | 2026-10-08 | workflow §8 | Task có FE kế tiếp — đo: lỗi chỉ lộ ở nghiệm thu tay | ⏳ chưa tới hạn |
+| P5 | **Subagent chạy lệnh foreground; review task theo rủi ro.** Bằng chứng: D1 treo 4 lần, D2 treo tới lúc được đánh thức | 2026-10-08 | workflow Rule 14 · `CLAUDE.md` §Quy trình | Sau 2 task dùng subagent — đo: số lần agent treo | ⏳ chưa tới hạn |
+| P6 | **Cho phép trước các lệnh an toàn** (`pnpm` script, `node tools/*`, `git` chỉ đọc, `dotnet ef migrations list`). Bằng chứng: ~57 giờ lệnh nằm chờ duyệt quyền qua đêm (6 lần) trong MEDIA-001 | 2026-10-08 | `.claude/settings.json` | Sau 2 task — đo: khoảng chờ > 1 giờ giữa lúc phát lệnh và lúc có kết quả | ⏳ chưa tới hạn |
 
 Ký hiệu cột **Kết quả**: `⏳ chưa tới hạn` · `✅ có tác dụng — giữ` · `❌ không cứu được gì — đã gỡ`
 

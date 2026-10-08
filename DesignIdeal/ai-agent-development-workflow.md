@@ -103,6 +103,9 @@ Gate 1 · **đồng bộ tài liệu** (`changelog.md` + banner `STATUS` + cấp
 
 **Task chạm code mà thiếu `changelog.md` là task chưa xong** — `change-reviewer` báo Critical ở Gate 2.
 
+**Lane C cần máy có Docker** trước khi mở session BE. Không có thì phải viết hai bộ test và lỗi thật chỉ
+lộ ở cuối.
+
 ---
 
 ## 5. ⚠️ Bước sync — diff và phân loại, KHÔNG overwrite
@@ -125,13 +128,9 @@ contract. Không còn gì để duyệt, và đảo ngược chiều nguồn s�
 Script **không bao giờ** ghi thẳng vào `contracts/openapi/`. Nó ghi ra `contracts/openapi/.staging/`.
 Promote là lệnh riêng, chạy sau Gate 1, cùng lúc cập nhật `contract.lock`.
 
-| Loại | Xử lý |
-|---|---|
-| `NEW_ENDPOINT` | Contract "ra đời" ở đây. Duyệt shape — vẫn kịp vì chưa có FE code nào bám vào |
-| `ADDITIVE` | Duyệt nhanh, giữ `v1` |
-| `BREAKING` | **Xem §6 — luật khác nhau trước và sau production** |
-| `REMOVED` | Endpoint biến mất khỏi runtime. Gần như luôn là bug → dừng, hỏi |
-| `UNCHANGED` | Bỏ qua |
+**Trước production (#89):** nhãn phân loại của tool (`ADDITIVE`/`BREAKING`/…) chỉ để tham khảo, không
+phải viết giải thích. Tool **mù với response dạng mảng** — tự đối chiếu staging cho các endpoint đó.
+`REMOVED` thì vẫn dừng và hỏi: gần như luôn là bug.
 
 **Cách chạy:** skill [`contract-sync`](../.claude/skills/contract-sync/SKILL.md) — đọc file đó, đừng
 đoán các bước. Quy tắc normalize (sort key đệ quy · bỏ `servers`/`info.version` · so theo operation
@@ -141,50 +140,18 @@ chứ không so text) đã hiện thực trong `tools/contract-sync/lib/normaliz
 
 ## 6. Gate 1 — duyệt contract
 
-> ### ⚠️ Luật BREAKING đổi theo giai đoạn — đọc kỹ mục này
+> ### ⚠️ Gate 1 gọn trước production (#89)
 >
-> **Hiện tại (chưa deploy production, không có client nào đang chạy):**
-> BREAKING là **bình thường**. Sửa BE → chạy lại `pnpm gen:api` → sửa lỗi compile ở FE.
-> Trình biên dịch tìm giúp hết. **Không tạo `v2`.** API có hình dạng sai thì sửa ngay lúc còn rẻ.
+> **Hiện tại (chưa deploy production):** BREAKING là **bình thường** — sửa BE, chạy lại `pnpm gen:api`,
+> sửa lỗi compile FE, **không tạo `v2`**. `contract-diff.md` chỉ gồm: endpoint/field mới · auth policy ·
+> giả định tự đặt · câu hỏi · bảng "Người duyệt đã quyết". **Không có câu hỏi và chỉ thêm endpoint/field
+> → promote luôn, không dừng chờ người**; vẫn ghi `contract-diff.md` để người đọc lại khi rảnh.
 >
-> **Từ lần deploy production đầu tiên** (hoặc khi có consumer ngoài đầu tiên):
-> BREAKING **mặc định là bug implementation**. Muốn `v2` thật thì phải có lý do ghi ra trong
-> `contract-diff.md` và được duyệt riêng.
->
-> Ai bật lại luật này cũng phải sửa **Rule 5** ở §10 cùng lúc. Ghi ngày bật vào `DECISIONS.md`.
+> **Từ lần deploy production đầu tiên:** BREAKING mặc định là bug; phân loại đầy đủ và Gate 1 luôn dừng.
+> Người bật lại phải sửa **Rule 5** ở §10 và dòng #89 ở `DECISIONS.md` cùng lúc.
 
-**Mục tiêu: 2 phút.** Người đọc `contract-diff.md`, không đọc file JSON.
-
-```markdown
-# LISTING-001 — contract diff
-
-## ⚠️ BREAKING / REMOVED
-(không có)   ← nếu có thì để đầu file
-
-## NEW_ENDPOINT
-POST /shops/{shopId}/listings          tạo tin đăng
-GET  /listings                         tìm kiếm công khai
-
-## ADDITIVE
-ListingSummary: + rating (double?)     null khi chưa có đánh giá
-
-## Auth policy
-POST: audience vsite-portal + role Owner/Manager tại shopId
-GET : anonymous
-
-## Giả định tôi đã tự đặt (không hỏi)
-- pageSize mặc định 20, tối đa 50
-- rating làm tròn 1 chữ số thập phân ở tầng API
-
-## Câu hỏi cần anh quyết
-1. ListedSince trả về dạng date hay datetime?
-
-## Người duyệt đã quyết   ← ĐIỀN LÚC GATE 1, không để trống
-| Câu hỏi / giả định | Quyết định | Số hiệu |
-|---|---|---|
-| ListedSince date hay datetime | datetime, UTC | không cấp mới — Quyết định #19 đã phủ |
-| Ảnh đánh giá lưu chung media_assets? | Không, bảng riêng | số mới → đã thêm dòng ở DECISIONS.md |
-```
+**Mục tiêu: 2 phút.** Người đọc `contract-diff.md`, không đọc file JSON. Mẫu:
+[`Docs/tasks/MEDIA-001-D3/contract-diff.md`](../Docs/tasks/MEDIA-001-D3/contract-diff.md).
 
 **"Giả định tôi đã tự đặt" quan trọng hơn mục câu hỏi.** Thứ agent tự quyết mà không nghĩ đến việc
 hỏi mới là chỗ hay sai; thứ nó biết để hỏi thì đã an toàn rồi.
@@ -202,6 +169,9 @@ trong đầu".
 - [ ] Auth policy ghi rõ audience + role từng endpoint
 - [ ] Các giả định tự đặt đều chấp nhận được
 - [ ] `Docs/architecture/dependency-map.json` đã cập nhật nếu chạm module khác
+- [ ] **Mọi "Câu hỏi mở" trong `data-needs.md` đã có quyết định**
+- [ ] Session BE đã chạy thử Orval trên bản **staging** vào thư mục tạm (không đụng
+  `api-sdk/src/generated`; `gen:api` thật chỉ đọc contract đã duyệt): không type trùng (`…Dto2`)
 
 Duyệt xong → promote staging → ghi `contract.lock` (sha256 + `approvedAt` + `taskId`) → viết `brief.md`.
 Session FE kiểm sha256 trước khi chạy Orval; lệch → dừng, không đoán.
@@ -234,6 +204,9 @@ Query hooks · Zod schemas · MSW handlers.
 từ contract · test Vitest + MSW · server state ở Query, client state ở Zustand, không copy qua lại (#20).
 
 FE dùng **API model**, không mirror BE Domain Entity.
+
+**Smoke chạy app thật ngay sau task FE đầu tiên**, không đợi tới integration: dev server lên được, host
+`{slug}.vsite.local` không bị chặn, proxy tới BE chạy, route mới mở được khi đã đăng nhập.
 
 ---
 
@@ -305,9 +278,9 @@ ghi ở cuối file đó. Thiếu hai thứ này thì flow chỉ là máy sinh r
 |---|---|
 | 1 | **Tuần tự BE → sync → FE.** Không chạy song song |
 | 2 | **Swagger đề xuất, người duyệt, contract chốt.** Không bao giờ overwrite contract bằng runtime |
-| 3 | **Script chỉ ghi `.staging/`.** Promote là hành động sau khi người duyệt |
+| 3 | **Script chỉ ghi `.staging/`.** Promote là hành động sau khi người duyệt — trước production, không có câu hỏi và chỉ thêm thì promote ngay, người đọc lại sau (#89) |
 | 4 | **Contract đã duyệt phải lock.** Sha256 lệch thì dừng |
-| 5 | **BREAKING: chưa production thì cứ sửa** (regen FE, không tạo `v2`). **Từ production trở đi** thì mặc định là bug implementation — xem khung cảnh báo ở §6 |
+| 5 | **BREAKING: chưa production thì cứ sửa** (regen FE, không tạo `v2`), Gate 1 gọn (#89). **Từ production trở đi** thì mặc định là bug và Gate 1 luôn dừng — xem khung ở §6 |
 | 6 | **Generated code không sửa tay** — `api-sdk`, `builder-components/generated` |
 | 7 | **FE code với MSW trước**, kể cả ở lane A/B khi cùng một session viết cả hai phía |
 | 8 | **Context quan trọng nằm trong file**, không nằm trong chat |
@@ -316,6 +289,7 @@ ghi ở cuối file đó. Thiếu hai thứ này thì flow chỉ là máy sinh r
 | 11 | **Chọn nhầm lane thì dừng và báo.** Lane A là mặc định |
 | 12 | **Task chạm code phải có `changelog.md`** và banner `STATUS` đã cập nhật |
 | 13 | **Đề xuất quy trình phải qua người duyệt.** `meta-reviewer` chỉ đọc; promote là hành động riêng, và mọi rule đã promote đều có mốc rà lại để còn gỡ được |
+| 14 | **Subagent chạy lệnh foreground.** Chạy nền rồi kết thúc lượt = treo, không gì đánh thức lại. Báo "đang chạy" phải kiểm bằng `git`/danh sách agent, không tin lời agent |
 
 ---
 
