@@ -24,7 +24,7 @@ change-reviewer (subagent read-only)
    ↓
 🧑 GATE 2 · duyệt merge → Merge
    ↓
-session-retro (session riêng, SAU Gate 2)  → Docs/tasks/{ID}/session-retro.md
+điền mục "Ma sát quy trình" cuối review.md (sau khi người quyết Gate 2)
    ⋮  (mỗi 3–5 task)
 meta-review  → Docs/process/improvement-proposals.md → 🧑 duyệt → sửa quy trình
 ==============
@@ -33,7 +33,7 @@ meta-review  → Docs/process/improvement-proposals.md → 🧑 duyệt → sử
 --- self improvement ---
 Gate 2 → merge
    ↓
-[bạn mở session mới] /session-retro     → Docs/tasks/{ID}/session-retro.md
+điền "Ma sát quy trình" ở cuối Docs/tasks/{ID}/review.md
    ⋮  (tích đủ 3–5 task)
 [bạn mở session mới] /meta-review       → spawn meta-reviewer (read-only)
    ↓                                      → Docs/process/improvement-proposals.md

@@ -24,7 +24,7 @@ KHỚP CONTRACT
 - FE có bám vào hành vi không có trong contract không
 
 RANH GIỚI KIẾN TRÚC
-- Module không reference project của module khác (#1)
+- Namespace module chỉ phụ thuộc module có trong dependsOn của Docs/architecture/dependency-map.json (#1)
 - packages không import từ apps
 - builder-renderer không import builder-core, vẫn isomorphic (#23)
 - Không sửa tay file generated (api-sdk, registry/generated)

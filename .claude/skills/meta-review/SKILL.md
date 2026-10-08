@@ -1,6 +1,6 @@
 ---
 name: meta-review
-description: Tổng hợp các session-retro thành Docs/process/improvement-proposals.md cho người duyệt, và rà lại hiệu quả các đề xuất đã promote. Chạy session riêng, sau mỗi 3–5 task hoặc 1–2 tuần.
+description: Tổng hợp mục "Ma sát quy trình" trong các Docs/tasks/*/review.md thành Docs/process/improvement-proposals.md cho người duyệt, và rà lại hiệu quả các đề xuất đã promote. Chạy session riêng, sau mỗi 3–5 task hoặc 1–2 tuần.
 ---
 
 # meta-review
@@ -15,18 +15,18 @@ Chạy ở **session riêng**, không lẫn với task feature.
 - KHÔNG promote bất cứ đề xuất nào. Promote là hành động riêng, sau khi người duyệt — cùng luật với
   contract ở Gate 1.
 - KHÔNG tự phân tích thay cho agent. Việc đọc và tổng hợp thuộc về `meta-reviewer`, vốn không có
-  quyền ghi. Bạn đọc các retro ở session này nghĩa là mất đúng lớp cách ly đó.
+  quyền ghi. Bạn tự đọc các mục ma sát ở session này nghĩa là mất đúng lớp cách ly đó.
 
 ## Các bước
 
-1. Spawn agent `meta-reviewer` (read-only). Nêu rõ trong prompt: phạm vi retro cần đọc, và ngày hôm nay.
+1. Spawn agent `meta-reviewer` (read-only). Nêu rõ trong prompt: phạm vi task cần đọc, và ngày hôm nay.
 2. Nhận báo cáo. **Không sửa nội dung phân tích** — chỉ kiểm hình thức: mọi đề xuất có task ID thật
    không, có mức A/B/C không, có trỏ file sẽ phải sửa không. Thiếu thì hỏi lại agent, đừng tự điền.
 3. Ghi vào `Docs/process/improvement-proposals.md`:
    - Giữ nguyên bảng **"Đã promote — theo dõi hiệu quả"**, cập nhật cột `Kết quả` theo kết luận rà lại.
    - Thay phần đề xuất bằng bản mới, có ngày.
    - Đề xuất kỳ trước chưa được quyết → giữ lại, đừng đánh rơi.
-4. Dừng. Báo người: số retro đã đọc, số đề xuất mới, số dòng `⏳` đã tới hạn rà và kết luận của chúng.
+4. Dừng. Báo người: số task đã đọc, số đề xuất mới, số dòng `⏳` đã tới hạn rà và kết luận của chúng.
 
 ## Sau khi người duyệt
 

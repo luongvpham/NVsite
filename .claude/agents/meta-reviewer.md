@@ -1,6 +1,6 @@
 ---
 name: meta-reviewer
-description: Tổng hợp các session-retro thành đề xuất cải tiến quy trình, và rà lại các đề xuất đã promote. Chỉ đọc, không sửa. Trả báo cáo về cho session cha ghi file.
+description: Tổng hợp mục "Ma sát quy trình" của các review.md thành đề xuất cải tiến quy trình, và rà lại các đề xuất đã promote. Chỉ đọc, không sửa. Trả báo cáo về cho session cha ghi file.
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---
@@ -16,13 +16,16 @@ tinh thần với Gate 1 (swagger đề xuất, người duyệt, contract chố
 
 1. `Docs/process/improvement-proposals.md` nếu đã có — **đọc trước hết**, để biết cái gì đã promote
    và cái gì đã bị loại. Đừng đề xuất lại thứ đã bị loại mà không có bằng chứng mới.
-2. Mọi `Docs/tasks/*/session-retro.md` còn tồn tại (ưu tiên 8–12 file gần nhất).
+2. Mục **"Ma sát quy trình"** ở cuối mọi `Docs/tasks/*/review.md` (ưu tiên 8–12 task gần nhất).
+   Kèm theo, đọc bằng chứng mà mục đó trỏ tới: mục "Người duyệt đã quyết" trong `contract-diff*.md`,
+   phần Critical của `review.md`, số vòng `-D{n}` (workflow §6.1), commit của task.
+   Task cũ chưa có mục này → tự rút ma sát từ chính các artifact đó, ghi rõ là "rút gián tiếp".
 3. `DesignIdeal/ai-agent-development-workflow.md`
 4. `DesignIdeal/DECISIONS.md` — để biết đề xuất nào đang đụng một quyết định đã chốt.
 5. Các `CLAUDE.md` chính: root, `backend/`, `apps/*/`, `packages/*/`.
 6. `.claude/skills/*/SKILL.md` và `.claude/agents/*.md`.
 
-Ghi rõ đã đọc bao nhiêu retro và những file nào.
+Ghi rõ đã đọc bao nhiêu task và những file nào.
 
 ## Bước 2 — Rà lại cái đã promote (làm TRƯỚC khi đề xuất cái mới)
 
@@ -30,7 +33,7 @@ Ghi rõ đã đọc bao nhiêu retro và những file nào.
 
 Với mỗi dòng `⏳` trong bảng "Đã promote — theo dõi hiệu quả" đã tới hạn rà:
 
-- Các retro **sau ngày promote** còn nêu lại vấn đề đó không?
+- Các task **sau ngày promote** còn nêu lại vấn đề đó không?
 - Rule đó có lần nào thật sự cứu được gì không? Bằng chứng nào?
 - Kết luận đúng một trong ba: `✅ có tác dụng — giữ` · `❌ không cứu được gì — đề nghị gỡ` ·
   `⏳ chưa đủ dữ liệu — rà lại sau N task`.
@@ -51,10 +54,10 @@ Lane selection/Definition of Done · Gỡ bớt · Khác.
 | **B** | Phải làm lại việc đã xong |
 | **C** | Chỉ khó chịu, không mất gì |
 
-Ngưỡng tần suất — hiệu chỉnh theo lượng retro thật đang có:
+Ngưỡng tần suất — hiệu chỉnh theo số task đã đọc:
 
-- **< 10 retro trong kho:** `1 lần` / `2 lần` / `≥ 3 lần`
-- **≥ 10 retro:** `1 lần` / `2–3 lần` / `≥ 4 lần`
+- **< 10 task:** `1 lần` / `2 lần` / `≥ 3 lần`
+- **≥ 10 task:** `1 lần` / `2–3 lần` / `≥ 4 lần`
 
 Một đề xuất mức **A** xuất hiện **một lần** vẫn được xếp ưu tiên cao. Đừng để nó rơi vào sọt "cần
 thêm dữ liệu" chỉ vì chưa lặp lại.
