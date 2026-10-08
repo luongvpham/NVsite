@@ -10,17 +10,19 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
-        builder.ToTable("User", t =>
+        // `app_user`, không phải `user`: `user` là từ khoá Postgres — `SELECT * FROM user` không lỗi mà
+        // trả về current_user, bẫy cho mọi SQL viết tay (REFACTOR-DB-001).
+        builder.ToTable("app_user", t =>
         {
             // [2] Có email <=> đã verify. Không tồn tại email chưa verify trong bảng User.
             t.HasCheckConstraint(
                 "ck_user_email_verified",
-                "(\"Email\" IS NULL AND \"EmailVerifiedAt\" IS NULL) OR (\"Email\" IS NOT NULL AND \"EmailVerifiedAt\" IS NOT NULL)");
+                "(email IS NULL AND email_verified_at IS NULL) OR (email IS NOT NULL AND email_verified_at IS NOT NULL)");
 
             // [3] Nhánh Email của nguyên tắc "phải có email hoặc Zalo".
             t.HasCheckConstraint(
                 "ck_user_primary_identity",
-                "\"PrimaryIdentityKind\" <> 'Email' OR \"Email\" IS NOT NULL");
+                "primary_identity_kind <> 'Email' OR email IS NOT NULL");
         });
 
         builder.HasKey(u => u.Id);
@@ -31,7 +33,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         // [1] Email là identity key toàn cục, nhưng chỉ khi có.
         builder.HasIndex(u => u.EmailNormalized)
             .IsUnique()
-            .HasFilter("\"EmailNormalized\" IS NOT NULL");
+            .HasFilter("email_normalized IS NOT NULL");
 
         builder.Property(u => u.RoleScope)
             .HasConversion<string>()
@@ -47,6 +49,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasMany(u => u.ExternalLogins)
             .WithOne(el => el.User)
             .HasForeignKey(el => el.UserId)
+            .HasConstraintName("fk_external_login_app_user_user_id")
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(u => u.UserShops)

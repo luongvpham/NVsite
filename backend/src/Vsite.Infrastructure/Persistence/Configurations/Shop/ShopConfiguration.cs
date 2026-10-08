@@ -10,12 +10,12 @@ public sealed class ShopConfiguration : IEntityTypeConfiguration<ShopEntity>
 {
     public void Configure(EntityTypeBuilder<ShopEntity> builder)
     {
-        builder.ToTable("Shop", t =>
+        builder.ToTable("shop", t =>
         {
             // 04 §2.1 — "NOT NULL khi Kind = ExternalOnly".
             t.HasCheckConstraint(
                 "ck_shop_external_url",
-                "\"Kind\" <> 'ExternalOnly' OR \"ExternalUrl\" IS NOT NULL");
+                "kind <> 'ExternalOnly' OR external_url IS NOT NULL");
         });
 
         builder.HasKey(s => s.Id);

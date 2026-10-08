@@ -42,7 +42,7 @@ public sealed class MediaReferenceValidatorSqlCountTests(PostgresFixture postgre
             setupDb.MediaAssets.Add(library);
             await setupDb.SaveChangesAsync();
 
-            var clone = MediaAsset.NewDerived(
+            var clone = MediaAsset.NewClone(
                 library, $"shops/{shopId}/clone/{Guid.NewGuid():N}.webp", 320, 96, 500, "320x96,inside", 0.5f, 0.5f);
             setupDb.MediaAssets.Add(clone);
             await setupDb.SaveChangesAsync();

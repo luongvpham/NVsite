@@ -72,7 +72,7 @@ public sealed class ShopLogoBatchSqlCountTests(PostgresFixture postgres)
     {
         var source = MediaAsset.NewLibrary(
             shopId, $"shops/{shopId}/library/{Guid.NewGuid():N}.webp", 1200, 800, 12345, 0.5f, 0.5f, null, null);
-        var header = MediaAsset.NewDerived(
+        var header = MediaAsset.NewDerivative(
             source, $"shops/{shopId}/logo/{Guid.NewGuid():N}.webp", 320, 96, 500, "320x96,inside", 0.5f, 0.5f);
         return (source, header);
     }

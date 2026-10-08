@@ -28,7 +28,12 @@ public sealed class UpdateShopHandler(IAppDbContext db, IShopLookupService shopL
         var slugChanged = !string.Equals(shop.Slug, request.Slug, StringComparison.Ordinal);
         if (slugChanged)
         {
-            var slugTaken = await db.Shops.AnyAsync(s => s.Slug == request.Slug && s.Id != shop.Id, cancellationToken);
+            // IgnoreQueryFilters: unique index slug ở DB KHÔNG lọc soft delete — slug của shop đã xoá mềm
+            // vẫn bị giữ (không cho người khác chiếm URL cũ). Bỏ qua filter để trả 409 thay vì để DB ném
+            // unique violation thành 500 (REFACTOR-DB-001). Shop không tenant-scoped nên chỉ tắt filter
+            // soft-delete.
+            var slugTaken = await db.Shops.IgnoreQueryFilters()
+                .AnyAsync(s => s.Slug == request.Slug && s.Id != shop.Id, cancellationToken);
             if (slugTaken)
             {
                 throw new ConflictException("SHOP_SLUG_ALREADY_TAKEN", "Slug này đã được dùng bởi shop khác.");

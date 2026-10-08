@@ -32,3 +32,20 @@
 - **Ngày thêm:** 2026-10-08 · **Task:** `Docs/tasks/REFACTOR-BE-001/changelog.md`
 - **Coi là xong khi:** lệnh trên PASS toàn bộ (Skipped chỉ còn 1 test `[Fact(Skip=…)]` có sẵn của
   SHOP-001).
+- **Cập nhật 2026-10-09:** đã chạy trên Postgres 16.4 cài trên máy (không phải Testcontainers, Redis
+  thay bằng cache in-memory) cùng nhánh REFACTOR-DB-001 — các test endpoint 403 non-Owner ở trên
+  đều PASS. Còn thiếu chạy bằng Docker thật (xem mục REFACTOR-DB-001 bên dưới).
+
+### REFACTOR-DB-001 — schema snake_case + migration gộp, chạy lại trên Docker thật
+
+- **Lệnh:** `dotnet test backend/tests/IntegrationTests`
+- **Vì sao cần Docker:** migration gộp lại một `InitialSchema` mới, toàn bộ tên bảng/cột đổi sang
+  snake_case, thêm `kind` + `ck_media_asset_kind` + `ux_media_asset_derivative`. Phải chạy trên image
+  `postgres:16-alpine` + Redis thật như CI.
+- **Đã chạy được (2026-10-09):** Postgres 16.4 cài trên máy (cluster tạm) + bản vá fixture tạm (không
+  commit, Redis → cache in-memory). Kết quả mới nhất ghi ở `Docs/tasks/REFACTOR-DB-001/changelog.md`
+  mục "Kiểm chứng". Các test fail còn lại chỉ vì cần Docker: `S3ObjectStorageTests` (LocalStack) và
+  `ShopLookupCacheTests.Slug_resolution_is_served_from_redis_cache_when_postgres_is_unreachable`.
+- **Ngày thêm:** 2026-10-09 · **Task:** `Docs/tasks/REFACTOR-DB-001/changelog.md`
+- **Coi là xong khi:** lệnh trên PASS toàn bộ (Skipped chỉ còn 1 test `[Fact(Skip=…)]` có sẵn của
+  SHOP-001).

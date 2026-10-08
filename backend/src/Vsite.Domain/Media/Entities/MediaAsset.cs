@@ -1,16 +1,18 @@
 using Vsite.Domain.Common;
 using Vsite.Domain.Exceptions;
+using Vsite.Domain.Media.Enums;
 
 namespace Vsite.Domain.Media.Entities;
 
 /// <summary>
 /// `08-media-asset-design.md` §2 — một bảng duy nhất cho cả bản Library, ảnh upload thẳng và
-/// clone/phái sinh (Quyết định #69), phân biệt bằng <see cref="IsInLibrary"/> + <see cref="Preset"/>.
+/// clone/phái sinh (Quyết định #69), phân biệt bằng <see cref="Kind"/> (REFACTOR-DB-001; trước đó
+/// suy ra từ <see cref="IsInLibrary"/> + <see cref="Preset"/> nên Clone và Derivative lẫn nhau).
 ///
-/// Hai điểm lệch có chủ đích so với `08` §2 (task T4, xem `Docs/tasks/MEDIA-001/changelog.md`):
-/// - Dùng <see cref="BaseAuditableEntity.IsDeleted"/> của base class thay cho cột `DeletedAt`.
-/// - Tên bảng `MediaAsset` (số ít, PascalCase) theo quy ước bảng hiện có (`Shop`, `UserShop`),
-///   không dùng `media_assets`.
+/// Điểm lệch so với `08` §2 (xem `Docs/tasks/REFACTOR-DB-001/changelog.md`):
+/// - Soft delete có cả <see cref="BaseAuditableEntity.IsDeleted"/> lẫn `DeletedAt` (base class).
+/// - Tên bảng `media_asset` (số ít, snake_case theo quy ước toàn DB từ REFACTOR-DB-001), không dùng
+///   `media_assets`.
 ///
 /// `08` §2 mô tả factory nhận <c>EncodedImage</c>/<c>FocalPoint</c> (kiểu của
 /// <c>Vsite.Application.Common.Imaging</c>) — Domain không được reference Application
@@ -42,6 +44,10 @@ public sealed class MediaAsset : TenantAuditableEntity
     public string? Folder { get; set; }
 
     public bool IsInLibrary { get; private set; }
+
+    /// <summary>Vai trò của record — xem <see cref="MediaAssetKind"/>. CHECK `ck_media_asset_kind`
+    /// giữ nó khớp với <see cref="IsInLibrary"/>/<see cref="SourceAssetId"/>.</summary>
+    public MediaAssetKind Kind { get; private set; }
 
     /// <summary><c>NULL</c> ⟺ <see cref="IsInLibrary"/> = true (CHECK ck_media_library_preset).</summary>
     public string? Preset { get; private set; }
@@ -80,6 +86,7 @@ public sealed class MediaAsset : TenantAuditableEntity
             OriginalFileName = originalFileName,
             AltText = altText,
             IsInLibrary = true,
+            Kind = MediaAssetKind.Library,
             Preset = null,
             SourceAssetId = null,
         };
@@ -113,15 +120,43 @@ public sealed class MediaAsset : TenantAuditableEntity
             OriginalFileName = originalFileName,
             AltText = altText,
             IsInLibrary = false,
+            Kind = MediaAssetKind.Direct,
             Preset = preset,
             SourceAssetId = null,
         };
     }
 
-    /// <summary>Clone/phái sinh từ một bản Library. Ném <see cref="DomainException"/>
-    /// (<c>MEDIA_CLONE_FROM_CLONE</c>) nếu <paramref name="source"/> không phải bản Library
-    /// (Quyết định #71 — Component Tree không bao giờ chứa id của một clone khác).</summary>
-    public static MediaAsset NewDerived(
+    /// <summary>Clone đặt vào một slot của Component Tree (#71/#72) — focal point riêng, độc lập với
+    /// bản Library. Ném <see cref="DomainException"/> (<c>MEDIA_CLONE_FROM_CLONE</c>) nếu
+    /// <paramref name="source"/> không phải bản Library (Component Tree không bao giờ chứa id của một
+    /// clone khác).</summary>
+    public static MediaAsset NewClone(
+        MediaAsset source,
+        string storageKey,
+        int width,
+        int height,
+        long sizeBytes,
+        string preset,
+        float focalX,
+        float focalY) =>
+        NewFromLibrary(MediaAssetKind.Clone, source, storageKey, width, height, sizeBytes, preset, focalX, focalY);
+
+    /// <summary>Phái sinh của ảnh nghiệp vụ (#73, vd. logo shop) — đúng MỘT bản cho mỗi (bản Library,
+    /// preset), unique index `ux_media_asset_derivative`. Cùng ràng buộc nguồn như
+    /// <see cref="NewClone"/>.</summary>
+    public static MediaAsset NewDerivative(
+        MediaAsset source,
+        string storageKey,
+        int width,
+        int height,
+        long sizeBytes,
+        string preset,
+        float focalX,
+        float focalY) =>
+        NewFromLibrary(MediaAssetKind.Derivative, source, storageKey, width, height, sizeBytes, preset, focalX, focalY);
+
+    private static MediaAsset NewFromLibrary(
+        MediaAssetKind kind,
         MediaAsset source,
         string storageKey,
         int width,
@@ -152,6 +187,7 @@ public sealed class MediaAsset : TenantAuditableEntity
             OriginalFileName = source.OriginalFileName,
             AltText = source.AltText,
             IsInLibrary = false,
+            Kind = kind,
             Preset = preset,
             SourceAssetId = source.Id,
         };

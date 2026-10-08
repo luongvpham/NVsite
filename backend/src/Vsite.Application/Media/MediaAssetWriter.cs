@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using Vsite.Application.Common.Imaging;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Domain.Media.Entities;
+using Vsite.Domain.Media.Enums;
 
 namespace Vsite.Application.Media;
 
@@ -69,9 +70,31 @@ public sealed class MediaAssetWriter(
         return asset;
     }
 
-    /// <summary>Clone/phái sinh từ một bản Library đã tồn tại trong CÙNG request (chưa cần
-    /// SaveChanges trước — <c>source.Id</c> đã sinh sẵn lúc construct, xem <c>BaseEntity</c>).</summary>
-    public async Task<MediaAsset> WriteDerivedAsync(
+    /// <summary>Clone cho một slot của Component Tree (<see cref="MediaAssetKind.Clone"/>) từ một bản
+    /// Library đã tồn tại trong CÙNG request (chưa cần SaveChanges trước — <c>source.Id</c> đã sinh
+    /// sẵn lúc construct, xem <c>BaseEntity</c>).</summary>
+    public Task<MediaAsset> WriteCloneAsync(
+        MediaAsset source,
+        ISourceImage sourceImage,
+        ImagePreset preset,
+        float focalX,
+        float focalY,
+        CancellationToken ct) =>
+        WriteFromLibraryAsync(MediaAsset.NewClone, source, sourceImage, preset, focalX, focalY, ct);
+
+    /// <summary>Phái sinh của ảnh nghiệp vụ (<see cref="MediaAssetKind.Derivative"/>, vd. logo) — xem
+    /// <see cref="WriteCloneAsync"/>.</summary>
+    public Task<MediaAsset> WriteDerivativeAsync(
+        MediaAsset source,
+        ISourceImage sourceImage,
+        ImagePreset preset,
+        float focalX,
+        float focalY,
+        CancellationToken ct) =>
+        WriteFromLibraryAsync(MediaAsset.NewDerivative, source, sourceImage, preset, focalX, focalY, ct);
+
+    private async Task<MediaAsset> WriteFromLibraryAsync(
+        Func<MediaAsset, string, int, int, long, string, float, float, MediaAsset> factory,
         MediaAsset source,
         ISourceImage sourceImage,
         ImagePreset preset,
@@ -82,12 +105,12 @@ public sealed class MediaAssetWriter(
         var transform = preset.ToTransform(new FocalPoint(focalX, focalY));
         var rendered = await RenderAndPutAsync(source.ShopId, sourceImage, transform, ct);
 
-        var derived = MediaAsset.NewDerived(
+        var asset = factory(
             source, rendered.Key, rendered.Width, rendered.Height, rendered.SizeBytes,
             preset.Name, focalX, focalY);
 
-        db.MediaAssets.Add(derived);
-        return derived;
+        db.MediaAssets.Add(asset);
+        return asset;
     }
 
     /// <summary>R4 — nếu <c>SaveChangesAsync</c> ném lỗi, xoá best-effort mọi key đã ghi trong

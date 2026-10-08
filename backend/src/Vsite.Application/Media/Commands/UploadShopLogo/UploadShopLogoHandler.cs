@@ -28,7 +28,7 @@ public sealed class UploadShopLogoHandler(
         // Artifact FULL SET (#86) — rỗng là lỗi cấu hình (startup lẽ ra đã fail fast trên file
         // thiếu/sai shape), KHÔNG sinh logo thiếu derivative. Resolve TOÀN BỘ preset name -> ImagePreset
         // TRƯỚC khi đụng file/ảnh (review sau T7: trước đây TryGet chạy TRONG loop SAU
-        // WriteLibraryAsync/một số WriteDerivedAsync — lỗi cấu hình ở preset thứ N thì file của
+        // WriteLibraryAsync/một số WriteDerivativeAsync — lỗi cấu hình ở preset thứ N thì file của
         // Library + derivative 1..N-1 đã ghi xong nhưng ném exception ngoài MediaAssetWriter, R4
         // KHÔNG dọn được các key đó -> mồ côi file trên storage).
         var presetNames = derivativePresetCatalog.For(DerivativeSource);
@@ -61,7 +61,7 @@ public sealed class UploadShopLogoHandler(
         var derivatives = new List<MediaAsset>(presets.Count);
         foreach (var preset in presets)
         {
-            var derived = await writer.WriteDerivedAsync(
+            var derived = await writer.WriteDerivativeAsync(
                 library, source, preset, FocalPoint.Center.X, FocalPoint.Center.Y, cancellationToken);
             derivatives.Add(derived);
         }

@@ -3,6 +3,7 @@ using Vsite.Application.Common.Imaging;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Media;
 using Vsite.Application.Shop.Interfaces;
+using Vsite.Domain.Media.Enums;
 
 namespace Vsite.Infrastructure.Media;
 
@@ -26,6 +27,7 @@ public sealed class ShopLogoReader(IAppDbContext db) : IShopLogoReader
             .IgnoreQueryFilters()
             .Where(a => a.ShopId == shopId
                 && !a.IsDeleted
+                && a.Kind == MediaAssetKind.Derivative
                 && a.SourceAssetId == logoId
                 && a.Preset == LogoPresets.Header)
             .OrderBy(a => a.CreatedAt)
@@ -51,7 +53,7 @@ public sealed class ShopLogoReader(IAppDbContext db) : IShopLogoReader
             join a in db.MediaAssets.IgnoreQueryFilters()
                 on new { ShopId = s.Id, SourceAssetId = s.LogoId }
                 equals new { a.ShopId, a.SourceAssetId }
-            where !a.IsDeleted && a.Preset == LogoPresets.Header
+            where !a.IsDeleted && a.Kind == MediaAssetKind.Derivative && a.Preset == LogoPresets.Header
             select new { s.Id, a.StorageKey, a.CreatedAt, AssetId = a.Id })
             .ToListAsync(ct);
 

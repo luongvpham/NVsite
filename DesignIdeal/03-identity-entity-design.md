@@ -1,6 +1,6 @@
 # vsite — Thiết Kế Entity: Identity & Shop Membership
 
-> **STATUS:** `IMPLEMENTED` · **Tasks:** `IDENTITY-001` · **Changelog:** `Docs/tasks/IDENTITY-001/changelog.md` · **Stale:** `§3.1/§3.3/§5 cột PasswordSalt · §3.3 câu upsert UserShop · §4 tên ràng buộc`
+> **STATUS:** `IMPLEMENTED` · **Tasks:** `IDENTITY-001,REFACTOR-DB-001` · **Changelog:** `Docs/tasks/IDENTITY-001/changelog.md` · **Stale:** `§3.1/§3.3/§5 cột PasswordSalt · §3.3 câu upsert UserShop · §4 tên ràng buộc · §4 tên bảng/cột PascalCase có quote (thực tế snake_case, bảng User = app_user, REFACTOR-DB-001 — xem Docs/tasks/REFACTOR-DB-001/changelog.md) · mọi bảng auditable có thêm cột deleted_at`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
 > ⚠️ **Ba chỗ trong file này không khớp code — đọc changelog trước khi làm theo:**

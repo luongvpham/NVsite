@@ -344,7 +344,7 @@ public sealed class ShopLogoTests
         await using var scope = _factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var rows = await db.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE "UserShop" SET "IsDeleted" = true WHERE "UserId" = {userId} AND "ShopId" = {shopId}""");
+            $"""UPDATE user_shop SET is_deleted = true WHERE user_id = {userId} AND shop_id = {shopId}""");
         Assert.Equal(1, rows);
     }
 
@@ -421,7 +421,7 @@ public sealed class ShopLogoTests
         await using var scope = _factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "UserShop" ("Id", "UserId", "ShopId", "RoleId", "Source", "Status", "CreatedAt", "IsDeleted")
+            INSERT INTO user_shop (id, user_id, shop_id, role_id, source, status, created_at, is_deleted)
             VALUES ({Guid.NewGuid()}, {userId}, {shopId}, {WellKnownRoles.StaffId}, 'InvitedByShop', 'Active', now(), false)
             """);
     }

@@ -53,7 +53,7 @@ backend/src/
     Common/       Behaviors/ValidationBehavior.cs  Exceptions/  Interfaces/{IAppDbContext,ICurrentUserContext,IAuditActor}.cs
     {Module}/     Interfaces/  Options/  {Feature}/Commands/{UseCase}/  {Feature}/Queries/{UseCase}/
   Vsite.Infrastructure/
-    Persistence/  AppDbContext.cs AppDbContextFactory.cs TenantQueryFilterExtensions.cs
+    Persistence/  AppDbContext.cs TenantQueryFilterExtensions.cs
                   Configurations/{Module}/{Entity}Configuration.cs
                   Seed/  Migrations/
     Configuration/ ReservedRoutesProvider.cs
@@ -107,6 +107,28 @@ chỉ dùng khi tạo thay người khác, vd. job nền.)
 **Entity không cho set `Id` tự do:** `BaseEntity.Id` là `protected set`. Entity cần seed data với
 GUID cố định phải tự expose constructor `public {Entity}(Guid id) : base(id) { }` — xem
 `Vsite.Domain.Identity.Entities.Role` + `Vsite.Infrastructure.Persistence.Seed.RoleSeed`.
+
+## Quy ước database (REFACTOR-DB-001)
+
+- **snake_case cho mọi tên** — bảng, cột, PK/FK/index (`EFCore.NamingConventions`, bật trong
+  `AppDbContext.OnConfiguring` để test tự dựng context cũng ra cùng model). Bảng = tên entity **số
+  ít** (`shop`, `user_shop`, `media_asset`); `ToTable("...")` viết tay cũng phải snake_case.
+- **Bảng `User` tên là `app_user`** — `user` là từ khoá Postgres (`SELECT * FROM user` trả về
+  `current_user`, không lỗi). Tránh mọi tên bảng là từ khoá reserved (`user`, `order`, `group`…);
+  `role` không reserved nên dùng được.
+- **SQL viết tay** (CHECK, `HasFilter`, test, job) dùng tên snake_case **không quote**. Tên ràng buộc
+  tự đặt: `ck_{bảng}_{ý}`, `ix_{bảng}_{ý}`, unique có lọc `ux_{bảng}_{ý}`.
+- **Soft delete** = `IsDeleted` (cho Global Query Filter) + `DeletedAt` (`AppDbContext` tự đóng dấu,
+  kể cả khi entity tự set `IsDeleted` không qua `Remove()`).
+- **Unique index không tự lọc soft delete.** Mỗi unique phải chọn rõ: giữ toàn cục (vd. `shop.slug`
+  — slug của shop đã xoá vẫn bị giữ) thì kiểm trùng bằng `IgnoreQueryFilters()` để trả 409; cho
+  dùng lại thì thêm `.HasFilter("NOT is_deleted")`.
+- **Migration đã gộp lại một `InitialSchema` ở REFACTOR-DB-001** (trước production). DB dev cũ phải
+  xoá: `docker compose down -v` rồi chạy lại — triệu chứng nếu quên: `column "migration_id" does not
+  exist` khi app khởi động/migrate. Từ giờ chỉ thêm migration mới, không gộp nữa.
+- **Tên FK nối tới `app_user`/`shop` ghim bằng `HasConstraintName`** — NamingConventions đặt tên FK
+  theo thứ tự cấu hình (có lúc lấy tên DbSet `users`/`shops`), không ghim thì thêm configuration sau
+  có thể sinh migration đổi tên vô cớ.
 
 ## Ranh giới module (Quyết định #1) ⚠️
 

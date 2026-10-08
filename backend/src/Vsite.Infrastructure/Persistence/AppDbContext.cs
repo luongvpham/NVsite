@@ -45,6 +45,19 @@ public sealed class AppDbContext(
     // ---- Media ----
     public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
 
+    /// <summary>
+    /// snake_case cho MỌI tên bảng/cột/khoá/index (REFACTOR-DB-001) — bật Ở ĐÂY chứ không ở
+    /// `AddDbContext`, để mọi nơi tự dựng context (test, tool) đều ra cùng một model với migration.
+    /// Tên bảng là tên entity số ít (`shop`, `user_shop`, `media_asset`). SQL viết tay trong
+    /// configuration (CHECK, filter index) phải dùng tên snake_case, không quote.
+    /// </summary>
+    /// ⚠️ Không dùng được với `AddDbContextPool` (pooling cấm OnConfiguring đổi options) — chuyển sang
+    /// pool thì dời convention vào chỗ đăng ký và cho test dùng chung một helper dựng options.
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.UseSnakeCaseNamingConvention();
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -100,12 +113,28 @@ public sealed class AppDbContext(
                 case EntityState.Added:
                     entry.Entity.CreatedAt = now;
                     entry.Entity.CreatedByUserId ??= actorId;
+                    if (entry.Entity.IsDeleted)
+                    {
+                        entry.Entity.DeletedAt ??= now; // insert sẵn ở trạng thái xoá (seed, job, test)
+                    }
+
                     break;
                 case EntityState.Modified:
                     entry.Entity.UpdatedAt = now;
                     if (actorId is not null)
                     {
                         entry.Entity.UpdatedByUserId = actorId;
+                    }
+
+                    // Xoá mềm bằng cách set thẳng IsDeleted (vd. MediaAsset.SoftDeleteFromLibrary,
+                    // không đi qua EntityState.Deleted) cũng phải có DeletedAt.
+                    if (entry.Entity.IsDeleted && entry.Entity.DeletedAt is null)
+                    {
+                        entry.Entity.DeletedAt = now;
+                    }
+                    else if (!entry.Entity.IsDeleted)
+                    {
+                        entry.Entity.DeletedAt = null; // khôi phục
                     }
 
                     break;
@@ -127,6 +156,7 @@ public sealed class AppDbContext(
             entry.State = EntityState.Modified;
             entry.Entity.IsDeleted = true;
             entry.Entity.UpdatedAt = DateTimeOffset.UtcNow;
+            entry.Entity.DeletedAt ??= entry.Entity.UpdatedAt;
             if (auditActor?.UserId is { } actorId)
             {
                 entry.Entity.UpdatedByUserId = actorId;

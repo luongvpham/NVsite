@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Vsite.Application.Common.Interfaces;
+using Vsite.Application.Shop.Commands.CreateShop;
+using Vsite.Application.Shop.Commands.UpdateShop;
 using Vsite.Application.Shop.Interfaces;
 using Vsite.Application.Shop.Queries.ListShops;
 using Vsite.Domain.Abstractions;
+using Vsite.Domain.Exceptions;
 using Vsite.Domain.Identity;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Domain.Identity.Enums;
@@ -81,6 +84,45 @@ public sealed class SoftDeletedMembershipTests
         var list = await new ListShopsHandler(db, new FakeUser(user), new EmptyReader()).Handle(new ListShopsQuery(), default);
 
         Assert.Equal(controlShop.Id, Assert.Single(list).Id);
+    }
+
+    /// <summary>REFACTOR-DB-001 — unique index `shop.slug` không lọc soft delete, nên slug của shop đã
+    /// xoá mềm vẫn bị giữ. Kiểm trước phải thấy nó để trả 409 thay vì để DB ném thành 500.</summary>
+    [Fact]
+    public async Task CreateShop_with_slug_of_soft_deleted_shop_is_conflict()
+    {
+        await using var db = CreateDb();
+        var slug = $"gone-{Guid.NewGuid():N}";
+        db.Shops.Add(new ShopEntity(Guid.NewGuid(), "Gone", slug, ShopKind.Hosted) { IsDeleted = true });
+        await db.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<ConflictException>(() =>
+            new CreateShopHandler(db, new FakeUser(Guid.NewGuid()), new EmptyReader())
+                .Handle(new CreateShopCommand("New", slug, ShopKind.Hosted, null), default));
+
+        Assert.Equal("SHOP_SLUG_ALREADY_TAKEN", ex.ErrorCode);
+    }
+
+    [Fact]
+    public async Task UpdateShop_to_slug_of_soft_deleted_shop_is_conflict()
+    {
+        await using var db = CreateDb();
+        var (shop, _, _) = await SeedAsync(db);
+        var slug = $"gone-{Guid.NewGuid():N}";
+        db.Shops.Add(new ShopEntity(Guid.NewGuid(), "Gone", slug, ShopKind.Hosted) { IsDeleted = true });
+        await db.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<ConflictException>(() =>
+            new UpdateShopHandler(db, new NoopLookup(), new EmptyReader())
+                .Handle(new UpdateShopCommand(shop.Id, "Shop", slug, ShopKind.Hosted, null, ShopStatus.Draft), default));
+
+        Assert.Equal("SHOP_SLUG_ALREADY_TAKEN", ex.ErrorCode);
+    }
+
+    private sealed class NoopLookup : IShopLookupService
+    {
+        public Task<Guid?> FindShopIdBySlugAsync(string slug, CancellationToken cancellationToken) => Task.FromResult<Guid?>(null);
+        public Task InvalidateAsync(string slug, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     /// <summary>Một shop, một Owner sống, một Owner có membership đã xoá mềm (Active + Owner + IsDeleted).</summary>

@@ -40,6 +40,25 @@ public sealed class GetDerivativesHandlerTests
         Assert.All(result, d => Assert.False(d.IsInLibrary));
     }
 
+    /// <summary>REFACTOR-DB-001 — clone đặt vào slot có cùng (SourceAssetId, Preset) với phái sinh nhưng
+    /// KHÔNG phải phái sinh; trước đây lọt vào kết quả.</summary>
+    [Fact]
+    public async Task Clone_with_same_source_and_preset_is_not_returned()
+    {
+        await using var db = CreateDb();
+        var shopId = Guid.NewGuid();
+        _tenant.ShopId = shopId;
+        var source = NewLibrary(shopId);
+        var clone = MediaAsset.NewClone(source, $"shops/{shopId}/{Guid.NewGuid():N}.webp", 320, 96, 500, LogoInside, 0.1f, 0.9f);
+        var derivative = NewDerived(source, LogoInside);
+        db.MediaAssets.AddRange(source, clone, derivative);
+        await db.SaveChangesAsync();
+
+        var result = await Handler(db).Handle(new GetDerivativesQuery(shopId, source.Id, LogoInside), CancellationToken.None);
+
+        Assert.Equal(derivative.Id, Assert.Single(result).Id);
+    }
+
     [Fact]
     public async Task Preset_filter_returns_exactly_the_matching_one_including_comma_value()
     {
@@ -164,7 +183,7 @@ public sealed class GetDerivativesHandlerTests
 
     private static MediaAsset NewDerived(MediaAsset source, string preset, Guid? shopIdOverride = null)
     {
-        var derived = MediaAsset.NewDerived(source, $"shops/{source.ShopId}/{Guid.NewGuid():N}.webp", 320, 96, 500, preset, 0.5f, 0.5f);
+        var derived = MediaAsset.NewDerivative(source, $"shops/{source.ShopId}/{Guid.NewGuid():N}.webp", 320, 96, 500, preset, 0.5f, 0.5f);
         if (shopIdOverride is { } other)
         {
             // ShopId là init-only (REFACTOR-BE-001) — test giả lập dữ liệu xuyên shop bằng reflection.
