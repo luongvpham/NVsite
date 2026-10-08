@@ -29,7 +29,7 @@ Middleware/loader phải resolve `TenantContext { ShopId, DomainKind, BasePath }
 
 `apps/web` **phải** SSR — Main và Shop đều cần SEO.
 
-- **Lock version chính xác** của TanStack Start trong `package.json`. Không dùng `^` hay `~` (Quyết định #23).
+- **Lock version chính xác** của TanStack Start trong `package.json`. Không dùng `^` hay `~` (Quyết định #23 — Start chưa 1.0, API còn đổi).
 - Code chạy ở cả server lẫn client. Không đụng `window`/`document` trong logic render chính; chỉ dùng trong effect chạy sau hydrate.
 - Data fetching qua loader của TanStack Start/Router, không fetch trong `useEffect` cho nội dung cần index.
 
@@ -86,18 +86,6 @@ contracts/openapi/*.json  ──pnpm gen:api (Orval)──→  packages/api-sdk/
 
 ---
 
-## Phase 1 — chưa có gì trong này
+## Phase 1 — chưa có Shop Site
 
 Ở Phase 1, `apps/web` chỉ có **Main** và **Shop Profile**. `builder-renderer` và Shop Site là Phase 2. Đừng scaffold sẵn route cho builder.
-
-## Version pin
-
-**Lock version chính xác cho TanStack Start** trong `package.json` — không dùng `^`/`~` (Quyết định #23, lý do: TanStack Start chưa 1.0, API còn đổi).
-
-## State ownership (Quyết định #20)
-
-Server state (shops, listings, reviews) → TanStack Query. Client/UI state → Zustand. Không copy dữ liệu từ Query sang Zustand.
-
-## Reserved routes
-
-Import `config/reserved-routes.json` build-time (Vite JSON import native). Đây là nguồn duy nhất — không viết tay danh sách thứ hai (Quyết định #24).

@@ -20,11 +20,24 @@ Chỉ đọc khi thật sự cần nền thiết kế. Trạng thái từng file
 | `Service` `ShopServiceGroup` | `DesignIdeal/06-service-design.md` |
 | Quy ước vận hành module đã code | `backend/docs/modules/{module}.md` |
 
+## Lệnh hay dùng
+
+```bash
+# Tiền đề (fresh clone / CI): Vsite.Api.csproj link artifact gitignored derivative-presets.json —
+# thiếu thì build dừng ở target EnsureDerivativePresetsArtifact. Job CI mới build Vsite.Api cũng phải có bước này.
+pnpm install && pnpm --filter @vsite/builder-components run gen:registry
+
+dotnet test backend/tests/ArchitectureTests        # không cần Docker
+dotnet test backend/vsite.sln                      # IntegrationTests cần Docker (Testcontainers)
+dotnet ef migrations add {Name} --project backend/src/Vsite.Infrastructure --startup-project backend/src/Vsite.Api
+pnpm contract:export [module...]                   # build Api → contracts/openapi/.staging/{module}.v1.json
+pnpm contract:diff                                 # → dùng qua skill contract-sync
+```
+
 ## Cấu trúc thư mục — nguồn sự thật để biết tạo/tìm file ở đâu
 
 **ĐÚNG 4 project cho toàn hệ** — `Vsite.Domain` / `Vsite.Application` / `Vsite.Infrastructure` /
-`Vsite.Api`, chốt tại lần gộp 8→4 ngày 2026-09-13. **Module là FOLDER + NAMESPACE**,
-không phải project riêng — xem mục "Ranh giới module" bên dưới.
+`Vsite.Api`. **Module là FOLDER + NAMESPACE**, không phải project riêng — xem "Ranh giới module".
 
 ```
 backend/src/
@@ -57,9 +70,8 @@ backend/docs/modules/{module}.md  ← tài liệu từng module (module trải t
                                     đặt CLAUDE.md trong một folder nào được)
 ```
 
-**Deploy: chỉ MỘT thứ.** `Vsite.Api` là project duy nhất `Microsoft.NET.Sdk.Web` và có `Program.cs`.
-`dotnet publish src/Vsite.Api` gom cả 4 assembly vào một output → 1 container, 1 process. Thêm module
-= thêm folder, **không** thêm deployment.
+**Deploy: chỉ MỘT thứ.** `Vsite.Api` là project `Microsoft.NET.Sdk.Web` duy nhất. Thêm module =
+thêm folder, **không** thêm deployment.
 
 **Một DbContext duy nhất** (`AppDbContext`). Module mới thêm `DbSet` vào đó + `IAppDbContext`, đặt
 `IEntityTypeConfiguration` dưới `Persistence/Configurations/{Module}/` (tự động được quét). KHÔNG
@@ -85,22 +97,24 @@ GUID cố định phải tự expose constructor `public {Entity}(Guid id) : bas
 
 ## Ranh giới module (Quyết định #1) ⚠️
 
-**Module = folder + namespace `Vsite.{Domain|Application|Infrastructure|Api}.{Module}`**, KHÔNG phải
-project riêng (sửa 2026-09-13 — trước đó mỗi module có 4 `.csproj`).
+**Module = folder + namespace `Vsite.{Domain|Application|Infrastructure|Api}.{Module}`.**
 
-- **Danh sách module + chiều phụ thuộc cho phép có đúng MỘT nguồn:**
+- **Danh sách module, phase và chiều phụ thuộc cho phép có đúng MỘT nguồn:**
   `Docs/architecture/dependency-map.json`. Thêm module mới mà quên khai ở đó → `ModuleBoundaryTests`
   FAIL. Không viết danh sách thứ hai ở bất kỳ đâu (#17, #24).
 - Namespace của module A chỉ được phụ thuộc namespace của module B nếu B nằm trong `A.dependsOn`.
 - Namespace dùng chung (`Common`, `Abstractions`, `Exceptions`, `Persistence`, `Tenancy`…) không bị
   luật này ràng buộc — danh sách ở `ModuleBoundaryTests.SharedSegments`.
-- Chiều phụ thuộc giữa các tầng: `Domain ← Application ← Infrastructure ← Api`, không đảo — cái này
-  vẫn được enforce ở **compile-time** (4 assembly, ProjectReference một chiều).
-- ⚠️ Ranh giới **giữa các module** giờ chỉ còn `ModuleBoundaryTests` chặn (test-time, không phải
-  compile-time). Đó là lớp phòng thủ DUY NHẤT — thấy nó đỏ thì sửa code, **đừng nới luật**.
+- Chiều phụ thuộc giữa các tầng: `Domain ← Application ← Infrastructure ← Api`, không đảo — enforce ở
+  **compile-time** (ProjectReference một chiều).
+- ⚠️ Ranh giới **giữa các module** chỉ có `ModuleBoundaryTests` chặn (test-time). Đó là lớp phòng
+  thủ DUY NHẤT — thấy nó đỏ thì sửa code, **đừng nới luật**.
 - Cross-module đọc dữ liệu: khai interface ở `Vsite.Application/{Module}/Interfaces/`, implement ở
   `Vsite.Infrastructure/{Module}/` (mẫu đang chạy: `IShopLookupService`,
   `IUserShopMembershipService`). Không cần Integration Event bus cho việc đọc.
+- ⚠️ `Catalog` gộp Product + Service nhưng **bảng và enum tách hoàn toàn** (#40). `06` §1 gọi đây là
+  "chỗ dễ nhầm nhất trong toàn hệ" — `backend/docs/modules/catalog.md` phải mở đầu bằng bảng phân
+  biệt `Listing`/`Service`/`Product` trước khi viết dòng code nào.
 
 ## Tenant security invariants (Quyết định #21) ⚠️
 
@@ -122,75 +136,29 @@ Vi phạm là lỗi bảo mật, không phải code style:
 | Pagination một shape | `{ items, total, page, pageSize }` — không có shape thứ hai |
 | Nested REST cho child resource | `/shops/{shopId}/services/{id}` — ownership validate ngay trong route |
 
-## OpenAPI — thư viện và cách xuất document theo module ✅ Đã chốt
+## OpenAPI
 
-**Thư viện: `Microsoft.AspNetCore.OpenApi` (built-in .NET 9).** Không dùng Swashbuckle.
+`Microsoft.AspNetCore.OpenApi` (built-in), không Swashbuckle. Mỗi module **một document riêng**
+(contract chia theo module): module mới thêm `AddOpenApi("{module}")` trong `Program.cs` +
+`.WithGroupName("{module}")` cho endpoint — tên lowercase, khớp nhau. File tĩnh sinh lúc build
+(`OpenApiGenerateDocumentsOnBuild`), lấy ra bằng `pnpm contract:export`; endpoint
+`/openapi/{module}.json` chỉ để xem khi chạy local, không phải nguồn cho contract-sync.
 
-**Bắt buộc:** committed contract chia theo module (`contracts/openapi/{module}.v{n}.json`), nên runtime cũng phải xuất được **từng document riêng theo module** — không phải một file `v1` gộp tất cả.
-
-Cách làm:
-
-1. Đăng ký **một `AddOpenApi(documentName)` riêng cho mỗi module** trong `Api/Program.cs`, ví dụ `AddOpenApi("identity")`, `AddOpenApi("shop")`, `AddOpenApi("listing")`.
-2. Gắn nhóm cho từng endpoint bằng `.WithGroupName("{module}")` (Minimal API) hoặc tag tương đương cho Controller-based — group name phải khớp `documentName` ở bước 1.
-3. Endpoint HTTP (`/openapi/{documentName}.json`) chỉ dùng để **verify khi dev chạy local**, KHÔNG phải nguồn cho contract-sync.
-4. **Xuất ra file lúc build/CLI** — dùng `Microsoft.Extensions.ApiDescription.Server` (package MSBuild có sẵn của .NET 9 cho OpenAPI) để generate file tĩnh `{module}.json` cho từng document vào `contracts/openapi/.staging/` khi chạy `dotnet build` hoặc một target MSBuild riêng (`dotnet build /t:GenerateOpenApiDocuments` hoặc script wrapper trong `tools/contract-sync/`). Đây là điều kiện bắt buộc theo skill bootstrap — thiếu bước này thì `tools/contract-sync` không có gì để diff.
-5. Naming file: `contracts/openapi/.staging/{module}.v{n}.json`, `{module}` = tên document ở bước 1 (lowercase, khớp tên module), `{n}` bắt đầu từ `1`.
-
-### Property object nullable → `allOf` + `nullable` (Quyết định #87)
-
-`Microsoft.AspNetCore.OpenApi` sinh **schema trùng** (`XDto2`) khi cùng một CLR type xuất hiện vừa
-nullable vừa non-null trong một document — Orval biến hai schema giống hệt nhau thành hai TS type
-không tương thích, FE phải tự chọn dùng cái nào (phát hiện lúc MEDIA-001 §F1, xem
-`Docs/tasks/MEDIA-001-D2/contract-diff.md`).
-
-**Chặn triệt để bằng transformer dùng chung**, đăng ký cho **mọi** document module, không sửa từng
-DTO tay: `backend/src/Vsite.Api/OpenApi/DuplicateNullableSchemaDocumentTransformer.cs` — chứa cả
-`DuplicateNullableSchemaOccurrenceTagger` (schema transformer, gắn cờ + tắt `Nullable` trước khi
-schema được chốt vào store) và `DuplicateNullableSchemaDocumentTransformer` (document transformer,
-viết lại node đã gắn cờ thành `{ "allOf": [ { "$ref": ... } ], "nullable": true }`). Ref id lấy theo
-`OpenApiOptions.CreateSchemaReferenceId` đã cấu hình cho đúng document, không tính lại bằng tay —
-nếu một id bị hai CLR type khác nhau cùng chiếm thì **throw lúc generate**, không âm thầm trỏ nhầm
-type.
-
-**Hệ quả áp dụng cho mọi module kể từ #87:** property object nullable **không còn** ở dạng phẳng
-`{ "$ref": ..., "nullable": true }` (OpenAPI 3.0 vốn không hợp lệ theo cách đó) mà luôn là
-`{ "allOf": [ { "$ref": ... } ], "nullable": true }`. JSON runtime server trả về **không đổi** — chỉ
-hình dạng schema OpenAPI thay đổi. FE cần biết: Orval sinh `X | null`, một type duy nhất.
-
-Ràng buộc với .NET 9 / OpenAPI.NET v1 (có `TODO` trong code, xem lại khi lên .NET 10).
-
-## Quy tắc normalize khi diff contract ✅ Đã chốt
-
-`tools/contract-sync/` áp dụng đúng bộ tối thiểu sau trước khi so sánh hai bên (runtime vs committed):
-
-- Sort key đệ quy (object keys) trước khi so sánh.
-- Bỏ `servers` và `info.version` — hai trường này đổi theo môi trường/thời điểm build, không phản ánh thay đổi API thật.
-- Chuẩn hoá whitespace trong mọi `description` (trim, collapse nhiều khoảng trắng thành một).
-- So sánh **có cấu trúc theo từng operation** (method + path), không so text thô toàn file.
-
-Không tự thêm luật normalize khác mà không hỏi — luật lỏng quá sẽ bỏ lọt breaking change thật; luật chặt quá sẽ báo diff giả liên tục.
-
+**Property object nullable (#87):** transformer dùng chung
+`Vsite.Api/OpenApi/DuplicateNullableSchemaDocumentTransformer.cs` đã đăng ký cho mọi document — nó
+viết lại thành `{ "allOf": [ { "$ref": ... } ], "nullable": true }` để Orval không sinh type trùng
+`XDto2`. **Không sửa từng DTO bằng tay**; module mới chỉ cần đăng ký document như mọi module khác.
 
 ## Testing
 
 Bắt buộc có, không phải tuỳ chọn:
 
-- **Architecture test** — enforce: `Domain` không reference EF Core/MediatR; module không reference project module khác; chiều phụ thuộc layer đúng. Ranh giới nào chỉ nằm trong tài liệu thì sẽ bị vi phạm.
+- **Architecture test** — `Domain` không reference EF Core/MediatR; chiều phụ thuộc layer đúng;
+  ranh giới namespace giữa module đúng `dependency-map.json`.
 - **Tenant isolation test** — với mỗi entity tenant-scoped: query từ shop A không thấy dữ liệu shop B.
 - **Unit test** cho handler và validator.
-- **Integration test** cho endpoint, chạy trên database thật (Testcontainers hoặc tương đương).
-
-⚠️ **Tiền đề build backend (fresh clone / CI):** `Vsite.Api.csproj` link file
-`packages/builder-components/generated/derivative-presets.json` — artifact codegen, **gitignored**
-(không commit). Thiếu file thì `dotnet build`/`dotnet test` dừng với lỗi rõ ràng (target
-`EnsureDerivativePresetsArtifact`). Chạy trước:
-`pnpm install && pnpm --filter @vsite/builder-components run gen:registry`. Mọi CI job build/chạy
-`Vsite.Api` (`be-tests`, `architecture-tests`, `contract-check`) đều có bước này — job mới cũng phải có.
-
-⚠️ **Môi trường không có Docker daemon** (nhiều dev/agent chạy nhiều máy, chỉ một máy cài Docker):
-KHÔNG bỏ qua Testcontainers test — viết test đầy đủ, xác nhận build/logic đúng bằng mắt, rồi ghi
-nợ lại vào `Docs/DOCKER-TEST-DEBT.md` (quy ước dùng chung, đọc file đó trước khi ghi) để máy có
-Docker chạy xác nhận sau. Xoá đúng mục khỏi file đó khi đã chạy pass thật.
+- **Integration test** cho endpoint, chạy trên database thật (Testcontainers). Máy không có Docker:
+  **không** Skip — xem DoD bước 9.
 
 ---
 
@@ -212,32 +180,6 @@ Docker chạy xác nhận sau. Xoá đúng mục khỏi file đó khi đã chạ
      ghi rõ mục nào **đừng tin nữa**. Banner đó là nguồn duy nhất; `00-INDEX.md` §2 sinh ra từ nó.
    - Quyết định mới người duyệt chốt giữa chừng → **cấp số tại `DesignIdeal/DECISIONS.md` trước**,
      rồi mới viết nội dung ở file chuyên đề.
-   - Nợ test cần Docker → ghi vào `Docs/DOCKER-TEST-DEBT.md`, đừng báo miệng qua chat.
-
-## Thứ tự module thật (Phase 1)
-
-Sample module (throwaway, đã chứng minh pipeline Bước 1) đã bị xoá — xem `Docs/tasks/CLEANUP-SAMPLE.md` cho lịch sử dọn dẹp.
-
-`Identity` → `Shop` → `Marketplace`. Phase 2: `Media` → `Website` → `Catalog`.
-Danh sách đầy đủ + chiều phụ thuộc: `Docs/architecture/dependency-map.json` (nguồn duy nhất).
-
-| Module | Gồm | Tài liệu thiết kế |
-|---|---|---|
-| `Identity` | User, ExternalLogin, Role, UserShop, PendingRegistration, RefreshToken, PasswordResetToken | `03` |
-| `Shop` | Shop (đầy đủ), ShopDomain | `04` §2.1 |
-| `Marketplace` | ServiceCategory, Listing, ShopCategoryHistory, Review, Lead + index ES | `04` |
-| `Media` | MediaAsset + pipeline ảnh | `05` §9 |
-| `Website` | Website, Theme, Page, PageDraft, SitePublication, NavigationConfig, WebsiteTemplate | `05` §1–§12 |
-| `Catalog` | Product (+attribute/variant/image) **và** Service (+ShopServiceGroup) | `05` §13–§22, `06` |
-
-⚠️ `Catalog` gộp Product + Service ở mức project nhưng **bảng và enum tách hoàn toàn** (Quyết định
-#40). `06` §1 gọi đây là "chỗ dễ nhầm nhất trong toàn hệ" — `backend/docs/modules/catalog.md` phải
-mở đầu bằng bảng phân biệt `Listing`/`Service`/`Product` trước khi viết dòng code nào.
-
-## Tài liệu từng module
-
-| Module | File |
-|---|---|
-| Identity | `backend/docs/modules/identity.md` |
-| Shop | `backend/docs/modules/shop.md` |
-| Media | `backend/docs/modules/media.md` |
+   - Nợ test cần Docker → viết test đầy đủ rồi ghi vào `Docs/DOCKER-TEST-DEBT.md` (đọc quy ước
+     trong file trước khi ghi), đừng báo miệng qua chat. Máy có Docker chạy pass thì xoá đúng mục.
+   - Module mới → viết `backend/docs/modules/{module}.md`.

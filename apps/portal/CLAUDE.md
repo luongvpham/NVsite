@@ -8,20 +8,10 @@
 > ⚠️ **Màn "Khách hàng" của shop:** Portal **không bao giờ** serialize thẳng entity `User` ra
 > response — phải có DTO riêng cho góc nhìn shop. Đọc bảng hai cột ở `03` §3.3 trước khi làm màn đó.
 
-**CSR thuần** — Vite + TanStack Router, **không** cài TanStack Start (Quyết định #22, #23). Không SSR: luôn sau login, không cần SEO.
+**CSR thuần** — Vite + TanStack Router (Quyết định #22, #23). Portal luôn sau login, không cần SEO:
+**không** cài TanStack Start, không viết code phòng hờ cho SSR.
 
 Domain: `admin.vsite.vn/*` (Quyết định #25) — origin riêng biệt hoàn toàn với `apps/web`.
-
-## Gồm hai phần
-
-1. **Quản trị shop** — tin đăng, lead, đánh giá, hồ sơ shop (Phase 1); dịch vụ/hàng hoá (Phase 2).
-2. **Website Builder** — route `/website` (Phase 2), kéo-thả + AI Chat. Không phải app riêng.
-
-## Không SSR
-
-Portal luôn nằm sau login, không được search engine index, không có yêu cầu SEO nào. Chạy SSR ở đây chỉ tốn compute vô ích (Quyết định #23).
-
-Không cài TanStack Start vào app này. Không viết code phòng hờ cho SSR.
 
 ---
 
@@ -36,7 +26,7 @@ Không cài TanStack Start vào app này. Không viết code phòng hờ cho SSR
 
 **Website Builder không phải app riêng** — nó là một route bên trong portal, vì bản chất cũng là công cụ quản trị (Quyết định #22). Phần *output* của builder (website khách xem) nằm ở `apps/web`.
 
-Ở Phase 1: **đừng scaffold route `/website`**, đừng cài `dnd-kit`/`Lexical`/`zundo`/`immer`. Chúng chỉ vào khi Phase 2 bắt đầu.
+Chưa có task Website Builder thì **đừng scaffold route `/website`**, đừng cài `dnd-kit`/`Lexical`/`zundo`/`immer`. Chúng chỉ vào khi task đó bắt đầu.
 
 ---
 
@@ -90,17 +80,10 @@ contracts/openapi/*.json  ──pnpm gen:api (Orval)──→  packages/api-sdk/
 | ✅ Được ghi | `apps/portal/**` · `packages/ui` · `packages/shared` · `packages/theme-engine` |
 | ❌ Cấm ghi | `packages/api-sdk/**` (generated) · `backend/**` · `contracts/**` · `config/**` · `DesignIdeal/**` |
 
-*(Phase 2 mở thêm: `packages/builder-core`, `packages/builder-components`, `packages/ai-agent`.)*
-
-
-## State ownership (Quyết định #20)
-
-Server state (shops, listings, leads) → TanStack Query. Client/UI state (modal, wizard step, filter chưa submit, Component Tree draft, selection) → Zustand (+ zundo cho undo, Phase 2). **Không copy dữ liệu từ Query sang Zustand** — nếu thấy cần thì thiết kế sai.
+*(Khi Website Builder bắt đầu mở thêm: `packages/builder-core` (state + Operations Engine),
+`packages/builder-components`, `packages/ai-agent` (prompt, tool schema). `builder-core` và `ai-agent`
+**chỉ** dùng bởi portal, không phải `apps/web`; chưa tạo — xem `DesignIdeal/ai-agent-development-workflow.md` §11.)*
 
 ## Reserved routes
 
 Import `config/reserved-routes.json` build-time. Nguồn duy nhất, không viết tay danh sách thứ hai (Quyết định #24).
-
-## Packages Phase 2 (chưa dùng ở Bước 1)
-
-`builder-core` (state + Operations Engine) và `ai-agent` (prompt, tool schema) **chỉ** dùng bởi `apps/portal`, không phải `apps/web`. Chưa tạo ở Bước 1 — xem `DesignIdeal/ai-agent-development-workflow.md` §11.

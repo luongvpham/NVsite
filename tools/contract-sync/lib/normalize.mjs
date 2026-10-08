@@ -1,5 +1,5 @@
 /**
- * Normalize OpenAPI document trước khi diff (backend/CLAUDE.md — "Quy tắc normalize khi diff contract").
+ * Normalize OpenAPI document trước khi diff (.claude/skills/contract-sync/SKILL.md bước 3 — đổi luật phải hỏi người duyệt).
  * - sort key đệ quy
  * - bỏ servers và info.version
  * - chuẩn hoá whitespace trong description

@@ -29,7 +29,7 @@
    phải tự đổi cả trong component, không có gì báo lỗi nếu quên.
 8. KHÔNG import `resolveImage`/`resolveUrl` từ đâu khác ngoài `useRenderContext()` — không hardcode
    nối chuỗi URL ảnh hay `href`. (#11, #53)
-9. KHÔNG tạo migration/entity trong package này — Bước 2 thuần build-time, không đụng database.
+9. KHÔNG tạo migration/entity trong package này — package thuần build-time, không đụng database.
 
 ## Ranh giới kiến trúc
 

@@ -56,6 +56,21 @@ Chi tiết ở `DesignIdeal/ai-agent-development-workflow.md`. **Tuần tự BE 
 4. **Contract sai hoặc thiếu → DỪNG và báo.** Không tự sửa, không làm tạm rồi sửa sau.
 5. **File generated không sửa tay**: `packages/api-sdk/src/generated/**`, `packages/builder-components/generated/**`.
 
+Quy tắc 1, 5 và `config/reserved-routes.json` có hook `.claude/hooks/guard-write.mjs` chặn — bị `BLOCKED` là đúng, đừng tìm cách ghi vòng.
+
+---
+
+## Lệnh hay dùng (FE / monorepo)
+
+```bash
+pnpm gen:api          # contracts/openapi → packages/api-sdk (Orval)
+pnpm gen:registry     # manifest → packages/builder-components/generated (kèm check-additive)
+pnpm build && pnpm test
+pnpm check:docs       # pre-commit cũng chạy: banner DesignIdeal + 00-INDEX
+```
+
+Lệnh backend: `backend/CLAUDE.md` — mục "Lệnh hay dùng".
+
 ---
 
 ## Invariant toàn hệ
@@ -63,7 +78,7 @@ Chi tiết ở `DesignIdeal/ai-agent-development-workflow.md`. **Tuần tự BE 
 Vi phạm những điều này là lỗi thật, không phải chuyện code style.
 
 - **Tenant isolation (#21)** — xem `backend/CLAUDE.md`. Mọi entity tenant-scoped có `ShopId`; mọi query qua Global Query Filter; ownership validate **trong câu query**; **không bao giờ** nhận `ShopId` từ request body.
-- **Module không reference project của module khác (#1).** Cross-module qua Integration Event hoặc Public Contract interface.
+- **Ranh giới module (#1)** — module là folder + namespace, chiều phụ thuộc chỉ theo `Docs/architecture/dependency-map.json` (`ModuleBoundaryTests` chặn). Cross-module qua Integration Event hoặc Public Contract interface.
 - **`packages/` không import từ `apps/`.** Chiều phụ thuộc một hướng.
 - **`builder-renderer` không import `builder-core`**, và phải **isomorphic** — không đụng `window`/`document` trong logic render chính (#23).
 - **Reserved routes có đúng một nguồn** là `config/reserved-routes.json` (#24). Không viết tay danh sách thứ hai ở FE hay BE.
