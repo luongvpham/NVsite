@@ -8,9 +8,9 @@ namespace Vsite.Infrastructure.Persistence;
 /// <summary>
 /// Global Query Filter TỰ ĐỘNG cho mọi module — gọi MỘT LẦN trong <see cref="AppDbContext"/>.
 /// OnModelCreating, không viết tay `HasQueryFilter` cho từng entity nữa. Entity
-/// nào kế thừa <see cref="IShopScoped"/> (`ShopEntity`/`ShopAuditableEntity`) được lọc theo
+/// nào kế thừa <see cref="IShopScoped"/> (`TenantEntity`/`TenantAuditableEntity`) được lọc theo
 /// `ShopId == TenantContext.ShopId`; entity nào kế thừa `BaseAuditableEntity` bị ẩn khi
-/// `IsDeleted = true`. Hai điều kiện AND lại nếu entity thoả cả hai (vd. `ShopAuditableEntity`).
+/// `IsDeleted = true`. Hai điều kiện AND lại nếu entity thoả cả hai (vd. `TenantAuditableEntity`).
 ///
 /// Fail-closed: `TenantContext.ShopId == null` không khớp `ShopId` (kiểu `Guid` non-null) của bất
 /// kỳ hàng nào → query rỗng, không phải "bỏ qua filter". Đây là quyết định có chủ đích (Quyết định

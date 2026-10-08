@@ -32,8 +32,8 @@ public sealed class TenantIsolationTests : IAsyncLifetime
         await db.Database.MigrateAsync();
 
         db.Shops.AddRange(
-            new Shop(_shopAId) { Name = "Shop A", Slug = $"shop-a-{_shopAId:N}", Kind = ShopKind.Hosted },
-            new Shop(_shopBId) { Name = "Shop B", Slug = $"shop-b-{_shopBId:N}", Kind = ShopKind.Hosted }
+            new Shop(_shopAId, "Shop A", $"shop-a-{_shopAId:N}", ShopKind.Hosted),
+            new Shop(_shopBId, "Shop B", $"shop-b-{_shopBId:N}", ShopKind.Hosted)
         );
         db.Users.AddRange(
             NewUser(_userAId, "user-a"),

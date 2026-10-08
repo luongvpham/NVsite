@@ -30,8 +30,8 @@ public sealed class MediaTenantIsolationTests : IAsyncLifetime
         await using var db = CreateContext(new TestTenantContext());
         await db.Database.MigrateAsync();
 
-        var shopA = new Shop(_shopAId) { Name = "Shop A", Slug = $"shop-a-{_shopAId:N}", Kind = ShopKind.Hosted };
-        var shopB = new Shop(_shopBId) { Name = "Shop B", Slug = $"shop-b-{_shopBId:N}", Kind = ShopKind.Hosted };
+        var shopA = new Shop(_shopAId, "Shop A", $"shop-a-{_shopAId:N}", ShopKind.Hosted);
+        var shopB = new Shop(_shopBId, "Shop B", $"shop-b-{_shopBId:N}", ShopKind.Hosted);
         db.Shops.AddRange(shopA, shopB);
         await db.SaveChangesAsync();
 

@@ -29,7 +29,7 @@ public sealed class MediaReferenceValidatorSqlCountTests(PostgresFixture postgre
         {
             await setupDb.Database.MigrateAsync();
 
-            var shop = new Shop(shopId) { Name = "Test Shop", Slug = $"test-shop-{shopId:N}", Kind = ShopKind.Hosted };
+            var shop = new Shop(shopId, "Test Shop", $"test-shop-{shopId:N}", ShopKind.Hosted);
             setupDb.Shops.Add(shop);
             await setupDb.SaveChangesAsync();
         }

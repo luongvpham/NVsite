@@ -21,7 +21,11 @@ namespace Vsite.Infrastructure.Persistence;
 /// Global Query Filter theo ShopId + soft-delete, audit stamping, và dispatch domain event qua
 /// MediatR SAU khi transaction commit.
 /// </summary>
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext tenantContext, IPublisher? publisher = null)
+public sealed class AppDbContext(
+    DbContextOptions<AppDbContext> options,
+    ITenantContext tenantContext,
+    IPublisher? publisher = null,
+    IAuditActor? auditActor = null)
     : DbContext(options), IAppDbContext
 {
     public ITenantContext TenantContext { get; } = tenantContext;
@@ -86,15 +90,24 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     private void StampAuditFields()
     {
         var now = DateTimeOffset.UtcNow;
+        // null khi chưa đăng nhập (Register, ForgotPassword…) hoặc ngoài HTTP (test, job) — giữ
+        // nguyên giá trị đang có thay vì ghi đè bằng null.
+        var actorId = auditActor?.UserId;
         foreach (var entry in ChangeTracker.Entries<BaseAuditableEntity>())
         {
             switch (entry.State)
             {
                 case EntityState.Added:
                     entry.Entity.CreatedAt = now;
+                    entry.Entity.CreatedByUserId ??= actorId;
                     break;
                 case EntityState.Modified:
                     entry.Entity.UpdatedAt = now;
+                    if (actorId is not null)
+                    {
+                        entry.Entity.UpdatedByUserId = actorId;
+                    }
+
                     break;
             }
         }
@@ -114,6 +127,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             entry.State = EntityState.Modified;
             entry.Entity.IsDeleted = true;
             entry.Entity.UpdatedAt = DateTimeOffset.UtcNow;
+            if (auditActor?.UserId is { } actorId)
+            {
+                entry.Entity.UpdatedByUserId = actorId;
+            }
         }
     }
 

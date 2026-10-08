@@ -121,9 +121,10 @@ Port `IShopLogoReader` do `Shop` khai báo (`Application/Shop/Interfaces`; `GetL
 (`IgnoreQueryFilters`, `Preset`, `!IsDeleted`) nên cặp (ShopId, SourceAssetId) được ép trong query; shop không có logo
 vắng mặt trong kết quả (`ShopLogoBatchSqlCountTests`, Docker).
 
-Đọc ngược chiều (Media cần biết ai là owner của shop để authorize `DELETE`/`PUT logo`) đi qua
-`Vsite.Application.Shop.Interfaces.IShopOwnershipService` (Public Contract khác, cùng mẫu
-`IShopLogoWriter`) — không lấy role từ claim token (#21.5).
+Quyền Owner cho `DELETE .../library/{id}` và `PUT /shops/{shopId}/logo` khai ở endpoint
+(`.RequireShopOwner("MEDIA_OWNER_REQUIRED", ...)`), kiểm trong `ShopMembershipEndpointFilter` bằng
+DB — không lấy role từ claim token (#21.5). Handler Media không tự tra quyền (REFACTOR-BE-001 đã
+xoá `IShopOwnershipService`).
 
 Xoá bản Library đang là `Shop.LogoId` **được phép** (A11, `Docs/tasks/MEDIA-001/plan.md` §10) — FK
 trỏ vào row soft-delete vẫn hợp lệ (`ON DELETE` không cascade xoá vật lý ngay), logo vẫn hiện; chỉ
@@ -277,7 +278,7 @@ verify hash `contracts/openapi/.staging/media.v1.json` không đổi trước/sa
 
 ## 9. Base class + tổ chức thư mục
 
-- `MediaAsset` → `ShopAuditableEntity` (tenant-scoped, có soft delete qua `IsDeleted` — thay
+- `MediaAsset` → `TenantAuditableEntity` (tenant-scoped, có soft delete qua `IsDeleted` — thay
   `DeletedAt` của `08`, xem `Docs/tasks/MEDIA-001/changelog.md` A3).
 - File của module: `Vsite.Domain/Media/{Entities,Enums}/` ·
   `Vsite.Application/Media/{Interfaces,Dtos,Commands,Queries}/` ·
@@ -286,7 +287,7 @@ verify hash `contracts/openapi/.staging/media.v1.json` không đổi trước/sa
   `ImageSharpImageProcessor`, preset catalog) + `Vsite.Infrastructure/Persistence/Configurations/Media/` ·
   `Vsite.Api/Media/MediaEndpoints.cs` + `Vsite.Api/Media/MediaFileMiddleware.cs`.
 - `Media.dependsOn = ["Shop"]` (`Docs/architecture/dependency-map.json`) — Media dùng
-  `IShopLogoWriter`/`IShopOwnershipService` (Public Contract phía Shop) và cài adapter cho `IShopLogoReader` (port của Shop, D4), Shop **không** reference
+  `IShopLogoWriter` (Public Contract phía Shop) và cài adapter cho `IShopLogoReader` (port của Shop, D4), Shop **không** reference
   Media ngược lại.
 
 ## 10. Lệch có chủ đích / chưa làm xong so với `DesignIdeal/08-media-asset-design.md`
@@ -295,7 +296,7 @@ verify hash `contracts/openapi/.staging/media.v1.json` không đổi trước/sa
 > 📌 Nợ test cần Docker (không chạy được trong sandbox không có Docker daemon):
 > `Docs/DOCKER-TEST-DEBT.md`, mục `MEDIA-001`.
 
-- `IsDeleted` (kế thừa `ShopAuditableEntity`) thay `DeletedAt` riêng — quy ước entity chung của
+- `IsDeleted` (kế thừa `TenantAuditableEntity`) thay `DeletedAt` riêng — quy ước entity chung của
   codebase, không phải lệch nghiệp vụ (A3).
 - Picker MVP hiện thẳng file bản Library (≤ 1600px, lazy load), chưa sinh thumbnail riêng cho picker
   (A7 — tối ưu hoãn tới khi có nhu cầu thật).

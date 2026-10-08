@@ -5,7 +5,7 @@ namespace Vsite.Application.Shop.Interfaces;
 /// (`Media.dependsOn = ["Shop"]`, `Docs/architecture/dependency-map.json`). Cho phép `Media` set
 /// `Shop.LogoId` sau khi upload logo mà KHÔNG cần reference `Vsite.Domain.Shop.Entities.Shop` trực
 /// tiếp trong handler của Media (interface sống ở `Application/Shop`, đúng mẫu
-/// <see cref="IShopOwnershipService"/>).
+/// <see cref="IShopLookupService"/>).
 ///
 /// Chỉ set property trên entity ĐANG được track qua CÙNG <c>IAppDbContext</c> scoped instance —
 /// KHÔNG tự gọi <c>SaveChangesAsync</c>. Người gọi (handler của Media, dùng chung scope/DbContext)

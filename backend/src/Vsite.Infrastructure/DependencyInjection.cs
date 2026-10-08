@@ -76,7 +76,6 @@ public static class DependencyInjection
     private static IServiceCollection AddShopModule(this IServiceCollection services)
     {
         services.AddScoped<IShopLookupService, ShopLookupService>();
-        services.AddScoped<IShopOwnershipService, ShopOwnershipService>();
         services.AddScoped<IShopLogoWriter, ShopLogoWriter>();
 
         return services;

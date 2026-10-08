@@ -56,7 +56,7 @@ public static class ShopEndpoints
         shops.MapPatch("/{shopId:guid}", async (Guid shopId, UpdateShopRequest body, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new UpdateShopCommand(shopId, body.Name, body.Slug, body.Kind, body.ExternalUrl, body.Status), ct)))
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
-            .RequireShopMembership()
+            .RequireShopOwner("SHOP_OWNER_REQUIRED", "Chỉ chủ shop (Owner) mới được sửa thông tin shop.")
             .Produces<ShopDto>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)

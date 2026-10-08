@@ -81,7 +81,7 @@ public sealed class ShopLogoHandlerTests : IDisposable
         // chứng minh THẬT SỰ đúng MỘT SaveChanges cho cả insert MediaAsset lẫn update Shop.LogoId,
         // không chỉ suy luận từ số record cuối cùng (review sau T7: test cũ không đếm call).
         var countingDb = new CountingSaveChangesDbContext(db);
-        var handler = CreateHandler(countingDb, ownerId, isOwner: true);
+        var handler = CreateHandler(countingDb);
 
         using var sourceStream = new MemoryStream(ReadTestAsset("logo-alpha-1000x200.png"));
         var command = new UploadShopLogoCommand(shopId, sourceStream, "logo.png");
@@ -120,7 +120,7 @@ public sealed class ShopLogoHandlerTests : IDisposable
         _tenantContext.ShopId = shopId;
         await SeedShopAsync(db, shopId);
 
-        var handler = CreateHandler(db, ownerId, isOwner: true);
+        var handler = CreateHandler(db);
 
         using var sourceStream = new MemoryStream(ReadTestAsset("logo-alpha-1000x200.png"));
         var command = new UploadShopLogoCommand(shopId, sourceStream, "logo.png");
@@ -155,7 +155,7 @@ public sealed class ShopLogoHandlerTests : IDisposable
         _tenantContext.ShopId = shopId;
         await SeedShopAsync(db, shopId);
 
-        var handler = CreateHandler(db, ownerId, isOwner: true);
+        var handler = CreateHandler(db);
 
         using var firstStream = new MemoryStream(ReadTestAsset("logo-alpha-1000x200.png"));
         var first = await handler.Handle(new UploadShopLogoCommand(shopId, firstStream, "logo1.png"), CancellationToken.None);
@@ -178,34 +178,6 @@ public sealed class ShopLogoHandlerTests : IDisposable
         Assert.Equal(6, totalAssets);
     }
 
-    // ---- non-Owner -> Forbidden MEDIA_OWNER_REQUIRED ----
-
-    [Fact]
-    public async Task Upload_by_non_owner_throws_Forbidden_MEDIA_OWNER_REQUIRED()
-    {
-        await using var db = CreateDbContext();
-        var shopId = Guid.NewGuid();
-        var staffId = Guid.NewGuid();
-        _tenantContext.ShopId = shopId;
-        await SeedShopAsync(db, shopId);
-
-        var handler = CreateHandler(db, staffId, isOwner: false);
-
-        using var sourceStream = new MemoryStream(ReadTestAsset("logo-alpha-1000x200.png"));
-        var command = new UploadShopLogoCommand(shopId, sourceStream, "logo.png");
-
-        var ex = await Assert.ThrowsAsync<ForbiddenAccessException>(() => handler.Handle(command, CancellationToken.None));
-
-        Assert.Equal("MEDIA_OWNER_REQUIRED", ex.ErrorCode);
-        Assert.Empty(await db.MediaAssets.ToListAsync());
-
-        var shop = await db.Shops.IgnoreQueryFilters().FirstAsync(s => s.Id == shopId);
-        Assert.Null(shop.LogoId);
-    }
-
-    // ---- Test bắt buộc 10 (chuyển từ T6) — usage tăng đúng SizeBytes của bản Library sau upload
-    // logo; derivative KHÔNG tính vào usage (GetUsageHandler chỉ đếm IsInLibrary) ----
-
     [Fact]
     public async Task Usage_increases_by_exactly_the_library_assets_SizeBytes()
     {
@@ -219,7 +191,7 @@ public sealed class ShopLogoHandlerTests : IDisposable
         var before = await usageHandler.Handle(new GetUsageQuery(shopId), CancellationToken.None);
         Assert.Equal(0, before.UsedBytes);
 
-        var handler = CreateHandler(db, ownerId, isOwner: true);
+        var handler = CreateHandler(db);
         using var sourceStream = new MemoryStream(ReadTestAsset("logo-alpha-1000x200.png"));
         var result = await handler.Handle(new UploadShopLogoCommand(shopId, sourceStream, "logo.png"), CancellationToken.None);
 
@@ -247,9 +219,7 @@ public sealed class ShopLogoHandlerTests : IDisposable
             _presetCatalog,
             new FakeDerivativePresetCatalog(("Shop", ["does-not-exist,inside"])),
             CreateWriter(db),
-            new ShopLogoWriter(db),
-            new FakeCurrentUserContext(ownerId),
-            new FakeShopOwnershipService(isOwner: true));
+            new ShopLogoWriter(db));
 
         using var sourceStream = new MemoryStream(ReadTestAsset("logo-alpha-1000x200.png"));
         var command = new UploadShopLogoCommand(shopId, sourceStream, "logo.png");
@@ -277,7 +247,7 @@ public sealed class ShopLogoHandlerTests : IDisposable
         _tenantContext.ShopId = shopId;
         await SeedShopAsync(db, shopId);
 
-        var handler = CreateHandler(throwingDb, ownerId, isOwner: true);
+        var handler = CreateHandler(throwingDb);
 
         using var sourceStream = new MemoryStream(ReadTestAsset("logo-alpha-1000x200.png"));
         var command = new UploadShopLogoCommand(shopId, sourceStream, "logo.png");
@@ -297,27 +267,20 @@ public sealed class ShopLogoHandlerTests : IDisposable
 
     // ---- helpers ----
 
-    private UploadShopLogoHandler CreateHandler(IAppDbContext db, Guid userId, bool isOwner) =>
+    private UploadShopLogoHandler CreateHandler(IAppDbContext db) =>
         new(
             _processor,
             _presetCatalog,
             new FakeDerivativePresetCatalog(("Shop", [InsidePreset.Name, CoverPreset.Name])),
             CreateWriter(db),
-            new ShopLogoWriter(db),
-            new FakeCurrentUserContext(userId),
-            new FakeShopOwnershipService(isOwner));
+            new ShopLogoWriter(db));
 
     private MediaAssetWriter CreateWriter(IAppDbContext db) =>
         new(db, _storage, TimeProvider.System, Options.Create(new ImageUploadOptions()));
 
     private static async Task SeedShopAsync(AppDbContext db, Guid shopId)
     {
-        db.Shops.Add(new ShopEntity(shopId)
-        {
-            Name = "Shop",
-            Slug = $"shop-{shopId:N}",
-            Kind = Vsite.Domain.Shop.Enums.ShopKind.Hosted,
-        });
+        db.Shops.Add(new ShopEntity(shopId, "Shop", $"shop-{shopId:N}", Vsite.Domain.Shop.Enums.ShopKind.Hosted));
         await db.SaveChangesAsync(CancellationToken.None);
     }
 
@@ -364,17 +327,7 @@ public sealed class ShopLogoHandlerTests : IDisposable
             _bySource.TryGetValue(source, out var names) ? names : Array.Empty<string>();
     }
 
-    private sealed class FakeCurrentUserContext(Guid userId) : ICurrentUserContext
-    {
-        public Guid UserId { get; } = userId;
-        public string Audience => "vsite-portal";
-    }
 
-    private sealed class FakeShopOwnershipService(bool isOwner) : IShopOwnershipService
-    {
-        public Task<bool> IsOwnerAsync(Guid userId, Guid shopId, CancellationToken cancellationToken) =>
-            Task.FromResult(isOwner);
-    }
 
     /// <summary>R4: forward mọi DbSet cho instance InMemory thật, nhưng <see cref="SaveChangesAsync"/>
     /// luôn ném lỗi TRƯỚC khi chạm DB thật (cùng khuôn `UploadHandlerTests.ThrowingDbContext`).</summary>

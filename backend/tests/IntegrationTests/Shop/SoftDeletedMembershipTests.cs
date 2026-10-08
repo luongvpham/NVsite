@@ -1,17 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Vsite.Application.Common.Interfaces;
-using Vsite.Application.Shop.Commands.UpdateShop;
 using Vsite.Application.Shop.Interfaces;
 using Vsite.Application.Shop.Queries.ListShops;
 using Vsite.Domain.Abstractions;
-using Vsite.Domain.Exceptions;
 using Vsite.Domain.Identity;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Domain.Identity.Enums;
 using Vsite.Domain.Shop.Enums;
 using Vsite.Infrastructure.Identity;
 using Vsite.Infrastructure.Persistence;
-using Vsite.Infrastructure.Shop;
 using ShopEntity = Vsite.Domain.Shop.Entities.Shop;
 
 namespace Vsite.IntegrationTests;
@@ -24,15 +21,17 @@ public sealed class SoftDeletedMembershipTests
     private readonly FakeTenant _tenant = new();
 
     [Fact]
-    public async Task ShopOwnershipService_live_owner_is_owner_but_soft_deleted_owner_is_not()
+    public async Task UserShopMembershipService_role_lookup_ignores_soft_deleted_owner()
     {
+        // REFACTOR-BE-001: kiểm Owner chuyển từ handler/ShopOwnershipService về
+        // ShopMembershipEndpointFilter, đọc role qua FindActiveRoleIdAsync.
         await using var db = CreateDb();
         var (shop, live, dead) = await SeedAsync(db);
 
-        var sut = new ShopOwnershipService(db);
+        var sut = new UserShopMembershipService(db);
 
-        Assert.True(await sut.IsOwnerAsync(live, shop.Id, default));
-        Assert.False(await sut.IsOwnerAsync(dead, shop.Id, default));
+        Assert.Equal(WellKnownRoles.OwnerId, await sut.FindActiveRoleIdAsync(live, shop.Id, default));
+        Assert.Null(await sut.FindActiveRoleIdAsync(dead, shop.Id, default));
     }
 
     [Fact]
@@ -67,14 +66,14 @@ public sealed class SoftDeletedMembershipTests
         var (controlShop, user, _) = await SeedAsync(db);
 
         // Membership còn sống (Active, !IsDeleted) nhưng bản thân Shop đã bị xoá mềm.
-        var deletedShop = new ShopEntity(Guid.NewGuid()) { Name = "Gone", Slug = $"gone-{Guid.NewGuid():N}", Kind = ShopKind.Hosted, IsDeleted = true };
+        var deletedShop = new ShopEntity(Guid.NewGuid(), "Gone", $"gone-{Guid.NewGuid():N}", ShopKind.Hosted) { IsDeleted = true };
         db.Shops.Add(deletedShop);
         db.UserShops.Add(new UserShop { UserId = user, ShopId = deletedShop.Id, RoleId = WellKnownRoles.OwnerId, Source = UserShopSource.ShopCreator });
 
         // Membership còn sống trỏ tới một Role đã bị xoá mềm.
         var deletedRoleId = Guid.NewGuid();
         db.Roles.Add(new Role(deletedRoleId) { Code = "Ghost", Name = "Ghost", Scope = RoleScope.Shop, IsDeleted = true });
-        var ghostShop = new ShopEntity(Guid.NewGuid()) { Name = "Ghost", Slug = $"ghost-{Guid.NewGuid():N}", Kind = ShopKind.Hosted };
+        var ghostShop = new ShopEntity(Guid.NewGuid(), "Ghost", $"ghost-{Guid.NewGuid():N}", ShopKind.Hosted);
         db.Shops.Add(ghostShop);
         db.UserShops.Add(new UserShop { UserId = user, ShopId = ghostShop.Id, RoleId = deletedRoleId, Source = UserShopSource.ShopCreator });
         await db.SaveChangesAsync();
@@ -84,25 +83,10 @@ public sealed class SoftDeletedMembershipTests
         Assert.Equal(controlShop.Id, Assert.Single(list).Id);
     }
 
-    [Fact]
-    public async Task UpdateShop_by_soft_deleted_owner_is_forbidden()
-    {
-        await using var db = CreateDb();
-        var (shop, live, dead) = await SeedAsync(db);
-        var command = new UpdateShopCommand(shop.Id, "Renamed", shop.Slug, ShopKind.Hosted, null, ShopStatus.Active);
-
-        var ex = await Assert.ThrowsAsync<ForbiddenAccessException>(() =>
-            new UpdateShopHandler(db, new FakeUser(dead), new NoopLookup(), new EmptyReader()).Handle(command, default));
-        Assert.Equal("SHOP_ACCESS_DENIED", ex.ErrorCode);
-
-        var ok = await new UpdateShopHandler(db, new FakeUser(live), new NoopLookup(), new EmptyReader()).Handle(command, default);
-        Assert.Equal("Renamed", ok.Name);
-    }
-
     /// <summary>Một shop, một Owner sống, một Owner có membership đã xoá mềm (Active + Owner + IsDeleted).</summary>
     private static async Task<(ShopEntity Shop, Guid Live, Guid Dead)> SeedAsync(AppDbContext db)
     {
-        var shop = new ShopEntity(Guid.NewGuid()) { Name = "Shop", Slug = $"shop-{Guid.NewGuid():N}", Kind = ShopKind.Hosted };
+        var shop = new ShopEntity(Guid.NewGuid(), "Shop", $"shop-{Guid.NewGuid():N}", ShopKind.Hosted);
         db.Shops.Add(shop);
         if (!await db.Roles.AnyAsync(r => r.Id == WellKnownRoles.OwnerId))
         {
@@ -135,11 +119,6 @@ public sealed class SoftDeletedMembershipTests
         public string Audience => "vsite-portal";
     }
 
-    private sealed class NoopLookup : IShopLookupService
-    {
-        public Task<Guid?> FindShopIdBySlugAsync(string slug, CancellationToken cancellationToken) => Task.FromResult<Guid?>(null);
-        public Task InvalidateAsync(string slug, CancellationToken cancellationToken) => Task.CompletedTask;
-    }
 
     private sealed class FakeTenant : ITenantContext
     {

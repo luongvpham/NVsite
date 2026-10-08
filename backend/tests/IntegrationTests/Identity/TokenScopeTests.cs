@@ -54,7 +54,7 @@ public sealed class TokenScopeTests : IAsyncLifetime
         await using (var scope = _factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Shops.Add(new Shop(shopId) { Name = "Token Scope Test Shop", Slug = slug, Kind = ShopKind.Hosted, Status = ShopStatus.Active });
+            db.Shops.Add(new Shop(shopId, "Token Scope Test Shop", slug, ShopKind.Hosted, status: ShopStatus.Active));
             await db.SaveChangesAsync();
         }
 

@@ -147,11 +147,6 @@ public sealed class MediaDbConstraintTests(PostgresFixture postgres)
     private static Shop NewShop()
     {
         var id = Guid.NewGuid();
-        return new Shop(id)
-        {
-            Name = "Test Shop",
-            Slug = $"test-shop-{id:N}",
-            Kind = ShopKind.Hosted,
-        };
+        return new Shop(id, "Test Shop", $"test-shop-{id:N}", ShopKind.Hosted);
     }
 }

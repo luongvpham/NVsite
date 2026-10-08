@@ -30,7 +30,7 @@ public sealed class ShopLogoBatchSqlCountTests(PostgresFixture postgres)
 
             foreach (var id in new[] { noLogo, softDeleted, normal })
             {
-                setup.Shops.Add(new Shop(id) { Name = "S", Slug = $"s-{id:N}", Kind = ShopKind.Hosted });
+                setup.Shops.Add(new Shop(id, "S", $"s-{id:N}", ShopKind.Hosted));
             }
 
             await setup.SaveChangesAsync();
@@ -43,8 +43,8 @@ public sealed class ShopLogoBatchSqlCountTests(PostgresFixture postgres)
             setup.MediaAssets.AddRange(softSource, softHeader, normalSource, normalHeader);
             await setup.SaveChangesAsync();
 
-            (await setup.Shops.FirstAsync(s => s.Id == softDeleted)).LogoId = softSource.Id;
-            (await setup.Shops.FirstAsync(s => s.Id == normal)).LogoId = normalSource.Id;
+            (await setup.Shops.FirstAsync(s => s.Id == softDeleted)).SetLogo(softSource.Id);
+            (await setup.Shops.FirstAsync(s => s.Id == normal)).SetLogo(normalSource.Id);
             await setup.SaveChangesAsync();
 
             softSource.SoftDeleteFromLibrary();

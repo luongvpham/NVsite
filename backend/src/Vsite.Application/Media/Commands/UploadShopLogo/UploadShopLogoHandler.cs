@@ -9,8 +9,7 @@ using Vsite.Domain.Media.Entities;
 namespace Vsite.Application.Media.Commands.UploadShopLogo;
 
 /// <summary>T7, MEDIA-001 (#73, #82) — xem doc trên <see cref="UploadShopLogoCommand"/> cho luồng
-/// đầy đủ. Owner-only cùng khuôn `DeleteFromLibraryHandler` (module `Media` không reference
-/// `Identity` trực tiếp — dùng <see cref="IShopOwnershipService"/>, `Media.dependsOn = ["Shop"]`).
+/// đầy đủ. Owner-only — quyền kiểm ở endpoint (`RequireShopOwner`, REFACTOR-BE-001).
 /// `IShopLogoWriter` (module `Shop`) chỉ set property trên entity đang track qua CÙNG
 /// <see cref="IAppDbContext"/> scoped — <see cref="MediaAssetWriter.SaveChangesAsync"/> là điểm
 /// SaveChanges DUY NHẤT của cả request.</summary>
@@ -19,21 +18,13 @@ public sealed class UploadShopLogoHandler(
     IImagePresetCatalog presetCatalog,
     IDerivativePresetCatalog derivativePresetCatalog,
     MediaAssetWriter writer,
-    IShopLogoWriter shopLogoWriter,
-    ICurrentUserContext currentUser,
-    IShopOwnershipService ownership)
+    IShopLogoWriter shopLogoWriter)
     : IRequestHandler<UploadShopLogoCommand, ShopLogoDto>
 {
     private const string DerivativeSource = "Shop";
 
     public async Task<ShopLogoDto> Handle(UploadShopLogoCommand request, CancellationToken cancellationToken)
     {
-        var isOwner = await ownership.IsOwnerAsync(currentUser.UserId, request.ShopId, cancellationToken);
-        if (!isOwner)
-        {
-            throw new ForbiddenAccessException("MEDIA_OWNER_REQUIRED", "Chỉ chủ shop (Owner) mới được đổi logo.");
-        }
-
         // Artifact FULL SET (#86) — rỗng là lỗi cấu hình (startup lẽ ra đã fail fast trên file
         // thiếu/sai shape), KHÔNG sinh logo thiếu derivative. Resolve TOÀN BỘ preset name -> ImagePreset
         // TRƯỚC khi đụng file/ảnh (review sau T7: trước đây TryGet chạy TRONG loop SAU

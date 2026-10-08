@@ -17,7 +17,7 @@ namespace Vsite.Domain.Media.Entities;
 /// (architecture-guide.md §1), nên factory ở đây nhận primitive tương đương; caller ở tầng
 /// Application tự destructure trước khi gọi.
 /// </summary>
-public sealed class MediaAsset : ShopAuditableEntity
+public sealed class MediaAsset : TenantAuditableEntity
 {
     public string StorageKey { get; private set; } = null!;
 

@@ -16,7 +16,7 @@ public enum TenantAudienceKind
 /// `Shop.Slug`, custom domain qua `ShopDomain` vẫn deferred tới khi module Shop đầy đủ tồn tại).
 ///
 /// Sống ở `Shared` (không phải module cụ thể) vì mọi module có entity kế thừa
-/// <see cref="ShopEntity"/>/<see cref="ShopAuditableEntity"/> đều cần cùng cơ chế Global Query
+/// <see cref="TenantEntity"/>/<see cref="TenantAuditableEntity"/> đều cần cùng cơ chế Global Query
 /// Filter (`Vsite.Infrastructure.Persistence.TenantQueryFilterExtensions`).
 /// </summary>
 public interface ITenantContext

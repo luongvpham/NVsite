@@ -19,4 +19,16 @@
 
 ## Pending
 
-_(rỗng)_
+### REFACTOR-BE-001 — toàn bộ IntegrationTests (97 test cần Testcontainers)
+
+- **Lệnh:** `dotnet test backend/tests/IntegrationTests`
+- **Vì sao cần Docker:** task đổi nơi kiểm quyền Owner (handler → `ShopMembershipEndpointFilter`),
+  đổi cách dựng `Shop` trong ~15 file test và thêm audit stamping trong `AppDbContext`. Test
+  endpoint (`LibraryEndpointTests`, `ShopLogoTests`, `ShopEndpointTests` — 403 non-Owner) và
+  `DbConstraintTests` (CHECK `ck_shop_external_url`) chạy trên Postgres thật. Máy làm task không có
+  Docker daemon: 188 test không cần Docker PASS, 97 test còn lại fail **chỉ** vì không kết nối được
+  Docker (đã phân loại qua trx, không có lỗi khác). Logic kiểm Owner của filter đã có unit test
+  không cần Docker (`ShopMembershipEndpointFilterTests`), phần còn thiếu là chạy end-to-end.
+- **Ngày thêm:** 2026-10-08 · **Task:** `Docs/tasks/REFACTOR-BE-001/changelog.md`
+- **Coi là xong khi:** lệnh trên PASS toàn bộ (Skipped chỉ còn 1 test `[Fact(Skip=…)]` có sẵn của
+  SHOP-001).

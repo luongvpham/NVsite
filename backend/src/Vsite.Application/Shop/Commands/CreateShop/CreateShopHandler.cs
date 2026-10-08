@@ -22,13 +22,7 @@ public sealed class CreateShopHandler(IAppDbContext db, ICurrentUserContext curr
             throw new ConflictException("SHOP_SLUG_ALREADY_TAKEN", "Slug này đã được dùng bởi shop khác.");
         }
 
-        var shop = new ShopEntity
-        {
-            Name = request.Name,
-            Slug = request.Slug,
-            Kind = request.Kind,
-            ExternalUrl = request.ExternalUrl,
-        };
+        var shop = new ShopEntity(request.Name, request.Slug, request.Kind, request.ExternalUrl);
         db.Shops.Add(shop);
 
         // 03 §3.3 — nhánh ShopCreator, nhánh DUY NHẤT sinh role Owner. MỘT SaveChangesAsync cho cả

@@ -4,8 +4,8 @@ namespace Vsite.Domain.Identity.Entities;
 
 /// <summary>
 /// Quyết định #3 (refresh token rotation, lưu DB, revoke được) + Quyết định #27/#31 (audience theo
-/// scope). Không kế thừa `ShopEntity` — `ShopId` ở đây NULLABLE (null cho audience `vsite-main`/
-/// `vsite-portal`), khác ngữ nghĩa "entity thuộc về một shop cụ thể" mà `ShopEntity` yêu cầu.
+/// scope). Không kế thừa `TenantEntity` — `ShopId` ở đây NULLABLE (null cho audience `vsite-main`/
+/// `vsite-portal`), khác ngữ nghĩa "entity thuộc về một shop cụ thể" mà `TenantEntity` yêu cầu.
 ///
 /// `TokenHash` — không lưu token thô, cùng nguyên tắc với `PendingRegistration.TokenHash` (03 §5).
 /// </summary>

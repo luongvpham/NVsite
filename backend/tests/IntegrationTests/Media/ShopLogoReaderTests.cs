@@ -273,13 +273,8 @@ public sealed class ShopLogoReaderTests
 
     private static Vsite.Domain.Shop.Entities.Shop NewShop(Guid id, Guid? logoId)
     {
-        var shop = new Vsite.Domain.Shop.Entities.Shop(id)
-        {
-            Name = "S",
-            Slug = $"s-{id:N}",
-            Kind = Vsite.Domain.Shop.Enums.ShopKind.Hosted,
-        };
-        shop.LogoId = logoId;
+        var shop = new Vsite.Domain.Shop.Entities.Shop(id, "S", $"s-{id:N}", Vsite.Domain.Shop.Enums.ShopKind.Hosted);
+        shop.SetLogo(logoId);
         return shop;
     }
 
@@ -311,7 +306,8 @@ public sealed class ShopLogoReaderTests
         var derived = MediaAsset.NewDerived(source, $"shops/{source.ShopId}/{Guid.NewGuid():N}.webp", 320, 96, 500, preset, 0.5f, 0.5f);
         if (shopIdOverride is { } other)
         {
-            derived.ShopId = other;
+            // ShopId là init-only (REFACTOR-BE-001) — test giả lập dữ liệu xuyên shop bằng reflection.
+            typeof(MediaAsset).GetProperty(nameof(MediaAsset.ShopId))!.SetValue(derived, other);
         }
 
         return derived;

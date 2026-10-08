@@ -17,6 +17,6 @@ public sealed class ShopLogoWriter(IAppDbContext db) : IShopLogoWriter
         var shop = await db.Shops.FirstOrDefaultAsync(s => s.Id == shopId, ct)
             ?? throw new NotFoundException("Shop", shopId);
 
-        shop.LogoId = libraryAssetId;
+        shop.SetLogo(libraryAssetId);
     }
 }

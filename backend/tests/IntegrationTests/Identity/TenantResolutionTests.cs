@@ -58,7 +58,7 @@ public sealed class TenantResolutionTests
 
         await using var scope = _factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Shops.Add(new Shop(shopId) { Name = "Tenant Resolution Test Shop", Slug = slug, Kind = ShopKind.Hosted, Status = ShopStatus.Active });
+        db.Shops.Add(new Shop(shopId, "Tenant Resolution Test Shop", slug, ShopKind.Hosted, status: ShopStatus.Active));
         await db.SaveChangesAsync();
 
         return (shopId, slug, $"{slug}.vsite.local");
