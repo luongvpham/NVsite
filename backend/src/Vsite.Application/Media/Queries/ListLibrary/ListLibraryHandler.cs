@@ -7,7 +7,7 @@ using Vsite.Domain.Pagination;
 namespace Vsite.Application.Media.Queries.ListLibrary;
 
 /// <summary>`IsInLibrary = true`, chưa xoá (Global Query Filter), `CreatedAt DESC` — tận dụng thẳng
-/// `ix_media_library` (`MediaAssetConfiguration`).</summary>
+/// `ix_media_asset_library` (`MediaAssetConfiguration`).</summary>
 public sealed class ListLibraryHandler(IAppDbContext db) : IRequestHandler<ListLibraryQuery, PagedResult<MediaAssetDto>>
 {
     public async Task<PagedResult<MediaAssetDto>> Handle(ListLibraryQuery request, CancellationToken cancellationToken)

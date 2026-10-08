@@ -8,7 +8,7 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
 {
     public void Configure(EntityTypeBuilder<RefreshToken> builder)
     {
-        builder.ToTable("RefreshToken");
+        builder.ToTable("refresh_token");
         builder.HasKey(t => t.Id);
 
         builder.HasIndex(t => t.TokenHash).IsUnique();
@@ -17,6 +17,7 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
         builder.HasOne<User>()
             .WithMany()
             .HasForeignKey(t => t.UserId)
+            .HasConstraintName("fk_refresh_token_app_user_user_id")
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

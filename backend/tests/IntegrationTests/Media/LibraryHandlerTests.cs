@@ -184,7 +184,7 @@ public sealed class LibraryHandlerTests : IDisposable
         var usageBefore = await usageHandler.Handle(new GetUsageQuery(shopId), CancellationToken.None);
         Assert.Equal(library.SizeBytes, usageBefore.UsedBytes);
 
-        var deleteHandler = new DeleteFromLibraryHandler(db, new FakeCurrentUserContext(ownerId), new FakeShopOwnershipService(isOwner: true));
+        var deleteHandler = new DeleteFromLibraryHandler(db);
         await deleteHandler.Handle(new DeleteFromLibraryCommand(shopId, library.Id), CancellationToken.None);
 
         var listHandler = new ListLibraryHandler(db);
@@ -221,30 +221,6 @@ public sealed class LibraryHandlerTests : IDisposable
         Assert.Equal(usageBefore.UsedBytes - library.SizeBytes, usageAfter.UsedBytes);
     }
 
-    // ---- delete bởi non-Owner -> 403 MEDIA_OWNER_REQUIRED ----
-
-    [Fact]
-    public async Task Delete_by_non_owner_throws_Forbidden_MEDIA_OWNER_REQUIRED()
-    {
-        await using var db = CreateDbContext();
-        var writer = CreateWriter(db);
-        var shopId = Guid.NewGuid();
-        var staffId = Guid.NewGuid();
-        _tenantContext.ShopId = shopId;
-
-        var library = await UploadLibraryAsync(db, writer, shopId, "photo.jpg");
-
-        var deleteHandler = new DeleteFromLibraryHandler(db, new FakeCurrentUserContext(staffId), new FakeShopOwnershipService(isOwner: false));
-
-        var ex = await Assert.ThrowsAsync<ForbiddenAccessException>(() =>
-            deleteHandler.Handle(new DeleteFromLibraryCommand(shopId, library.Id), CancellationToken.None));
-
-        Assert.Equal("MEDIA_OWNER_REQUIRED", ex.ErrorCode);
-
-        // Chưa bị xoá — vẫn còn trong Global Query Filter mặc định (NOT IsDeleted).
-        Assert.NotNull(await db.MediaAssets.FirstOrDefaultAsync(a => a.Id == library.Id));
-    }
-
     // ---- delete asset không phải Library (hoặc id lạ) -> 404 ----
 
     [Fact]
@@ -262,7 +238,7 @@ public sealed class LibraryHandlerTests : IDisposable
             new UploadToSlotCommand(shopId, sourceStream, "photo.jpg", CoverPreset.Name, 0.5f, 0.5f, false, null),
             CancellationToken.None);
 
-        var deleteHandler = new DeleteFromLibraryHandler(db, new FakeCurrentUserContext(ownerId), new FakeShopOwnershipService(isOwner: true));
+        var deleteHandler = new DeleteFromLibraryHandler(db);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             deleteHandler.Handle(new DeleteFromLibraryCommand(shopId, direct.Asset.Id), CancellationToken.None));
@@ -270,6 +246,29 @@ public sealed class LibraryHandlerTests : IDisposable
 
     // ---- Test bắt buộc 10: usage trước/sau clone KHÔNG đổi; sau upload thẳng thì tăng đúng
     // SizeBytes ----
+
+    [Fact]
+    public async Task Usage_ignores_clone_whose_source_was_hard_deleted()
+    {
+        // REFACTOR-DB-001 / #55: FK SourceAssetId là ON DELETE SET NULL — clone mất nguồn có
+        // SourceAssetId = null nhưng KHÔNG phải bản gốc, không được tính quota (trước đây lọc theo
+        // SourceAssetId IS NULL nên bị tính nhầm).
+        await using var db = CreateDbContext();
+        var writer = CreateWriter(db);
+        var shopId = Guid.NewGuid();
+        _tenantContext.ShopId = shopId;
+
+        var library = await UploadLibraryAsync(db, writer, shopId, "photo.jpg");
+        var clone = await CreateCloneHandler(db, writer)
+            .Handle(new CloneFromLibraryCommand(shopId, library.Id, CoverPreset.Name, null, null), CancellationToken.None);
+
+        var cloneEntity = await db.MediaAssets.SingleAsync(a => a.Id == clone.Id);
+        typeof(Vsite.Domain.Media.Entities.MediaAsset).GetProperty(nameof(Vsite.Domain.Media.Entities.MediaAsset.SourceAssetId))!.SetValue(cloneEntity, null);
+        await db.SaveChangesAsync();
+
+        var usage = await new GetUsageHandler(db).Handle(new GetUsageQuery(shopId), CancellationToken.None);
+        Assert.Equal(library.SizeBytes, usage.UsedBytes);
+    }
 
     [Fact]
     public async Task Usage_unchanged_after_clone_but_increases_by_SizeBytes_after_direct_upload()
@@ -356,7 +355,7 @@ public sealed class LibraryHandlerTests : IDisposable
         var libraryB = await UploadLibraryAsync(db, writer, shopBId, "b.jpg");
 
         _tenantContext.ShopId = shopAId;
-        var deleteHandler = new DeleteFromLibraryHandler(db, new FakeCurrentUserContext(ownerAId), new FakeShopOwnershipService(isOwner: true));
+        var deleteHandler = new DeleteFromLibraryHandler(db);
         await deleteHandler.Handle(new DeleteFromLibraryCommand(shopAId, libraryA.Id), CancellationToken.None);
 
         var lookupHandler = new GetAssetsByIdsHandler(db);
@@ -409,13 +408,9 @@ public sealed class LibraryHandlerTests : IDisposable
         var before = await referencesHandler.Handle(new GetReferencesQuery(shopId, library.Id), CancellationToken.None);
         Assert.Empty(before.References);
 
-        db.Shops.Add(new Vsite.Domain.Shop.Entities.Shop(shopId)
-        {
-            Name = "Shop",
-            Slug = $"shop-{shopId:N}",
-            Kind = Vsite.Domain.Shop.Enums.ShopKind.Hosted,
-            LogoId = library.Id,
-        });
+        var shop = new Vsite.Domain.Shop.Entities.Shop(shopId, "Shop", $"shop-{shopId:N}", Vsite.Domain.Shop.Enums.ShopKind.Hosted);
+        shop.SetLogo(library.Id);
+        db.Shops.Add(shop);
         await db.SaveChangesAsync(CancellationToken.None);
 
         var after = await referencesHandler.Handle(new GetReferencesQuery(shopId, library.Id), CancellationToken.None);
@@ -482,15 +477,5 @@ public sealed class LibraryHandlerTests : IDisposable
         public IReadOnlyCollection<ImagePreset> All => _presets.Values;
     }
 
-    private sealed class FakeCurrentUserContext(Guid userId) : ICurrentUserContext
-    {
-        public Guid UserId { get; } = userId;
-        public string Audience => "vsite-portal";
-    }
 
-    private sealed class FakeShopOwnershipService(bool isOwner) : IShopOwnershipService
-    {
-        public Task<bool> IsOwnerAsync(Guid userId, Guid shopId, CancellationToken cancellationToken) =>
-            Task.FromResult(isOwner);
-    }
 }

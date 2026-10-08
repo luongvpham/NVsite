@@ -75,6 +75,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
+builder.Services.AddScoped<IAuditActor, HttpAuditActor>();
 
 // JWT Bearer validation + policy RequireGlobalScope (Quyết định #32).
 builder.Services.AddIdentityAuthentication();

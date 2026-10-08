@@ -26,216 +26,288 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<Guid?>("CreatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTimeOffset?>("LastLoginAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_login_at");
 
                     b.Property<string>("Provider")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("provider");
 
                     b.Property<string>("ProviderUserId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("provider_user_id");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_external_login");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_external_login_user_id");
 
                     b.HasIndex("Provider", "ProviderUserId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_external_login_provider_provider_user_id");
 
-                    b.ToTable("ExternalLogin", (string)null);
+                    b.ToTable("external_login", (string)null);
                 });
 
             modelBuilder.Entity("Vsite.Domain.Identity.Entities.PasswordResetToken", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("Audience")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("audience");
 
                     b.Property<DateTimeOffset?>("ConsumedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("consumed_at");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
 
                     b.Property<Guid?>("ShopId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("shop_id");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("token_hash");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_password_reset_token");
 
                     b.HasIndex("TokenHash")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_password_reset_token_token_hash");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_password_reset_token_user_id");
 
-                    b.ToTable("PasswordResetToken", (string)null);
+                    b.ToTable("password_reset_token", (string)null);
                 });
 
             modelBuilder.Entity("Vsite.Domain.Identity.Entities.PendingRegistration", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTimeOffset?>("ConsumedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("consumed_at");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("email");
 
                     b.Property<string>("EmailNormalized")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("email_normalized");
 
                     b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
 
                     b.Property<string>("FullName")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("full_name");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("password_hash");
 
                     b.Property<Guid?>("ShopId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("shop_id");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("token_hash");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_pending_registration");
 
-                    b.HasIndex("EmailNormalized");
+                    b.HasIndex("EmailNormalized")
+                        .HasDatabaseName("ix_pending_registration_email_normalized");
 
-                    b.HasIndex("ExpiresAt");
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_pending_registration_expires_at");
 
-                    b.ToTable("PendingRegistration", (string)null);
+                    b.ToTable("pending_registration", (string)null);
                 });
 
             modelBuilder.Entity("Vsite.Domain.Identity.Entities.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("Audience")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("audience");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
 
                     b.Property<Guid?>("ReplacedByTokenId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("replaced_by_token_id");
 
                     b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
 
                     b.Property<Guid?>("ShopId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("shop_id");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("token_hash");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_refresh_token");
 
                     b.HasIndex("TokenHash")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_refresh_token_token_hash");
 
-                    b.HasIndex("UserId", "Audience", "ShopId");
+                    b.HasIndex("UserId", "Audience", "ShopId")
+                        .HasDatabaseName("ix_refresh_token_user_id_audience_shop_id");
 
-                    b.ToTable("RefreshToken", (string)null);
+                    b.ToTable("refresh_token", (string)null);
                 });
 
             modelBuilder.Entity("Vsite.Domain.Identity.Entities.Role", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("Code")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("code");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<Guid?>("CreatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsSystem")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_system");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("name");
 
                     b.Property<string>("Scope")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("scope");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_role");
+
+                    b.HasAlternateKey("Id", "Scope")
+                        .HasName("ak_role_id_scope");
 
                     b.HasIndex("Code", "Scope")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_role_code_scope");
 
-                    b.ToTable("Role", (string)null);
+                    b.ToTable("role", (string)null);
 
                     b.HasData(
                         new
@@ -321,86 +393,114 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("AvatarUrl")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("avatar_url");
 
                     b.Property<string>("CCCD")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("cccd");
 
                     b.Property<DateTimeOffset?>("CCCDVerifiedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cccd_verified_at");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<Guid?>("CreatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
 
                     b.Property<string>("Email")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("email");
 
                     b.Property<string>("EmailNormalized")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("email_normalized");
 
                     b.Property<DateTimeOffset?>("EmailVerifiedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("email_verified_at");
 
                     b.Property<string>("FullName")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("full_name");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTimeOffset?>("LastLoginAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_login_at");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("password_hash");
 
                     b.Property<string>("Phone")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("phone");
 
                     b.Property<DateTimeOffset?>("PhoneVerifiedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("phone_verified_at");
 
                     b.Property<string>("PrimaryIdentityKind")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("primary_identity_kind");
 
                     b.Property<Guid>("RoleId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("role_id");
 
                     b.Property<string>("RoleScope")
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("text")
+                        .HasColumnName("role_scope")
                         .HasComputedColumnSql("'Platform'", true);
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("status");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_app_user");
 
                     b.HasIndex("EmailNormalized")
                         .IsUnique()
-                        .HasFilter("\"EmailNormalized\" IS NOT NULL");
+                        .HasDatabaseName("ix_app_user_email_normalized")
+                        .HasFilter("email_normalized IS NOT NULL");
 
-                    b.HasIndex("RoleId", "RoleScope");
+                    b.HasIndex("RoleId", "RoleScope")
+                        .HasDatabaseName("ix_app_user_role_id_role_scope");
 
-                    b.ToTable("User", null, t =>
+                    b.ToTable("app_user", null, t =>
                         {
-                            t.HasCheckConstraint("ck_user_email_verified", "(\"Email\" IS NULL AND \"EmailVerifiedAt\" IS NULL) OR (\"Email\" IS NOT NULL AND \"EmailVerifiedAt\" IS NOT NULL)");
+                            t.HasCheckConstraint("ck_user_email_verified", "(email IS NULL AND email_verified_at IS NULL) OR (email IS NOT NULL AND email_verified_at IS NOT NULL)");
 
-                            t.HasCheckConstraint("ck_user_primary_identity", "\"PrimaryIdentityKind\" <> 'Email' OR \"Email\" IS NOT NULL");
+                            t.HasCheckConstraint("ck_user_primary_identity", "primary_identity_kind <> 'Email' OR email IS NOT NULL");
                         });
                 });
 
@@ -408,207 +508,290 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<Guid?>("CreatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTimeOffset?>("LastActiveAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_active_at");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("password_hash");
 
                     b.Property<Guid>("RoleId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("role_id");
 
                     b.Property<string>("RoleScope")
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("text")
+                        .HasColumnName("role_scope")
                         .HasComputedColumnSql("'Shop'", true);
 
                     b.Property<Guid>("ShopId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("shop_id");
 
                     b.Property<string>("Source")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("source");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("status");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_user_shop");
 
-                    b.HasIndex("ShopId");
+                    b.HasIndex("ShopId")
+                        .HasDatabaseName("ix_user_shop_shop_id");
 
-                    b.HasIndex("RoleId", "RoleScope");
+                    b.HasIndex("RoleId", "RoleScope")
+                        .HasDatabaseName("ix_user_shop_role_id_role_scope");
 
                     b.HasIndex("UserId", "ShopId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_shop_user_id_shop_id");
 
-                    b.ToTable("UserShop", (string)null);
+                    b.ToTable("user_shop", (string)null);
                 });
 
             modelBuilder.Entity("Vsite.Domain.Media.Entities.MediaAsset", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("AltText")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("alt_text");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<Guid?>("CreatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
 
                     b.Property<float>("FocalPointX")
-                        .HasColumnType("real");
+                        .HasColumnType("real")
+                        .HasColumnName("focal_point_x");
 
                     b.Property<float>("FocalPointY")
-                        .HasColumnType("real");
+                        .HasColumnType("real")
+                        .HasColumnName("focal_point_y");
 
                     b.Property<string>("Folder")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("folder");
 
                     b.Property<int>("Height")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("height");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsInLibrary")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_in_library");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
 
                     b.Property<string>("MimeType")
                         .IsRequired()
                         .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("mime_type");
 
                     b.Property<string>("OriginalFileName")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("original_file_name");
 
                     b.Property<string>("Preset")
                         .HasMaxLength(40)
-                        .HasColumnType("character varying(40)");
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("preset");
 
                     b.Property<Guid>("ShopId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("shop_id");
 
                     b.Property<long>("SizeBytes")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
 
                     b.Property<Guid?>("SourceAssetId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_asset_id");
 
                     b.Property<string>("StorageKey")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("storage_key");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
 
                     b.Property<int>("Width")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("width");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_media_asset");
+
+                    b.HasAlternateKey("Id", "ShopId")
+                        .HasName("ak_media_asset_id_shop_id");
+
+                    b.HasIndex("SourceAssetId")
+                        .HasDatabaseName("ix_media_asset_source")
+                        .HasFilter("source_asset_id IS NOT NULL");
 
                     b.HasIndex("StorageKey")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_media_asset_storage_key");
 
                     b.HasIndex("ShopId", "CreatedAt")
                         .IsDescending(false, true)
-                        .HasDatabaseName("ix_media_library")
-                        .HasFilter("\"IsInLibrary\" AND NOT \"IsDeleted\"");
+                        .HasDatabaseName("ix_media_asset_library")
+                        .HasFilter("is_in_library AND NOT is_deleted");
 
                     b.HasIndex("SourceAssetId", "Preset")
-                        .HasDatabaseName("ix_media_derivative")
-                        .HasFilter("\"SourceAssetId\" IS NOT NULL");
+                        .IsUnique()
+                        .HasDatabaseName("ux_media_asset_derivative")
+                        .HasFilter("kind = 'Derivative' AND NOT is_deleted");
 
-                    b.ToTable("MediaAsset", null, t =>
+                    b.ToTable("media_asset", null, t =>
                         {
-                            t.HasCheckConstraint("ck_media_library_preset", "(\"IsInLibrary\" = true AND \"Preset\" IS NULL) OR (\"IsInLibrary\" = false AND \"Preset\" IS NOT NULL)");
+                            t.HasCheckConstraint("ck_media_asset_kind", "kind IN ('Library', 'Direct', 'Clone', 'Derivative') AND (kind = 'Library') = is_in_library AND (kind NOT IN ('Library', 'Direct') OR source_asset_id IS NULL)");
+
+                            t.HasCheckConstraint("ck_media_library_preset", "(is_in_library = true AND preset IS NULL) OR (is_in_library = false AND preset IS NOT NULL)");
                         });
                 });
 
             modelBuilder.Entity("Vsite.Domain.Shop.Entities.Shop", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<Guid?>("CreatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
 
                     b.Property<string>("ExternalUrl")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("external_url");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
 
                     b.Property<string>("Kind")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("kind");
 
                     b.Property<Guid?>("LogoId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("logo_id");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("name");
 
                     b.Property<string>("Slug")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("slug");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("status");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_shop");
 
                     b.HasIndex("Slug")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_shop_slug");
 
-                    b.HasIndex("LogoId", "Id");
+                    b.HasIndex("LogoId", "Id")
+                        .HasDatabaseName("ix_shop_logo_id_id");
 
-                    b.ToTable("Shop", null, t =>
+                    b.ToTable("shop", null, t =>
                         {
-                            t.HasCheckConstraint("ck_shop_external_url", "\"Kind\" <> 'ExternalOnly' OR \"ExternalUrl\" IS NOT NULL");
+                            t.HasCheckConstraint("ck_shop_external_url", "kind <> 'ExternalOnly' OR external_url IS NOT NULL");
                         });
                 });
 
@@ -618,7 +801,8 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .WithMany("ExternalLogins")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_external_login_app_user_user_id");
 
                     b.Navigation("User");
                 });
@@ -629,7 +813,8 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_password_reset_token_app_user_user_id");
                 });
 
             modelBuilder.Entity("Vsite.Domain.Identity.Entities.RefreshToken", b =>
@@ -638,7 +823,8 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_refresh_token_app_user_user_id");
                 });
 
             modelBuilder.Entity("Vsite.Domain.Identity.Entities.User", b =>
@@ -648,7 +834,8 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .HasForeignKey("RoleId", "RoleScope")
                         .HasPrincipalKey("Id", "Scope")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_app_user_role_role_id_role_scope");
                 });
 
             modelBuilder.Entity("Vsite.Domain.Identity.Entities.UserShop", b =>
@@ -657,20 +844,23 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ShopId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_user_shop_shop_shop_id");
 
                     b.HasOne("Vsite.Domain.Identity.Entities.User", "User")
                         .WithMany("UserShops")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_user_shop_app_user_user_id");
 
                     b.HasOne("Vsite.Domain.Identity.Entities.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId", "RoleScope")
                         .HasPrincipalKey("Id", "Scope")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_user_shop_role_role_id_role_scope");
 
                     b.Navigation("User");
                 });
@@ -681,12 +871,14 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ShopId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_media_asset_shop_shop_id");
 
                     b.HasOne("Vsite.Domain.Media.Entities.MediaAsset", null)
                         .WithMany()
                         .HasForeignKey("SourceAssetId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_media_asset_media_asset_source_asset_id");
                 });
 
             modelBuilder.Entity("Vsite.Domain.Shop.Entities.Shop", b =>
@@ -695,7 +887,8 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("LogoId", "Id")
                         .HasPrincipalKey("Id", "ShopId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_shop_media_asset_logo_id_id");
                 });
 
             modelBuilder.Entity("Vsite.Domain.Identity.Entities.User", b =>

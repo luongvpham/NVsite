@@ -42,7 +42,7 @@ pnpm contract:diff                                 # → dùng qua skill contrac
 ```
 backend/src/
   Vsite.Domain/                   ← thuần: không EF Core, không ASP.NET Core, không Npgsql
-    Common/       BaseEntity.cs BaseAuditableEntity.cs ShopEntity.cs ShopAuditableEntity.cs
+    Common/       BaseEntity.cs BaseAuditableEntity.cs TenantEntity.cs TenantAuditableEntity.cs
                   IShopScoped.cs BaseEvent.cs
     Abstractions/ ITenantContext.cs
     Exceptions/   AppException + NotFound/Domain/Conflict/ForbiddenAccess/TooManyRequests
@@ -50,10 +50,10 @@ backend/src/
     Pagination/  ReservedRoutes/
     {Module}/     Entities/{Entity}.cs  Enums/{Name}.cs  ← vd. Identity/
   Vsite.Application/              ← CQRS, chỉ phụ thuộc Domain
-    Common/       Behaviors/ValidationBehavior.cs  Exceptions/  Interfaces/{IAppDbContext,ICurrentUserContext}.cs
+    Common/       Behaviors/ValidationBehavior.cs  Exceptions/  Interfaces/{IAppDbContext,ICurrentUserContext,IAuditActor}.cs
     {Module}/     Interfaces/  Options/  {Feature}/Commands/{UseCase}/  {Feature}/Queries/{UseCase}/
   Vsite.Infrastructure/
-    Persistence/  AppDbContext.cs AppDbContextFactory.cs TenantQueryFilterExtensions.cs
+    Persistence/  AppDbContext.cs TenantQueryFilterExtensions.cs
                   Configurations/{Module}/{Entity}Configuration.cs
                   Seed/  Migrations/
     Configuration/ ReservedRoutesProvider.cs
@@ -85,15 +85,50 @@ nhiều DbContext thì EF Core không diễn đạt được chúng.
 |---|---|
 | `BaseEntity` | Không cần audit trail, không platform/shop-scoped cố định (vd. `PendingRegistration` — staging ngắn hạn) |
 | `BaseAuditableEntity` | Cần `CreatedAt`/`UpdatedAt`/soft-delete, KHÔNG thuộc về một shop cụ thể (platform-scoped, vd. `User`, `Role`) |
-| `ShopEntity` | Thuộc về một shop, KHÔNG cần audit trail (hiếm) |
-| `ShopAuditableEntity` | Thuộc về một shop VÀ cần audit trail — phổ biến nhất cho entity nghiệp vụ (`UserShop`, sau này `Product`/`Service`/`Booking`...) |
+| `TenantEntity` | Thuộc về một shop, KHÔNG cần audit trail (hiếm) |
+| `TenantAuditableEntity` | Thuộc về một shop VÀ cần audit trail — phổ biến nhất cho entity nghiệp vụ (`UserShop`, sau này `Product`/`Service`/`Booking`...) |
 
-Kế thừa `ShopEntity`/`ShopAuditableEntity` là **đủ** để có Global Query Filter theo `ShopId` —
+Kế thừa `TenantEntity`/`TenantAuditableEntity` là **đủ** để có Global Query Filter theo `ShopId` —
 không viết tay `HasQueryFilter` nữa (xem `Vsite.Infrastructure.Persistence.TenantQueryFilterExtensions`).
+`ShopId` trên base là `init` — gán lúc tạo, không đổi được (không "chuyển" entity sang tenant khác).
+
+**Tên base class ≠ tên entity:** base tenant là `TenantEntity`/`TenantAuditableEntity` (đổi từ
+`ShopEntity`/`ShopAuditableEntity` ở REFACTOR-BE-001 vì đụng alias `ShopEntity = …Shop.Entities.Shop`).
+Entity mới không đặt trùng tên module (`Website`, `Theme`…) — trùng thì phải alias khắp nơi.
+
+**Entity có hành vi, không setter public:** thay đổi trạng thái qua method của entity để invariant
+nằm ở Domain (mẫu: `MediaAsset`, `Shop.Update`/`SetLogo`). Validator vẫn chặn sớm để trả 422;
+entity ném `DomainException` là lớp chặn thứ hai.
+
+**Audit "by user":** `AppDbContext` tự ghi `CreatedByUserId`/`UpdatedByUserId` từ `IAuditActor`
+(null khi chưa đăng nhập) — handler không gán tay. (`CreatedByUserId` đã có giá trị thì giữ nguyên —
+chỉ dùng khi tạo thay người khác, vd. job nền.)
 
 **Entity không cho set `Id` tự do:** `BaseEntity.Id` là `protected set`. Entity cần seed data với
 GUID cố định phải tự expose constructor `public {Entity}(Guid id) : base(id) { }` — xem
 `Vsite.Domain.Identity.Entities.Role` + `Vsite.Infrastructure.Persistence.Seed.RoleSeed`.
+
+## Quy ước database (REFACTOR-DB-001)
+
+- **snake_case cho mọi tên** — bảng, cột, PK/FK/index (`EFCore.NamingConventions`, bật trong
+  `AppDbContext.OnConfiguring` để test tự dựng context cũng ra cùng model). Bảng = tên entity **số
+  ít** (`shop`, `user_shop`, `media_asset`); `ToTable("...")` viết tay cũng phải snake_case.
+- **Bảng `User` tên là `app_user`** — `user` là từ khoá Postgres (`SELECT * FROM user` trả về
+  `current_user`, không lỗi). Tránh mọi tên bảng là từ khoá reserved (`user`, `order`, `group`…);
+  `role` không reserved nên dùng được.
+- **SQL viết tay** (CHECK, `HasFilter`, test, job) dùng tên snake_case **không quote**. Tên ràng buộc
+  tự đặt: `ck_{bảng}_{ý}`, `ix_{bảng}_{ý}`, unique có lọc `ux_{bảng}_{ý}`.
+- **Soft delete** = `IsDeleted` (cho Global Query Filter) + `DeletedAt` (`AppDbContext` tự đóng dấu,
+  kể cả khi entity tự set `IsDeleted` không qua `Remove()`).
+- **Unique index không tự lọc soft delete.** Mỗi unique phải chọn rõ: giữ toàn cục (vd. `shop.slug`
+  — slug của shop đã xoá vẫn bị giữ) thì kiểm trùng bằng `IgnoreQueryFilters()` để trả 409; cho
+  dùng lại thì thêm `.HasFilter("NOT is_deleted")`.
+- **Migration đã gộp lại một `InitialSchema` ở REFACTOR-DB-001** (trước production). DB dev cũ phải
+  xoá: `docker compose down -v` rồi chạy lại — triệu chứng nếu quên: `column "migration_id" does not
+  exist` khi app khởi động/migrate. Từ giờ chỉ thêm migration mới, không gộp nữa.
+- **Tên FK nối tới `app_user`/`shop` ghim bằng `HasConstraintName`** — NamingConventions đặt tên FK
+  theo thứ tự cấu hình (có lúc lấy tên DbSet `users`/`shops`), không ghim thì thêm configuration sau
+  có thể sinh migration đổi tên vô cớ.
 
 ## Ranh giới module (Quyết định #1) ⚠️
 
@@ -125,6 +160,8 @@ Vi phạm là lỗi bảo mật, không phải code style:
 3. Child resource **phải** validate ownership **trong câu query** (`WHERE ParentId = ...`), KHÔNG load rồi check ở memory.
 4. **Không bao giờ** nhận `ShopId` từ request body — chỉ lấy từ route hoặc `TenantContext`.
 5. Quyền theo shop kiểm ở **Authorization Handler**, không tin claim trong token.
+   Cách làm hiện tại: endpoint có `{shopId}` gắn `.RequireShopMembership()`; cần role Owner thì
+   `.RequireShopOwner(errorCode, detail)`. **Handler không tự query `UserShop`/`RoleId`.**
 
 ## Quy ước codegen bắt buộc (Quyết định #19)
 

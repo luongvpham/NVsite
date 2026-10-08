@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Identity.Interfaces;
 using Vsite.Domain.Exceptions;
+using Vsite.Domain.Identity;
 
 namespace Vsite.Api.Tenancy;
 
@@ -22,11 +23,29 @@ public static class ShopScopedEndpointExtensions
         builder.WithMetadata(new ShopMembershipRequiredMarker());
         return builder;
     }
+
+    /// <summary>
+    /// Như <see cref="RequireShopMembership"/> nhưng membership phải có role `Owner` (#21.5 — quyền
+    /// theo shop kiểm ở tầng authorization, không rải trong handler). Kiểm trong CÙNG câu query
+    /// membership của filter; không phải Owner → 403 với `errorCode` riêng của endpoint (giữ nguyên
+    /// error_code đã có trong contract, vd. `SHOP_OWNER_REQUIRED`/`MEDIA_OWNER_REQUIRED`).
+    /// Handler phía sau KHÔNG tự tra `UserShop`/`RoleId` nữa (REFACTOR-BE-001).
+    /// </summary>
+    public static RouteHandlerBuilder RequireShopOwner(this RouteHandlerBuilder builder, string errorCode, string detail)
+    {
+        builder.RequireShopMembership();
+        builder.WithMetadata(new ShopOwnerRequirement(errorCode, detail));
+        return builder;
+    }
 }
 
 /// <summary>Marker rỗng — chỉ để `EndpointDataSource`/test bên ngoài phát hiện được endpoint đã gắn
 /// <see cref="ShopMembershipEndpointFilter"/> qua <see cref="ShopScopedEndpointExtensions"/>.</summary>
 public sealed class ShopMembershipRequiredMarker;
+
+/// <summary>Metadata của <see cref="ShopScopedEndpointExtensions.RequireShopOwner"/> — filter đọc nó để
+/// biết endpoint đòi role Owner và trả error_code nào khi thiếu.</summary>
+public sealed record ShopOwnerRequirement(string ErrorCode, string Detail);
 
 /// <summary>
 /// SHOP-001 §3/§7 Quyết định 3 — Quyết định #31 nói Portal lấy `ShopId` từ route
@@ -42,7 +61,9 @@ public sealed class ShopMembershipRequiredMarker;
 ///      (invariant 7, tái dùng <see cref="IUserShopMembershipService"/> đã có sẵn cho
 ///      `ShopMembershipValidationMiddleware`, không viết lại query).
 ///   3. Không có record → 403, KHÔNG fallback role mặc định (invariant 8).
-///   4. Có → set `TenantContext.ShopId = shopId` để Global Query Filter hoạt động đúng.
+///   4. Endpoint có <see cref="ShopOwnerRequirement"/> (gắn bởi `RequireShopOwner`) mà role không
+///      phải Owner → 403 với error_code của endpoint (REFACTOR-BE-001).
+///   5. Còn lại → set `TenantContext.ShopId = shopId` để Global Query Filter hoạt động đúng.
 ///
 /// ⚠️ Giả định tôi đã tự đặt (ghi ở `Docs/tasks/SHOP-001/contract-diff.md`): sau bước này,
 /// `TenantContext.ShopId` có giá trị dù `AudienceKind` vẫn là `Portal` (không đổi thành `Shop`) —
@@ -56,10 +77,13 @@ public sealed class ShopMembershipEndpointFilter(TenantContext tenantContext, IC
     {
         var shopId = Guid.Parse((string)context.HttpContext.Request.RouteValues["shopId"]!);
 
-        var isActiveMember = await membershipService.IsActiveMemberAsync(currentUser.UserId, shopId, context.HttpContext.RequestAborted);
-        if (!isActiveMember)
+        var roleId = await membershipService.FindActiveRoleIdAsync(currentUser.UserId, shopId, context.HttpContext.RequestAborted)
+            ?? throw new ForbiddenAccessException("SHOP_ACCESS_DENIED", "Không có quyền truy cập shop này.");
+
+        var ownerRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<ShopOwnerRequirement>();
+        if (ownerRequirement is not null && roleId != WellKnownRoles.OwnerId)
         {
-            throw new ForbiddenAccessException("SHOP_ACCESS_DENIED", "Không có quyền truy cập shop này.");
+            throw new ForbiddenAccessException(ownerRequirement.ErrorCode, ownerRequirement.Detail);
         }
 
         tenantContext.ShopId = shopId;

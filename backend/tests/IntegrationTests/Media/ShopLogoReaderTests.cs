@@ -36,6 +36,31 @@ public sealed class ShopLogoReaderTests
         Assert.StartsWith("/media/shops/", key);
     }
 
+    /// <summary>REFACTOR-DB-001 — một clone CŨ HƠN với cùng (nguồn, preset header) từng thắng luật
+    /// "dòng đầu theo CreatedAt" và làm logo hiện crop của slot. Giờ chỉ `Kind = Derivative` được đọc.</summary>
+    [Fact]
+    public async Task Older_clone_with_header_preset_is_ignored_in_single_and_batch_lookup()
+    {
+        await using var db = CreateDb();
+        var shopId = Guid.NewGuid();
+        _tenant.ShopId = shopId;
+        var source = NewLibrary(shopId);
+        var clone = MediaAsset.NewClone(source, $"shops/{shopId}/{Guid.NewGuid():N}.webp", 320, 96, 500, Header, 0.1f, 0.1f);
+        db.MediaAssets.AddRange(source, clone);
+        await db.SaveChangesAsync();
+        var header = NewDerived(source, Header);
+        db.MediaAssets.Add(header);
+        db.Shops.Add(NewShop(shopId, source.Id));
+        await db.SaveChangesAsync();
+
+        var reader = new ShopLogoReader(db);
+        var single = await reader.GetLogoUrlAsync(shopId, source.Id, CancellationToken.None);
+        var batch = await reader.GetLogoUrlsAsync([shopId], CancellationToken.None);
+
+        Assert.Equal("/media/" + header.StorageKey, single);
+        Assert.Equal("/media/" + header.StorageKey, batch[shopId]);
+    }
+
     [Fact]
     public async Task Null_LogoId_returns_null()
     {
@@ -273,13 +298,8 @@ public sealed class ShopLogoReaderTests
 
     private static Vsite.Domain.Shop.Entities.Shop NewShop(Guid id, Guid? logoId)
     {
-        var shop = new Vsite.Domain.Shop.Entities.Shop(id)
-        {
-            Name = "S",
-            Slug = $"s-{id:N}",
-            Kind = Vsite.Domain.Shop.Enums.ShopKind.Hosted,
-        };
-        shop.LogoId = logoId;
+        var shop = new Vsite.Domain.Shop.Entities.Shop(id, "S", $"s-{id:N}", Vsite.Domain.Shop.Enums.ShopKind.Hosted);
+        shop.SetLogo(logoId);
         return shop;
     }
 
@@ -308,10 +328,11 @@ public sealed class ShopLogoReaderTests
 
     private static MediaAsset NewDerived(MediaAsset source, string preset, Guid? shopIdOverride = null)
     {
-        var derived = MediaAsset.NewDerived(source, $"shops/{source.ShopId}/{Guid.NewGuid():N}.webp", 320, 96, 500, preset, 0.5f, 0.5f);
+        var derived = MediaAsset.NewDerivative(source, $"shops/{source.ShopId}/{Guid.NewGuid():N}.webp", 320, 96, 500, preset, 0.5f, 0.5f);
         if (shopIdOverride is { } other)
         {
-            derived.ShopId = other;
+            // ShopId là init-only (REFACTOR-BE-001) — test giả lập dữ liệu xuyên shop bằng reflection.
+            typeof(MediaAsset).GetProperty(nameof(MediaAsset.ShopId))!.SetValue(derived, other);
         }
 
         return derived;

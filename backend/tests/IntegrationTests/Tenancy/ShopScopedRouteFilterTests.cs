@@ -23,27 +23,31 @@ namespace Vsite.IntegrationTests;
 /// </summary>
 public sealed class ShopScopedRouteFilterTests
 {
+    /// <summary>REFACTOR-BE-001 — quyền Owner chuyển từ handler về `RequireShopOwner`. Khoá danh sách
+    /// endpoint Owner-only + error_code của từng cái (giữ đúng contract cũ), để không ai lỡ đổi
+    /// về `RequireShopMembership()` mà mất kiểm role.</summary>
+    [Theory]
+    [InlineData("PATCH", "shops/{shopId:guid}", "SHOP_OWNER_REQUIRED")]
+    [InlineData("PUT", "shops/{shopId:guid}/logo", "MEDIA_OWNER_REQUIRED")]
+    [InlineData("DELETE", "shops/{shopId:guid}/media/library/{assetId:guid}", "MEDIA_OWNER_REQUIRED")]
+    public void Owner_only_endpoints_carry_ShopOwnerRequirement(string method, string route, string errorCode)
+    {
+        using var factory = CreateFactory();
+        var endpoint = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .OfType<RouteEndpoint>()
+            .Single(e => string.Equals(e.RoutePattern.RawText?.TrimStart('/'), route, StringComparison.Ordinal)
+                && e.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.HttpMethodMetadata>()?.HttpMethods.Contains(method) == true);
+
+        var requirement = endpoint.Metadata.GetMetadata<ShopOwnerRequirement>();
+        Assert.NotNull(requirement);
+        Assert.Equal(errorCode, requirement.ErrorCode);
+        Assert.NotNull(endpoint.Metadata.GetMetadata<ShopMembershipRequiredMarker>());
+    }
+
     [Fact]
     public void Every_route_with_shopId_parameter_requires_ShopMembership_marker()
     {
-        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-        {
-            builder.UseEnvironment("Development");
-            builder.ConfigureAppConfiguration((_, config) =>
-            {
-                config.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    // Giá trị giả — test này không gửi request nào chạm DB/Redis thật, chỉ đọc
-                    // EndpointDataSource sau khi host build xong.
-                    ["ConnectionStrings:Identity"] = "Host=localhost;Port=1;Database=fake;Username=fake;Password=fake",
-                    ["ConnectionStrings:Redis"] = "localhost:1",
-                    ["Jwt:SigningKey"] = "test-signing-key-not-for-production-use-32-chars-min",
-                    ["Jwt:Issuer"] = "vsite-test",
-                    ["Jwt:AccessTokenLifetimeMinutes"] = "15",
-                    ["Auth:ApiBaseUrl"] = "http://localhost",
-                });
-            });
-        });
+        using var factory = CreateFactory();
 
         var endpointDataSource = factory.Services.GetRequiredService<EndpointDataSource>();
 
@@ -61,4 +65,24 @@ public sealed class ShopScopedRouteFilterTests
             "hoặc, nếu ai đó sau này bypass filter, có thể lộ dữ liệu xuyên shop. Route vi phạm: " +
             string.Join(", ", violations));
     }
+
+    private static WebApplicationFactory<Program> CreateFactory() =>
+        new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Development");
+            builder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    // Giá trị giả — test này không gửi request nào chạm DB/Redis thật, chỉ đọc
+                    // EndpointDataSource sau khi host build xong.
+                    ["ConnectionStrings:Identity"] = "Host=localhost;Port=1;Database=fake;Username=fake;Password=fake",
+                    ["ConnectionStrings:Redis"] = "localhost:1",
+                    ["Jwt:SigningKey"] = "test-signing-key-not-for-production-use-32-chars-min",
+                    ["Jwt:Issuer"] = "vsite-test",
+                    ["Jwt:AccessTokenLifetimeMinutes"] = "15",
+                    ["Auth:ApiBaseUrl"] = "http://localhost",
+                });
+            });
+        });
 }

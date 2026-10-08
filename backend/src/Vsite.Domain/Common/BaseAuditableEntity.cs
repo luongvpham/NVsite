@@ -19,6 +19,10 @@ public abstract class BaseAuditableEntity : BaseEntity
     /// <summary>Soft-delete — true thì bị ẩn bởi global query filter (Vsite.Infrastructure.Persistence).</summary>
     public bool IsDeleted { get; set; }
 
+    /// <summary>Thời điểm xoá mềm — `AppDbContext` tự đóng dấu khi <see cref="IsDeleted"/> chuyển
+    /// sang true (REFACTOR-DB-001). Cần cho cooldown/retention/purge (vd. listing 30 ngày, `04`).</summary>
+    public DateTimeOffset? DeletedAt { get; set; }
+
     protected BaseAuditableEntity()
     {
     }

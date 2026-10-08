@@ -38,7 +38,7 @@ public sealed class CloneFromLibraryHandler(
         var focalX = request.FocalX ?? source.FocalPointX;
         var focalY = request.FocalY ?? source.FocalPointY;
 
-        var clone = await writer.WriteDerivedAsync(source, sourceImage, preset, focalX, focalY, cancellationToken);
+        var clone = await writer.WriteCloneAsync(source, sourceImage, preset, focalX, focalY, cancellationToken);
 
         await writer.SaveChangesAsync(cancellationToken);
 

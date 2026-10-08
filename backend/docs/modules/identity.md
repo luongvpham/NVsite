@@ -105,7 +105,7 @@ middleware tiếp tục resolve sai tenant tới khi cache tự hết hạn (t�
 - **Tenant Resolution Middleware ĐÃ có, nhưng thu hẹp** (Quyết định #7) — chỉ Path/Subdomain qua
   `Shop.Slug` (xem mục riêng phía trên). Custom domain (`ShopDomain`, Caddy On-Demand TLS #9) vẫn
   deferred tới khi module Shop đầy đủ tồn tại.
-- **`UserShop` không có navigation `Shop` qua base class** — `ShopAuditableEntity`
+- **`UserShop` không có navigation `Shop` qua base class** — `TenantAuditableEntity`
   (`Vsite.Domain.Common`) chỉ có `ShopId` (Guid), không navigation, vì namespace dùng chung không
   được biết entity của module nào (Quyết định #1). Navigation `UserShop.Shop` tự khai thêm ở entity
   cụ thể trong module này.
@@ -121,7 +121,7 @@ middleware tiếp tục resolve sai tenant tới khi cache tự hết hạn (t�
 ## Base class + tổ chức thư mục (xem `backend/CLAUDE.md` cho quy ước chung mọi module)
 
 - `User`, `Role`, `ExternalLogin`, `Shop` → `BaseAuditableEntity` (platform-scoped, có audit trail).
-- `UserShop` → `ShopAuditableEntity` (tenant-scoped — entity DUY NHẤT ở Bước 3 có Global Query
+- `UserShop` → `TenantAuditableEntity` (tenant-scoped — entity DUY NHẤT ở Bước 3 có Global Query
   Filter tự động theo `ShopId`, không viết tay `HasQueryFilter`).
 - `PendingRegistration` → `BaseEntity` thẳng (staging ngắn hạn, không cần audit/soft-delete).
 - File của module nằm ở 4 chỗ, mỗi tầng một folder `Identity/`:

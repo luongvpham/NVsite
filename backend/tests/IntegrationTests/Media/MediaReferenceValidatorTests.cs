@@ -39,6 +39,29 @@ public sealed class MediaReferenceValidatorTests
         Assert.Equal("MEDIA_INVALID_IMAGE_REFERENCE", ex.ErrorCode);
     }
 
+    // ---- REFACTOR-DB-001: phái sinh ảnh nghiệp vụ (logo) KHÔNG được vào tree ----
+
+    [Fact]
+    public async Task Derivative_id_in_tree_list_throws()
+    {
+        var shopId = Guid.NewGuid();
+        var tenantContext = new FakeTenantContext { ShopId = shopId };
+        await using var db = CreateDb(tenantContext);
+        var library = AddLibrary(db, shopId);
+        var derivative = MediaAsset.NewDerivative(
+            library, $"shops/{shopId}/d/{Guid.NewGuid():N}.webp", 320, 96, 500, "320x96,inside", 0.5f, 0.5f);
+        var clone = AddClone(db, library);
+        db.MediaAssets.Add(derivative);
+        await db.SaveChangesAsync();
+
+        var validator = new MediaReferenceValidator(db, tenantContext);
+
+        await validator.EnsureValidAsync([clone.Id], [], CancellationToken.None);
+        var ex = await Assert.ThrowsAsync<UnprocessableException>(() =>
+            validator.EnsureValidAsync([derivative.Id], [], CancellationToken.None));
+        Assert.Equal("MEDIA_INVALID_IMAGE_REFERENCE", ex.ErrorCode);
+    }
+
     // ---- id clone của shop B trong treeImageIds (tenant context = A) -> ném lỗi (test bắt buộc 7) ----
 
     [Fact]
@@ -195,7 +218,7 @@ public sealed class MediaReferenceValidatorTests
 
     private static MediaAsset AddClone(AppDbContext db, MediaAsset library)
     {
-        var clone = MediaAsset.NewDerived(
+        var clone = MediaAsset.NewClone(
             library, $"shops/{library.ShopId}/clone/{Guid.NewGuid():N}.webp", 320, 96, 500, "320x96,inside", 0.5f, 0.5f);
         db.MediaAssets.Add(clone);
         return clone;

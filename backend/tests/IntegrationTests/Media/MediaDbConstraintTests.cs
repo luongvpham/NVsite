@@ -26,17 +26,70 @@ public sealed class MediaDbConstraintTests(PostgresFixture postgres)
         await db.SaveChangesAsync();
 
         var ex = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "MediaAsset"
-                ("Id", "ShopId", "StorageKey", "MimeType", "Width", "Height", "SizeBytes",
-                 "FocalPointX", "FocalPointY", "IsInLibrary", "Preset", "SourceAssetId",
-                 "CreatedAt", "IsDeleted")
+            INSERT INTO media_asset
+                (id, shop_id, storage_key, mime_type, width, height, size_bytes,
+                 focal_point_x, focal_point_y, is_in_library, kind, preset, source_asset_id,
+                 created_at, is_deleted)
             VALUES
                 ({Guid.NewGuid()}, {shop.Id}, {$"shops/{shop.Id}/direct/{Guid.NewGuid():N}.webp"}, 'image/webp', 100, 100, 10,
-                 0.5, 0.5, false, NULL, NULL,
+                 0.5, 0.5, false, 'Direct', NULL, NULL,
                  now(), false)
             """));
 
         Assert.Equal("ck_media_library_preset", ex.ConstraintName);
+    }
+
+    /// <summary>REFACTOR-DB-001 — `kind` phải khớp `is_in_library` (`ck_media_asset_kind`).</summary>
+    [Fact]
+    public async Task Check_constraint_rejects_kind_inconsistent_with_is_in_library()
+    {
+        await using var db = CreateContext();
+        await db.Database.MigrateAsync();
+
+        var shop = NewShop();
+        db.Shops.Add(shop);
+        await db.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO media_asset
+                (id, shop_id, storage_key, mime_type, width, height, size_bytes,
+                 focal_point_x, focal_point_y, is_in_library, kind, preset, source_asset_id,
+                 created_at, is_deleted)
+            VALUES
+                ({Guid.NewGuid()}, {shop.Id}, {$"shops/{shop.Id}/library/{Guid.NewGuid():N}.webp"}, 'image/webp', 100, 100, 10,
+                 0.5, 0.5, true, 'Clone', NULL, NULL,
+                 now(), false)
+            """));
+
+        Assert.Equal("ck_media_asset_kind", ex.ConstraintName);
+    }
+
+    /// <summary>REFACTOR-DB-001 — đúng MỘT phái sinh còn sống cho mỗi (bản Library, preset); clone
+    /// cùng (nguồn, preset) thì KHÔNG bị chặn (nhiều slot clone cùng ảnh).</summary>
+    [Fact]
+    public async Task Unique_index_allows_many_clones_but_one_live_derivative_per_source_and_preset()
+    {
+        await using var db = CreateContext();
+        await db.Database.MigrateAsync();
+
+        var shop = NewShop();
+        db.Shops.Add(shop);
+        var library = MediaAsset.NewLibrary(
+            shop.Id, $"shops/{shop.Id}/library/{Guid.NewGuid():N}.webp", 1200, 800, 1, 0.5f, 0.5f, null, null);
+        db.MediaAssets.Add(library);
+        await db.SaveChangesAsync();
+
+        string Key() => $"shops/{shop.Id}/x/{Guid.NewGuid():N}.webp";
+        db.MediaAssets.AddRange(
+            MediaAsset.NewClone(library, Key(), 320, 96, 1, "320x96,inside", 0.1f, 0.1f),
+            MediaAsset.NewClone(library, Key(), 320, 96, 1, "320x96,inside", 0.9f, 0.9f),
+            MediaAsset.NewDerivative(library, Key(), 320, 96, 1, "320x96,inside", 0.5f, 0.5f));
+        await db.SaveChangesAsync();
+
+        db.MediaAssets.Add(MediaAsset.NewDerivative(library, Key(), 320, 96, 1, "320x96,inside", 0.5f, 0.5f));
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+
+        Assert.Equal("ux_media_asset_derivative", Assert.IsType<PostgresException>(ex.InnerException).ConstraintName);
     }
 
     /// <summary>Chiều ngược lại — `IsInLibrary=true` nhưng có `Preset`.</summary>
@@ -51,13 +104,13 @@ public sealed class MediaDbConstraintTests(PostgresFixture postgres)
         await db.SaveChangesAsync();
 
         var ex = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "MediaAsset"
-                ("Id", "ShopId", "StorageKey", "MimeType", "Width", "Height", "SizeBytes",
-                 "FocalPointX", "FocalPointY", "IsInLibrary", "Preset", "SourceAssetId",
-                 "CreatedAt", "IsDeleted")
+            INSERT INTO media_asset
+                (id, shop_id, storage_key, mime_type, width, height, size_bytes,
+                 focal_point_x, focal_point_y, is_in_library, kind, preset, source_asset_id,
+                 created_at, is_deleted)
             VALUES
                 ({Guid.NewGuid()}, {shop.Id}, {$"shops/{shop.Id}/library/{Guid.NewGuid():N}.webp"}, 'image/webp', 100, 100, 10,
-                 0.5, 0.5, true, {"96x96,cover"}, NULL,
+                 0.5, 0.5, true, 'Library', {"96x96,cover"}, NULL,
                  now(), false)
             """));
 
@@ -102,9 +155,9 @@ public sealed class MediaDbConstraintTests(PostgresFixture postgres)
         await db.SaveChangesAsync();
 
         var ex = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE "Shop" SET "LogoId" = {assetOfB.Id} WHERE "Id" = {shopA.Id}"""));
+            $"""UPDATE shop SET logo_id = {assetOfB.Id} WHERE id = {shopA.Id}"""));
 
-        Assert.Equal("FK_Shop_MediaAsset_LogoId_Id", ex.ConstraintName);
+        Assert.Equal("fk_shop_media_asset_logo_id_id", ex.ConstraintName);
     }
 
     /// <summary>Xoá cứng bản Library → `SourceAssetId` của clone thành NULL (`ON DELETE SET NULL`).</summary>
@@ -123,14 +176,14 @@ public sealed class MediaDbConstraintTests(PostgresFixture postgres)
         db.MediaAssets.Add(library);
         await db.SaveChangesAsync();
 
-        var clone = MediaAsset.NewDerived(
+        var clone = MediaAsset.NewClone(
             library, $"shops/{shop.Id}/clone/{Guid.NewGuid():N}.webp", 320, 96, 500, "320x96,inside", 0.5f, 0.5f);
         db.MediaAssets.Add(clone);
         await db.SaveChangesAsync();
 
         // Xoá CỨNG (raw SQL) — EF interceptor chặn Delete thành soft-delete cho BaseAuditableEntity
         // (AppDbContext.InterceptSoftDelete), nên bypass bằng SQL thô để mô phỏng job dọn thật.
-        await db.Database.ExecuteSqlInterpolatedAsync($"""DELETE FROM "MediaAsset" WHERE "Id" = {library.Id}""");
+        await db.Database.ExecuteSqlInterpolatedAsync($"""DELETE FROM media_asset WHERE id = {library.Id}""");
 
         await using var verifyDb = CreateContext();
         var reloadedClone = await verifyDb.MediaAssets.IgnoreQueryFilters().SingleAsync(m => m.Id == clone.Id);
@@ -147,11 +200,6 @@ public sealed class MediaDbConstraintTests(PostgresFixture postgres)
     private static Shop NewShop()
     {
         var id = Guid.NewGuid();
-        return new Shop(id)
-        {
-            Name = "Test Shop",
-            Slug = $"test-shop-{id:N}",
-            Kind = ShopKind.Hosted,
-        };
+        return new Shop(id, "Test Shop", $"test-shop-{id:N}", ShopKind.Hosted);
     }
 }

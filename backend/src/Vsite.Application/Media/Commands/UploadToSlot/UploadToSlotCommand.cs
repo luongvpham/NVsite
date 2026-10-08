@@ -8,7 +8,7 @@ namespace Vsite.Application.Media.Commands.UploadToSlot;
 /// #21.4), đã qua `ShopMembershipEndpointFilter` xác nhận membership. Hai chế độ theo
 /// <see cref="SaveToLibrary"/>:
 /// - false → 1 record <c>NewDirect</c> (crop theo <see cref="Preset"/>).
-/// - true → <c>NewLibrary</c> (LongEdge 1600) + <c>NewDerived</c> từ bản Library đó, CÙNG một
+/// - true → <c>NewLibrary</c> (LongEdge 1600) + <c>NewClone</c> từ bản Library đó, CÙNG một
 ///   <c>SaveChangesAsync</c> (<see cref="MediaAssetWriter"/>).
 /// </summary>
 public sealed record UploadToSlotCommand(

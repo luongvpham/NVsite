@@ -10,7 +10,7 @@ public sealed class UserShopConfiguration : IEntityTypeConfiguration<UserShop>
 {
     public void Configure(EntityTypeBuilder<UserShop> builder)
     {
-        builder.ToTable("UserShop");
+        builder.ToTable("user_shop");
         builder.HasKey(us => us.Id);
 
         builder.Property(us => us.Source).HasConversion<string>().IsRequired();

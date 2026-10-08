@@ -17,6 +17,8 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <!-- snake_case cho toàn bộ tên bảng/cột/ràng buộc (REFACTOR-DB-001) -->
+    <PackageVersion Include="EFCore.NamingConventions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.9" />
     <!-- Identity / Auth (Quyết định #3 — không OIDC/OpenIddict, tự cấp JWT) -->
     <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="9.0.9" />

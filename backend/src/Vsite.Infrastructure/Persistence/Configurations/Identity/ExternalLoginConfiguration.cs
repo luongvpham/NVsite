@@ -10,7 +10,7 @@ public sealed class ExternalLoginConfiguration : IEntityTypeConfiguration<Extern
 {
     public void Configure(EntityTypeBuilder<ExternalLogin> builder)
     {
-        builder.ToTable("ExternalLogin");
+        builder.ToTable("external_login");
         builder.HasKey(el => el.Id);
 
         builder.HasIndex(el => new { el.Provider, el.ProviderUserId }).IsUnique();

@@ -10,7 +10,7 @@ public sealed class PendingRegistrationConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<PendingRegistration> builder)
     {
-        builder.ToTable("PendingRegistration");
+        builder.ToTable("pending_registration");
         builder.HasKey(p => p.Id);
 
         builder.HasIndex(p => p.EmailNormalized);

@@ -67,7 +67,7 @@ public sealed class ShopDtoLogoHandlerTests
         await db.SaveChangesAsync();
         var reader = new FakeReader(Key);
 
-        var dto = await new UpdateShopHandler(db, new FakeUser(userId), new NoopLookup(), reader).Handle(
+        var dto = await new UpdateShopHandler(db, new NoopLookup(), reader).Handle(
             new UpdateShopCommand(shop.Id, "Renamed", shop.Slug, ShopKind.Hosted, null, ShopStatus.Active),
             CancellationToken.None);
 
@@ -139,10 +139,10 @@ public sealed class ShopDtoLogoHandlerTests
 
     private static async Task<ShopEntity> SeedShopAsync(AppDbContext db, Guid? logoId)
     {
-        var shop = new ShopEntity(Guid.NewGuid()) { Name = "Shop", Slug = $"shop-{Guid.NewGuid():N}", Kind = ShopKind.Hosted };
+        var shop = new ShopEntity(Guid.NewGuid(), "Shop", $"shop-{Guid.NewGuid():N}", ShopKind.Hosted);
         if (logoId is { } id)
         {
-            shop.LogoId = id;
+            shop.SetLogo(id);
         }
 
         db.Shops.Add(shop);

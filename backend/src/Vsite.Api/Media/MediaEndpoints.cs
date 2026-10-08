@@ -150,15 +150,14 @@ public static class MediaEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
-        // Owner-only — kiểm tra RoleId ở handler (cùng khuôn UpdateShopHandler), không phải policy
-        // ASP.NET Core riêng ở tầng endpoint. RequireShopMembership() chỉ xác nhận membership bất kỳ.
+        // Owner-only — kiểm ở ShopMembershipEndpointFilter (RequireShopOwner), handler không tự tra role.
         media.MapDelete("/library/{assetId:guid}", async (Guid shopId, Guid assetId, ISender sender, CancellationToken ct) =>
         {
             await sender.Send(new DeleteFromLibraryCommand(shopId, assetId), ct);
             return Results.NoContent();
         })
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
-            .RequireShopMembership()
+            .RequireShopOwner("MEDIA_OWNER_REQUIRED", "Chỉ chủ shop (Owner) mới được xoá khỏi thư viện.")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -202,7 +201,7 @@ public static class MediaEndpoints
         })
             .WithTags("Media").WithGroupName("media")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
-            .RequireShopMembership()
+            .RequireShopOwner("MEDIA_OWNER_REQUIRED", "Chỉ chủ shop (Owner) mới được đổi logo.")
             .DisableAntiforgery()
             .Accepts<UploadShopLogoForm>("multipart/form-data")
             .Produces<ShopLogoDto>()

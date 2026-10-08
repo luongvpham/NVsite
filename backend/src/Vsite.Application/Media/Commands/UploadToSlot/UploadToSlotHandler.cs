@@ -38,7 +38,7 @@ public sealed class UploadToSlotHandler(
             request.ShopId, source, request.FocalX, request.FocalY,
             request.FileName, request.AltText, folder: null, cancellationToken);
 
-        var clone = await writer.WriteDerivedAsync(
+        var clone = await writer.WriteCloneAsync(
             library, source, preset, request.FocalX, request.FocalY, cancellationToken);
 
         await writer.SaveChangesAsync(cancellationToken);

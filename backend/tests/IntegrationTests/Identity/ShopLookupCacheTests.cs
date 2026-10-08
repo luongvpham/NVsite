@@ -57,7 +57,7 @@ public sealed class ShopLookupCacheTests
 
         await using var scope = _factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Shops.Add(new Shop(shopId) { Name = "Shop Lookup Cache Test Shop", Slug = slug, Kind = ShopKind.Hosted, Status = ShopStatus.Active });
+        db.Shops.Add(new Shop(shopId, "Shop Lookup Cache Test Shop", slug, ShopKind.Hosted, status: ShopStatus.Active));
         await db.SaveChangesAsync();
 
         return (shopId, slug);

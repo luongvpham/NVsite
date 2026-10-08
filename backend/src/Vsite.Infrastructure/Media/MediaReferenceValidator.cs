@@ -3,6 +3,7 @@ using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Media.Interfaces;
 using Vsite.Domain.Abstractions;
 using Vsite.Domain.Exceptions;
+using Vsite.Domain.Media.Enums;
 
 namespace Vsite.Infrastructure.Media;
 
@@ -47,13 +48,16 @@ public sealed class MediaReferenceValidator(IAppDbContext db, ITenantContext ten
 
         // MỘT câu query duy nhất cho cả hai danh sách (08 §3.5). Loại trừ tường minh trường hợp id
         // xuất hiện ở CẢ HAI danh sách (!businessSet.Contains / !treeSet.Contains) — một id như vậy
-        // không bao giờ được coi là hợp lệ, bất kể IsInLibrary thật của nó là gì, vì nó không thể vừa
-        // là clone (tree) vừa là bản Library (business) cùng lúc.
+        // không bao giờ được coi là hợp lệ, bất kể Kind thật của nó là gì, vì nó không thể vừa là clone
+        // (tree) vừa là bản Library (business) cùng lúc. Tree chỉ nhận Clone/Direct — KHÔNG nhận phái
+        // sinh của ảnh nghiệp vụ (Derivative, vd. logo): phái sinh thuộc về entity nghiệp vụ, có thể
+        // bị sinh lại/dọn theo nó (REFACTOR-DB-001).
         var matchedDistinctCount = await db.MediaAssets
             .Where(a => a.ShopId == shopId && !a.IsDeleted)
             .Where(a =>
-                (treeSet.Contains(a.Id) && !businessSet.Contains(a.Id) && !a.IsInLibrary) ||
-                (businessSet.Contains(a.Id) && !treeSet.Contains(a.Id) && a.IsInLibrary))
+                (treeSet.Contains(a.Id) && !businessSet.Contains(a.Id)
+                    && (a.Kind == MediaAssetKind.Clone || a.Kind == MediaAssetKind.Direct)) ||
+                (businessSet.Contains(a.Id) && !treeSet.Contains(a.Id) && a.Kind == MediaAssetKind.Library))
             .Select(a => a.Id)
             .Distinct()
             .CountAsync(ct);
@@ -62,7 +66,7 @@ public sealed class MediaReferenceValidator(IAppDbContext db, ITenantContext ten
         {
             throw new UnprocessableException(
                 "MEDIA_INVALID_IMAGE_REFERENCE",
-                "Một hoặc nhiều ảnh tham chiếu không hợp lệ: thuộc shop khác, đã bị xoá, sai loại (tree phải là clone, business phải là bản Library), hoặc trùng ở cả hai danh sách.");
+                "Một hoặc nhiều ảnh tham chiếu không hợp lệ: thuộc shop khác, đã bị xoá, sai loại (tree phải là clone/ảnh upload thẳng, business phải là bản Library), hoặc trùng ở cả hai danh sách.");
         }
     }
 }

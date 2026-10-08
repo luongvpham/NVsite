@@ -5,7 +5,7 @@ namespace Vsite.Domain.Identity.Entities;
 
 /// <summary>
 /// 03 §3.1 — tài khoản toàn cục của một người. KHÔNG chứa `ShopId` (platform-scoped, không kế thừa
-/// ShopEntity), KHÔNG chứa cột `GoogleId`/`FacebookId`/`ZaloId` (xem <see cref="ExternalLogin"/>).
+/// TenantEntity), KHÔNG chứa cột `GoogleId`/`FacebookId`/`ZaloId` (xem <see cref="ExternalLogin"/>).
 ///
 /// `PasswordHash` dùng <c>Microsoft.AspNetCore.Identity.PasswordHasher&lt;User&gt;</c> — định dạng
 /// output của hasher này đã tự chứa salt + iteration count trong MỘT chuỗi, nên KHÔNG có cột

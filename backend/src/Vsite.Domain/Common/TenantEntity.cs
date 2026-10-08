@@ -11,15 +11,15 @@ namespace Vsite.Domain.Common;
 /// Entity cụ thể trong module muốn có navigation `Shop` thì tự khai thêm property đó ở lớp con
 /// (xem `Vsite.Domain.Identity.UserShop.Shop`).
 /// </summary>
-public abstract class ShopEntity : BaseEntity, IShopScoped
+public abstract class TenantEntity : BaseEntity, IShopScoped
 {
-    public Guid ShopId { get; set; }
+    public Guid ShopId { get; init; }
 
-    protected ShopEntity()
+    protected TenantEntity()
     {
     }
 
-    protected ShopEntity(Guid id) : base(id)
+    protected TenantEntity(Guid id) : base(id)
     {
     }
 }

@@ -8,7 +8,7 @@ public sealed class PasswordResetTokenConfiguration : IEntityTypeConfiguration<P
 {
     public void Configure(EntityTypeBuilder<PasswordResetToken> builder)
     {
-        builder.ToTable("PasswordResetToken");
+        builder.ToTable("password_reset_token");
         builder.HasKey(t => t.Id);
 
         builder.HasIndex(t => t.TokenHash).IsUnique();
@@ -16,6 +16,7 @@ public sealed class PasswordResetTokenConfiguration : IEntityTypeConfiguration<P
         builder.HasOne<User>()
             .WithMany()
             .HasForeignKey(t => t.UserId)
+            .HasConstraintName("fk_password_reset_token_app_user_user_id")
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -1,6 +1,6 @@
 # vsite — Thiết Kế Entity: Website Builder & Product (Phase 2)
 
-> **STATUS:** `SPEC` · **Tasks:** `MEDIA-001` · **Changelog:** `Docs/tasks/MEDIA-001/changelog.md` · **Stale:** `§9 tên bảng media_assets (thực tế MediaAsset) — MediaAsset đã code (Bước 4), phần còn lại của tài liệu (Website/Page/Product) vẫn là spec`
+> **STATUS:** `SPEC` · **Tasks:** `MEDIA-001,REFACTOR-DB-001` · **Changelog:** `Docs/tasks/MEDIA-001/changelog.md` · **Stale:** `§9 tên bảng media_assets (thực tế media_asset, số ít snake_case — REFACTOR-DB-001) — MediaAsset đã code (Bước 4), phần còn lại của tài liệu (Website/Page/Product) vẫn là spec`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
 > 📌 **§0 là nơi định nghĩa Quyết định `#40–#58`.** Không chép sang `02` — tra số ở

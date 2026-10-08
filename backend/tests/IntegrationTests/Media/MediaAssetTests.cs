@@ -1,5 +1,6 @@
 using Vsite.Domain.Exceptions;
 using Vsite.Domain.Media.Entities;
+using Vsite.Domain.Media.Enums;
 
 namespace Vsite.IntegrationTests;
 
@@ -36,12 +37,12 @@ public sealed class MediaAssetTests
     }
 
     [Fact]
-    public void NewDerived_from_library_source_succeeds()
+    public void NewClone_from_library_source_succeeds()
     {
         var library = MediaAsset.NewLibrary(
             ShopId, "shops/x/library/a.webp", 1200, 800, 12345, 0.5f, 0.5f, null, null);
 
-        var clone = MediaAsset.NewDerived(library, "shops/x/clone/a.webp", 320, 96, 500, "320x96,inside", 0.5f, 0.5f);
+        var clone = MediaAsset.NewClone(library, "shops/x/clone/a.webp", 320, 96, 500, "320x96,inside", 0.5f, 0.5f);
 
         Assert.False(clone.IsInLibrary);
         Assert.Equal("320x96,inside", clone.Preset);
@@ -49,14 +50,41 @@ public sealed class MediaAssetTests
         Assert.Equal(ShopId, clone.ShopId);
     }
 
+    /// <summary>REFACTOR-DB-001 — Clone và Derivative có cùng (IsInLibrary, Preset, SourceAssetId);
+    /// chỉ `Kind` phân biệt được.</summary>
     [Fact]
-    public void NewDerived_from_non_library_source_throws_MEDIA_CLONE_FROM_CLONE()
+    public void Each_factory_stamps_its_Kind()
+    {
+        var library = MediaAsset.NewLibrary(ShopId, "k/l.webp", 1200, 800, 1, 0.5f, 0.5f, null, null);
+        var direct = MediaAsset.NewDirect(ShopId, "k/d.webp", 320, 96, 1, "320x96,inside", 0.5f, 0.5f, null, null);
+        var clone = MediaAsset.NewClone(library, "k/c.webp", 320, 96, 1, "320x96,inside", 0.2f, 0.2f);
+        var derivative = MediaAsset.NewDerivative(library, "k/v.webp", 320, 96, 1, "320x96,inside", 0.5f, 0.5f);
+
+        Assert.Equal(
+            [MediaAssetKind.Library, MediaAssetKind.Direct, MediaAssetKind.Clone, MediaAssetKind.Derivative],
+            new[] { library.Kind, direct.Kind, clone.Kind, derivative.Kind });
+        Assert.Equal((clone.IsInLibrary, clone.Preset, clone.SourceAssetId), (derivative.IsInLibrary, derivative.Preset, derivative.SourceAssetId));
+    }
+
+    [Fact]
+    public void NewDerivative_from_non_library_source_throws_MEDIA_CLONE_FROM_CLONE()
+    {
+        var direct = MediaAsset.NewDirect(ShopId, "k/d.webp", 320, 96, 1, "320x96,inside", 0.5f, 0.5f, null, null);
+
+        var ex = Assert.Throws<DomainException>(() =>
+            MediaAsset.NewDerivative(direct, "k/v.webp", 96, 96, 1, "96x96,cover", 0.5f, 0.5f));
+
+        Assert.Equal("MEDIA_CLONE_FROM_CLONE", ex.ErrorCode);
+    }
+
+    [Fact]
+    public void NewClone_from_non_library_source_throws_MEDIA_CLONE_FROM_CLONE()
     {
         var direct = MediaAsset.NewDirect(
             ShopId, "shops/x/slot/a.webp", 320, 96, 500, "320x96,inside", 0.5f, 0.5f, null, null);
 
         var ex = Assert.Throws<DomainException>(() =>
-            MediaAsset.NewDerived(direct, "shops/x/clone/a.webp", 96, 96, 200, "96x96,cover", 0.5f, 0.5f));
+            MediaAsset.NewClone(direct, "shops/x/clone/a.webp", 96, 96, 200, "96x96,cover", 0.5f, 0.5f));
 
         Assert.Equal("MEDIA_CLONE_FROM_CLONE", ex.ErrorCode);
     }

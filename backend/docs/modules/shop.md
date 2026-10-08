@@ -15,8 +15,8 @@ Entity `Shop` đầy đủ (04 §2.1) + 4 endpoint (`tạo/sửa/xem/liệt kê 
   toàn `GET /auth/me/shops` cũ của Identity (xem `Docs/tasks/SHOP-001/contract-diff.md`).
 - `GET /shops/{shopId}` — đọc một shop, qua `ShopMembershipEndpointFilter`.
 - `PATCH /shops/{shopId}` — sửa `Name`/`Slug`/`Kind`/`ExternalUrl`/`Status` (full-replace, không
-  phải partial patch), qua `ShopMembershipEndpointFilter` + chỉ role `Owner` (check ở
-  `UpdateShopHandler`, error code `SHOP_OWNER_REQUIRED`).
+  phải partial patch), qua `RequireShopOwner(...)` — membership + role `Owner` kiểm trong
+  `ShopMembershipEndpointFilter`, error code `SHOP_OWNER_REQUIRED` (REFACTOR-BE-001).
 
 ## ⚠️ Resolve `ShopId` cho Portal — đọc trước khi thêm endpoint `{shopId}` mới
 
@@ -30,10 +30,11 @@ mọi module Portal sau này dùng lại) giải quyết việc này bằng `IEn
 
 1. Đọc `shopId` từ route.
 2. Query `UserShop(userId, shopId)` còn `Active` **tại request này** — không tin claim JWT (tái
-   dùng `IUserShopMembershipService.IsActiveMemberAsync`, cùng service Identity Phase 3 đã có,
+   dùng `IUserShopMembershipService.FindActiveRoleIdAsync`, cùng service Identity Phase 3 đã có,
    không viết lại query).
 3. Không có record → 403 `SHOP_ACCESS_DENIED`, KHÔNG fallback role mặc định.
-4. Có → set `TenantContext.ShopId = shopId`.
+4. Endpoint gắn `RequireShopOwner(...)` mà role không phải Owner → 403 với error_code của endpoint.
+5. Còn lại → set `TenantContext.ShopId = shopId`.
 
 **⚠️ Gắn bằng `.RequireShopMembership()` (`Vsite.Api.Tenancy.ShopScopedEndpointExtensions`), KHÔNG
 gọi thẳng `.AddEndpointFilter<ShopMembershipEndpointFilter>()`.** Method này gắn CẢ filter LẪN một
@@ -52,10 +53,17 @@ Chỉ cần cho endpoint có `{shopId}` trong route. `POST /shops` và `GET /sho
 `Portal` (không đổi thành `Shop`) — nới rộng invariant cũ "`ShopId` chỉ có giá trị khi `AudienceKind`
 = Shop" (xem XML doc `ITenantContext.ShopId` và `Docs/tasks/SHOP-001/contract-diff.md`).
 
-**Quyền "chỉ Owner"** (cho `PATCH`) không nằm trong filter dùng chung ở trên — filter chỉ xác nhận
-membership generic. Business rule riêng của từng endpoint (như "chỉ Owner mới sửa được shop") kiểm
-ở tầng handler (`UpdateShopHandler` tự query `RoleId`), theo đúng invariant #21.5 "Quyền theo shop
-kiểm ở Authorization Handler/handler, không tin claim trong token".
+**Quyền "chỉ Owner"** khai ở endpoint bằng `.RequireShopOwner(errorCode, detail)` thay cho
+`.RequireShopMembership()` — cùng filter, cùng MỘT câu query membership, đọc thêm `RoleId` (#21.5).
+**Handler không tự query `UserShop`/`RoleId`** (REFACTOR-BE-001 gỡ ba bản copy cũ ở
+`UpdateShopHandler`, `DeleteFromLibraryHandler`, `UploadShopLogoHandler` và xoá
+`IShopOwnershipService`). Danh sách endpoint Owner-only được khoá bởi
+`ShopScopedRouteFilterTests.Owner_only_endpoints_carry_ShopOwnerRequirement`; logic của filter có
+unit test không cần Docker ở `ShopMembershipEndpointFilterTests`.
+
+`Shop` tự ném `DomainException("SHOP_EXTERNAL_URL_REQUIRED")` (400) khi `ExternalOnly` thiếu URL —
+**mã phòng thủ, API không bao giờ trả** vì validator đã chặn trước bằng 422 (nên contract không khai
+400 cho `POST`/`PATCH /shops`).
 
 **Logo trong `ShopDto` (MEDIA-001, #73/#88).** `ShopDto` (Create/Get/Update) có `logoId` (id bản Library) và
 `logoUrl` (`/media/{storageKey}` của phái sinh `320x96,inside`, `null` khi chưa có logo hoặc phái sinh);
@@ -65,7 +73,7 @@ reference `Media`; adapter nằm ở `Vsite.Infrastructure.Media.ShopLogoReader`
 ## Base class + tổ chức thư mục (xem `backend/CLAUDE.md` cho quy ước chung mọi module)
 
 - `Shop` → `BaseAuditableEntity` (platform-scoped — bản thân Shop LÀ tenant, không kế thừa
-  `ShopEntity`/`ShopAuditableEntity`).
+  `TenantEntity`/`TenantAuditableEntity`).
 - File của module nằm ở 4 chỗ: `Vsite.Domain/Shop/{Entities,Enums}/` ·
   `Vsite.Application/Shop/{Interfaces,Dtos,Commands,Queries}/` · `Vsite.Infrastructure/Shop/` +
   `Vsite.Infrastructure/Persistence/Configurations/Shop/` · `Vsite.Api/Shop/`.

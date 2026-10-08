@@ -114,7 +114,11 @@ public sealed class DbConstraintTests(PostgresFixture postgres)
 
         // 04 §2.1 — vi phạm CHECK ck_shop_external_url. SHOP-001 §4.5 yêu cầu chặn CẢ ở validator
         // (422, xem CreateShopValidator/UpdateShopValidator) LẪN ở DB — đây là lớp phòng thủ thứ hai.
-        db.Shops.Add(NewShop(kind: ShopKind.ExternalOnly, externalUrl: null));
+        // Entity `Shop` tự chặn trường hợp này (REFACTOR-BE-001) — ép giá trị qua ChangeTracker để
+        // chạm tới CHECK ở DB, lớp phòng thủ thứ ba.
+        var shop = NewShop();
+        db.Shops.Add(shop);
+        db.Entry(shop).Property(s => s.Kind).CurrentValue = ShopKind.ExternalOnly;
 
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
     }
@@ -128,13 +132,7 @@ public sealed class DbConstraintTests(PostgresFixture postgres)
     private static Shop NewShop(ShopKind kind = ShopKind.Hosted, string? externalUrl = null)
     {
         var id = Guid.NewGuid();
-        return new Shop(id)
-        {
-            Name = "Test Shop",
-            Slug = $"test-shop-{id:N}",
-            Kind = kind,
-            ExternalUrl = externalUrl,
-        };
+        return new Shop(id, "Test Shop", $"test-shop-{id:N}", kind, externalUrl);
     }
 
     private static User NewUser(string? emailNormalized = null)

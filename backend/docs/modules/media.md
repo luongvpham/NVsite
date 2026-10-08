@@ -29,7 +29,8 @@ file thì build dừng với thông báo chỉ đúng lệnh này.
 | GET | `/shops/{shopId}/media/usage` | member | `MediaUsageDto { usedBytes }` |
 | PUT | `/shops/{shopId}/logo` | Owner | `ShopLogoDto` |
 
-`GET .../derivatives` (MEDIA-001 D3, #73): tra phái sinh (`IsInLibrary=false`, `SourceAssetId = assetId`)
+`GET .../derivatives` (MEDIA-001 D3, #73): tra phái sinh (`Kind = Derivative`, `SourceAssetId = assetId`;
+clone **không** được trả — REFACTOR-DB-001)
 của một bản Library, tuỳ chọn lọc `preset` chính xác (chứa dấu phẩy, vd `320x96,inside` — client phải
 URL-encode; không lọc thì trả tất cả, sắp `Preset` rồi `CreatedAt`). `IgnoreQueryFilters()` + `ShopId`
 route + `!IsDeleted` viết tay trên CHÍNH dòng phái sinh, không đọc dòng nguồn: bản Library đã soft
@@ -38,23 +39,32 @@ delete (kể cả là `Shop.LogoId`, A11) vẫn resolve được. Id lạ / củ
 
 Ngoài ra `GET /media/{relativePath}` (mọi host, không qua OpenAPI — xem §4) phục vụ file tĩnh.
 
-## 1. Ba loại record `MediaAsset` — suy ra từ cột, không có enum
+## 1. Bốn loại record `MediaAsset` — cột `Kind` (REFACTOR-DB-001)
 
 Neo vào `Shop`, **không** neo `Website`. **Không** dùng cho ảnh `Listing`/`Product` (đường dẫn nằm
 trong `ImageUrls` của module `Marketplace`/`Catalog`, `08` §8).
 
-| Loại | `IsInLibrary` | `Preset` | `SourceAssetId` | Tính quota |
-|---|---|---|---|---|
-| Bản Library | `true` | `NULL` | `NULL` | ✅ |
-| Ảnh upload thẳng vào slot | `false` | preset của slot | `NULL` | ✅ |
-| Clone / phái sinh | `false` | preset | id bản Library | ❌ |
+| `Kind` | Loại | `IsInLibrary` | `Preset` | `SourceAssetId` | Tính quota | Factory |
+|---|---|---|---|---|---|---|
+| `Library` | Bản Library | `true` | `NULL` | `NULL` | ✅ | `NewLibrary` |
+| `Direct` | Ảnh upload thẳng vào slot | `false` | preset của slot | `NULL` | ✅ | `NewDirect` |
+| `Clone` | Bản crop đặt vào một slot của tree (#71/#72) | `false` | preset | id bản Library | ❌ | `NewClone` |
+| `Derivative` | Phái sinh ảnh nghiệp vụ, vd. logo (#73) | `false` | preset | id bản Library | ❌ | `NewDerivative` |
+
+⚠️ **Clone và Derivative có cùng bộ ba `IsInLibrary`/`Preset`/`SourceAssetId`** — trước REFACTOR-DB-001
+không phân biệt được, nên resolver logo có thể trả crop của một slot. Mọi query đọc phái sinh **phải**
+lọc `Kind == Derivative`; mọi query đọc clone phải lọc `Kind == Clone`. DB giữ:
+`ck_media_asset_kind` (`Kind` khớp `IsInLibrary`, `Direct` không có nguồn) và
+`ux_media_asset_derivative` (đúng một phái sinh còn sống cho mỗi `(source_asset_id, preset)` — clone
+không bị ràng buộc này, nhiều slot có thể clone cùng ảnh cùng preset).
 
 `StorageKey` là đường dẫn **tương đối**, **bất biến** (#75 — `IObjectStorage.PutAsync` không ghi
 đè, key trùng thì ném lỗi). `MimeType` sau xử lý luôn `image/webp`, quality 82. Bản Library và file
 full cạnh dài ≤ 1600px, **không upscale** — ảnh gốc nhỏ hơn preset thì `Width`/`Height` ghi kích
 thước thật, `Preset` vẫn ghi đúng slot (đúng tỉ lệ, chỉ mờ hơn khi phóng to ở FE).
 
-Quota = tổng `SizeBytes` của record `SourceAssetId IS NULL AND DeletedAt IS NULL`.
+Quota = tổng `SizeBytes` của record `Kind IN (Library, Direct)` chưa xoá mềm — lọc theo `Kind`, không
+theo `SourceAssetId IS NULL` (FK đó `ON DELETE SET NULL`, clone mất nguồn sẽ bị tính nhầm).
 
 ## 2. Vì sao không có image proxy runtime (`08` §1, Quyết định #53)
 
@@ -115,15 +125,16 @@ Port `IShopLogoReader` do `Shop` khai báo (`Application/Shop/Interfaces`; `GetL
 `GetLogoUrlsAsync` tra theo lô cho `GET /shops`), adapter
 `Vsite.Infrastructure.Media.ShopLogoReader` (đăng ký trong `AddMediaModule`) — chiều ngược với
 `IShopLogoWriter`. Query dùng `IgnoreQueryFilters()` + `ShopId == shopId` + `!IsDeleted` +
-`SourceAssetId == logoId` + `Preset` trong CÙNG câu (giống `GetDerivativesHandler`), lấy dòng đầu theo
-`CreatedAt, Id`; bản Library đã soft delete vẫn resolve (A11). `LogoId` null hoặc không thấy phái sinh →
+`Kind == Derivative` + `SourceAssetId == logoId` + `Preset` trong CÙNG câu (giống `GetDerivativesHandler`).
+Unique index bảo đảm tối đa một dòng; vẫn sắp `CreatedAt, Id` cho tất định; bản Library đã soft delete vẫn resolve (A11). `LogoId` null hoặc không thấy phái sinh →
 `null`, không ném. Bản theo lô là ĐÚNG MỘT câu SQL: join `Shop (Id, LogoId)` với `MediaAsset`
 (`IgnoreQueryFilters`, `Preset`, `!IsDeleted`) nên cặp (ShopId, SourceAssetId) được ép trong query; shop không có logo
 vắng mặt trong kết quả (`ShopLogoBatchSqlCountTests`, Docker).
 
-Đọc ngược chiều (Media cần biết ai là owner của shop để authorize `DELETE`/`PUT logo`) đi qua
-`Vsite.Application.Shop.Interfaces.IShopOwnershipService` (Public Contract khác, cùng mẫu
-`IShopLogoWriter`) — không lấy role từ claim token (#21.5).
+Quyền Owner cho `DELETE .../library/{id}` và `PUT /shops/{shopId}/logo` khai ở endpoint
+(`.RequireShopOwner("MEDIA_OWNER_REQUIRED", ...)`), kiểm trong `ShopMembershipEndpointFilter` bằng
+DB — không lấy role từ claim token (#21.5). Handler Media không tự tra quyền (REFACTOR-BE-001 đã
+xoá `IShopOwnershipService`).
 
 Xoá bản Library đang là `Shop.LogoId` **được phép** (A11, `Docs/tasks/MEDIA-001/plan.md` §10) — FK
 trỏ vào row soft-delete vẫn hợp lệ (`ON DELETE` không cascade xoá vật lý ngay), logo vẫn hiện; chỉ
@@ -277,8 +288,8 @@ verify hash `contracts/openapi/.staging/media.v1.json` không đổi trước/sa
 
 ## 9. Base class + tổ chức thư mục
 
-- `MediaAsset` → `ShopAuditableEntity` (tenant-scoped, có soft delete qua `IsDeleted` — thay
-  `DeletedAt` của `08`, xem `Docs/tasks/MEDIA-001/changelog.md` A3).
+- `MediaAsset` → `TenantAuditableEntity` (tenant-scoped, soft delete qua `IsDeleted` + `DeletedAt` —
+  `DeletedAt` có từ REFACTOR-DB-001, khớp lại `08` §2). Bảng `media_asset` (snake_case).
 - File của module: `Vsite.Domain/Media/{Entities,Enums}/` ·
   `Vsite.Application/Media/{Interfaces,Dtos,Commands,Queries}/` ·
   `Vsite.Application/Common/Imaging/` (pipeline dùng chung, không thuộc riêng module nào) ·
@@ -286,7 +297,7 @@ verify hash `contracts/openapi/.staging/media.v1.json` không đổi trước/sa
   `ImageSharpImageProcessor`, preset catalog) + `Vsite.Infrastructure/Persistence/Configurations/Media/` ·
   `Vsite.Api/Media/MediaEndpoints.cs` + `Vsite.Api/Media/MediaFileMiddleware.cs`.
 - `Media.dependsOn = ["Shop"]` (`Docs/architecture/dependency-map.json`) — Media dùng
-  `IShopLogoWriter`/`IShopOwnershipService` (Public Contract phía Shop) và cài adapter cho `IShopLogoReader` (port của Shop, D4), Shop **không** reference
+  `IShopLogoWriter` (Public Contract phía Shop) và cài adapter cho `IShopLogoReader` (port của Shop, D4), Shop **không** reference
   Media ngược lại.
 
 ## 10. Lệch có chủ đích / chưa làm xong so với `DesignIdeal/08-media-asset-design.md`
@@ -295,8 +306,8 @@ verify hash `contracts/openapi/.staging/media.v1.json` không đổi trước/sa
 > 📌 Nợ test cần Docker (không chạy được trong sandbox không có Docker daemon):
 > `Docs/DOCKER-TEST-DEBT.md`, mục `MEDIA-001`.
 
-- `IsDeleted` (kế thừa `ShopAuditableEntity`) thay `DeletedAt` riêng — quy ước entity chung của
-  codebase, không phải lệch nghiệp vụ (A3).
+- Soft delete có CẢ `IsDeleted` (cho Global Query Filter) lẫn `DeletedAt` (REFACTOR-DB-001) — `08`
+  §2 chỉ có `DeletedAt`; A3 của MEDIA-001 (chỉ `IsDeleted`) không còn đúng.
 - Picker MVP hiện thẳng file bản Library (≤ 1600px, lazy load), chưa sinh thumbnail riêng cho picker
   (A7 — tối ưu hoãn tới khi có nhu cầu thật).
 - `Cache-Control: public, max-age=3600` (không phải `immutable`) cho `/media/*` tới Bước 8, khi cache
