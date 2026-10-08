@@ -36,4 +36,11 @@ public sealed class Shop : BaseAuditableEntity
     public string? ExternalUrl { get; set; }
 
     public ShopStatus Status { get; set; } = ShopStatus.Draft;
+
+    /// <summary>`MediaAsset` bản Library dùng làm logo (Quyết định #73, #76). Guid? thuần —
+    /// KHÔNG navigation, KHÔNG reference type của module `Media` (Shop.dependsOn không gồm Media,
+    /// xem `Docs/architecture/dependency-map.json`). FK ghép `(LogoId, Id) → MediaAsset (Id, ShopId)`
+    /// khai từ phía `MediaAssetConfiguration` (namespace `Persistence` dùng chung, không vi phạm
+    /// ranh giới module — cùng khuôn `UserShop`/`ShopConfiguration.cs:28-35`).</summary>
+    public Guid? LogoId { get; set; }
 }

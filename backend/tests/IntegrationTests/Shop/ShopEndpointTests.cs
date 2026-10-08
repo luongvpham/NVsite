@@ -92,6 +92,17 @@ public sealed class ShopEndpointTests
     }
 
     [Fact]
+    public async Task CreateShop_rejects_media_slug_with_422()
+    {
+        var token = await RegisterVerifyLoginGlobalAsync(NewEmail());
+
+        // "media" là reserved route (MEDIA-001, #24; 08 §9 test 12) — /media/* là đường phục vụ file.
+        var response = await CreateShopAsync(token, new CreateShopRequest("Spa Media", "media", ShopKind.Hosted, null));
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    [Fact]
     public async Task CreateShop_rejects_invalid_slug_format_with_422()
     {
         var token = await RegisterVerifyLoginGlobalAsync(NewEmail());

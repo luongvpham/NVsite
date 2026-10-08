@@ -21,10 +21,14 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" />
+    <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="MediatR" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <!-- IObjectStorage LocalDisk + S3 (T2, MEDIA-001, Quyết định #75/#83) -->
+    <PackageReference Include="AWSSDK.S3" />
   </ItemGroup>
 
 </Project>

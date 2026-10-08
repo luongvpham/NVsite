@@ -21,8 +21,15 @@
     <!-- Identity / Auth (Quyết định #3 — không OIDC/OpenIddict, tự cấp JWT) -->
     <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="9.0.9" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
+    <!-- Pin 3.x (bản 4.x đổi license model) — Imaging pipeline (#53, #84, #85) -->
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <!-- Chỉ dùng trong test để vẽ ảnh mẫu (Fill) khi verify pipeline — không dùng ở code sản phẩm. -->
+    <PackageVersion Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.9" />
+    <!-- Object storage (T2, MEDIA-001, Quyết định #75/#83) -->
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.501.18" />
     <!-- Testing -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.2" />
@@ -32,5 +39,9 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="3.10.0" />
     <PackageVersion Include="Testcontainers.Redis" Version="3.10.0" />
+    <!-- S3ObjectStorage contract test (T2, MEDIA-001) — cùng bản với Testcontainers.PostgreSql/Redis.
+         Đổi từ Testcontainers.Minio: minio/minio không còn publish image public (Docker Hub và
+         quay.io đều từ chối pull, xác nhận 2026-09-27) — xem backend/docs/modules/media.md §6. -->
+    <PackageVersion Include="Testcontainers.LocalStack" Version="3.10.0" />
   </ItemGroup>
 </Project>

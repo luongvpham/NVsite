@@ -19,7 +19,7 @@ namespace Vsite.Application.Shop.Commands.UpdateShop;
 /// `Marketplace` chưa làm) nên ràng buộc này để RỖNG ở đây — xem
 /// `Docs/tasks/SHOP-001/changelog.md` và test `[Fact(Skip = ...)]` tương ứng.
 /// </summary>
-public sealed class UpdateShopHandler(IAppDbContext db, ICurrentUserContext currentUser, IShopLookupService shopLookup)
+public sealed class UpdateShopHandler(IAppDbContext db, ICurrentUserContext currentUser, IShopLookupService shopLookup, IShopLogoReader logoReader)
     : IRequestHandler<UpdateShopCommand, ShopDto>
 {
     public async Task<ShopDto> Handle(UpdateShopCommand request, CancellationToken cancellationToken)
@@ -31,7 +31,7 @@ public sealed class UpdateShopHandler(IAppDbContext db, ICurrentUserContext curr
         // phải đọc dữ liệu trong một tenant đã biết trước.
         var membership = await db.UserShops.IgnoreQueryFilters()
             .FirstOrDefaultAsync(
-                us => us.UserId == currentUser.UserId && us.ShopId == request.ShopId && us.Status == UserShopStatus.Active,
+                us => us.UserId == currentUser.UserId && us.ShopId == request.ShopId && !us.IsDeleted && us.Status == UserShopStatus.Active,
                 cancellationToken)
             ?? throw new ForbiddenAccessException("SHOP_ACCESS_DENIED", "Không có quyền truy cập shop này.");
 
@@ -67,6 +67,8 @@ public sealed class UpdateShopHandler(IAppDbContext db, ICurrentUserContext curr
             await shopLookup.InvalidateAsync(request.Slug, cancellationToken);
         }
 
-        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status);
+        var logoUrl = await logoReader.GetLogoUrlAsync(shop.Id, shop.LogoId, cancellationToken);
+
+        return new ShopDto(shop.Id, shop.Name, shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status, shop.LogoId, logoUrl);
     }
 }

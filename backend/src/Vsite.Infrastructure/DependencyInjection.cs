@@ -5,13 +5,18 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Vsite.Application.Common.Behaviors;
+using Vsite.Application.Common.Imaging;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Identity.Auth.Commands.Register;
 using Vsite.Application.Identity.Interfaces;
 using Vsite.Application.Identity.Options;
+using Vsite.Application.Media;
+using Vsite.Application.Media.Interfaces;
 using Vsite.Application.Shop.Interfaces;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Infrastructure.Identity;
+using Vsite.Infrastructure.Imaging;
+using Vsite.Infrastructure.Media;
 using Vsite.Infrastructure.Persistence;
 using Vsite.Infrastructure.Shop;
 
@@ -43,6 +48,8 @@ public static class DependencyInjection
 
         services.AddIdentityModule(configuration);
         services.AddShopModule();
+        services.AddImagingModule(configuration);
+        services.AddMediaModule();
 
         return services;
     }
@@ -69,6 +76,48 @@ public static class DependencyInjection
     private static IServiceCollection AddShopModule(this IServiceCollection services)
     {
         services.AddScoped<IShopLookupService, ShopLookupService>();
+        services.AddScoped<IShopOwnershipService, ShopOwnershipService>();
+        services.AddScoped<IShopLogoWriter, ShopLogoWriter>();
+
+        return services;
+    }
+
+    // ---- Imaging (T1/T2, MEDIA-001) — dùng chung cho mọi module cần xử lý ảnh upload ----
+    private static IServiceCollection AddImagingModule(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<ImageUploadOptions>(configuration.GetSection(ImageUploadOptions.Section));
+        services.AddScoped<IImageProcessor, ImageSharpImageProcessor>();
+
+        // IObjectStorage (T2, Quyết định #83): đúng MỘT provider theo Storage:Provider, mặc định
+        // LocalDisk. Singleton hợp lệ cho cả hai — LocalDiskObjectStorage không giữ state theo
+        // request, S3ObjectStorage bọc AmazonS3Client (bản thân đã thread-safe/khuyến nghị dùng chung).
+        services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.Section));
+        var provider = configuration.GetSection(StorageOptions.Section).Get<StorageOptions>()?.Provider
+            ?? StorageProvider.LocalDisk;
+        if (provider == StorageProvider.S3)
+        {
+            services.AddSingleton<IObjectStorage, S3ObjectStorage>();
+        }
+        else
+        {
+            services.AddSingleton<IObjectStorage, LocalDiskObjectStorage>();
+        }
+
+        return services;
+    }
+
+    // ---- Media (T5, MEDIA-001) ----
+    private static IServiceCollection AddMediaModule(this IServiceCollection services)
+    {
+        // TimeProvider.System — không có clock abstraction sẵn có trong codebase (T5 tự quyết,
+        // xem `Docs/tasks/MEDIA-001/changelog.md` mục 17). Singleton: TimeProvider tự nó
+        // thread-safe/stateless, tests thay bằng FakeTimeProvider qua override DI khi cần.
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<MediaAssetWriter>();
+
+        // T8, MEDIA-001 (#77) — Public Contract cho Bước 5 (Website/PageDraft).
+        services.AddScoped<IMediaReferenceValidator, MediaReferenceValidator>();
+        services.AddScoped<IShopLogoReader, ShopLogoReader>(); // #88 — adapter cho port của Shop
 
         return services;
     }

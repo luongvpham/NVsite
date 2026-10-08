@@ -4,6 +4,7 @@ node_modules/
 dist/
 .output/
 .turbo/
+*.tsbuildinfo
 *.log
 npm-debug.log*
 pnpm-debug.log*
@@ -17,6 +18,9 @@ pnpm-debug.log*
 backend/**/bin/
 backend/**/obj/
 backend/**/*.user
+
+# Object storage LocalDisk provider — root mặc định (T2, MEDIA-001, Quyết định #83)
+.media/
 
 # IDE
 .vs/

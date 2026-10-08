@@ -1,9 +1,9 @@
 # vsite — MediaAsset, Media Library, ảnh Listing/Product & pipeline ảnh (Bước 4)
 
-> **STATUS:** `SPEC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `—`
+> **STATUS:** `IMPLEMENTED` · **Tasks:** `MEDIA-001` · **Changelog:** `Docs/tasks/MEDIA-001/changelog.md` · **Stale:** `§2 và §3.5 tên bảng media_assets, cột DeletedAt, tên index ux_* (thực tế: bảng MediaAsset, IsDeleted, index tên EF) · §3.6 ví dụ Shop có 1200x630,cover (thực tế chỉ 320x96,inside + 96x96,cover) · §5 và §10 mục 7 Cache-Control immutable (thực tế max-age=3600) · §3.5 và §9 test 6/7 chưa được chặn ở tầng request — IMediaReferenceValidator chưa nối handler nào (Bước 5) · §4 quét tham chiếu mới chỉ Shop.LogoId · §9 tiêu chí dừng chưa được chạy tay trên API + UI thật`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
-> 📌 **§0 là nơi định nghĩa Quyết định `#69–#81`.** Các quyết định cũ còn hiệu lực về ảnh (`#53`
+> 📌 **§0 là nơi định nghĩa Quyết định `#69–#86` và `#88`.** Các quyết định cũ còn hiệu lực về ảnh (`#53`
 > `#55` `#56` `#57` `#58`) định nghĩa ở `05` §0, `#64` ở `07` §0 — tài liệu này là **chi tiết** của
 > chúng. Tra số ở [`DECISIONS.md`](DECISIONS.md).
 >
@@ -38,6 +38,12 @@
 | **#79** | **Ảnh `Listing` và `Product` không dùng `MediaAsset`.** Lưu `ImageUrls text[]` = **đường dẫn tương đối của file full**; thứ tự trong mảng là thứ tự hiển thị, `[0]` là ảnh đại diện. Mỗi entity một thư mục `shops/{shopId}/listings/{id}/` hoặc `shops/{shopId}/products/{id}/`, tên file là uuid. Thumb cùng thư mục, suy ra bằng prefix tên file: **`thumb_`** cho mọi ảnh, **`fthumb_`** (lớn hơn) chỉ sinh cho ảnh đang là ảnh đại diện, sinh khi cần. Kích thước và luật tỉ lệ ở §8 |
 | **#80** | **Ảnh variant là field `ProductVariant.ImageUrls text[]`** trên bảng variant — rỗng = dùng `Product.ImageUrls`. File nằm chung thư mục sản phẩm; nhiều variant được dùng chung một đường dẫn (upload một lần, "áp cho mọi variant cùng màu" chỉ copy đường dẫn) |
 | **#81** | **Kiểm quyền lúc GHI đường dẫn ảnh, không kiểm lúc ĐỌC.** Mọi phần tử của `Listing.ImageUrls`, `Product.ImageUrls`, `ProductVariant.ImageUrls`, `ShopAttributeOption.SwatchImageUrl` phải bắt đầu bằng thư mục của đúng entity đó dưới `shops/{shopId}/` — `shopId` từ `TenantContext` (#21.4) — **và** file phải tồn tại. Sai → fail request. Đọc ảnh là công khai, không kiểm tenant |
+| **#82** | **Pipeline ảnh và object storage ở namespace dùng chung `Imaging`** — `Vsite.Application.Common.Imaging` (interface, quy ước tên `thumb_`/`fthumb_`) + `Vsite.Infrastructure.Imaging` (implementation), `Imaging` thêm vào `ModuleBoundaryTests.SharedSegments`. Lý do: `Marketplace` (phase 1) và `Catalog` cần pipeline mà không phụ thuộc `Media`. **Upload logo là endpoint của `Media`**, ghi `Shop.LogoId` qua Public Contract `IShopLogoWriter` của `Shop` — chiều `Media → Shop` đã hợp lệ; cho `Shop` gọi `Media` là vòng tròn. `Media` giữ phase 2 trong `dependency-map.json` |
+| **#83** | **Object storage sau interface `IObjectStorage`, hai implementation `LocalDisk` và `S3`**, chọn bằng setting `Storage:Provider` (mặc định `LocalDisk`). `S3` dùng được với MinIO. Ghi file dùng chế độ **không ghi đè** (#75). `/media/*` do .NET phục vụ bằng cùng interface — đổi provider không đổi URL |
+| **#84** | **Thư viện xử lý ảnh là ImageSharp** — thuần managed, có sẵn auto-orient, xoá metadata, encoder webp. License Six Labors Split: miễn phí khi doanh thu năm < 1M USD; vượt ngưỡng phải mua license thương mại |
+| **#85** | **Giới hạn upload: file ≤ 10 MB, ảnh ≤ 25 megapixel** — số pixel đọc từ header **trước khi decode** (chặn decompression bomb). Chỉ nhận JPEG / PNG / WebP (nhận diện bằng magic bytes). **HEIC bị từ chối** với `error_code` riêng; FE đặt `accept` là JPEG/PNG/WebP để iOS tự chuyển và hiện hướng dẫn khi gặp lỗi này |
+| **#86** | **Prop `binding` thêm field additive `imagePresets`** — preset ảnh theo từng source (`Partial<Record<source, preset[]>>`), mỗi preset phải có trong whitelist (#64). Codegen gom thành **bộ phái sinh theo nguồn** ghi vào `packages/builder-components/generated/`, hợp với **tập cố định của bề mặt vsite** khai trong `config/image-presets.json`. BE đọc artifact đó lúc startup |
+| **#88** | `ShopDto` **và `ShopSummaryDto`** (`GET /shops`) trả sẵn **`logoUrl`** = `"/media/" + storageKey` của phái sinh `320x96,inside` của logo (đường dẫn tương đối theo domain, dùng được trên mọi host; `null` nếu chưa có logo hoặc chưa có phái sinh). **Field DTO tên `*Url` mà Portal nhận do BE trả sẵn có tiền tố `/media/`**; DB vẫn chỉ lưu key tương đối; nội dung ảnh trong builder vẫn đi qua `resolveImage()`. Prefix + hàm dựng URL nằm ở MỘT chỗ BE (`ImagePaths.MediaUrl`, cùng hằng với route mount `/media`). `Shop` đọc qua port do chính `Shop` khai báo (`IShopLogoReader`, có bản tra theo lô một câu SQL cho `GET /shops`), adapter nằm ở `Media` (Shop không reference Media). Endpoint `GET …/library/{assetId}/derivatives` vẫn giữ cho các nguồn ảnh nghiệp vụ khác |
 
 **Quyết định cũ đã viết đè theo mô hình này** (giữ số, nội dung mới — xem `05` §0, `07` §0):
 `#53` (pipeline + URL `{domain}/media/{path}`, không image proxy runtime), `#55` (không `MediaVariant`,
@@ -157,7 +163,7 @@ phái sinh của ảnh nghiệp vụ. Đường dẫn ảnh `Listing`/`Product` 
 
 ```
 File người dùng gửi lên
-  → giới hạn kích thước file + số pixel (chặn decompression bomb) — con số chốt ở plan Bước 4
+  → giới hạn kích thước file + số pixel (chặn decompression bomb) — 10 MB / 25 MP (#85)
   → validate MIME thật bằng magic bytes (KHÔNG tin extension)
   → strip toàn bộ EXIF (ảnh điện thoại chứa GPS — lộ địa chỉ nhà)
   → sinh file theo luồng bên dưới, encode webp (quality ~82)
@@ -239,19 +245,27 @@ Render
   → trả StorageKey của phái sinh
 ```
 
+Portal (không đi qua resolver) đọc logo shop qua **`ShopDto.logoUrl`** và **`ShopSummaryDto.logoUrl`** (#88) —
+`/media/{storageKey}` của phái sinh `320x96,inside`, `null` nếu chưa có logo/phái sinh; FE dùng thẳng
+`<img src={shop.logoUrl}>`. `Shop` lấy giá trị qua port `IShopLogoReader` do chính `Shop` khai báo (một bản tra
+đơn cho `ShopDto`, một bản tra theo lô một câu SQL cho `GET /shops`), adapter nằm ở `Media` (Shop không
+reference Media). Với các nguồn ảnh nghiệp vụ khác, Portal tra cùng cặp `(SourceAssetId, Preset)` bằng
+`GET /shops/{shopId}/media/library/{assetId}/derivatives?preset=` — vẫn trả phái sinh khi bản Library đã soft
+delete (A11); id lạ/của shop khác → `[]`, không 404.
+
 **Bộ phái sinh của một nguồn** = hợp của hai tập:
 
-1. **Codegen từ manifest:** mọi preset mà component bind nguồn đó dùng để hiển thị ảnh. Hiện prop
-   `binding` chỉ khai `sources` — **cần thêm một field additive** để manifest khai preset ảnh của
-   dữ liệu bind (#43). Đây là thay đổi Component Registry, qua duyệt contract ở Bước 4.
+1. **Codegen từ manifest:** mọi preset mà component bind nguồn đó dùng để hiển thị ảnh. Prop `binding`
+   khai thêm field additive **`imagePresets`** (map nguồn → danh sách preset, ví dụ
+   `ServiceGrid.source`: `{ Service: ['800x600,cover'], ServiceGroup: ['800x600,cover'] }`, #43/#86).
+   Đây là thay đổi Component Registry đã qua duyệt contract ở Bước 4.
 2. **Tập cố định của bề mặt vsite** không đi qua manifest: Shop Profile (`vsite.vn/shop/{slug}`),
    OG image.
 
 Ví dụ artifact sinh ra: `{ "Service": ["800x600,cover"], "Shop": ["320x96,inside", "1200x630,cover"], … }`.
-Tên file và vị trí chốt ở plan Bước 4.
+Artifact nằm ở `packages/builder-components/generated/`, tập cố định của bề mặt vsite khai trong `config/image-presets.json` (#86).
 
-**Nguồn `Shop` cần thêm vào `config/binding-sources.json`** để component bind được logo — hiện file
-chưa có `Shop`.
+**Nguồn `Shop` có trong `config/binding-sources.json`** (đã thêm ở Bước 4) để component bind được logo.
 
 **Component mới dùng preset chưa có trong bộ** → job sinh bù phái sinh từ bản Library. Luôn làm được,
 vì ảnh nghiệp vụ luôn có bản Library.
@@ -308,7 +322,7 @@ https://spa-abc.com/media/shops/77/products/9c1e…/thumb_5b7d….webp
 | Tầng phía trước (.NET / Caddy) chuyển `/media/*` thẳng về object storage, **không** qua xử lý ảnh | Không có image proxy runtime (#53) — chỉ phục vụ file tĩnh. Đặt CDN phía trước sau này không đổi URL |
 | DB lưu **đường dẫn tương đối**, **không** lưu URL có domain | Cùng một ảnh dùng được trên mọi domain của shop; đổi hạ tầng không phải rewrite `SitePublication.Snapshot` (#41) |
 | Tree lưu `imageId`, **không** lưu `StorageKey` | Một lớp gián tiếp: đổi được cấu trúc thư mục của ảnh website |
-| Component **không bao giờ** tự nối chuỗi URL | Luôn `resolveImage(imageId, preset)` — cùng tinh thần `resolveUrl()` của #11. Chính `resolveImage` thêm tiền tố `/media/` |
+| Component **không bao giờ** tự nối chuỗi URL | Ảnh trong nội dung builder luôn đi qua `resolveImage(imageId, preset)` — cùng tinh thần `resolveUrl()` của #11; chính `resolveImage` thêm tiền tố `/media/`. Field DTO tên `*Url` mà Portal nhận (vd. `ShopDto.logoUrl`, #88) do BE trả sẵn với tiền tố `/media/` (đường dẫn tương đối theo domain, chạy trên mọi host); prefix và hàm dựng nằm ở MỘT chỗ BE (`ImagePaths.MediaUrl`) |
 | File bất biến (#75) | Cache-Control `immutable` được — chốt cùng cache publish ở Bước 8 |
 
 ---
@@ -370,8 +384,8 @@ Chọn theo độ rộng CSS (ví dụ 300px cho thẻ sản phẩm) là ảnh m
 
 **Việc Bước 4 phải làm với config:** thêm `fit: "inside"`, thêm 4 preset mới (`1600x600,cover`,
 `1200x1200,inside`, `800x600,cover`, `320x96,inside`), **bỏ** `600xR,cover` (không manifest nào dùng).
-Hai preset manifest đang dùng (`1600x900,cover`, `800x800,cover`) giữ nguyên — `registry.lock.json`
-không đổi.
+Hai preset manifest đang dùng (`1600x900,cover`, `800x800,cover`) giữ nguyên. `registry.lock.json`
+**có đổi** ở Bước 4: `ServiceGrid.source` thêm `imagePresets` (additive, `check-additive` vẫn qua).
 
 ---
 
@@ -485,7 +499,7 @@ Builder picker **không bao giờ** thấy ảnh sản phẩm trực tiếp.
 | Entity `MediaAsset` + migration + ràng buộc §2.1 | Upload ảnh `Listing` (làm cùng module Listing) và `Product` (Bước 10) — nhưng dùng lại pipeline + hàm quy ước tên của Bước 4 |
 | Pipeline **dùng chung**: giới hạn kích thước → magic bytes → strip EXIF → resize/crop → webp; hàm quy ước tên `thumb_`/`fthumb_` (§8.1) | Image proxy runtime — **không tồn tại** trong thiết kế |
 | Hai chế độ upload vào slot (#70) + chọn từ Library → clone (#71) | `srcset` / responsive (#58) |
-| API: upload, list library, chọn-từ-library (clone), soft delete | Job dọn file mồ côi (Bước 8) |
+| API: upload, list library, chọn-từ-library (clone), soft delete, tra phái sinh theo (bản Library, preset) (`.../library/{assetId}/derivatives`) | Job dọn file mồ côi (Bước 8) |
 | Thay thân `resolveImage()`, giữ chữ ký · phục vụ `/media/*` + reserved route `media` (§5) | Job re-crop khi đổi `ImageRatio` — **không có**, đổi tỉ lệ thì upload lại (#57) |
 | `config/image-presets.json` đủ 9 preset (#78) | Media Library UI đầy đủ (folder, search, bulk) — MVP chỉ list + upload + xoá |
 | `Shop.LogoId` + FK ghép + bộ phái sinh logo (#73, #76) | Bảng `MediaVariant` — **cố ý không có** (#55) |
@@ -519,9 +533,9 @@ Test 7, 8, 11 cần Testcontainers — không có Docker thì ghi `Docs/DOCKER-T
 
 | # | Vấn đề | Trạng thái |
 |---|---|---|
-| 1 | Giới hạn dung lượng file + số pixel tối đa khi upload | ⚠️ Chốt ở plan Bước 4 |
-| 2 | HEIC từ iPhone — thư viện xử lý ảnh .NET phổ biến không đọc được | ⚠️ Chốt ở plan Bước 4: từ chối kèm hướng dẫn, hay thêm decoder |
-| 3 | Tên field additive trên prop `binding` + tên/vị trí artifact bộ phái sinh | ⚠️ Chốt ở plan Bước 4, qua duyệt Component Registry |
+| 1 | Giới hạn dung lượng file + số pixel tối đa khi upload | ✅ #85 |
+| 2 | HEIC từ iPhone | ✅ #85 — từ chối kèm hướng dẫn |
+| 3 | Tên field additive trên prop `binding` + vị trí artifact bộ phái sinh | ✅ #86 — tên file cụ thể chốt ở Gate duyệt Component Registry của MEDIA-001 |
 | 4 | Tái dùng clone có cùng `(SourceAssetId, Preset, FocalPoint)` thay vì sinh file mới | ⏳ Tối ưu, an toàn nhờ #75. Không làm ở MVP |
 | 5 | Nhúng `storageKey` vào snapshot lúc publish để runtime khỏi tra DB | ⏳ Bước 8 |
 | 6 | Grace period trước khi xoá file thật | ⏳ Bước 8 |

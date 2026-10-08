@@ -365,7 +365,9 @@
           "slug",
           "kind",
           "externalUrl",
-          "status"
+          "status",
+          "logoId",
+          "logoUrl"
         ],
         "type": "object",
         "properties": {
@@ -388,6 +390,15 @@
           },
           "status": {
             "$ref": "#/components/schemas/ShopStatus"
+          },
+          "logoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -412,7 +423,8 @@
           "slug",
           "kind",
           "status",
-          "roleCode"
+          "roleCode",
+          "logoUrl"
         ],
         "type": "object",
         "properties": {
@@ -434,6 +446,10 @@
           },
           "roleCode": {
             "type": "string"
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
           }
         }
       },

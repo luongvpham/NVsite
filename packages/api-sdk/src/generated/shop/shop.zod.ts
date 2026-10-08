@@ -16,7 +16,9 @@ export const postShopsResponse = zod.object({
   "slug": zod.string(),
   "kind": zod.enum(['Hosted', 'ExternalOnly']),
   "externalUrl": zod.string().nullable(),
-  "status": zod.enum(['Draft', 'Active', 'Suspended', 'Closed'])
+  "status": zod.enum(['Draft', 'Active', 'Suspended', 'Closed']),
+  "logoId": zod.string().uuid().nullable(),
+  "logoUrl": zod.string().nullable()
 })
 
 
@@ -26,7 +28,8 @@ export const getShopsResponseItem = zod.object({
   "slug": zod.string(),
   "kind": zod.enum(['Hosted', 'ExternalOnly']),
   "status": zod.enum(['Draft', 'Active', 'Suspended', 'Closed']),
-  "roleCode": zod.string()
+  "roleCode": zod.string(),
+  "logoUrl": zod.string().nullable()
 })
 export const getShopsResponse = zod.array(getShopsResponseItem)
 
@@ -41,7 +44,9 @@ export const getShopsShopIdResponse = zod.object({
   "slug": zod.string(),
   "kind": zod.enum(['Hosted', 'ExternalOnly']),
   "externalUrl": zod.string().nullable(),
-  "status": zod.enum(['Draft', 'Active', 'Suspended', 'Closed'])
+  "status": zod.enum(['Draft', 'Active', 'Suspended', 'Closed']),
+  "logoId": zod.string().uuid().nullable(),
+  "logoUrl": zod.string().nullable()
 })
 
 
@@ -63,5 +68,7 @@ export const patchShopsShopIdResponse = zod.object({
   "slug": zod.string(),
   "kind": zod.enum(['Hosted', 'ExternalOnly']),
   "externalUrl": zod.string().nullable(),
-  "status": zod.enum(['Draft', 'Active', 'Suspended', 'Closed'])
+  "status": zod.enum(['Draft', 'Active', 'Suspended', 'Closed']),
+  "logoId": zod.string().uuid().nullable(),
+  "logoUrl": zod.string().nullable()
 })

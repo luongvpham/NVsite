@@ -11,6 +11,22 @@ export default defineConfig({
     viteReact(),
     tailwindcss(),
   ],
+  server: {
+    // Website shop dev chạy theo Host `{slug}.vsite.local:3000` (hosts file, xem
+    // backend/docs/modules/identity.md). Vite mặc định CHẶN mọi hostname lạ bằng 403
+    // ("Blocked request. This host is not allowed"), nên phải cho phép cả hậu tố này — nếu không
+    // /media/… và mọi trang shop đều không mở được ở domain shop khi dev.
+    allowedHosts: ['.vsite.local'],
+    proxy: {
+      // Ảnh không đi qua API — phục vụ tại /media/{storageKey} trên mọi domain, kể cả
+      // {slug}.vsite.local:3000 (brief MEDIA-001). changeOrigin: false — giữ nguyên Host header
+      // gốc (cùng cơ chế như apps/portal/vite.config.ts).
+      // Dùng `server.proxy` của Vite, KHÔNG dùng `nitro({ devProxy })`: đã thử chạy thật, với
+      // TanStack Start + nitro/vite thì devProxy không chặn được request — /media/… bị SSR của app
+      // trả 404 HTML thay vì tới API.
+      '/media': { target: 'http://localhost:5270', changeOrigin: false },
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,

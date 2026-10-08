@@ -57,6 +57,11 @@ membership generic. Business rule riêng của từng endpoint (như "chỉ Owne
 ở tầng handler (`UpdateShopHandler` tự query `RoleId`), theo đúng invariant #21.5 "Quyền theo shop
 kiểm ở Authorization Handler/handler, không tin claim trong token".
 
+**Logo trong `ShopDto` (MEDIA-001, #73/#88).** `ShopDto` (Create/Get/Update) có `logoId` (id bản Library) và
+`logoUrl` (`/media/{storageKey}` của phái sinh `320x96,inside`, `null` khi chưa có logo hoặc phái sinh);
+`ShopSummaryDto` (`GET /shops`) cũng có `logoUrl`, tra theo lô một câu SQL (không N+1). Handler chỉ phụ thuộc port `IShopLogoReader` (`Application/Shop/Interfaces`) — `Shop` không
+reference `Media`; adapter nằm ở `Vsite.Infrastructure.Media.ShopLogoReader` (xem `media.md` §4). Chiều ghi ngược lại: `IShopLogoWriter` (Media → Shop).
+
 ## Base class + tổ chức thư mục (xem `backend/CLAUDE.md` cho quy ước chung mọi module)
 
 - `Shop` → `BaseAuditableEntity` (platform-scoped — bản thân Shop LÀ tenant, không kế thừa

@@ -157,7 +157,15 @@
         "maxLength": 120
       },
       "source": {
-        "kind": "binding"
+        "kind": "binding",
+        "imagePresets": {
+          "Service": [
+            "800x600,cover"
+          ],
+          "ServiceGroup": [
+            "800x600,cover"
+          ]
+        }
       },
       "showPrice": {
         "kind": "boolean"

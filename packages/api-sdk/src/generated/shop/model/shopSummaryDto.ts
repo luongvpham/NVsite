@@ -11,4 +11,6 @@ export interface ShopSummaryDto {
   kind: ShopKind;
   status: ShopStatus;
   roleCode: string;
+  /** @nullable */
+  logoUrl: string | null;
 }

@@ -37,6 +37,24 @@
   <ItemGroup>
     <!-- config/reserved-routes.json là nguồn sự thật duy nhất (Quyết định #24) — link vào, không copy tay. -->
     <None Include="..\..\..\config\reserved-routes.json" Link="config\reserved-routes.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- config/image-presets.json là nguồn sự thật duy nhất cho 9 preset (Quyết định #78) — link vào,
+         không copy tay. Đọc qua ImagePresetCatalog (T3, MEDIA-001). -->
+    <None Include="..\..\..\config\image-presets.json" Link="config\image-presets.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- packages/builder-components/generated/derivative-presets.json là artifact FULL SET
+         (manifest ∪ surfaces, Quyết định #86) — nguồn sự thật duy nhất cho derivative cần
+         pre-generate. Đọc qua DerivativePresetCatalog (T3, MEDIA-001); KHÔNG đọc 'surfaces' trong
+         image-presets.json. -->
+    <None Include="..\..\..\packages\builder-components\generated\derivative-presets.json" Link="generated\derivative-presets.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- derivative-presets.json nằm trong packages/builder-components/generated/ (gitignored, do codegen
+       sinh). Fresh clone chưa có file → thiếu target này thì MSBuild báo MSB3030 khó hiểu. -->
+  <Target Name="EnsureDerivativePresetsArtifact" BeforeTargets="BeforeBuild;AssignTargetPaths">
+    <PropertyGroup>
+      <_DerivativePresetsFile>$(MSBuildProjectDirectory)\..\..\..\packages\builder-components\generated\derivative-presets.json</_DerivativePresetsFile>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_DerivativePresetsFile)')"
+           Text="Thiếu packages/builder-components/generated/derivative-presets.json (artifact codegen, gitignored) - chạy `pnpm install` rồi `pnpm --filter @vsite/builder-components run gen:registry` trước khi build backend. / Missing generated derivative-presets.json: run `pnpm --filter @vsite/builder-components run gen:registry` before building the backend." />
+  </Target>
 
 </Project>

@@ -11,8 +11,8 @@ public sealed class UserShopMembershipService(AppDbContext db) : IUserShopMember
     public Task<bool> IsActiveMemberAsync(Guid userId, Guid shopId, CancellationToken cancellationToken)
     {
         // IgnoreQueryFilters — đây CHÍNH LÀ bước xác lập tenant hợp lệ hay không, không phải đọc
-        // dữ liệu trong một tenant đã biết trước, nên không dựa vào Global Query Filter.
+        // dữ liệu trong một tenant đã biết trước, nên không dựa vào Global Query Filter — và vì thế phải lọc `!IsDeleted` tường minh (#21).
         return db.UserShops.IgnoreQueryFilters()
-            .AnyAsync(us => us.UserId == userId && us.ShopId == shopId && us.Status == UserShopStatus.Active, cancellationToken);
+            .AnyAsync(us => us.UserId == userId && us.ShopId == shopId && !us.IsDeleted && us.Status == UserShopStatus.Active, cancellationToken);
     }
 }

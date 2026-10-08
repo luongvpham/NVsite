@@ -55,11 +55,28 @@ function ShopListPage() {
                 params={{ shopId: shop.id }}
                 className="flex items-center justify-between px-4 py-3 hover:bg-muted"
               >
-                <div>
-                  <p className="font-medium text-foreground">{shop.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {shop.slug} · {KIND_LABEL[shop.kind] ?? shop.kind}
-                  </p>
+                <div className="flex items-center gap-3">
+                  {shop.logoUrl ? (
+                    <img
+                      src={shop.logoUrl}
+                      alt={shop.name}
+                      className="h-10 w-10 rounded border border-border bg-background object-contain"
+                    />
+                  ) : (
+                    <span
+                      aria-hidden="true"
+                      data-testid="shop-logo-fallback"
+                      className="flex h-10 w-10 items-center justify-center rounded border border-border bg-muted text-sm font-semibold text-muted-foreground"
+                    >
+                      {shop.name.trim().charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <div>
+                    <p className="font-medium text-foreground">{shop.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {shop.slug} · {KIND_LABEL[shop.kind] ?? shop.kind}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>{shop.roleCode}</span>

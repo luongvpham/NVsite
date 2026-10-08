@@ -7,14 +7,15 @@ import { defineConfig, type Plugin } from 'vite';
 
 /**
  * TẠM THỜI — chỉ phục vụ /_dev/dev-hero-preview (xoá cùng lúc ở Sub-phase B 2.9).
- * ctx.resolveImage() ở Bước 2 là stub trả về URL `/_dev/placeholder/{preset}.svg` (07 §7.1) —
- * middleware này sinh SVG placeholder đúng kích thước preset để xem được bằng mắt lúc dev,
- * KHÔNG phải image proxy thật (đó là Bước 4, không đổi chữ ký resolveImage).
+ * ctx.resolveImage() khi imageId KHÔNG có trong mediaMap vẫn trả về `/_dev/placeholder/{preset}.svg`
+ * (Bước 4, #74) — middleware này sinh SVG placeholder đúng kích thước preset để xem được bằng mắt
+ * lúc dev. Ảnh thật (imageId có trong mediaMap) đi qua proxy `/media` bên dưới, không qua đây.
  */
 function devPlaceholderImagePlugin(): Plugin {
-  const presets = JSON.parse(
+  const imagePresetsFile = JSON.parse(
     readFileSync(path.resolve(import.meta.dirname, '..', '..', 'config', 'image-presets.json'), 'utf8'),
-  ) as Record<string, { width: number | null; height: number | null }>;
+  ) as { presets: Record<string, { width: number | null; height: number | null }> };
+  const presets = imagePresetsFile.presets;
 
   return {
     name: 'dev-placeholder-image',
@@ -58,6 +59,10 @@ export default defineConfig({
       // Host thành target (localhost:5270) và làm audience sai.
       '/auth': { target: 'http://localhost:5270', changeOrigin: false },
       '/shops': { target: 'http://localhost:5270', changeOrigin: false },
+      // Ảnh không đi qua API — mọi ảnh phục vụ tại /media/{storageKey} (#88). Ảnh trong nội dung
+      // builder: qua resolveImage(); field DTO đặt tên *Url (vd. ShopDto.logoUrl) BE trả sẵn có
+      // tiền tố /media/ nên dùng nguyên; storageKey thô của Library (chưa có imageId) qua mediaUrl().
+      '/media': { target: 'http://localhost:5270', changeOrigin: false },
     },
   },
   test: {

@@ -4,6 +4,7 @@ using Vsite.Application.Common.Interfaces;
 using Vsite.Domain.Abstractions;
 using Vsite.Domain.Common;
 using Vsite.Domain.Identity.Entities;
+using Vsite.Domain.Media.Entities;
 using Vsite.Infrastructure.Persistence.Seed;
 using ShopEntity = Vsite.Domain.Shop.Entities.Shop;
 
@@ -36,6 +37,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
 
     // ---- Shop ----
     public DbSet<ShopEntity> Shops => Set<ShopEntity>();
+
+    // ---- Media ----
+    public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

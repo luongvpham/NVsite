@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Vsite.Domain.Identity.Entities;
+using Vsite.Domain.Media.Entities;
 using ShopEntity = Vsite.Domain.Shop.Entities.Shop;
 
 namespace Vsite.Application.Common.Interfaces;
@@ -26,6 +27,9 @@ public interface IAppDbContext
 
     // ---- Shop ----
     DbSet<ShopEntity> Shops { get; }
+
+    // ---- Media ----
+    DbSet<MediaAsset> MediaAssets { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

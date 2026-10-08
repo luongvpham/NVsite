@@ -32,6 +32,8 @@ Chi tiết ở `DesignIdeal/ai-agent-development-workflow.md`. **Tuần tự BE 
 
 **Chọn nhầm lane thì dừng và báo**, không âm thầm đi tiếp.
 
+**Subagent:** chạy lệnh **foreground** (chạy nền rồi kết thúc lượt là treo). Review task theo rủi ro: model mạnh nhất cho task chạm tenant/bảo mật/contract, model rẻ hơn hoặc gộp review cho task chỉ có tài liệu hay sửa nhỏ.
+
 **Task chạm code chưa có `Docs/tasks/{ID}/changelog.md` là task CHƯA XONG** — kể cả khi code chạy và test xanh. Xem Definition of Done ở `backend/CLAUDE.md`.
 
 **⚠️ Trước khi báo task backend "xong":** đọc `Docs/DOCKER-TEST-DEBT.md`. Không có Docker daemon thì test cần Testcontainers **không** được coi là "bỏ qua" — ghi vào file đó theo đúng quy ước. Máy CÓ Docker thì đọc file đó trước, có thể đang có nợ chờ bạn chạy giúp.
@@ -48,9 +50,9 @@ Chi tiết ở `DesignIdeal/ai-agent-development-workflow.md`. **Tuần tự BE 
 
 ### Quy tắc tuyệt đối
 
-1. **Không bao giờ ghi thẳng vào `contracts/openapi/*.json`.** Script sync chỉ ghi `contracts/openapi/.staging/`. Promote là hành động riêng, sau khi người duyệt.
+1. **Không bao giờ ghi thẳng vào `contracts/openapi/*.json`.** Script sync chỉ ghi `contracts/openapi/.staging/`. Promote bằng script riêng (`tools/contract-sync/promote.mjs`).
 2. **Không bao giờ overwrite contract bằng runtime swagger.** Swagger *đề xuất*, người *duyệt*, contract *chốt*.
-3. **BREAKING: chưa deploy production thì cứ sửa** — sửa BE, chạy lại `pnpm gen:api`, sửa lỗi compile FE. Không tạo `v2`. **Từ lần deploy production đầu tiên**, luật đảo lại: BREAKING mặc định là bug implementation. Khung cảnh báo đầy đủ ở `DesignIdeal/ai-agent-development-workflow.md` §6.
+3. **Trước production — Gate 1 gọn (#89):** BREAKING thì cứ sửa (regen FE, không tạo `v2`); chỉ thêm endpoint/field mà **không có câu hỏi** thì promote ngay, người đọc lại `contract-diff.md` sau. Có câu hỏi hoặc `REMOVED` → dừng chờ người. **Từ lần deploy production đầu tiên**: BREAKING mặc định là bug, Gate 1 luôn dừng. Chi tiết ở `DesignIdeal/ai-agent-development-workflow.md` §6.
 4. **Contract sai hoặc thiếu → DỪNG và báo.** Không tự sửa, không làm tạm rồi sửa sau.
 5. **File generated không sửa tay**: `packages/api-sdk/src/generated/**`, `packages/builder-components/generated/**`.
 

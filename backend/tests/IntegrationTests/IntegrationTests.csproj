@@ -18,6 +18,8 @@
     <!-- Testcontainers.PostgreSql kéo theo Npgsql/EF Core Relational bản khác — pin tường minh để
          tránh MSB3277 (conflict version) khi build. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <!-- UploadHandlerTests (T5, MEDIA-001): xác nhận hành vi handler mà không cần Docker/Postgres. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,6 +30,24 @@
     <!-- Vsite.Api kéo theo Application/Infrastructure/Domain; cần chính nó để
          WebApplicationFactory<Program> tìm được entry point. -->
     <ProjectReference Include="..\..\src\Vsite.Api\Vsite.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Test đọc lại byte output (Image.Identify) để verify metadata bị xoá / dimension đúng —
+         không cần Docker, chạy trực tiếp trên IImageProcessor (T1, MEDIA-001). -->
+    <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ObjectStorageContractTests (T2, MEDIA-001): LocalDisk không cần Docker; S3ObjectStorageTests
+         cần container S3-compatible — xem Docs/DOCKER-TEST-DEBT.md. -->
+    <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="Testcontainers.LocalStack" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="TestAssets\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

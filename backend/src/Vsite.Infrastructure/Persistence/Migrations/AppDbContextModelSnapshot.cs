@@ -466,10 +466,100 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                     b.ToTable("UserShop", (string)null);
                 });
 
-            modelBuilder.Entity("Vsite.Domain.Shop.Entities.Shop", b =>
+            modelBuilder.Entity("Vsite.Domain.Media.Entities.MediaAsset", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AltText")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<float>("FocalPointX")
+                        .HasColumnType("real");
+
+                    b.Property<float>("FocalPointY")
+                        .HasColumnType("real");
+
+                    b.Property<string>("Folder")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Height")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsInLibrary")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MimeType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("OriginalFileName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Preset")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("ShopId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("SourceAssetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique();
+
+                    b.HasIndex("ShopId", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_media_library")
+                        .HasFilter("\"IsInLibrary\" AND NOT \"IsDeleted\"");
+
+                    b.HasIndex("SourceAssetId", "Preset")
+                        .HasDatabaseName("ix_media_derivative")
+                        .HasFilter("\"SourceAssetId\" IS NOT NULL");
+
+                    b.ToTable("MediaAsset", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_media_library_preset", "(\"IsInLibrary\" = true AND \"Preset\" IS NULL) OR (\"IsInLibrary\" = false AND \"Preset\" IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Vsite.Domain.Shop.Entities.Shop", b =>
+                {
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -487,6 +577,9 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<Guid?>("LogoId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -510,6 +603,8 @@ namespace Vsite.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Slug")
                         .IsUnique();
+
+                    b.HasIndex("LogoId", "Id");
 
                     b.ToTable("Shop", null, t =>
                         {
@@ -578,6 +673,29 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Vsite.Domain.Media.Entities.MediaAsset", b =>
+                {
+                    b.HasOne("Vsite.Domain.Shop.Entities.Shop", null)
+                        .WithMany()
+                        .HasForeignKey("ShopId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Vsite.Domain.Media.Entities.MediaAsset", null)
+                        .WithMany()
+                        .HasForeignKey("SourceAssetId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("Vsite.Domain.Shop.Entities.Shop", b =>
+                {
+                    b.HasOne("Vsite.Domain.Media.Entities.MediaAsset", null)
+                        .WithMany()
+                        .HasForeignKey("LogoId", "Id")
+                        .HasPrincipalKey("Id", "ShopId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Vsite.Domain.Identity.Entities.User", b =>

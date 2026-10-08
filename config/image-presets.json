@@ -1,8 +1,16 @@
 {
-  "1600x900,cover": { "width": 1600, "height": 900, "fit": "cover", "usage": "Hero full-width" },
-  "1200x630,cover": { "width": 1200, "height": 630, "fit": "cover", "usage": "OG image (chuẩn Facebook)" },
-  "800x800,cover": { "width": 800, "height": 800, "fit": "cover", "usage": "Ảnh chính trang chi tiết / ảnh trong gallery" },
-  "600xR,cover": { "width": 600, "height": null, "fit": "cover", "usage": "Thẻ sản phẩm trong lưới (R = tỉ lệ danh mục)" },
-  "160x160,cover": { "width": 160, "height": 160, "fit": "cover", "usage": "Thumbnail dải ảnh" },
-  "96x96,cover": { "width": 96, "height": 96, "fit": "cover", "usage": "Avatar / logo nhỏ" }
+  "presets": {
+    "1600x900,cover": { "width": 1600, "height": 900, "fit": "cover", "usage": "Hero full-width (16:9)" },
+    "1600x600,cover": { "width": 1600, "height": 600, "fit": "cover", "usage": "Banner mỏng, nền section" },
+    "1200x630,cover": { "width": 1200, "height": 630, "fit": "cover", "usage": "OG image (chuẩn Facebook)" },
+    "1200x1200,inside": { "width": 1200, "height": 1200, "fit": "inside", "usage": "Ảnh trong nội dung, giữ tỉ lệ gốc" },
+    "800x800,cover": { "width": 800, "height": 800, "fit": "cover", "usage": "Gallery, ảnh vuông" },
+    "800x600,cover": { "width": 800, "height": 600, "fit": "cover", "usage": "Thẻ dịch vụ / thẻ nội dung (4:3)" },
+    "320x96,inside": { "width": 320, "height": 96, "fit": "inside", "usage": "Logo trên Header, không crop" },
+    "160x160,cover": { "width": 160, "height": 160, "fit": "cover", "usage": "Thumbnail dải ảnh" },
+    "96x96,cover": { "width": 96, "height": 96, "fit": "cover", "usage": "Avatar" }
+  },
+  "surfaces": {
+    "Shop": ["320x96,inside", "96x96,cover"]
+  }
 }

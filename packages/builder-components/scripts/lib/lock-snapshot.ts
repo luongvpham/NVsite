@@ -15,6 +15,7 @@ export interface LockPropSnapshot {
   maxItems?: number;
   options?: string[];
   preset?: string;
+  imagePresets?: Record<string, string[]>;
   props?: Record<string, LockPropSnapshot>;
   itemProps?: Record<string, LockPropSnapshot>;
 }
@@ -55,6 +56,16 @@ function snapshotProp(prop: PropDef): LockPropSnapshot {
       if (prop.minItems !== undefined) base.minItems = prop.minItems;
       if (prop.maxItems !== undefined) base.maxItems = prop.maxItems;
       base.itemProps = snapshotProps(prop.itemProps);
+      return base;
+    case 'binding':
+      if (prop.imagePresets) {
+        const sorted: Record<string, string[]> = {};
+        for (const source of Object.keys(prop.imagePresets).sort()) {
+          const presets = prop.imagePresets[source];
+          if (presets) sorted[source] = [...new Set(presets)].sort();
+        }
+        base.imagePresets = sorted;
+      }
       return base;
     default:
       return base;
@@ -132,6 +143,20 @@ function diffProps(
 
     if (prevProp.preset !== undefined && currProp.preset !== undefined && prevProp.preset !== currProp.preset) {
       result.warnings.push(`${where}: đổi preset '${prevProp.preset}' → '${currProp.preset}' (không vỡ dữ liệu, nhưng đổi layout hàng loạt site)`);
+    }
+
+    // #86 — bỏ preset khỏi binding.imagePresets (kể cả bỏ nguyên source key) là CẢNH BÁO, không FAIL
+    // (cùng khuôn với đổi preset của image ở trên): ảnh cũ không mất, chỉ mất derivative sẵn có.
+    if (prevProp.imagePresets) {
+      for (const [source, prevPresets] of Object.entries(prevProp.imagePresets)) {
+        const currPresets = currProp.imagePresets?.[source] ?? [];
+        const removed = prevPresets.filter((p) => !currPresets.includes(p));
+        if (removed.length > 0) {
+          result.warnings.push(
+            `${where}: bỏ preset [${removed.join(', ')}] khỏi imagePresets.${source} (không vỡ dữ liệu cũ, nhưng mất derivative đã sinh)`,
+          );
+        }
+      }
     }
 
     if (prevProp.props) {

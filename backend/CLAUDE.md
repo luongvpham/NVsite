@@ -136,6 +136,29 @@ Cách làm:
 4. **Xuất ra file lúc build/CLI** — dùng `Microsoft.Extensions.ApiDescription.Server` (package MSBuild có sẵn của .NET 9 cho OpenAPI) để generate file tĩnh `{module}.json` cho từng document vào `contracts/openapi/.staging/` khi chạy `dotnet build` hoặc một target MSBuild riêng (`dotnet build /t:GenerateOpenApiDocuments` hoặc script wrapper trong `tools/contract-sync/`). Đây là điều kiện bắt buộc theo skill bootstrap — thiếu bước này thì `tools/contract-sync` không có gì để diff.
 5. Naming file: `contracts/openapi/.staging/{module}.v{n}.json`, `{module}` = tên document ở bước 1 (lowercase, khớp tên module), `{n}` bắt đầu từ `1`.
 
+### Property object nullable → `allOf` + `nullable` (Quyết định #87)
+
+`Microsoft.AspNetCore.OpenApi` sinh **schema trùng** (`XDto2`) khi cùng một CLR type xuất hiện vừa
+nullable vừa non-null trong một document — Orval biến hai schema giống hệt nhau thành hai TS type
+không tương thích, FE phải tự chọn dùng cái nào (phát hiện lúc MEDIA-001 §F1, xem
+`Docs/tasks/MEDIA-001-D2/contract-diff.md`).
+
+**Chặn triệt để bằng transformer dùng chung**, đăng ký cho **mọi** document module, không sửa từng
+DTO tay: `backend/src/Vsite.Api/OpenApi/DuplicateNullableSchemaDocumentTransformer.cs` — chứa cả
+`DuplicateNullableSchemaOccurrenceTagger` (schema transformer, gắn cờ + tắt `Nullable` trước khi
+schema được chốt vào store) và `DuplicateNullableSchemaDocumentTransformer` (document transformer,
+viết lại node đã gắn cờ thành `{ "allOf": [ { "$ref": ... } ], "nullable": true }`). Ref id lấy theo
+`OpenApiOptions.CreateSchemaReferenceId` đã cấu hình cho đúng document, không tính lại bằng tay —
+nếu một id bị hai CLR type khác nhau cùng chiếm thì **throw lúc generate**, không âm thầm trỏ nhầm
+type.
+
+**Hệ quả áp dụng cho mọi module kể từ #87:** property object nullable **không còn** ở dạng phẳng
+`{ "$ref": ..., "nullable": true }` (OpenAPI 3.0 vốn không hợp lệ theo cách đó) mà luôn là
+`{ "allOf": [ { "$ref": ... } ], "nullable": true }`. JSON runtime server trả về **không đổi** — chỉ
+hình dạng schema OpenAPI thay đổi. FE cần biết: Orval sinh `X | null`, một type duy nhất.
+
+Ràng buộc với .NET 9 / OpenAPI.NET v1 (có `TODO` trong code, xem lại khi lên .NET 10).
+
 ## Quy tắc normalize khi diff contract ✅ Đã chốt
 
 `tools/contract-sync/` áp dụng đúng bộ tối thiểu sau trước khi so sánh hai bên (runtime vs committed):
@@ -157,6 +180,13 @@ Bắt buộc có, không phải tuỳ chọn:
 - **Unit test** cho handler và validator.
 - **Integration test** cho endpoint, chạy trên database thật (Testcontainers hoặc tương đương).
 
+⚠️ **Tiền đề build backend (fresh clone / CI):** `Vsite.Api.csproj` link file
+`packages/builder-components/generated/derivative-presets.json` — artifact codegen, **gitignored**
+(không commit). Thiếu file thì `dotnet build`/`dotnet test` dừng với lỗi rõ ràng (target
+`EnsureDerivativePresetsArtifact`). Chạy trước:
+`pnpm install && pnpm --filter @vsite/builder-components run gen:registry`. Mọi CI job build/chạy
+`Vsite.Api` (`be-tests`, `architecture-tests`, `contract-check`) đều có bước này — job mới cũng phải có.
+
 ⚠️ **Môi trường không có Docker daemon** (nhiều dev/agent chạy nhiều máy, chỉ một máy cài Docker):
 KHÔNG bỏ qua Testcontainers test — viết test đầy đủ, xác nhận build/logic đúng bằng mắt, rồi ghi
 nợ lại vào `Docs/DOCKER-TEST-DEBT.md` (quy ước dùng chung, đọc file đó trước khi ghi) để máy có
@@ -173,7 +203,7 @@ Docker chạy xác nhận sau. Xoá đúng mục khỏi file đó khi đã chạ
 5. Tuân thủ đủ 5 invariant #21
 6. Export runtime OpenAPI theo document module
 7. Chạy skill `contract-sync`, sinh `Docs/tasks/{ID}/contract-diff.md`
-8. **Dừng lại chờ Gate 1.** Chỉ viết `brief.md` sau khi contract được duyệt
+8. **Gate 1** (gọn trước production, #89): có câu hỏi/`REMOVED` thì dừng chờ duyệt; chỉ thêm và không câu hỏi thì promote. `brief.md` viết sau promote
 9. **Đồng bộ tài liệu — không có bước này thì task CHƯA XONG**, kể cả khi code chạy và test xanh:
    - Viết `Docs/tasks/{ID}/changelog.md` — từng điểm thực thi lệch so với file `DesignIdeal/`
      tương ứng, chia rõ **"lệch có chủ đích"** và **"chưa làm xong"**. Mẫu:
@@ -210,3 +240,4 @@ mở đầu bằng bảng phân biệt `Listing`/`Service`/`Product` trước kh
 |---|---|
 | Identity | `backend/docs/modules/identity.md` |
 | Shop | `backend/docs/modules/shop.md` |
+| Media | `backend/docs/modules/media.md` |

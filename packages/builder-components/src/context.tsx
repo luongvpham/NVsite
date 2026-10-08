@@ -10,16 +10,61 @@ import type { LinkValue } from '../meta/value-shapes';
  * builder-renderer re-export lại y nguyên (xem packages/builder-renderer/src/context.tsx) để giữ
  * đúng bề mặt API mà tài liệu mô tả.
  */
+/** Một mục trong `mediaMap` — tree chỉ lưu `imageId`, `mediaMap` tra ra storageKey thật (#71, #74). */
+export interface MediaRef {
+  storageKey: string;
+  preset: string | null;
+}
+
 export interface RenderContextValue {
   /** Quyết định #11 — cùng tree render ở vsite.vn/{slug} và ở custom domain phải ra khác href. */
   basePath: string;
+  /** Bước 4 — imageId → MediaRef, nạp trước khi render (SSR loader / dev-registry). Mặc định {}. */
+  mediaMap: Readonly<Record<string, MediaRef>>;
   resolveImage: (imageId: string, preset: string) => string;
   resolveUrl: (link: LinkValue) => string;
 }
 
-// Bước 2: stub. Bước 4 thay thân hàm, KHÔNG đổi chữ ký (07 §7.1).
-const defaultResolveImage: RenderContextValue['resolveImage'] = (_imageId, preset) =>
-  `/_dev/placeholder/${preset}.svg`;
+const PLACEHOLDER_PRESET_PATH = (preset: string) => `/_dev/placeholder/${preset}.svg`;
+
+/**
+ * Duy nhất một nơi FE nối `storageKey` thô thành URL ảnh (#88). Ảnh trong nội dung builder đi qua
+ * `resolveImage()` (gọi hàm này bên trong); `storageKey` thô của Library (chưa có `imageId` trong
+ * tree — vd. Media Library picker ở apps/portal) dùng hàm này trực tiếp. Field DTO đặt tên `*Url`
+ * (vd. `ShopDto.logoUrl`) thì BE trả sẵn có tiền tố `/media/` — dùng nguyên, KHÔNG qua hàm này
+ * (nối lần hai sẽ thành `/media//media/…`). Thuần, isomorphic — không đụng window/document (#23).
+ */
+export function mediaUrl(storageKey: string): string {
+  return `/media/${storageKey}`;
+}
+
+/**
+ * Bước 4 — thân thật. Isomorphic, KHÔNG đụng window/document (#23).
+ * - imageId không có trong mediaMap → placeholder theo preset yêu cầu (dev-only, giữ nguyên
+ *   `devPlaceholderImagePlugin` ở apps/portal làm SVG đúng kích thước).
+ * - imageId có, nhưng preset đã "bake" (`mediaRef.preset`) khác preset yêu cầu (kể cả bản Library
+ *   gốc, `preset: null`, luôn coi là lệch) → console.warn đúng 1 lần, vẫn trả URL thật (#74).
+ * - Ảnh không đi qua API — chỉ nối chuỗi `/media/{storageKey}` (brief MEDIA-001 §"Ảnh không đi qua API").
+ */
+export function createResolveImage(
+  mediaMap: Readonly<Record<string, MediaRef>>,
+): RenderContextValue['resolveImage'] {
+  return (imageId, preset) => {
+    const mediaRef = mediaMap[imageId];
+    if (!mediaRef) {
+      return PLACEHOLDER_PRESET_PATH(preset);
+    }
+    if (mediaRef.preset !== preset) {
+      console.warn(
+        `[resolveImage] preset lệch cho imageId="${imageId}": mediaRef.preset="${mediaRef.preset}", yêu cầu="${preset}". Vẫn trả ảnh gốc.`,
+      );
+    }
+    return mediaUrl(mediaRef.storageKey);
+  };
+}
+
+const EMPTY_MEDIA_MAP: Readonly<Record<string, MediaRef>> = {};
+const defaultResolveImage: RenderContextValue['resolveImage'] = createResolveImage(EMPTY_MEDIA_MAP);
 
 // Bước 2: stub cho page/systemPage/productCategory (chưa có DB) — trả thẳng url cho external,
 // #nodeId cho anchor (07 §7.3).
@@ -38,6 +83,7 @@ const defaultResolveUrl: RenderContextValue['resolveUrl'] = (link) => {
 
 const defaultContextValue: RenderContextValue = {
   basePath: '',
+  mediaMap: EMPTY_MEDIA_MAP,
   resolveImage: defaultResolveImage,
   resolveUrl: defaultResolveUrl,
 };
@@ -51,7 +97,11 @@ export function RenderContextProvider({
   value?: Partial<RenderContextValue>;
   children: ReactNode;
 }) {
-  const merged: RenderContextValue = { ...defaultContextValue, ...value };
+  const mediaMap = value?.mediaMap ?? defaultContextValue.mediaMap;
+  // resolveImage mặc định phải đọc đúng mediaMap đã merge — nếu caller chỉ truyền `mediaMap` mà
+  // không tự override `resolveImage`, thân thật vẫn phải tra đúng map đó, không phải EMPTY_MEDIA_MAP.
+  const resolveImage = value?.resolveImage ?? createResolveImage(mediaMap);
+  const merged: RenderContextValue = { ...defaultContextValue, ...value, mediaMap, resolveImage };
   return <RenderContext.Provider value={merged}>{children}</RenderContext.Provider>;
 }
 
