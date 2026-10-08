@@ -10,13 +10,19 @@ namespace Vsite.IntegrationTests;
 /// email, DB chỉ lưu hash — đúng thiết kế 03 §5).</summary>
 public sealed class TestEmailSpy : IEmailSender
 {
-    private readonly ConcurrentBag<(string To, string Body)> _sent = [];
+    // ConcurrentQueue, KHÔNG ConcurrentBag: bag không giữ thứ tự nên "mail cuối cùng" có thể là mail
+    // cũ khi một địa chỉ nhận nhiều mail (verify rồi reset) — REFACTOR-AUTHZ-001.
+    private readonly ConcurrentQueue<(string To, string Body)> _sent = new();
 
     public Task SendAsync(string toEmail, string subject, string bodyHtml, CancellationToken cancellationToken = default)
     {
-        _sent.Add((toEmail, bodyHtml));
+        _sent.Enqueue((toEmail, bodyHtml));
         return Task.CompletedTask;
     }
+
+    public string LastBodyFor(string toEmail) =>
+        _sent.Where(e => e.To == toEmail).Select(e => e.Body).LastOrDefault()
+            ?? throw new InvalidOperationException($"Không có email nào gửi tới {toEmail}.");
 
     public string ExtractLastTokenFor(string toEmail)
     {

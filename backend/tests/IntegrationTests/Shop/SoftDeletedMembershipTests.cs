@@ -137,6 +137,12 @@ public sealed class SoftDeletedMembershipTests
 
         var live = Guid.NewGuid();
         var dead = Guid.NewGuid();
+
+        // UserShopMembershipService kiểm cả User còn Active (#90) — InMemory không có FK nên phải seed User.
+        foreach (var userId in new[] { live, dead })
+        {
+            db.Users.Add(new User(userId) { PrimaryIdentityKind = PrimaryIdentityKind.Email, RoleId = WellKnownRoles.PlatformUserId });
+        }
         db.UserShops.Add(new UserShop { UserId = live, ShopId = shop.Id, RoleId = WellKnownRoles.OwnerId, Source = UserShopSource.ShopCreator });
         db.UserShops.Add(new UserShop { UserId = dead, ShopId = shop.Id, RoleId = WellKnownRoles.OwnerId, Source = UserShopSource.ShopCreator, IsDeleted = true });
         await db.SaveChangesAsync();

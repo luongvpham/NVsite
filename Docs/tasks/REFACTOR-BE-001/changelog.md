@@ -89,9 +89,9 @@ gồm các test endpoint 403 non-Owner (`LibraryEndpointTests`, `ShopLogoTests`,
 
 ## Chưa làm xong / để task khác
 
-1. **`User`, `UserShop` vẫn dùng setter public.** Làm cùng task audit `IgnoreQueryFilters` của
+1. ✅ *Đã làm ở REFACTOR-AUTHZ-001.* **`User`, `UserShop` vẫn dùng setter public.** Làm cùng task audit `IgnoreQueryFilters` của
    Identity (mục 2), task đó viết lại các luồng Identity đọc `UserShop`. Đã ghi vào 00-INDEX §4.
-2. **7 handler Identity vẫn `UserShops.IgnoreQueryFilters()` thiếu `!IsDeleted`/`Status == Active`**
+2. ✅ *Đã làm ở REFACTOR-AUTHZ-001.* **7 handler Identity vẫn `UserShops.IgnoreQueryFilters()` thiếu `!IsDeleted`/`Status == Active`**
    (00-INDEX §4, nợ MEDIA-001 #15). Task này không chạm luồng auth — cần task riêng.
 3. **Handler vẫn nhận `ShopId` từ command (route)** trong khi `MediaReferenceValidator` đọc
    `ITenantContext.ShopId`. Hai nguồn hiện bằng nhau nhờ filter. Chưa chốt quy ước một nguồn

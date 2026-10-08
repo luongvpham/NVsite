@@ -162,6 +162,9 @@ Vi phạm là lỗi bảo mật, không phải code style:
 5. Quyền theo shop kiểm ở **Authorization Handler**, không tin claim trong token.
    Cách làm hiện tại: endpoint có `{shopId}` gắn `.RequireShopMembership()`; cần role Owner thì
    `.RequireShopOwner(errorCode, detail)`. **Handler không tự query `UserShop`/`RoleId`.**
+6. **`IgnoreQueryFilters()` chỉ ở file trong allowlist** (`IgnoreQueryFiltersAllowlistTests`) — nó tắt
+   CẢ filter tenant lẫn soft-delete. Đọc `UserShop` xuyên shop thì dùng `UserShopQueries`
+   (Quyết định #90).
 
 ## Quy ước codegen bắt buộc (Quyết định #19)
 

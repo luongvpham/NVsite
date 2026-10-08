@@ -83,6 +83,28 @@ middleware tiếp tục resolve sai tenant tới khi cache tự hết hạn (t�
    lỗ hổng account-takeover của Quyết định #28 cũ).
 8. KHÔNG ghi password context-shop vào `User.PasswordHash` (và ngược lại) — 03 §6.1 cảnh báo hai lần
    đây là lỗi nguy hiểm nhất của luồng đăng ký.
+9. **Đọc `UserShop` xuyên shop CHỈ qua `Vsite.Application.Identity.UserShopQueries`**
+   (`ActiveAcrossShops` / `AcrossShops` / `IncludingDeletedAcrossShops`), không gọi
+   `IgnoreQueryFilters()` trực tiếp — `IgnoreQueryFilters()` tắt luôn filter soft-delete.
+   `IgnoreQueryFiltersAllowlistTests` (ArchitectureTests) chặn lời gọi mới ngoài allowlist.
+
+### Quyết định #90 — Vòng đời membership trong luồng auth (REFACTOR-AUTHZ-001)
+
+Người duyệt chốt 2026-10-09. "Còn hiệu lực" = `UserShop` chưa xoá mềm **và** `Status = Active`;
+tài khoản dùng được = `User.Status = Active` (`User.CanSignIn`).
+
+| Luồng | Membership/tài khoản hết hiệu lực thì |
+|---|---|
+| Login (audience shop) | 401 chung "Email hoặc mật khẩu không đúng" — không lộ trạng thái; mọi nhánh thất bại đều tốn đúng một lượt PBKDF2 để thời gian phản hồi không lộ tài khoản/membership |
+| Login / refresh / forgot-password khi `User` không `Active` | 401 chung / 401 / âm thầm không gửi mail |
+| Refresh token | **401 + thu hồi mọi refresh token cùng (user, audience, shop)** — khôi phục membership sau đó cũng không dùng lại được token cũ |
+| `ownerShopIds` trong JWT | Chỉ membership Owner còn hiệu lực |
+| Forgot password (audience shop) | Âm thầm không gửi mail (như "không tìm thấy") |
+| Reset password | `400 RESET_TOKEN_INVALID` nếu `User` không còn `Active`, hoặc (token audience shop) membership hết hiệu lực sau khi phát token |
+| Mỗi request có token `shop:*` hoặc route `{shopId}` | `UserShopMembershipService` kiểm membership còn hiệu lực **và `User` Active** → token shop của tài khoản bị đình chỉ mất hiệu lực ngay (403), không đợi hết hạn |
+| Change password | 401 nếu `User` không `Active`, hoặc (token shop) membership hết hiệu lực — handler kiểm lại, không dựa vào thứ tự pipeline |
+| **Đăng ký lại** khi membership **đã xoá mềm** | **Khôi phục** dòng cũ lúc verify email: role `Customer`, `Active`, mật khẩu mới, `Source` giữ nguyên (#29), **thu hồi mọi refresh token cũ của scope shop đó**. Unique `(user_id, shop_id)` không lọc soft delete nên không tạo dòng mới |
+| **Đăng ký lại** khi membership `Suspended`/`Invited` | **Chặn 409** `EMAIL_ALREADY_REGISTERED_AT_SHOP` — không lách lệnh đình chỉ của shop |
 
 ## Lệch có chủ đích so với `DesignIdeal/03-identity-entity-design.md`
 

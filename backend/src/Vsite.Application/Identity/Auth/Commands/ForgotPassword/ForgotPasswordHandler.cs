@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Vsite.Application.Common.Interfaces;
+using Vsite.Application.Identity;
 using Vsite.Application.Identity.Interfaces;
 using Vsite.Application.Identity.Options;
 using Vsite.Domain.Abstractions;
@@ -24,7 +25,7 @@ public sealed class ForgotPasswordHandler(IAppDbContext db, ITenantContext tenan
         var normalized = request.Email.Trim().ToUpperInvariant();
         var user = await db.Users.FirstOrDefaultAsync(u => u.EmailNormalized == normalized, cancellationToken);
 
-        if (user is null)
+        if (user is null || !user.CanSignIn)
         {
             return;
         }
@@ -39,7 +40,9 @@ public sealed class ForgotPasswordHandler(IAppDbContext db, ITenantContext tenan
 
         if (tenantContext.AudienceKind == TenantAudienceKind.Shop)
         {
-            var isMember = await db.UserShops.IgnoreQueryFilters()
+            // Chỉ membership còn hiệu lực mới nhận mail reset — đã xoá/đình chỉ thì âm thầm bỏ qua
+            // như "không tìm thấy" (REFACTOR-AUTHZ-001).
+            var isMember = await db.UserShops.ActiveAcrossShops()
                 .AnyAsync(us => us.UserId == user.Id && us.ShopId == tenantContext.ShopId, cancellationToken);
             if (!isMember)
             {

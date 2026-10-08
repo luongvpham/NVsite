@@ -2,8 +2,10 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Vsite.Application.Common.Interfaces;
+using Vsite.Application.Identity;
 using Vsite.Domain.Authorization;
 using Vsite.Domain.Identity.Entities;
+using Vsite.Domain.Identity.Enums;
 
 namespace Vsite.Application.Identity.Auth.Commands.ChangePassword;
 
@@ -12,8 +14,8 @@ public sealed class ChangePasswordHandler(IAppDbContext db, ICurrentUserContext 
 {
     public async Task Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
     {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == currentUser.UserId, cancellationToken)
-            ?? throw new UnauthorizedAccessException("Tài khoản không tồn tại.");
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == currentUser.UserId && u.Status == UserStatus.Active, cancellationToken)
+            ?? throw new UnauthorizedAccessException("Tài khoản không tồn tại hoặc đã bị đình chỉ.");
 
         var shopId = AudienceHelpers.TryGetShopId(currentUser.Audience);
         UserShop? userShop = null;
@@ -21,9 +23,9 @@ public sealed class ChangePasswordHandler(IAppDbContext db, ICurrentUserContext 
 
         if (shopId is not null)
         {
-            // IgnoreQueryFilters — ShopMembershipValidationMiddleware đã re-verify membership còn
-            // Active trước khi request tới đây; đọc lại record ở scope hệ thống để cập nhật.
-            userShop = await db.UserShops.IgnoreQueryFilters()
+            // ShopMembershipValidationMiddleware đã re-verify membership; vẫn đọc qua helper chỉ lấy
+            // membership còn hiệu lực — không dựa vào việc middleware luôn đứng trước handler.
+            userShop = await db.UserShops.ActiveAcrossShops()
                 .FirstOrDefaultAsync(us => us.UserId == user.Id && us.ShopId == shopId, cancellationToken)
                 ?? throw new UnauthorizedAccessException("Membership không tồn tại.");
             currentHash = userShop.PasswordHash;
@@ -42,11 +44,11 @@ public sealed class ChangePasswordHandler(IAppDbContext db, ICurrentUserContext 
         var newHash = passwordHasher.HashPassword(user, request.NewPassword);
         if (userShop is not null)
         {
-            userShop.PasswordHash = newHash;
+            userShop.SetPassword(newHash);
         }
         else
         {
-            user.PasswordHash = newHash;
+            user.SetPassword(newHash);
         }
 
         // Revoke toàn bộ refresh token CÙNG scope — cùng nguyên tắc với ResetPassword (#21.5): kẻ
