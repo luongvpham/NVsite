@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useGetShops } from '@vsite/api-sdk';
+import { useListShops } from '@vsite/api-sdk';
 import { getErrorCode } from '@vsite/shared';
 import { getErrorMessage } from '../lib/error-messages';
 
@@ -20,7 +20,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 function ShopListPage() {
-  const shopsQuery = useGetShops();
+  const shopsQuery = useListShops();
 
   return (
     <main className="mx-auto max-w-3xl p-6">

@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@vsite/ui';
-import { postAuthRegisterBody, usePostAuthRegister, type RegisterRequest } from '@vsite/api-sdk';
+import { registerBody, useRegister, type RegisterRequest } from '@vsite/api-sdk';
 import { getErrorCode } from '@vsite/shared';
 import { FormField } from '../components/form-field';
 import { getErrorMessage } from '../lib/error-messages';
@@ -20,11 +20,11 @@ function RegisterPage() {
     setError,
     formState: { errors, isSubmitting },
   } = useForm<RegisterRequest>({
-    resolver: zodResolver(postAuthRegisterBody),
+    resolver: zodResolver(registerBody),
     defaultValues: { email: '', password: '', fullName: '' },
   });
 
-  const registerMutation = usePostAuthRegister({
+  const registerMutation = useRegister({
     mutation: {
       onSuccess: () => {
         setSubmitted(true);

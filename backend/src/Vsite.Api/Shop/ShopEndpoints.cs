@@ -30,6 +30,7 @@ public static class ShopEndpoints
 
         shops.MapPost("", async (CreateShopRequest body, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new CreateShopCommand(body.Name, body.Slug, body.Kind, body.ExternalUrl), ct)))
+            .WithName("createShop")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .Produces<ShopDto>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -39,6 +40,7 @@ public static class ShopEndpoints
 
         shops.MapGet("", async (ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new ListShopsQuery(), ct)))
+            .WithName("listShops")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .Produces<IReadOnlyList<ShopSummaryDto>>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -46,6 +48,7 @@ public static class ShopEndpoints
 
         shops.MapGet("/{shopId:guid}", async (Guid shopId, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetShopQuery(shopId), ct)))
+            .WithName("getShop")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireShopMembership()
             .Produces<ShopDto>()
@@ -55,6 +58,7 @@ public static class ShopEndpoints
 
         shops.MapPatch("/{shopId:guid}", async (Guid shopId, UpdateShopRequest body, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new UpdateShopCommand(shopId, body.Name, body.Slug, body.Kind, body.ExternalUrl, body.Status), ct)))
+            .WithName("updateShop")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireShopOwner("SHOP_OWNER_REQUIRED", "Chỉ chủ shop (Owner) mới được sửa thông tin shop.")
             .Produces<ShopDto>()

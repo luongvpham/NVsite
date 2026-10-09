@@ -27,9 +27,9 @@ public sealed class ShopScopedRouteFilterTests
     /// endpoint Owner-only + error_code của từng cái (giữ đúng contract cũ), để không ai lỡ đổi
     /// về `RequireShopMembership()` mà mất kiểm role.</summary>
     [Theory]
-    [InlineData("PATCH", "shops/{shopId:guid}", "SHOP_OWNER_REQUIRED")]
-    [InlineData("PUT", "shops/{shopId:guid}/logo", "MEDIA_OWNER_REQUIRED")]
-    [InlineData("DELETE", "shops/{shopId:guid}/media/library/{assetId:guid}", "MEDIA_OWNER_REQUIRED")]
+    [InlineData("PATCH", "api/shops/{shopId:guid}", "SHOP_OWNER_REQUIRED")]
+    [InlineData("PUT", "api/shops/{shopId:guid}/logo", "MEDIA_OWNER_REQUIRED")]
+    [InlineData("DELETE", "api/shops/{shopId:guid}/media/library/{assetId:guid}", "MEDIA_OWNER_REQUIRED")]
     public void Owner_only_endpoints_carry_ShopOwnerRequirement(string method, string route, string errorCode)
     {
         using var factory = CreateFactory();

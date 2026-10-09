@@ -41,8 +41,8 @@ function libraryPage(items: MediaAssetDto[], total = items.length): PagedResultO
 describe('MediaLibraryPicker (F3)', () => {
   it('hiện trạng thái loading rồi render grid ảnh', async () => {
     server.use(
-      http.get('*/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([asset('a1'), asset('a2')]))),
-      http.get('*/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 2048 })),
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([asset('a1'), asset('a2')]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 2048 })),
     );
     renderWithQuery(
       <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
@@ -58,8 +58,8 @@ describe('MediaLibraryPicker (F3)', () => {
 
   it('ẩn nút Xoá khi isOwner không được truyền (mặc định false, fail-safe)', async () => {
     server.use(
-      http.get('*/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([asset('a1')]))),
-      http.get('*/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([asset('a1')]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
     );
     renderWithQuery(
       <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
@@ -71,8 +71,8 @@ describe('MediaLibraryPicker (F3)', () => {
 
   it('báo lỗi client khi upload thẳng vào thư viện với file vượt quá 10MB, không gọi API', async () => {
     server.use(
-      http.get('*/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([]))),
-      http.get('*/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
     );
     renderWithQuery(
       <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
@@ -88,8 +88,8 @@ describe('MediaLibraryPicker (F3)', () => {
 
   it('chọn file HEIC ở upload thư viện: client chặn và hiện hướng dẫn HEIC (S4)', async () => {
     server.use(
-      http.get('*/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([]))),
-      http.get('*/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
     );
     renderWithQuery(
       <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
@@ -105,8 +105,8 @@ describe('MediaLibraryPicker (F3)', () => {
 
   it('hiện trạng thái rỗng khi thư viện chưa có ảnh', async () => {
     server.use(
-      http.get('*/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([]))),
-      http.get('*/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
     );
     renderWithQuery(
       <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
@@ -117,10 +117,10 @@ describe('MediaLibraryPicker (F3)', () => {
 
   it('hiện trạng thái lỗi khi tải thư viện thất bại', async () => {
     server.use(
-      http.get('*/shops/:shopId/media/library', () =>
+      http.get('*/api/shops/:shopId/media/library', () =>
         HttpResponse.json({ error_code: 'SHOP_ACCESS_DENIED', title: 'denied' }, { status: 403 }),
       ),
-      http.get('*/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
     );
     renderWithQuery(
       <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
@@ -133,9 +133,9 @@ describe('MediaLibraryPicker (F3)', () => {
     const source = asset('a1');
     const cloned = { ...asset('clone-1') };
     server.use(
-      http.get('*/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([source]))),
-      http.get('*/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
-      http.post('*/shops/:shopId/media/library/:assetId/clones', () => HttpResponse.json(cloned)),
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([source]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.post('*/api/shops/:shopId/media/library/:assetId/clones', () => HttpResponse.json(cloned)),
     );
     const onSelect = vi.fn();
     renderWithQuery(
@@ -158,12 +158,12 @@ describe('MediaLibraryPicker (F3)', () => {
   it('xoá: gọi references trước, có tham chiếu thì cảnh báo nhưng không chặn xoá', async () => {
     const source = asset('a1');
     server.use(
-      http.get('*/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([source]))),
-      http.get('*/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
-      http.get('*/shops/:shopId/media/library/:assetId/references', () =>
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([source]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.get('*/api/shops/:shopId/media/library/:assetId/references', () =>
         HttpResponse.json({ references: [{ kind: 'ShopLogo' }] }),
       ),
-      http.delete('*/shops/:shopId/media/library/:assetId', () => new HttpResponse(null, { status: 204 })),
+      http.delete('*/api/shops/:shopId/media/library/:assetId', () => new HttpResponse(null, { status: 204 })),
     );
     renderWithQuery(
       <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" isOwner open onClose={vi.fn()} onSelect={vi.fn()} />,

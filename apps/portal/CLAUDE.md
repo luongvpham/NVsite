@@ -44,7 +44,11 @@ Shop **không** viết được `Review` (việc đó cần audience `vsite-main
 contracts/openapi/*.json  ──pnpm gen:api (Orval)──→  packages/api-sdk/
 ```
 
-- **Không sửa tay `packages/api-sdk/`.**
+- **Không sửa tay `packages/api-sdk/src/generated/`.**
+- Mọi API dưới `/api` (Quyết định #91), dev proxy một mục `/api` ở `vite.config.ts`. **Đừng** thêm proxy
+  theo tên route (`/shops`, `/auth`…) — đè lên route SPA cùng tên của Portal.
+- Tên hàm/hook lấy từ `operationId` của contract (`useListShops`, `useGetShop`, `useUploadToLibrary`…),
+  không theo path. MSW handler trong test dùng URL `/api/...`.
 - Contract sai hoặc thiếu → **DỪNG và báo**.
 - Code với **MSW mock trước**, bật API thật ở bước integration.
 - Access token giữ **trong memory**, không dùng `localStorage` (Quyết định #3). Refresh qua Axios interceptor tự viết.

@@ -1,5 +1,7 @@
 # Media — vsite
 
+> 📌 **Mọi đường dẫn endpoint trong tài liệu này tương đối với prefix `/api`** (Quyết định #91, REFACTOR-API-001) — vd. `/shops/{shopId}` nghĩa là `/api/shops/{shopId}`. `/media/*` (file ảnh) KHÔNG có prefix.
+
 ## Trạng thái (MEDIA-001)
 
 `MediaAsset` + pipeline ảnh (upload → resize/crop → strip EXIF → encode `webp`) + Media Library +

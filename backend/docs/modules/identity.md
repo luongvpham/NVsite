@@ -1,5 +1,7 @@
 # Identity — vsite
 
+> 📌 **Mọi đường dẫn endpoint trong tài liệu này tương đối với prefix `/api`** (Quyết định #91, REFACTOR-API-001) — vd. `/shops/{shopId}` nghĩa là `/api/shops/{shopId}`. `/media/*` (file ảnh) KHÔNG có prefix.
+
 ## Trạng thái (Bước 3)
 
 Phase 0 (hạ tầng Postgres/Redis) + Phase 1 (entity + migration + Global Query Filter) + Phase 2
@@ -59,7 +61,7 @@ middleware tiếp tục resolve sai tenant tới khi cache tự hết hạn (t�
   file `{slug}.vsite.local`). Custom domain cần bảng `ShopDomain` (module Shop đầy đủ) để match
   CHÍNH XÁC domain — deferred, xem mục "Lệch có chủ đích" bên dưới.
 - Test dev: thêm entry hosts file Windows (`C:\Windows\System32\drivers\etc\hosts`), vd.
-  `127.0.0.1 spa-abc.vsite.local`, gọi thẳng `http://spa-abc.vsite.local:5270/auth/login` — Kestrel
+  `127.0.0.1 spa-abc.vsite.local`, gọi thẳng `http://spa-abc.vsite.local:5270/api/auth/login` — Kestrel
   không quan tâm hostname, chỉ quan tâm port, nên Host header đúng thật không cần Caddy.
 
 ## Invariant — vi phạm là bug, không phải lựa chọn phong cách

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { postShopsShopIdMediaLibraryBody, postShopsShopIdMediaSlotUploadsBody } from '@vsite/api-sdk';
+import { uploadToLibraryBody, uploadToSlotBody } from '@vsite/api-sdk';
 
 /**
  * Ràng buộc client-side cho upload ảnh (MEDIA-001 brief.md §"Việc FE cần làm" F2, §"Ràng buộc").
@@ -38,13 +38,13 @@ export function fitOfPreset(preset: string): 'cover' | 'inside' | null {
   return fit === 'cover' || fit === 'inside' ? fit : null;
 }
 
-export const slotUploadClientSchema = postShopsShopIdMediaSlotUploadsBody.extend({
+export const slotUploadClientSchema = uploadToSlotBody.extend({
   file: fileSchema,
   preset: z.string().min(1, 'Thiếu preset'),
 });
 export type SlotUploadClientValues = z.infer<typeof slotUploadClientSchema>;
 
-export const libraryUploadClientSchema = postShopsShopIdMediaLibraryBody.extend({
+export const libraryUploadClientSchema = uploadToLibraryBody.extend({
   file: fileSchema,
 });
 export type LibraryUploadClientValues = z.infer<typeof libraryUploadClientSchema>;

@@ -24,7 +24,7 @@ const withoutLogo: ShopSummaryDto = { ...withLogo, id: 'shop-2', name: 'Salon Xi
 describe('Danh sách shop — logo (F6)', () => {
   it('hiện logo nguyên trạng khi có logoUrl, chữ cái đầu khi null', async () => {
     useSessionStore.getState().setSession({ accessToken: 't', refreshToken: 'r' });
-    server.use(http.get('/shops', () => HttpResponse.json([withLogo, withoutLogo])));
+    server.use(http.get('/api/shops', () => HttpResponse.json([withLogo, withoutLogo])));
     renderApp('/shops');
 
     const img = await screen.findByAltText('Spa ABC');
@@ -40,7 +40,7 @@ describe('Danh sách shop — logo (F6)', () => {
   it('loading và error được giữ nguyên', async () => {
     useSessionStore.getState().setSession({ accessToken: 't', refreshToken: 'r' });
     server.use(
-      http.get('/shops', () => HttpResponse.json({ error_code: 'SHOP_ACCESS_DENIED', title: 'x' }, { status: 403 })),
+      http.get('/api/shops', () => HttpResponse.json({ error_code: 'SHOP_ACCESS_DENIED', title: 'x' }, { status: 403 })),
     );
     renderApp('/shops');
     expect(await screen.findByRole('alert')).toHaveTextContent('Bạn không có quyền truy cập shop này.');

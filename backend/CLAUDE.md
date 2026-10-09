@@ -174,7 +174,7 @@ Vi phạm là lỗi bảo mật, không phải code style:
 | Đủ error shape trong OpenAPI | Mọi endpoint có `[ProducesResponseType]` cho từng status code có thể trả |
 | Lỗi trả ProblemDetails | RFC 7807, luôn có `error_code` machine-readable |
 | Pagination một shape | `{ items, total, page, pageSize }` — không có shape thứ hai |
-| Nested REST cho child resource | `/shops/{shopId}/services/{id}` — ownership validate ngay trong route |
+| Nested REST cho child resource | `/api/shops/{shopId}/services/{id}` — ownership validate ngay trong route |
 
 ## OpenAPI
 
@@ -188,6 +188,16 @@ Vi phạm là lỗi bảo mật, không phải code style:
 `Vsite.Api/OpenApi/DuplicateNullableSchemaDocumentTransformer.cs` đã đăng ký cho mọi document — nó
 viết lại thành `{ "allOf": [ { "$ref": ... } ], "nullable": true }` để Orval không sinh type trùng
 `XDto2`. **Không sửa từng DTO bằng tay**; module mới chỉ cần đăng ký document như mọi module khác.
+
+**Prefix `/api` + `operationId` tường minh (#91, REFACTOR-API-001):**
+- Mọi endpoint API map qua group `ApiRoutes.Prefix` (`/api`) ở `Program.cs` — module mới gọi
+  `api.Map{Module}Endpoints()`, không map thẳng lên `app`. Ngoại lệ có chủ đích: `/media/*` (file
+  ảnh public, không phải API) và `/openapi/*` (chỉ dev).
+- Mọi endpoint **bắt buộc** `.WithName("{động từ}{Danh từ}")` camelCase (vd. `listShops`,
+  `uploadToLibrary`) — đó là `operationId`, và là tên hàm/hook Orval sinh ra cho FE. Đặt theo nghiệp
+  vụ, **không theo path**, để đổi path không làm đổi tên ở FE. Đổi tên một `operationId` = đổi
+  contract (Gate 1).
+- `ApiRoutePrefixTests` chặn cả hai: endpoint ngoài `/api`, endpoint thiếu/trùng `operationId`.
 
 ## Testing
 

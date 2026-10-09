@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Vsite.Application.Common;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Identity;
 using Vsite.Application.Identity.Interfaces;
@@ -84,7 +85,7 @@ public sealed class RegisterHandler(
         db.PendingRegistrations.Add(pending);
         await db.SaveChangesAsync(cancellationToken);
 
-        var verifyUrl = $"{authOptions.Value.ApiBaseUrl.TrimEnd('/')}/auth/verify-email?token={Uri.EscapeDataString(rawToken)}";
+        var verifyUrl = $"{authOptions.Value.ApiBaseUrl.TrimEnd('/')}{ApiRoutes.Prefix}/auth/verify-email?token={Uri.EscapeDataString(rawToken)}";
         await emailSender.SendAsync(
             pending.Email,
             "Xác minh email của bạn",

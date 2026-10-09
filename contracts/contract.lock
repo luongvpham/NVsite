@@ -1,20 +1,20 @@
 {
   "identity.v1.json": {
-    "sha256": "77e1e507ee9cb5674a060cfd1140099b117d6b3789f3ecdcc81e0f9d3b59c92c",
-    "approvedAt": "2026-09-14T09:01:23.470Z",
-    "approvedBy": "human",
-    "taskId": "SHOP-001"
+    "sha256": "b73a5ab9aeb49881c7421f3a6784d2508ce00f5b643f02e220f4ebb2ee381a45",
+    "approvedAt": "2026-10-09T07:16:15.827Z",
+    "approvedBy": "VietLuong Pham",
+    "taskId": "REFACTOR-API-001"
   },
   "shop.v1.json": {
-    "sha256": "aa88da74fa557bfd2e8d9ff0c95262d7483607718ac834129626ee4a09f83032",
-    "approvedAt": "2026-09-29T15:01:00.035Z",
+    "sha256": "b26c7b6c9e56e89b648df5fabda399ad76ff625784ff77d8ad0fa69943a8a3ef",
+    "approvedAt": "2026-10-09T07:16:15.836Z",
     "approvedBy": "VietLuong Pham",
-    "taskId": "MEDIA-001-D4"
+    "taskId": "REFACTOR-API-001"
   },
   "media.v1.json": {
-    "sha256": "4ac4d8be8bec410b3e51cd7275c6f0ba31425abb7f675369d108274bca9fad02",
-    "approvedAt": "2026-09-29T08:18:08.710Z",
+    "sha256": "b0e9fbd6066fd3c0eeeb64e156304c20b8ed74cdc049c39d587ba296e98cda02",
+    "approvedAt": "2026-10-09T07:16:15.838Z",
     "approvedBy": "VietLuong Pham",
-    "taskId": "MEDIA-001-D3"
+    "taskId": "REFACTOR-API-001"
   }
 }

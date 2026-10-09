@@ -66,7 +66,7 @@ public sealed class TenantResolutionTests
 
     private async Task RegisterAsync(string? host, string email)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/auth/register")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/register")
         {
             Content = JsonContent.Create(new RegisterRequest(email, Password, "Tenant Resolution Test")),
         };

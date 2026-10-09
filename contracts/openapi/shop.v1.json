@@ -5,11 +5,12 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/shops": {
+    "/api/shops": {
       "post": {
         "tags": [
           "Shop"
         ],
+        "operationId": "createShop",
         "requestBody": {
           "content": {
             "application/json": {
@@ -77,6 +78,7 @@
         "tags": [
           "Shop"
         ],
+        "operationId": "listShops",
         "responses": {
           "200": {
             "description": "OK",
@@ -114,11 +116,12 @@
         }
       }
     },
-    "/shops/{shopId}": {
+    "/api/shops/{shopId}": {
       "get": {
         "tags": [
           "Shop"
         ],
+        "operationId": "getShop",
         "parameters": [
           {
             "name": "shopId",
@@ -177,6 +180,7 @@
         "tags": [
           "Shop"
         ],
+        "operationId": "updateShop",
         "parameters": [
           {
             "name": "shopId",

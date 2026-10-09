@@ -2,7 +2,7 @@
  * GENERATED — DO NOT EDIT (pnpm gen:api)
  */
 
-export type GetShopsShopIdMediaLibraryParams = {
+export type ListLibraryParams = {
 page?: number;
 pageSize?: number;
 };

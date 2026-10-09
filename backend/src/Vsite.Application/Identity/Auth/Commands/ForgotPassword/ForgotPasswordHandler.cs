@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Vsite.Application.Common;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Identity;
 using Vsite.Application.Identity.Interfaces;
@@ -62,7 +63,7 @@ public sealed class ForgotPasswordHandler(IAppDbContext db, ITenantContext tenan
 
         await db.SaveChangesAsync(cancellationToken);
 
-        var resetUrl = $"{authOptions.Value.ApiBaseUrl.TrimEnd('/')}/auth/reset-password?token={Uri.EscapeDataString(rawToken)}";
+        var resetUrl = $"{authOptions.Value.ApiBaseUrl.TrimEnd('/')}{ApiRoutes.Prefix}/auth/reset-password?token={Uri.EscapeDataString(rawToken)}";
         await emailSender.SendAsync(
             user.Email!,
             "Đặt lại mật khẩu",

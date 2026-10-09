@@ -4,7 +4,7 @@ import type { ComponentNode, ImagePickerValue, MediaRef } from '@vsite/builder-c
 import { Inspector, mediaUrl, propertyPanel, setAtPath } from '@vsite/builder-components';
 import type { PropertyPanelField } from '@vsite/builder-components';
 import { RenderContextProvider, RenderTree } from '@vsite/builder-renderer';
-import { useGetShops, useGetShopsShopIdMediaAssets, type MediaAssetDto } from '@vsite/api-sdk';
+import { useListShops, useGetAssetsByIds, type MediaAssetDto } from '@vsite/api-sdk';
 import { UploadSlotDialog } from '../components/media/upload-slot-dialog';
 import { MediaLibraryPicker } from '../components/media/media-library-picker';
 import { isShopOwner } from '../lib/shop-role';
@@ -136,7 +136,7 @@ export function ImagePickerControl({
 }) {
   const [mode, setMode] = useState<'closed' | 'upload' | 'library'>('closed');
   // Nút Xoá của picker chỉ hiện cho Owner: signal duy nhất là roleCode của `GET /shops` (cùng cách màn sửa shop).
-  const shopsQuery = useGetShops();
+  const shopsQuery = useListShops();
   const isOwner = isShopOwner(shopsQuery.data, shopId);
   const hasShopId = shopId.trim().length > 0;
   const currentRef = value.imageId ? mediaMap[value.imageId] : undefined;
@@ -249,7 +249,7 @@ function DevRegistry() {
     return all.filter((id) => !(id in mediaMap) && !requestedIds.has(id));
   }, [tree, mediaMap, requestedIds]);
 
-  const assetsQuery = useGetShopsShopIdMediaAssets(
+  const assetsQuery = useGetAssetsByIds(
     shopId,
     { ids: missingIds },
     { query: { enabled: shopId.trim().length > 0 && missingIds.length > 0 } },

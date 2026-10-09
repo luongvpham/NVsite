@@ -1,7 +1,7 @@
 import { type ChangeEvent, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getErrorCode } from '@vsite/shared';
-import { getGetShopsQueryKey, useGetShopsShopId, usePutShopsShopIdLogo } from '@vsite/api-sdk';
+import { getListShopsQueryKey, useGetShop, useUploadShopLogo } from '@vsite/api-sdk';
 import { getErrorMessage, HEIC_UNSUPPORTED_GUIDANCE } from '../../lib/error-messages';
 import { ACCEPT_ATTR, fileSchema } from '../../lib/media-validation';
 
@@ -19,16 +19,16 @@ export interface ShopLogoSectionProps {
 export function ShopLogoSection({ shopId, isOwner }: ShopLogoSectionProps) {
   const queryClient = useQueryClient();
   const [clientError, setClientError] = useState<string | null>(null);
-  const shopQuery = useGetShopsShopId(shopId);
+  const shopQuery = useGetShop(shopId);
 
-  const uploadMutation = usePutShopsShopIdLogo({
+  const uploadMutation = useUploadShopLogo({
     mutation: {
       onSuccess: async () => {
         setClientError(null);
         // Giữ mutation ở trạng thái pending tới khi logoUrl mới về, để UI không nhấp nháy ảnh cũ.
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: shopQuery.queryKey }),
-          queryClient.invalidateQueries({ queryKey: getGetShopsQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getListShopsQueryKey() }),
         ]);
       },
     },

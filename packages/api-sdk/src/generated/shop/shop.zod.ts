@@ -3,14 +3,14 @@
  */
 import * as zod from 'zod';
 
-export const postShopsBody = zod.object({
+export const createShopBody = zod.object({
   "name": zod.string(),
   "slug": zod.string(),
   "kind": zod.enum(['Hosted', 'ExternalOnly']),
   "externalUrl": zod.string().nullable()
 })
 
-export const postShopsResponse = zod.object({
+export const createShopResponse = zod.object({
   "id": zod.string().uuid(),
   "name": zod.string(),
   "slug": zod.string(),
@@ -22,7 +22,7 @@ export const postShopsResponse = zod.object({
 })
 
 
-export const getShopsResponseItem = zod.object({
+export const listShopsResponseItem = zod.object({
   "id": zod.string().uuid(),
   "name": zod.string(),
   "slug": zod.string(),
@@ -31,14 +31,14 @@ export const getShopsResponseItem = zod.object({
   "roleCode": zod.string(),
   "logoUrl": zod.string().nullable()
 })
-export const getShopsResponse = zod.array(getShopsResponseItem)
+export const listShopsResponse = zod.array(listShopsResponseItem)
 
 
-export const getShopsShopIdParams = zod.object({
+export const getShopParams = zod.object({
   "shopId": zod.string().uuid()
 })
 
-export const getShopsShopIdResponse = zod.object({
+export const getShopResponse = zod.object({
   "id": zod.string().uuid(),
   "name": zod.string(),
   "slug": zod.string(),
@@ -50,11 +50,11 @@ export const getShopsShopIdResponse = zod.object({
 })
 
 
-export const patchShopsShopIdParams = zod.object({
+export const updateShopParams = zod.object({
   "shopId": zod.string().uuid()
 })
 
-export const patchShopsShopIdBody = zod.object({
+export const updateShopBody = zod.object({
   "name": zod.string(),
   "slug": zod.string(),
   "kind": zod.enum(['Hosted', 'ExternalOnly']),
@@ -62,7 +62,7 @@ export const patchShopsShopIdBody = zod.object({
   "status": zod.enum(['Draft', 'Active', 'Suspended', 'Closed'])
 })
 
-export const patchShopsShopIdResponse = zod.object({
+export const updateShopResponse = zod.object({
   "id": zod.string().uuid(),
   "name": zod.string(),
   "slug": zod.string(),

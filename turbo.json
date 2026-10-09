@@ -13,11 +13,11 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build", "gen:registry"]
+      "dependsOn": ["^build", "^gen:api", "gen:api", "gen:registry"]
     },
     "gen:api": {
       "cache": true,
-      "inputs": ["$TURBO_ROOT$/contracts/openapi/**"],
+      "inputs": ["$TURBO_ROOT$/contracts/openapi/**", "orval.config.ts", "scripts/**", "src/mutator/**"],
       "outputs": ["src/generated/**"]
     },
     "gen:registry": {

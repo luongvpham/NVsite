@@ -95,7 +95,7 @@ public sealed class LibraryEndpointTests
     {
         var (token, shopId) = await CreateOwnerWithShopAsync();
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/shops/{shopId}/media/library/{Guid.NewGuid()}/clones")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/shops/{shopId}/media/library/{Guid.NewGuid()}/clones")
         {
             Content = new StringContent("not json", System.Text.Encoding.UTF8, "text/plain"),
             Headers = { Host = PortalHost },
@@ -283,7 +283,7 @@ public sealed class LibraryEndpointTests
         var (token, shopId) = await CreateOwnerWithShopAsync();
         var library = await UploadLibraryAsync(token, shopId);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/shops/{shopId}/media/library/{library.Id}/references")
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/shops/{shopId}/media/library/{library.Id}/references")
         {
             Headers = { Host = PortalHost },
         };
@@ -310,7 +310,7 @@ public sealed class LibraryEndpointTests
 
     private async Task<HttpResponseMessage> PostCloneAsync(string token, Guid shopId, Guid assetId, string preset)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/shops/{shopId}/media/library/{assetId}/clones")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/shops/{shopId}/media/library/{assetId}/clones")
         {
             Content = JsonContent.Create(new { preset, focalX = (float?)null, focalY = (float?)null }),
             Headers = { Host = PortalHost },
@@ -321,7 +321,7 @@ public sealed class LibraryEndpointTests
 
     private async Task<HttpResponseMessage> DeleteAsync(string token, Guid shopId, Guid assetId)
     {
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/shops/{shopId}/media/library/{assetId}")
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/shops/{shopId}/media/library/{assetId}")
         {
             Headers = { Host = PortalHost },
         };
@@ -331,7 +331,7 @@ public sealed class LibraryEndpointTests
 
     private async Task<HttpResponseMessage> GetLibraryAsync(string token, Guid shopId, int page = 1, int pageSize = 24)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/shops/{shopId}/media/library?page={page}&pageSize={pageSize}")
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/shops/{shopId}/media/library?page={page}&pageSize={pageSize}")
         {
             Headers = { Host = PortalHost },
         };
@@ -342,7 +342,7 @@ public sealed class LibraryEndpointTests
     private async Task<HttpResponseMessage> GetAssetsByIdsAsync(string token, Guid shopId, IReadOnlyList<Guid> ids)
     {
         var query = string.Join("&", ids.Select(id => $"ids={id}"));
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/shops/{shopId}/media/assets?{query}")
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/shops/{shopId}/media/assets?{query}")
         {
             Headers = { Host = PortalHost },
         };
@@ -352,7 +352,7 @@ public sealed class LibraryEndpointTests
 
     private async Task<MediaUsageDto> GetUsageAsync(string token, Guid shopId)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/shops/{shopId}/media/usage")
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/shops/{shopId}/media/usage")
         {
             Headers = { Host = PortalHost },
         };
@@ -367,7 +367,7 @@ public sealed class LibraryEndpointTests
         {
             { new ByteArrayContent(EncodeJpeg(1600, 1200)), "file", "photo.jpg" },
         };
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/shops/{shopId}/media/library") { Content = content, Headers = { Host = PortalHost } };
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/shops/{shopId}/media/library") { Content = content, Headers = { Host = PortalHost } };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await _client.SendAsync(request);
         return (await response.Content.ReadFromJsonAsync<MediaAssetDto>(JsonOptions))!;
@@ -383,7 +383,7 @@ public sealed class LibraryEndpointTests
             { new StringContent("0.5"), "focalY" },
             { new StringContent(saveToLibrary.ToString()), "saveToLibrary" },
         };
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/shops/{shopId}/media/slot-uploads") { Content = content, Headers = { Host = PortalHost } };
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/shops/{shopId}/media/slot-uploads") { Content = content, Headers = { Host = PortalHost } };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await _client.SendAsync(request);
         return (await response.Content.ReadFromJsonAsync<SlotUploadResultDto>(JsonOptions))!;
@@ -409,13 +409,13 @@ public sealed class LibraryEndpointTests
 
     private async Task<string> RegisterVerifyLoginGlobalAsync(string email)
     {
-        await PostAsync(PortalHost, "/auth/register", new RegisterRequest(email, Password, "Test User"));
+        await PostAsync(PortalHost, "/api/auth/register", new RegisterRequest(email, Password, "Test User"));
 
         var token = _factory.EmailSpy.ExtractLastTokenFor(email);
-        var verifyResponse = await SendAsync(HttpMethod.Get, $"/auth/verify-email?token={Uri.EscapeDataString(token)}", PortalHost);
+        var verifyResponse = await SendAsync(HttpMethod.Get, $"/api/auth/verify-email?token={Uri.EscapeDataString(token)}", PortalHost);
         Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
 
-        var loginResponse = await PostAsync(PortalHost, "/auth/login", new LoginRequest(email, Password));
+        var loginResponse = await PostAsync(PortalHost, "/api/auth/login", new LoginRequest(email, Password));
         Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
 
         var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthTokenResult>();
@@ -444,7 +444,7 @@ public sealed class LibraryEndpointTests
 
     private Task<HttpResponseMessage> CreateShopAsync(string token, CreateShopRequest body)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/shops")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/shops")
         {
             Content = JsonContent.Create(body),
             Headers = { Host = PortalHost },

@@ -24,7 +24,6 @@ import type {
   AuthTokenResult,
   ChangePasswordRequest,
   ForgotPasswordRequest,
-  GetAuthVerifyEmailParams,
   HttpValidationProblemDetails,
   LoginRequest,
   MeDto,
@@ -33,48 +32,51 @@ import type {
   RegisterRequest,
   RegisterResult,
   ResetPasswordRequest,
+  VerifyEmailParams,
   VerifyEmailResult
 } from '.././model';
 
 import { customInstance } from '../../../mutator/axios-instance';
 
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
-export const postAuthRegister = (
+
+export const register = (
     registerRequest: RegisterRequest,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<RegisterResult>(
-      {url: `/auth/register`, method: 'POST',
+      {url: `/api/auth/register`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: registerRequest, signal
     },
-      );
+      options);
     }
   
 
 
-export const getPostAuthRegisterMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthRegister>>, TError,{data: RegisterRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postAuthRegister>>, TError,{data: RegisterRequest}, TContext> => {
+export const getRegisterMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,{data: RegisterRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,{data: RegisterRequest}, TContext> => {
 
-const mutationKey = ['postAuthRegister'];
-const {mutation: mutationOptions} = options ?
+const mutationKey = ['register'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthRegister>>, {data: RegisterRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof register>>, {data: RegisterRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  postAuthRegister(data,)
+          return  register(data,requestOptions)
         }
 
         
@@ -82,99 +84,99 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PostAuthRegisterMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthRegister>>>
-    export type PostAuthRegisterMutationBody = RegisterRequest
-    export type PostAuthRegisterMutationError = ProblemDetails | HttpValidationProblemDetails
+    export type RegisterMutationResult = NonNullable<Awaited<ReturnType<typeof register>>>
+    export type RegisterMutationBody = RegisterRequest
+    export type RegisterMutationError = ProblemDetails | HttpValidationProblemDetails
 
-    export const usePostAuthRegister = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthRegister>>, TError,{data: RegisterRequest}, TContext>, }
+    export const useRegister = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,{data: RegisterRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postAuthRegister>>,
+        Awaited<ReturnType<typeof register>>,
         TError,
         {data: RegisterRequest},
         TContext
       > => {
 
-      const mutationOptions = getPostAuthRegisterMutationOptions(options);
+      const mutationOptions = getRegisterMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const getAuthVerifyEmail = (
-    params: GetAuthVerifyEmailParams,
- signal?: AbortSignal
+    export const verifyEmail = (
+    params: VerifyEmailParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<VerifyEmailResult>(
-      {url: `/auth/verify-email`, method: 'GET',
+      {url: `/api/auth/verify-email`, method: 'GET',
         params, signal
     },
-      );
+      options);
     }
   
 
 
 
-export const getGetAuthVerifyEmailQueryKey = (params?: GetAuthVerifyEmailParams,) => {
+export const getVerifyEmailQueryKey = (params?: VerifyEmailParams,) => {
     return [
-    `/auth/verify-email`, ...(params ? [params]: [])
+    `/api/auth/verify-email`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getGetAuthVerifyEmailQueryOptions = <TData = Awaited<ReturnType<typeof getAuthVerifyEmail>>, TError = ProblemDetails | HttpValidationProblemDetails>(params: GetAuthVerifyEmailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAuthVerifyEmail>>, TError, TData>>, }
+export const getVerifyEmailQueryOptions = <TData = Awaited<ReturnType<typeof verifyEmail>>, TError = ProblemDetails | HttpValidationProblemDetails>(params: VerifyEmailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof verifyEmail>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetAuthVerifyEmailQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getVerifyEmailQueryKey(params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuthVerifyEmail>>> = ({ signal }) => getAuthVerifyEmail(params, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof verifyEmail>>> = ({ signal }) => verifyEmail(params, requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuthVerifyEmail>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof verifyEmail>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetAuthVerifyEmailQueryResult = NonNullable<Awaited<ReturnType<typeof getAuthVerifyEmail>>>
-export type GetAuthVerifyEmailQueryError = ProblemDetails | HttpValidationProblemDetails
+export type VerifyEmailQueryResult = NonNullable<Awaited<ReturnType<typeof verifyEmail>>>
+export type VerifyEmailQueryError = ProblemDetails | HttpValidationProblemDetails
 
 
-export function useGetAuthVerifyEmail<TData = Awaited<ReturnType<typeof getAuthVerifyEmail>>, TError = ProblemDetails | HttpValidationProblemDetails>(
- params: GetAuthVerifyEmailParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAuthVerifyEmail>>, TError, TData>> & Pick<
+export function useVerifyEmail<TData = Awaited<ReturnType<typeof verifyEmail>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+ params: VerifyEmailParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof verifyEmail>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getAuthVerifyEmail>>,
+          Awaited<ReturnType<typeof verifyEmail>>,
           TError,
-          Awaited<ReturnType<typeof getAuthVerifyEmail>>
+          Awaited<ReturnType<typeof verifyEmail>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetAuthVerifyEmail<TData = Awaited<ReturnType<typeof getAuthVerifyEmail>>, TError = ProblemDetails | HttpValidationProblemDetails>(
- params: GetAuthVerifyEmailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAuthVerifyEmail>>, TError, TData>> & Pick<
+export function useVerifyEmail<TData = Awaited<ReturnType<typeof verifyEmail>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+ params: VerifyEmailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof verifyEmail>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getAuthVerifyEmail>>,
+          Awaited<ReturnType<typeof verifyEmail>>,
           TError,
-          Awaited<ReturnType<typeof getAuthVerifyEmail>>
+          Awaited<ReturnType<typeof verifyEmail>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetAuthVerifyEmail<TData = Awaited<ReturnType<typeof getAuthVerifyEmail>>, TError = ProblemDetails | HttpValidationProblemDetails>(
- params: GetAuthVerifyEmailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAuthVerifyEmail>>, TError, TData>>, }
+export function useVerifyEmail<TData = Awaited<ReturnType<typeof verifyEmail>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+ params: VerifyEmailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof verifyEmail>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetAuthVerifyEmail<TData = Awaited<ReturnType<typeof getAuthVerifyEmail>>, TError = ProblemDetails | HttpValidationProblemDetails>(
- params: GetAuthVerifyEmailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAuthVerifyEmail>>, TError, TData>>, }
+export function useVerifyEmail<TData = Awaited<ReturnType<typeof verifyEmail>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+ params: VerifyEmailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof verifyEmail>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetAuthVerifyEmailQueryOptions(params,options)
+  const queryOptions = getVerifyEmailQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -186,40 +188,40 @@ export function useGetAuthVerifyEmail<TData = Awaited<ReturnType<typeof getAuthV
 
 
 
-export const postAuthLogin = (
+export const login = (
     loginRequest: LoginRequest,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<AuthTokenResult>(
-      {url: `/auth/login`, method: 'POST',
+      {url: `/api/auth/login`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: loginRequest, signal
     },
-      );
+      options);
     }
   
 
 
-export const getPostAuthLoginMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthLogin>>, TError,{data: LoginRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postAuthLogin>>, TError,{data: LoginRequest}, TContext> => {
+export const getLoginMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: LoginRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: LoginRequest}, TContext> => {
 
-const mutationKey = ['postAuthLogin'];
-const {mutation: mutationOptions} = options ?
+const mutationKey = ['login'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthLogin>>, {data: LoginRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof login>>, {data: LoginRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  postAuthLogin(data,)
+          return  login(data,requestOptions)
         }
 
         
@@ -227,57 +229,57 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PostAuthLoginMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthLogin>>>
-    export type PostAuthLoginMutationBody = LoginRequest
-    export type PostAuthLoginMutationError = ProblemDetails | HttpValidationProblemDetails
+    export type LoginMutationResult = NonNullable<Awaited<ReturnType<typeof login>>>
+    export type LoginMutationBody = LoginRequest
+    export type LoginMutationError = ProblemDetails | HttpValidationProblemDetails
 
-    export const usePostAuthLogin = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthLogin>>, TError,{data: LoginRequest}, TContext>, }
+    export const useLogin = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: LoginRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postAuthLogin>>,
+        Awaited<ReturnType<typeof login>>,
         TError,
         {data: LoginRequest},
         TContext
       > => {
 
-      const mutationOptions = getPostAuthLoginMutationOptions(options);
+      const mutationOptions = getLoginMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const postAuthRefreshToken = (
+    export const refreshToken = (
     refreshTokenRequest: RefreshTokenRequest,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<AuthTokenResult>(
-      {url: `/auth/refresh-token`, method: 'POST',
+      {url: `/api/auth/refresh-token`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: refreshTokenRequest, signal
     },
-      );
+      options);
     }
   
 
 
-export const getPostAuthRefreshTokenMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthRefreshToken>>, TError,{data: RefreshTokenRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postAuthRefreshToken>>, TError,{data: RefreshTokenRequest}, TContext> => {
+export const getRefreshTokenMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshToken>>, TError,{data: RefreshTokenRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof refreshToken>>, TError,{data: RefreshTokenRequest}, TContext> => {
 
-const mutationKey = ['postAuthRefreshToken'];
-const {mutation: mutationOptions} = options ?
+const mutationKey = ['refreshToken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthRefreshToken>>, {data: RefreshTokenRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refreshToken>>, {data: RefreshTokenRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  postAuthRefreshToken(data,)
+          return  refreshToken(data,requestOptions)
         }
 
         
@@ -285,57 +287,57 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PostAuthRefreshTokenMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthRefreshToken>>>
-    export type PostAuthRefreshTokenMutationBody = RefreshTokenRequest
-    export type PostAuthRefreshTokenMutationError = ProblemDetails | HttpValidationProblemDetails
+    export type RefreshTokenMutationResult = NonNullable<Awaited<ReturnType<typeof refreshToken>>>
+    export type RefreshTokenMutationBody = RefreshTokenRequest
+    export type RefreshTokenMutationError = ProblemDetails | HttpValidationProblemDetails
 
-    export const usePostAuthRefreshToken = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthRefreshToken>>, TError,{data: RefreshTokenRequest}, TContext>, }
+    export const useRefreshToken = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshToken>>, TError,{data: RefreshTokenRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postAuthRefreshToken>>,
+        Awaited<ReturnType<typeof refreshToken>>,
         TError,
         {data: RefreshTokenRequest},
         TContext
       > => {
 
-      const mutationOptions = getPostAuthRefreshTokenMutationOptions(options);
+      const mutationOptions = getRefreshTokenMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const postAuthForgotPassword = (
+    export const forgotPassword = (
     forgotPasswordRequest: ForgotPasswordRequest,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<void>(
-      {url: `/auth/forgot-password`, method: 'POST',
+      {url: `/api/auth/forgot-password`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: forgotPasswordRequest, signal
     },
-      );
+      options);
     }
   
 
 
-export const getPostAuthForgotPasswordMutationOptions = <TError = HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthForgotPassword>>, TError,{data: ForgotPasswordRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postAuthForgotPassword>>, TError,{data: ForgotPasswordRequest}, TContext> => {
+export const getForgotPasswordMutationOptions = <TError = HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof forgotPassword>>, TError,{data: ForgotPasswordRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof forgotPassword>>, TError,{data: ForgotPasswordRequest}, TContext> => {
 
-const mutationKey = ['postAuthForgotPassword'];
-const {mutation: mutationOptions} = options ?
+const mutationKey = ['forgotPassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthForgotPassword>>, {data: ForgotPasswordRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof forgotPassword>>, {data: ForgotPasswordRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  postAuthForgotPassword(data,)
+          return  forgotPassword(data,requestOptions)
         }
 
         
@@ -343,57 +345,57 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PostAuthForgotPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthForgotPassword>>>
-    export type PostAuthForgotPasswordMutationBody = ForgotPasswordRequest
-    export type PostAuthForgotPasswordMutationError = HttpValidationProblemDetails
+    export type ForgotPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof forgotPassword>>>
+    export type ForgotPasswordMutationBody = ForgotPasswordRequest
+    export type ForgotPasswordMutationError = HttpValidationProblemDetails
 
-    export const usePostAuthForgotPassword = <TError = HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthForgotPassword>>, TError,{data: ForgotPasswordRequest}, TContext>, }
+    export const useForgotPassword = <TError = HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof forgotPassword>>, TError,{data: ForgotPasswordRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postAuthForgotPassword>>,
+        Awaited<ReturnType<typeof forgotPassword>>,
         TError,
         {data: ForgotPasswordRequest},
         TContext
       > => {
 
-      const mutationOptions = getPostAuthForgotPasswordMutationOptions(options);
+      const mutationOptions = getForgotPasswordMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const postAuthResetPassword = (
+    export const resetPassword = (
     resetPasswordRequest: ResetPasswordRequest,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<void>(
-      {url: `/auth/reset-password`, method: 'POST',
+      {url: `/api/auth/reset-password`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: resetPasswordRequest, signal
     },
-      );
+      options);
     }
   
 
 
-export const getPostAuthResetPasswordMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthResetPassword>>, TError,{data: ResetPasswordRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postAuthResetPassword>>, TError,{data: ResetPasswordRequest}, TContext> => {
+export const getResetPasswordMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPassword>>, TError,{data: ResetPasswordRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetPassword>>, TError,{data: ResetPasswordRequest}, TContext> => {
 
-const mutationKey = ['postAuthResetPassword'];
-const {mutation: mutationOptions} = options ?
+const mutationKey = ['resetPassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthResetPassword>>, {data: ResetPasswordRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetPassword>>, {data: ResetPasswordRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  postAuthResetPassword(data,)
+          return  resetPassword(data,requestOptions)
         }
 
         
@@ -401,98 +403,98 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PostAuthResetPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthResetPassword>>>
-    export type PostAuthResetPasswordMutationBody = ResetPasswordRequest
-    export type PostAuthResetPasswordMutationError = ProblemDetails | HttpValidationProblemDetails
+    export type ResetPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof resetPassword>>>
+    export type ResetPasswordMutationBody = ResetPasswordRequest
+    export type ResetPasswordMutationError = ProblemDetails | HttpValidationProblemDetails
 
-    export const usePostAuthResetPassword = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthResetPassword>>, TError,{data: ResetPasswordRequest}, TContext>, }
+    export const useResetPassword = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPassword>>, TError,{data: ResetPasswordRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postAuthResetPassword>>,
+        Awaited<ReturnType<typeof resetPassword>>,
         TError,
         {data: ResetPasswordRequest},
         TContext
       > => {
 
-      const mutationOptions = getPostAuthResetPasswordMutationOptions(options);
+      const mutationOptions = getResetPasswordMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const getAuthMe = (
+    export const getMe = (
     
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<MeDto>(
-      {url: `/auth/me`, method: 'GET', signal
+      {url: `/api/auth/me`, method: 'GET', signal
     },
-      );
+      options);
     }
   
 
 
 
-export const getGetAuthMeQueryKey = () => {
+export const getGetMeQueryKey = () => {
     return [
-    `/auth/me`
+    `/api/auth/me`
     ] as const;
     }
 
     
-export const getGetAuthMeQueryOptions = <TData = Awaited<ReturnType<typeof getAuthMe>>, TError = ProblemDetails>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAuthMe>>, TError, TData>>, }
+export const getGetMeQueryOptions = <TData = Awaited<ReturnType<typeof getMe>>, TError = ProblemDetails>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetAuthMeQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetMeQueryKey();
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuthMe>>> = ({ signal }) => getAuthMe(signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMe>>> = ({ signal }) => getMe(requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuthMe>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetAuthMeQueryResult = NonNullable<Awaited<ReturnType<typeof getAuthMe>>>
-export type GetAuthMeQueryError = ProblemDetails
+export type GetMeQueryResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
+export type GetMeQueryError = ProblemDetails
 
 
-export function useGetAuthMe<TData = Awaited<ReturnType<typeof getAuthMe>>, TError = ProblemDetails>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAuthMe>>, TError, TData>> & Pick<
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ProblemDetails>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getAuthMe>>,
+          Awaited<ReturnType<typeof getMe>>,
           TError,
-          Awaited<ReturnType<typeof getAuthMe>>
+          Awaited<ReturnType<typeof getMe>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetAuthMe<TData = Awaited<ReturnType<typeof getAuthMe>>, TError = ProblemDetails>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAuthMe>>, TError, TData>> & Pick<
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ProblemDetails>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getAuthMe>>,
+          Awaited<ReturnType<typeof getMe>>,
           TError,
-          Awaited<ReturnType<typeof getAuthMe>>
+          Awaited<ReturnType<typeof getMe>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetAuthMe<TData = Awaited<ReturnType<typeof getAuthMe>>, TError = ProblemDetails>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAuthMe>>, TError, TData>>, }
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ProblemDetails>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetAuthMe<TData = Awaited<ReturnType<typeof getAuthMe>>, TError = ProblemDetails>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAuthMe>>, TError, TData>>, }
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ProblemDetails>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetAuthMeQueryOptions(options)
+  const queryOptions = getGetMeQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -504,40 +506,40 @@ export function useGetAuthMe<TData = Awaited<ReturnType<typeof getAuthMe>>, TErr
 
 
 
-export const postAuthMeChangePassword = (
+export const changePassword = (
     changePasswordRequest: ChangePasswordRequest,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<void>(
-      {url: `/auth/me/change-password`, method: 'POST',
+      {url: `/api/auth/me/change-password`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: changePasswordRequest, signal
     },
-      );
+      options);
     }
   
 
 
-export const getPostAuthMeChangePasswordMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthMeChangePassword>>, TError,{data: ChangePasswordRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postAuthMeChangePassword>>, TError,{data: ChangePasswordRequest}, TContext> => {
+export const getChangePasswordMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,{data: ChangePasswordRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,{data: ChangePasswordRequest}, TContext> => {
 
-const mutationKey = ['postAuthMeChangePassword'];
-const {mutation: mutationOptions} = options ?
+const mutationKey = ['changePassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthMeChangePassword>>, {data: ChangePasswordRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changePassword>>, {data: ChangePasswordRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  postAuthMeChangePassword(data,)
+          return  changePassword(data,requestOptions)
         }
 
         
@@ -545,20 +547,20 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PostAuthMeChangePasswordMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthMeChangePassword>>>
-    export type PostAuthMeChangePasswordMutationBody = ChangePasswordRequest
-    export type PostAuthMeChangePasswordMutationError = ProblemDetails | HttpValidationProblemDetails
+    export type ChangePasswordMutationResult = NonNullable<Awaited<ReturnType<typeof changePassword>>>
+    export type ChangePasswordMutationBody = ChangePasswordRequest
+    export type ChangePasswordMutationError = ProblemDetails | HttpValidationProblemDetails
 
-    export const usePostAuthMeChangePassword = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthMeChangePassword>>, TError,{data: ChangePasswordRequest}, TContext>, }
+    export const useChangePassword = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,{data: ChangePasswordRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postAuthMeChangePassword>>,
+        Awaited<ReturnType<typeof changePassword>>,
         TError,
         {data: ChangePasswordRequest},
         TContext
       > => {
 
-      const mutationOptions = getPostAuthMeChangePasswordMutationOptions(options);
+      const mutationOptions = getChangePasswordMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

@@ -5,101 +5,12 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/shops/{shopId}/logo": {
-      "put": {
-        "tags": [
-          "Media"
-        ],
-        "parameters": [
-          {
-            "name": "shopId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/UploadShopLogoForm"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ShopLogoDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "Unsupported Media Type",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "Payload Too Large",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Entity",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/shops/{shopId}/media/slot-uploads": {
+    "/api/shops/{shopId}/media/slot-uploads": {
       "post": {
         "tags": [
           "Media"
         ],
+        "operationId": "uploadToSlot",
         "parameters": [
           {
             "name": "shopId",
@@ -185,11 +96,12 @@
         }
       }
     },
-    "/shops/{shopId}/media/library": {
+    "/api/shops/{shopId}/media/library": {
       "post": {
         "tags": [
           "Media"
         ],
+        "operationId": "uploadToLibrary",
         "parameters": [
           {
             "name": "shopId",
@@ -278,6 +190,7 @@
         "tags": [
           "Media"
         ],
+        "operationId": "listLibrary",
         "parameters": [
           {
             "name": "shopId",
@@ -351,11 +264,12 @@
         }
       }
     },
-    "/shops/{shopId}/media/library/{assetId}/clones": {
+    "/api/shops/{shopId}/media/library/{assetId}/clones": {
       "post": {
         "tags": [
           "Media"
         ],
+        "operationId": "cloneFromLibrary",
         "parameters": [
           {
             "name": "shopId",
@@ -440,11 +354,12 @@
         }
       }
     },
-    "/shops/{shopId}/media/library/{assetId}/references": {
+    "/api/shops/{shopId}/media/library/{assetId}/references": {
       "get": {
         "tags": [
           "Media"
         ],
+        "operationId": "getAssetReferences",
         "parameters": [
           {
             "name": "shopId",
@@ -499,11 +414,12 @@
         }
       }
     },
-    "/shops/{shopId}/media/library/{assetId}/derivatives": {
+    "/api/shops/{shopId}/media/library/{assetId}/derivatives": {
       "get": {
         "tags": [
           "Media"
         ],
+        "operationId": "getDerivatives",
         "parameters": [
           {
             "name": "shopId",
@@ -578,11 +494,12 @@
         }
       }
     },
-    "/shops/{shopId}/media/library/{assetId}": {
+    "/api/shops/{shopId}/media/library/{assetId}": {
       "delete": {
         "tags": [
           "Media"
         ],
+        "operationId": "deleteFromLibrary",
         "parameters": [
           {
             "name": "shopId",
@@ -640,11 +557,12 @@
         }
       }
     },
-    "/shops/{shopId}/media/assets": {
+    "/api/shops/{shopId}/media/assets": {
       "get": {
         "tags": [
           "Media"
         ],
+        "operationId": "getAssetsByIds",
         "parameters": [
           {
             "name": "shopId",
@@ -714,11 +632,12 @@
         }
       }
     },
-    "/shops/{shopId}/media/usage": {
+    "/api/shops/{shopId}/media/usage": {
       "get": {
         "tags": [
           "Media"
         ],
+        "operationId": "getMediaUsage",
         "parameters": [
           {
             "name": "shopId",
@@ -757,6 +676,97 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shops/{shopId}/logo": {
+      "put": {
+        "tags": [
+          "Media"
+        ],
+        "operationId": "uploadShopLogo",
+        "parameters": [
+          {
+            "name": "shopId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadShopLogoForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopLogoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
                 }
               }
             }

@@ -1,5 +1,7 @@
 # Shop — vsite
 
+> 📌 **Mọi đường dẫn endpoint trong tài liệu này tương đối với prefix `/api`** (Quyết định #91, REFACTOR-API-001) — vd. `/shops/{shopId}` nghĩa là `/api/shops/{shopId}`. `/media/*` (file ảnh) KHÔNG có prefix.
+
 ## Trạng thái (SHOP-001)
 
 Entity `Shop` đầy đủ (04 §2.1) + 4 endpoint (`tạo/sửa/xem/liệt kê shop của mình`) + cơ chế resolve

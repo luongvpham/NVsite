@@ -22,10 +22,10 @@ import type {
 
 import type {
   CloneRequest,
-  GetShopsShopIdMediaAssetsParams,
-  GetShopsShopIdMediaLibraryAssetIdDerivativesParams,
-  GetShopsShopIdMediaLibraryParams,
+  GetAssetsByIdsParams,
+  GetDerivativesParams,
   HttpValidationProblemDetails,
+  ListLibraryParams,
   MediaAssetDto,
   MediaReferencesDto,
   MediaUsageDto,
@@ -41,74 +41,14 @@ import type {
 import { customInstance } from '../../../mutator/axios-instance';
 
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
-export const putShopsShopIdLogo = (
-    shopId: string,
-    uploadShopLogoForm: UploadShopLogoForm,
- ) => {
-      
-      const formData = new FormData();
-if(uploadShopLogoForm.file !== undefined) {
- formData.append(`file`, uploadShopLogoForm.file)
- }
 
-      return customInstance<ShopLogoDto>(
-      {url: `/shops/${shopId}/logo`, method: 'PUT',
-      headers: {'Content-Type': 'multipart/form-data', },
-       data: formData
-    },
-      );
-    }
-  
-
-
-export const getPutShopsShopIdLogoMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putShopsShopIdLogo>>, TError,{shopId: string;data: UploadShopLogoForm}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof putShopsShopIdLogo>>, TError,{shopId: string;data: UploadShopLogoForm}, TContext> => {
-
-const mutationKey = ['putShopsShopIdLogo'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putShopsShopIdLogo>>, {shopId: string;data: UploadShopLogoForm}> = (props) => {
-          const {shopId,data} = props ?? {};
-
-          return  putShopsShopIdLogo(shopId,data,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type PutShopsShopIdLogoMutationResult = NonNullable<Awaited<ReturnType<typeof putShopsShopIdLogo>>>
-    export type PutShopsShopIdLogoMutationBody = UploadShopLogoForm
-    export type PutShopsShopIdLogoMutationError = ProblemDetails | HttpValidationProblemDetails
-
-    export const usePutShopsShopIdLogo = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putShopsShopIdLogo>>, TError,{shopId: string;data: UploadShopLogoForm}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof putShopsShopIdLogo>>,
-        TError,
-        {shopId: string;data: UploadShopLogoForm},
-        TContext
-      > => {
-
-      const mutationOptions = getPutShopsShopIdLogoMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    export const postShopsShopIdMediaSlotUploads = (
+export const uploadToSlot = (
     shopId: string,
     uploadToSlotForm: UploadToSlotForm,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       const formData = new FormData();
@@ -132,33 +72,33 @@ if(uploadToSlotForm.altText !== undefined && uploadToSlotForm.altText !== null) 
  }
 
       return customInstance<SlotUploadResultDto>(
-      {url: `/shops/${shopId}/media/slot-uploads`, method: 'POST',
+      {url: `/api/shops/${shopId}/media/slot-uploads`, method: 'POST',
       headers: {'Content-Type': 'multipart/form-data', },
        data: formData, signal
     },
-      );
+      options);
     }
   
 
 
-export const getPostShopsShopIdMediaSlotUploadsMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postShopsShopIdMediaSlotUploads>>, TError,{shopId: string;data: UploadToSlotForm}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postShopsShopIdMediaSlotUploads>>, TError,{shopId: string;data: UploadToSlotForm}, TContext> => {
+export const getUploadToSlotMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadToSlot>>, TError,{shopId: string;data: UploadToSlotForm}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadToSlot>>, TError,{shopId: string;data: UploadToSlotForm}, TContext> => {
 
-const mutationKey = ['postShopsShopIdMediaSlotUploads'];
-const {mutation: mutationOptions} = options ?
+const mutationKey = ['uploadToSlot'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postShopsShopIdMediaSlotUploads>>, {shopId: string;data: UploadToSlotForm}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadToSlot>>, {shopId: string;data: UploadToSlotForm}> = (props) => {
           const {shopId,data} = props ?? {};
 
-          return  postShopsShopIdMediaSlotUploads(shopId,data,)
+          return  uploadToSlot(shopId,data,requestOptions)
         }
 
         
@@ -166,27 +106,27 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PostShopsShopIdMediaSlotUploadsMutationResult = NonNullable<Awaited<ReturnType<typeof postShopsShopIdMediaSlotUploads>>>
-    export type PostShopsShopIdMediaSlotUploadsMutationBody = UploadToSlotForm
-    export type PostShopsShopIdMediaSlotUploadsMutationError = ProblemDetails | HttpValidationProblemDetails
+    export type UploadToSlotMutationResult = NonNullable<Awaited<ReturnType<typeof uploadToSlot>>>
+    export type UploadToSlotMutationBody = UploadToSlotForm
+    export type UploadToSlotMutationError = ProblemDetails | HttpValidationProblemDetails
 
-    export const usePostShopsShopIdMediaSlotUploads = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postShopsShopIdMediaSlotUploads>>, TError,{shopId: string;data: UploadToSlotForm}, TContext>, }
+    export const useUploadToSlot = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadToSlot>>, TError,{shopId: string;data: UploadToSlotForm}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postShopsShopIdMediaSlotUploads>>,
+        Awaited<ReturnType<typeof uploadToSlot>>,
         TError,
         {shopId: string;data: UploadToSlotForm},
         TContext
       > => {
 
-      const mutationOptions = getPostShopsShopIdMediaSlotUploadsMutationOptions(options);
+      const mutationOptions = getUploadToSlotMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const postShopsShopIdMediaLibrary = (
+    export const uploadToLibrary = (
     shopId: string,
     uploadToLibraryForm: UploadToLibraryForm,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       const formData = new FormData();
@@ -201,33 +141,33 @@ if(uploadToLibraryForm.folder !== undefined && uploadToLibraryForm.folder !== nu
  }
 
       return customInstance<MediaAssetDto>(
-      {url: `/shops/${shopId}/media/library`, method: 'POST',
+      {url: `/api/shops/${shopId}/media/library`, method: 'POST',
       headers: {'Content-Type': 'multipart/form-data', },
        data: formData, signal
     },
-      );
+      options);
     }
   
 
 
-export const getPostShopsShopIdMediaLibraryMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postShopsShopIdMediaLibrary>>, TError,{shopId: string;data: UploadToLibraryForm}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postShopsShopIdMediaLibrary>>, TError,{shopId: string;data: UploadToLibraryForm}, TContext> => {
+export const getUploadToLibraryMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadToLibrary>>, TError,{shopId: string;data: UploadToLibraryForm}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadToLibrary>>, TError,{shopId: string;data: UploadToLibraryForm}, TContext> => {
 
-const mutationKey = ['postShopsShopIdMediaLibrary'];
-const {mutation: mutationOptions} = options ?
+const mutationKey = ['uploadToLibrary'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postShopsShopIdMediaLibrary>>, {shopId: string;data: UploadToLibraryForm}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadToLibrary>>, {shopId: string;data: UploadToLibraryForm}> = (props) => {
           const {shopId,data} = props ?? {};
 
-          return  postShopsShopIdMediaLibrary(shopId,data,)
+          return  uploadToLibrary(shopId,data,requestOptions)
         }
 
         
@@ -235,106 +175,106 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PostShopsShopIdMediaLibraryMutationResult = NonNullable<Awaited<ReturnType<typeof postShopsShopIdMediaLibrary>>>
-    export type PostShopsShopIdMediaLibraryMutationBody = UploadToLibraryForm
-    export type PostShopsShopIdMediaLibraryMutationError = ProblemDetails | HttpValidationProblemDetails
+    export type UploadToLibraryMutationResult = NonNullable<Awaited<ReturnType<typeof uploadToLibrary>>>
+    export type UploadToLibraryMutationBody = UploadToLibraryForm
+    export type UploadToLibraryMutationError = ProblemDetails | HttpValidationProblemDetails
 
-    export const usePostShopsShopIdMediaLibrary = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postShopsShopIdMediaLibrary>>, TError,{shopId: string;data: UploadToLibraryForm}, TContext>, }
+    export const useUploadToLibrary = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadToLibrary>>, TError,{shopId: string;data: UploadToLibraryForm}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postShopsShopIdMediaLibrary>>,
+        Awaited<ReturnType<typeof uploadToLibrary>>,
         TError,
         {shopId: string;data: UploadToLibraryForm},
         TContext
       > => {
 
-      const mutationOptions = getPostShopsShopIdMediaLibraryMutationOptions(options);
+      const mutationOptions = getUploadToLibraryMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const getShopsShopIdMediaLibrary = (
+    export const listLibrary = (
     shopId: string,
-    params?: GetShopsShopIdMediaLibraryParams,
- signal?: AbortSignal
+    params?: ListLibraryParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<PagedResultOfMediaAssetDto>(
-      {url: `/shops/${shopId}/media/library`, method: 'GET',
+      {url: `/api/shops/${shopId}/media/library`, method: 'GET',
         params, signal
     },
-      );
+      options);
     }
   
 
 
 
-export const getGetShopsShopIdMediaLibraryQueryKey = (shopId?: string,
-    params?: GetShopsShopIdMediaLibraryParams,) => {
+export const getListLibraryQueryKey = (shopId?: string,
+    params?: ListLibraryParams,) => {
     return [
-    `/shops/${shopId}/media/library`, ...(params ? [params]: [])
+    `/api/shops/${shopId}/media/library`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getGetShopsShopIdMediaLibraryQueryOptions = <TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>, TError = ProblemDetails | HttpValidationProblemDetails>(shopId: string,
-    params?: GetShopsShopIdMediaLibraryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>, TError, TData>>, }
+export const getListLibraryQueryOptions = <TData = Awaited<ReturnType<typeof listLibrary>>, TError = ProblemDetails | HttpValidationProblemDetails>(shopId: string,
+    params?: ListLibraryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLibrary>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetShopsShopIdMediaLibraryQueryKey(shopId,params);
+  const queryKey =  queryOptions?.queryKey ?? getListLibraryQueryKey(shopId,params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>> = ({ signal }) => getShopsShopIdMediaLibrary(shopId,params, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLibrary>>> = ({ signal }) => listLibrary(shopId,params, requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, enabled: !!(shopId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(shopId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLibrary>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetShopsShopIdMediaLibraryQueryResult = NonNullable<Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>>
-export type GetShopsShopIdMediaLibraryQueryError = ProblemDetails | HttpValidationProblemDetails
+export type ListLibraryQueryResult = NonNullable<Awaited<ReturnType<typeof listLibrary>>>
+export type ListLibraryQueryError = ProblemDetails | HttpValidationProblemDetails
 
 
-export function useGetShopsShopIdMediaLibrary<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+export function useListLibrary<TData = Awaited<ReturnType<typeof listLibrary>>, TError = ProblemDetails | HttpValidationProblemDetails>(
  shopId: string,
-    params: undefined |  GetShopsShopIdMediaLibraryParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>, TError, TData>> & Pick<
+    params: undefined |  ListLibraryParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLibrary>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>,
+          Awaited<ReturnType<typeof listLibrary>>,
           TError,
-          Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>
+          Awaited<ReturnType<typeof listLibrary>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShopsShopIdMediaLibrary<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+export function useListLibrary<TData = Awaited<ReturnType<typeof listLibrary>>, TError = ProblemDetails | HttpValidationProblemDetails>(
  shopId: string,
-    params?: GetShopsShopIdMediaLibraryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>, TError, TData>> & Pick<
+    params?: ListLibraryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLibrary>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>,
+          Awaited<ReturnType<typeof listLibrary>>,
           TError,
-          Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>
+          Awaited<ReturnType<typeof listLibrary>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShopsShopIdMediaLibrary<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+export function useListLibrary<TData = Awaited<ReturnType<typeof listLibrary>>, TError = ProblemDetails | HttpValidationProblemDetails>(
  shopId: string,
-    params?: GetShopsShopIdMediaLibraryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>, TError, TData>>, }
+    params?: ListLibraryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLibrary>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetShopsShopIdMediaLibrary<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+export function useListLibrary<TData = Awaited<ReturnType<typeof listLibrary>>, TError = ProblemDetails | HttpValidationProblemDetails>(
  shopId: string,
-    params?: GetShopsShopIdMediaLibraryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibrary>>, TError, TData>>, }
+    params?: ListLibraryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLibrary>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetShopsShopIdMediaLibraryQueryOptions(shopId,params,options)
+  const queryOptions = getListLibraryQueryOptions(shopId,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -346,42 +286,42 @@ export function useGetShopsShopIdMediaLibrary<TData = Awaited<ReturnType<typeof 
 
 
 
-export const postShopsShopIdMediaLibraryAssetIdClones = (
+export const cloneFromLibrary = (
     shopId: string,
     assetId: string,
     cloneRequest: CloneRequest,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<MediaAssetDto>(
-      {url: `/shops/${shopId}/media/library/${assetId}/clones`, method: 'POST',
+      {url: `/api/shops/${shopId}/media/library/${assetId}/clones`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: cloneRequest, signal
     },
-      );
+      options);
     }
   
 
 
-export const getPostShopsShopIdMediaLibraryAssetIdClonesMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postShopsShopIdMediaLibraryAssetIdClones>>, TError,{shopId: string;assetId: string;data: CloneRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postShopsShopIdMediaLibraryAssetIdClones>>, TError,{shopId: string;assetId: string;data: CloneRequest}, TContext> => {
+export const getCloneFromLibraryMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cloneFromLibrary>>, TError,{shopId: string;assetId: string;data: CloneRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof cloneFromLibrary>>, TError,{shopId: string;assetId: string;data: CloneRequest}, TContext> => {
 
-const mutationKey = ['postShopsShopIdMediaLibraryAssetIdClones'];
-const {mutation: mutationOptions} = options ?
+const mutationKey = ['cloneFromLibrary'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postShopsShopIdMediaLibraryAssetIdClones>>, {shopId: string;assetId: string;data: CloneRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cloneFromLibrary>>, {shopId: string;assetId: string;data: CloneRequest}> = (props) => {
           const {shopId,assetId,data} = props ?? {};
 
-          return  postShopsShopIdMediaLibraryAssetIdClones(shopId,assetId,data,)
+          return  cloneFromLibrary(shopId,assetId,data,requestOptions)
         }
 
         
@@ -389,105 +329,105 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PostShopsShopIdMediaLibraryAssetIdClonesMutationResult = NonNullable<Awaited<ReturnType<typeof postShopsShopIdMediaLibraryAssetIdClones>>>
-    export type PostShopsShopIdMediaLibraryAssetIdClonesMutationBody = CloneRequest
-    export type PostShopsShopIdMediaLibraryAssetIdClonesMutationError = ProblemDetails | HttpValidationProblemDetails
+    export type CloneFromLibraryMutationResult = NonNullable<Awaited<ReturnType<typeof cloneFromLibrary>>>
+    export type CloneFromLibraryMutationBody = CloneRequest
+    export type CloneFromLibraryMutationError = ProblemDetails | HttpValidationProblemDetails
 
-    export const usePostShopsShopIdMediaLibraryAssetIdClones = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postShopsShopIdMediaLibraryAssetIdClones>>, TError,{shopId: string;assetId: string;data: CloneRequest}, TContext>, }
+    export const useCloneFromLibrary = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cloneFromLibrary>>, TError,{shopId: string;assetId: string;data: CloneRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postShopsShopIdMediaLibraryAssetIdClones>>,
+        Awaited<ReturnType<typeof cloneFromLibrary>>,
         TError,
         {shopId: string;assetId: string;data: CloneRequest},
         TContext
       > => {
 
-      const mutationOptions = getPostShopsShopIdMediaLibraryAssetIdClonesMutationOptions(options);
+      const mutationOptions = getCloneFromLibraryMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const getShopsShopIdMediaLibraryAssetIdReferences = (
+    export const getAssetReferences = (
     shopId: string,
     assetId: string,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<MediaReferencesDto>(
-      {url: `/shops/${shopId}/media/library/${assetId}/references`, method: 'GET', signal
+      {url: `/api/shops/${shopId}/media/library/${assetId}/references`, method: 'GET', signal
     },
-      );
+      options);
     }
   
 
 
 
-export const getGetShopsShopIdMediaLibraryAssetIdReferencesQueryKey = (shopId?: string,
+export const getGetAssetReferencesQueryKey = (shopId?: string,
     assetId?: string,) => {
     return [
-    `/shops/${shopId}/media/library/${assetId}/references`
+    `/api/shops/${shopId}/media/library/${assetId}/references`
     ] as const;
     }
 
     
-export const getGetShopsShopIdMediaLibraryAssetIdReferencesQueryOptions = <TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>, TError = ProblemDetails>(shopId: string,
-    assetId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>, TError, TData>>, }
+export const getGetAssetReferencesQueryOptions = <TData = Awaited<ReturnType<typeof getAssetReferences>>, TError = ProblemDetails>(shopId: string,
+    assetId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssetReferences>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetShopsShopIdMediaLibraryAssetIdReferencesQueryKey(shopId,assetId);
+  const queryKey =  queryOptions?.queryKey ?? getGetAssetReferencesQueryKey(shopId,assetId);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>> = ({ signal }) => getShopsShopIdMediaLibraryAssetIdReferences(shopId,assetId, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAssetReferences>>> = ({ signal }) => getAssetReferences(shopId,assetId, requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, enabled: !!(shopId && assetId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(shopId && assetId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAssetReferences>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetShopsShopIdMediaLibraryAssetIdReferencesQueryResult = NonNullable<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>>
-export type GetShopsShopIdMediaLibraryAssetIdReferencesQueryError = ProblemDetails
+export type GetAssetReferencesQueryResult = NonNullable<Awaited<ReturnType<typeof getAssetReferences>>>
+export type GetAssetReferencesQueryError = ProblemDetails
 
 
-export function useGetShopsShopIdMediaLibraryAssetIdReferences<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>, TError = ProblemDetails>(
+export function useGetAssetReferences<TData = Awaited<ReturnType<typeof getAssetReferences>>, TError = ProblemDetails>(
  shopId: string,
-    assetId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>, TError, TData>> & Pick<
+    assetId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssetReferences>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>,
+          Awaited<ReturnType<typeof getAssetReferences>>,
           TError,
-          Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>
+          Awaited<ReturnType<typeof getAssetReferences>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShopsShopIdMediaLibraryAssetIdReferences<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>, TError = ProblemDetails>(
+export function useGetAssetReferences<TData = Awaited<ReturnType<typeof getAssetReferences>>, TError = ProblemDetails>(
  shopId: string,
-    assetId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>, TError, TData>> & Pick<
+    assetId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssetReferences>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>,
+          Awaited<ReturnType<typeof getAssetReferences>>,
           TError,
-          Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>
+          Awaited<ReturnType<typeof getAssetReferences>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShopsShopIdMediaLibraryAssetIdReferences<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>, TError = ProblemDetails>(
+export function useGetAssetReferences<TData = Awaited<ReturnType<typeof getAssetReferences>>, TError = ProblemDetails>(
  shopId: string,
-    assetId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>, TError, TData>>, }
+    assetId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssetReferences>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetShopsShopIdMediaLibraryAssetIdReferences<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>, TError = ProblemDetails>(
+export function useGetAssetReferences<TData = Awaited<ReturnType<typeof getAssetReferences>>, TError = ProblemDetails>(
  shopId: string,
-    assetId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdReferences>>, TError, TData>>, }
+    assetId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssetReferences>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetShopsShopIdMediaLibraryAssetIdReferencesQueryOptions(shopId,assetId,options)
+  const queryOptions = getGetAssetReferencesQueryOptions(shopId,assetId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -499,96 +439,96 @@ export function useGetShopsShopIdMediaLibraryAssetIdReferences<TData = Awaited<R
 
 
 
-export const getShopsShopIdMediaLibraryAssetIdDerivatives = (
+export const getDerivatives = (
     shopId: string,
     assetId: string,
-    params?: GetShopsShopIdMediaLibraryAssetIdDerivativesParams,
- signal?: AbortSignal
+    params?: GetDerivativesParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<MediaAssetDto[]>(
-      {url: `/shops/${shopId}/media/library/${assetId}/derivatives`, method: 'GET',
+      {url: `/api/shops/${shopId}/media/library/${assetId}/derivatives`, method: 'GET',
         params, signal
     },
-      );
+      options);
     }
   
 
 
 
-export const getGetShopsShopIdMediaLibraryAssetIdDerivativesQueryKey = (shopId?: string,
+export const getGetDerivativesQueryKey = (shopId?: string,
     assetId?: string,
-    params?: GetShopsShopIdMediaLibraryAssetIdDerivativesParams,) => {
+    params?: GetDerivativesParams,) => {
     return [
-    `/shops/${shopId}/media/library/${assetId}/derivatives`, ...(params ? [params]: [])
+    `/api/shops/${shopId}/media/library/${assetId}/derivatives`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getGetShopsShopIdMediaLibraryAssetIdDerivativesQueryOptions = <TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(shopId: string,
+export const getGetDerivativesQueryOptions = <TData = Awaited<ReturnType<typeof getDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(shopId: string,
     assetId: string,
-    params?: GetShopsShopIdMediaLibraryAssetIdDerivativesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError, TData>>, }
+    params?: GetDerivativesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDerivatives>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetShopsShopIdMediaLibraryAssetIdDerivativesQueryKey(shopId,assetId,params);
+  const queryKey =  queryOptions?.queryKey ?? getGetDerivativesQueryKey(shopId,assetId,params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>> = ({ signal }) => getShopsShopIdMediaLibraryAssetIdDerivatives(shopId,assetId,params, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDerivatives>>> = ({ signal }) => getDerivatives(shopId,assetId,params, requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, enabled: !!(shopId && assetId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(shopId && assetId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDerivatives>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetShopsShopIdMediaLibraryAssetIdDerivativesQueryResult = NonNullable<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>>
-export type GetShopsShopIdMediaLibraryAssetIdDerivativesQueryError = ProblemDetails | HttpValidationProblemDetails
+export type GetDerivativesQueryResult = NonNullable<Awaited<ReturnType<typeof getDerivatives>>>
+export type GetDerivativesQueryError = ProblemDetails | HttpValidationProblemDetails
 
 
-export function useGetShopsShopIdMediaLibraryAssetIdDerivatives<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+export function useGetDerivatives<TData = Awaited<ReturnType<typeof getDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(
  shopId: string,
     assetId: string,
-    params: undefined |  GetShopsShopIdMediaLibraryAssetIdDerivativesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError, TData>> & Pick<
+    params: undefined |  GetDerivativesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDerivatives>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>,
+          Awaited<ReturnType<typeof getDerivatives>>,
           TError,
-          Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>
+          Awaited<ReturnType<typeof getDerivatives>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShopsShopIdMediaLibraryAssetIdDerivatives<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+export function useGetDerivatives<TData = Awaited<ReturnType<typeof getDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(
  shopId: string,
     assetId: string,
-    params?: GetShopsShopIdMediaLibraryAssetIdDerivativesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError, TData>> & Pick<
+    params?: GetDerivativesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDerivatives>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>,
+          Awaited<ReturnType<typeof getDerivatives>>,
           TError,
-          Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>
+          Awaited<ReturnType<typeof getDerivatives>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShopsShopIdMediaLibraryAssetIdDerivatives<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+export function useGetDerivatives<TData = Awaited<ReturnType<typeof getDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(
  shopId: string,
     assetId: string,
-    params?: GetShopsShopIdMediaLibraryAssetIdDerivativesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError, TData>>, }
+    params?: GetDerivativesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDerivatives>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetShopsShopIdMediaLibraryAssetIdDerivatives<TData = Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+export function useGetDerivatives<TData = Awaited<ReturnType<typeof getDerivatives>>, TError = ProblemDetails | HttpValidationProblemDetails>(
  shopId: string,
     assetId: string,
-    params?: GetShopsShopIdMediaLibraryAssetIdDerivativesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaLibraryAssetIdDerivatives>>, TError, TData>>, }
+    params?: GetDerivativesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDerivatives>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetShopsShopIdMediaLibraryAssetIdDerivativesQueryOptions(shopId,assetId,params,options)
+  const queryOptions = getGetDerivativesQueryOptions(shopId,assetId,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -600,38 +540,38 @@ export function useGetShopsShopIdMediaLibraryAssetIdDerivatives<TData = Awaited<
 
 
 
-export const deleteShopsShopIdMediaLibraryAssetId = (
+export const deleteFromLibrary = (
     shopId: string,
     assetId: string,
- ) => {
+ options?: SecondParameter<typeof customInstance>,) => {
       
       
       return customInstance<void>(
-      {url: `/shops/${shopId}/media/library/${assetId}`, method: 'DELETE'
+      {url: `/api/shops/${shopId}/media/library/${assetId}`, method: 'DELETE'
     },
-      );
+      options);
     }
   
 
 
-export const getDeleteShopsShopIdMediaLibraryAssetIdMutationOptions = <TError = ProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteShopsShopIdMediaLibraryAssetId>>, TError,{shopId: string;assetId: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteShopsShopIdMediaLibraryAssetId>>, TError,{shopId: string;assetId: string}, TContext> => {
+export const getDeleteFromLibraryMutationOptions = <TError = ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFromLibrary>>, TError,{shopId: string;assetId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteFromLibrary>>, TError,{shopId: string;assetId: string}, TContext> => {
 
-const mutationKey = ['deleteShopsShopIdMediaLibraryAssetId'];
-const {mutation: mutationOptions} = options ?
+const mutationKey = ['deleteFromLibrary'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteShopsShopIdMediaLibraryAssetId>>, {shopId: string;assetId: string}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteFromLibrary>>, {shopId: string;assetId: string}> = (props) => {
           const {shopId,assetId} = props ?? {};
 
-          return  deleteShopsShopIdMediaLibraryAssetId(shopId,assetId,)
+          return  deleteFromLibrary(shopId,assetId,requestOptions)
         }
 
         
@@ -639,106 +579,106 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type DeleteShopsShopIdMediaLibraryAssetIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteShopsShopIdMediaLibraryAssetId>>>
+    export type DeleteFromLibraryMutationResult = NonNullable<Awaited<ReturnType<typeof deleteFromLibrary>>>
     
-    export type DeleteShopsShopIdMediaLibraryAssetIdMutationError = ProblemDetails
+    export type DeleteFromLibraryMutationError = ProblemDetails
 
-    export const useDeleteShopsShopIdMediaLibraryAssetId = <TError = ProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteShopsShopIdMediaLibraryAssetId>>, TError,{shopId: string;assetId: string}, TContext>, }
+    export const useDeleteFromLibrary = <TError = ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFromLibrary>>, TError,{shopId: string;assetId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deleteShopsShopIdMediaLibraryAssetId>>,
+        Awaited<ReturnType<typeof deleteFromLibrary>>,
         TError,
         {shopId: string;assetId: string},
         TContext
       > => {
 
-      const mutationOptions = getDeleteShopsShopIdMediaLibraryAssetIdMutationOptions(options);
+      const mutationOptions = getDeleteFromLibraryMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const getShopsShopIdMediaAssets = (
+    export const getAssetsByIds = (
     shopId: string,
-    params?: GetShopsShopIdMediaAssetsParams,
- signal?: AbortSignal
+    params?: GetAssetsByIdsParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<MediaAssetDto[]>(
-      {url: `/shops/${shopId}/media/assets`, method: 'GET',
+      {url: `/api/shops/${shopId}/media/assets`, method: 'GET',
         params, signal
     },
-      );
+      options);
     }
   
 
 
 
-export const getGetShopsShopIdMediaAssetsQueryKey = (shopId?: string,
-    params?: GetShopsShopIdMediaAssetsParams,) => {
+export const getGetAssetsByIdsQueryKey = (shopId?: string,
+    params?: GetAssetsByIdsParams,) => {
     return [
-    `/shops/${shopId}/media/assets`, ...(params ? [params]: [])
+    `/api/shops/${shopId}/media/assets`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getGetShopsShopIdMediaAssetsQueryOptions = <TData = Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>, TError = ProblemDetails | HttpValidationProblemDetails>(shopId: string,
-    params?: GetShopsShopIdMediaAssetsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>, TError, TData>>, }
+export const getGetAssetsByIdsQueryOptions = <TData = Awaited<ReturnType<typeof getAssetsByIds>>, TError = ProblemDetails | HttpValidationProblemDetails>(shopId: string,
+    params?: GetAssetsByIdsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssetsByIds>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetShopsShopIdMediaAssetsQueryKey(shopId,params);
+  const queryKey =  queryOptions?.queryKey ?? getGetAssetsByIdsQueryKey(shopId,params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>> = ({ signal }) => getShopsShopIdMediaAssets(shopId,params, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAssetsByIds>>> = ({ signal }) => getAssetsByIds(shopId,params, requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, enabled: !!(shopId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(shopId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAssetsByIds>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetShopsShopIdMediaAssetsQueryResult = NonNullable<Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>>
-export type GetShopsShopIdMediaAssetsQueryError = ProblemDetails | HttpValidationProblemDetails
+export type GetAssetsByIdsQueryResult = NonNullable<Awaited<ReturnType<typeof getAssetsByIds>>>
+export type GetAssetsByIdsQueryError = ProblemDetails | HttpValidationProblemDetails
 
 
-export function useGetShopsShopIdMediaAssets<TData = Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+export function useGetAssetsByIds<TData = Awaited<ReturnType<typeof getAssetsByIds>>, TError = ProblemDetails | HttpValidationProblemDetails>(
  shopId: string,
-    params: undefined |  GetShopsShopIdMediaAssetsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>, TError, TData>> & Pick<
+    params: undefined |  GetAssetsByIdsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssetsByIds>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>,
+          Awaited<ReturnType<typeof getAssetsByIds>>,
           TError,
-          Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>
+          Awaited<ReturnType<typeof getAssetsByIds>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShopsShopIdMediaAssets<TData = Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+export function useGetAssetsByIds<TData = Awaited<ReturnType<typeof getAssetsByIds>>, TError = ProblemDetails | HttpValidationProblemDetails>(
  shopId: string,
-    params?: GetShopsShopIdMediaAssetsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>, TError, TData>> & Pick<
+    params?: GetAssetsByIdsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssetsByIds>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>,
+          Awaited<ReturnType<typeof getAssetsByIds>>,
           TError,
-          Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>
+          Awaited<ReturnType<typeof getAssetsByIds>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShopsShopIdMediaAssets<TData = Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+export function useGetAssetsByIds<TData = Awaited<ReturnType<typeof getAssetsByIds>>, TError = ProblemDetails | HttpValidationProblemDetails>(
  shopId: string,
-    params?: GetShopsShopIdMediaAssetsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>, TError, TData>>, }
+    params?: GetAssetsByIdsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssetsByIds>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetShopsShopIdMediaAssets<TData = Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>, TError = ProblemDetails | HttpValidationProblemDetails>(
+export function useGetAssetsByIds<TData = Awaited<ReturnType<typeof getAssetsByIds>>, TError = ProblemDetails | HttpValidationProblemDetails>(
  shopId: string,
-    params?: GetShopsShopIdMediaAssetsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaAssets>>, TError, TData>>, }
+    params?: GetAssetsByIdsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssetsByIds>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetShopsShopIdMediaAssetsQueryOptions(shopId,params,options)
+  const queryOptions = getGetAssetsByIdsQueryOptions(shopId,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -750,81 +690,81 @@ export function useGetShopsShopIdMediaAssets<TData = Awaited<ReturnType<typeof g
 
 
 
-export const getShopsShopIdMediaUsage = (
+export const getMediaUsage = (
     shopId: string,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<MediaUsageDto>(
-      {url: `/shops/${shopId}/media/usage`, method: 'GET', signal
+      {url: `/api/shops/${shopId}/media/usage`, method: 'GET', signal
     },
-      );
+      options);
     }
   
 
 
 
-export const getGetShopsShopIdMediaUsageQueryKey = (shopId?: string,) => {
+export const getGetMediaUsageQueryKey = (shopId?: string,) => {
     return [
-    `/shops/${shopId}/media/usage`
+    `/api/shops/${shopId}/media/usage`
     ] as const;
     }
 
     
-export const getGetShopsShopIdMediaUsageQueryOptions = <TData = Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>, TError = ProblemDetails>(shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>, TError, TData>>, }
+export const getGetMediaUsageQueryOptions = <TData = Awaited<ReturnType<typeof getMediaUsage>>, TError = ProblemDetails>(shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMediaUsage>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetShopsShopIdMediaUsageQueryKey(shopId);
+  const queryKey =  queryOptions?.queryKey ?? getGetMediaUsageQueryKey(shopId);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>> = ({ signal }) => getShopsShopIdMediaUsage(shopId, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMediaUsage>>> = ({ signal }) => getMediaUsage(shopId, requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, enabled: !!(shopId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(shopId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMediaUsage>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetShopsShopIdMediaUsageQueryResult = NonNullable<Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>>
-export type GetShopsShopIdMediaUsageQueryError = ProblemDetails
+export type GetMediaUsageQueryResult = NonNullable<Awaited<ReturnType<typeof getMediaUsage>>>
+export type GetMediaUsageQueryError = ProblemDetails
 
 
-export function useGetShopsShopIdMediaUsage<TData = Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>, TError = ProblemDetails>(
- shopId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>, TError, TData>> & Pick<
+export function useGetMediaUsage<TData = Awaited<ReturnType<typeof getMediaUsage>>, TError = ProblemDetails>(
+ shopId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMediaUsage>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>,
+          Awaited<ReturnType<typeof getMediaUsage>>,
           TError,
-          Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>
+          Awaited<ReturnType<typeof getMediaUsage>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShopsShopIdMediaUsage<TData = Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>, TError = ProblemDetails>(
- shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>, TError, TData>> & Pick<
+export function useGetMediaUsage<TData = Awaited<ReturnType<typeof getMediaUsage>>, TError = ProblemDetails>(
+ shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMediaUsage>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>,
+          Awaited<ReturnType<typeof getMediaUsage>>,
           TError,
-          Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>
+          Awaited<ReturnType<typeof getMediaUsage>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShopsShopIdMediaUsage<TData = Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>, TError = ProblemDetails>(
- shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>, TError, TData>>, }
+export function useGetMediaUsage<TData = Awaited<ReturnType<typeof getMediaUsage>>, TError = ProblemDetails>(
+ shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMediaUsage>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetShopsShopIdMediaUsage<TData = Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>, TError = ProblemDetails>(
- shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopIdMediaUsage>>, TError, TData>>, }
+export function useGetMediaUsage<TData = Awaited<ReturnType<typeof getMediaUsage>>, TError = ProblemDetails>(
+ shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMediaUsage>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetShopsShopIdMediaUsageQueryOptions(shopId,options)
+  const queryOptions = getGetMediaUsageQueryOptions(shopId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -836,3 +776,66 @@ export function useGetShopsShopIdMediaUsage<TData = Awaited<ReturnType<typeof ge
 
 
 
+export const uploadShopLogo = (
+    shopId: string,
+    uploadShopLogoForm: UploadShopLogoForm,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      const formData = new FormData();
+if(uploadShopLogoForm.file !== undefined) {
+ formData.append(`file`, uploadShopLogoForm.file)
+ }
+
+      return customInstance<ShopLogoDto>(
+      {url: `/api/shops/${shopId}/logo`, method: 'PUT',
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData
+    },
+      options);
+    }
+  
+
+
+export const getUploadShopLogoMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadShopLogo>>, TError,{shopId: string;data: UploadShopLogoForm}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadShopLogo>>, TError,{shopId: string;data: UploadShopLogoForm}, TContext> => {
+
+const mutationKey = ['uploadShopLogo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadShopLogo>>, {shopId: string;data: UploadShopLogoForm}> = (props) => {
+          const {shopId,data} = props ?? {};
+
+          return  uploadShopLogo(shopId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadShopLogoMutationResult = NonNullable<Awaited<ReturnType<typeof uploadShopLogo>>>
+    export type UploadShopLogoMutationBody = UploadShopLogoForm
+    export type UploadShopLogoMutationError = ProblemDetails | HttpValidationProblemDetails
+
+    export const useUploadShopLogo = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadShopLogo>>, TError,{shopId: string;data: UploadShopLogoForm}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof uploadShopLogo>>,
+        TError,
+        {shopId: string;data: UploadShopLogoForm},
+        TContext
+      > => {
+
+      const mutationOptions = getUploadShopLogoMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    

@@ -138,9 +138,12 @@ app.UseAuthorization();
 
 app.MapOpenApi();
 
-app.MapIdentityEndpoints();
-app.MapShopEndpoints();
-app.MapMediaEndpoints();
+// REFACTOR-API-001 — mọi endpoint API dưới /api (xem ApiRoutes). /media/* (file ảnh) và /openapi/*
+// cố ý KHÔNG nằm trong group này.
+var api = app.MapGroup(Vsite.Application.Common.ApiRoutes.Prefix);
+api.MapIdentityEndpoints();
+api.MapShopEndpoints();
+api.MapMediaEndpoints();
 
 app.Run();
 

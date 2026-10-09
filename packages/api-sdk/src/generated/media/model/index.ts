@@ -3,12 +3,12 @@
  */
 
 export * from './cloneRequest';
-export * from './getShopsShopIdMediaAssetsParams';
-export * from './getShopsShopIdMediaLibraryAssetIdDerivativesParams';
-export * from './getShopsShopIdMediaLibraryParams';
+export * from './getAssetsByIdsParams';
+export * from './getDerivativesParams';
 export * from './httpValidationProblemDetails';
 export * from './httpValidationProblemDetailsErrors';
 export * from './iFormFile';
+export * from './listLibraryParams';
 export * from './mediaAssetDto';
 export * from './mediaReferenceDto';
 export * from './mediaReferenceKind';
