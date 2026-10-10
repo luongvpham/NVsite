@@ -1,6 +1,6 @@
 # vsite — Thiết Kế Entity: Service (Phase 2)
 
-> **STATUS:** `SPEC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `—`
+> **STATUS:** `SPEC` · **Tasks:** `DESIGN-STEP5-PREP` · **Changelog:** `—` · **Stale:** `—`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 
 > **Tài liệu liên quan:** `01-project-ideal.md` (§2.1, §5.2) · `02-tech-stack-and-decision.md` (#33, #34, #38) · `04-listing-and-review-design.md` (§4 — `Listing.TargetPageId`) · `05-website-builder-and-product-design.md` (#54)
@@ -70,11 +70,11 @@ Hai bảng. Hết.
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
 | `Id` | int PK (identity) | int vì xuất hiện trong `binding.groupId` |
-| `ShopId` | uuid FK | |
+| `ShopId` | uuid FK | Khai `UNIQUE (Id, ShopId)` — đích FK ghép (#92) |
 | `Name` | varchar(120) | "Chăm sóc da", "Massage", "Sửa chữa tại nhà" |
 | `Slug` | varchar(140) | UNIQUE `(ShopId, Slug)` |
 | `Description` | varchar(500)? | |
-| `ImageId` | uuid? | Bản Library trong `media_assets`. FK ghép `(ImageId, ShopId) → media_assets (Id, ShopId)` (#76); phái sinh sinh sẵn (#73) |
+| `ImageId` | uuid? | Bản Library trong `media_asset`. FK ghép `(ImageId, ShopId) → media_asset (Id, ShopId)` (#76); phái sinh sinh sẵn (#73) |
 | `SortOrder` | int | |
 | `IsVisible` | bool | |
 | `CreatedAt` / `UpdatedAt` | | |
@@ -93,7 +93,7 @@ Hai bảng. Hết.
 |---|---|---|
 | `Id` | uuid PK | |
 | `ShopId` | uuid FK | |
-| `GroupId` | int? FK → `shop_service_groups` | NULL = không thuộc nhóm nào |
+| `GroupId` | int? | NULL = không thuộc nhóm nào. FK ghép `(GroupId, ShopId) → shop_service_group (Id, ShopId)` (#92), `ON DELETE SET NULL (GroupId)` |
 | `Name` | varchar(200) | |
 | `Slug` | varchar(220) | UNIQUE `(ShopId, Slug)` |
 | `ShortDescription` | varchar(500)? | Hiển thị trong thẻ / danh sách |
@@ -102,8 +102,8 @@ Hai bảng. Hết.
 | `PriceTo` | numeric(14,2)? | |
 | `PriceNote` | varchar(200)? | "Tuỳ tình trạng xe", "Liên hệ báo giá" |
 | `DurationMinutes` | int? | Chuẩn bị sẵn cho `Booking` (Phase 3) |
-| `ImageId` | uuid? | Bản Library trong `media_assets`, khác `Product` (#56). FK ghép `(ImageId, ShopId) → media_assets (Id, ShopId)` (#76) |
-| `DetailPageId` | uuid? FK → `pages` | **Tuỳ chọn** — xem §6 |
+| `ImageId` | uuid? | Bản Library trong `media_asset`, khác `Product` (#56). FK ghép `(ImageId, ShopId) → media_asset (Id, ShopId)` (#76) |
+| `DetailPageId` | uuid? | **Tuỳ chọn** — xem §6. FK ghép `(DetailPageId, ShopId) → page (Id, ShopId)` (#92) |
 | `Status` | enum | `Draft` · `Active` · `Hidden` — **enum riêng, không dùng chung `Product.Status`** (#40) |
 | `IsFeatured` | bool | Cho component `ServiceHighlight` |
 | `SortOrder` | int | |
@@ -165,9 +165,9 @@ Chi phí của việc giữ entity là hai bảng phẳng không có logic phứ
 
 ### 6.4 Ràng buộc
 
-- `DetailPageId` phải trỏ tới `Page` thuộc **cùng `Website` của cùng shop** — kiểm ở tầng handler
+- `DetailPageId` phải trỏ tới `Page` của **cùng shop** — DB chặn bằng FK ghép (#92); một shop có đúng một `Website` nên cùng shop ⟹ cùng website
 - `Page.Kind` phải là `Composable` (không cho trỏ vào `System` page)
-- Xoá `Page` đang được `Service` trỏ tới → **cảnh báo**, cho phép tiếp tục, `DetailPageId` set NULL
+- Xoá `Page` đang được `Service` trỏ tới → **cảnh báo**, cho phép tiếp tục, `DetailPageId` set NULL — FK khai `ON DELETE SET NULL (DetailPageId)`, **không** `SET NULL` trơn (sẽ set NULL cả `ShopId`, #92)
 - Nhiều `Service` **được phép** trỏ chung một `Page` (shop gộp mô tả nhiều dịch vụ vào một trang)
 
 ---

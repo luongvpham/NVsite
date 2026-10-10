@@ -1,0 +1,9 @@
+Task chỉ sửa tài liệu thiết kế (không chạm code, không qua Gate 1) — nội dung nằm ở Quyết định #92–#95 trong DesignIdeal/DECISIONS.md và các file 04/05/06.
+
+Tóm tắt (người duyệt chốt 2026-10-10):
+- #92: ShopId + FK ghép (X, ShopId) cho mọi bảng thuộc shop (05 §2–§19, 06, 04 §4.1); giữ int identity; SET NULL (X) cho FK ghép.
+- #93: địa chỉ 2 cấp + "khu vực" quận/huyện cũ cho SEO (04 §4.5, §8.2, §8.3).
+- #94: schemaVersion ở gốc document JSONB + upcaster (05 §3, §6–§8, §10).
+- #95: CategoryAttribute bỏ sentinel 0 (05 §16).
+- Sửa kỹ thuật: PK ProductAttributeValue (không chứa biểu thức), ProductVariant thiếu ShopId, PageDraft bật concurrency + version trong contract ngay Bước 5, quy ước tên bảng số ít.
+- Sau review độc lập: 08/#77 (Page.OgImageId sang nhóm FK ghép, chỉ imageId trong tree kiểm ở handler); 04 Review/Lead/ShopCategoryHistory FK ghép tới listing (§4.1 [6]), SQL §4.1 snake_case, phường phải thuộc đúng tỉnh (§4.1 [7]); 05 vòng FK website↔site_publication + job prune không xoá bản current; option phải thuộc đúng attribute bằng FK 3 cột; theo dõi concurrency PageDraft ở 00-INDEX §4.

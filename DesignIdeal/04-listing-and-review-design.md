@@ -1,6 +1,6 @@
 # vsite — Thiết Kế: Listing (tin đăng marketplace) & Review
 
-> **STATUS:** `IMPLEMENTED` · **Tasks:** `SHOP-001,MEDIA-001` · **Changelog:** `Docs/tasks/MEDIA-001/changelog.md` · **Stale:** `Changelog trước MEDIA-001: Docs/tasks/SHOP-001/changelog.md (banner chỉ nhận một đường dẫn) · Chỉ §2.1/§2.2 (Shop) đã code — §3 trở đi (ServiceCategory/Listing/Review/Lead) vẫn là spec, chưa có dòng code nào · §2.1 Shop chưa liệt kê LogoId (FK ghép, MEDIA-001) và logoUrl trên ShopDto/ShopSummaryDto (xem Docs/tasks/MEDIA-001/changelog.md mục 13)`
+> **STATUS:** `IMPLEMENTED` · **Tasks:** `SHOP-001,MEDIA-001,DESIGN-STEP5-PREP` · **Changelog:** `Docs/tasks/MEDIA-001/changelog.md` · **Stale:** `Changelog trước MEDIA-001: Docs/tasks/SHOP-001/changelog.md (banner chỉ nhận một đường dẫn) · Chỉ §2.1/§2.2 (Shop) đã code — §3 trở đi (ServiceCategory/Listing/Review/Lead) vẫn là spec, chưa có dòng code nào · §2.1 Shop chưa liệt kê LogoId (FK ghép, MEDIA-001) và logoUrl trên ShopDto/ShopSummaryDto (xem Docs/tasks/MEDIA-001/changelog.md mục 13)`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md) — §2.1/§2.2 đã code ở SHOP-001, đọc changelog trước khi
 > dựa vào phần đó. Phần còn lại của file (§3+) vẫn thuần thiết kế.
 
@@ -112,7 +112,7 @@ Shop có thể coi reset là **chiến thuật định kỳ**: gom đánh giá x
 ShopCategoryHistory        -- chỉ để phát hiện lạm dụng, KHÔNG chứa Review
 ─────────────────────────────────────────────
 Id, ShopId, CategoryId
-ListingId          UUID      -- listing đã bị gỡ
+ListingId          UUID      -- listing đã bị gỡ; FK ghép (ListingId, ShopId) → Listing (Id, ShopId) (#92, §4.1 [6])
 ReviewCountAtDelete  int
 RatingAvgAtDelete    decimal?
 DeletedAt          timestamp
@@ -156,8 +156,13 @@ ImageUrls          text[]     NOT NULL   -- >= 1 ảnh; đường dẫn tương 
 
 -- vị trí RIÊNG của listing
 Location           geography(Point, 4326)  NOT NULL
-Address            string     NOT NULL
-WardCode / DistrictCode / ProvinceCode     -- phục vụ landing page SEO khu vực
+Address            string     NOT NULL   -- nguyên văn shop nhập, KHÔNG dựng lại từ mã
+WardCode           string     NOT NULL → administrative_unit   -- xã/phường/đặc khu, 2 cấp từ 01/07/2025 (#93)
+ProvinceCode       string     NOT NULL   -- SUY RA từ WardCode lúc ghi, không nhận từ client;
+                                         -- FK ghép (WardCode, ProvinceCode) chặn lệch (§4.1 [7])
+AreaCode           string?    → administrative_unit (level = LegacyArea)
+                                         -- "khu vực" = quận/huyện CŨ, suy ra từ WardCode qua ward_legacy_area;
+                                         -- CHỈ cho tìm kiếm + landing SEO (§4.5), không phải cấp hành chính
 
 -- giá: TUỲ CHỌN HOÀN TOÀN
 PriceFrom          decimal?
@@ -178,8 +183,8 @@ ModerationStatus   enum       { Pending, Approved, Rejected }
 
 CreatedAt / UpdatedAt / LastIndexedAt
 
--- 1 shop ↔ tối đa 1 listing đang sống trong mỗi ngành
-UNIQUE (ShopId, CategoryId) WHERE DeletedAt IS NULL
+-- 1 shop ↔ tối đa 1 listing đang sống trong mỗi ngành — xem §4.1 [4]
+UNIQUE (ShopId, CategoryId) WHERE NOT IsDeleted
 ```
 
 ⚠️ **Xoá listing là xoá mềm** (`DeletedAt`), không xoá cứng — cần giữ row để `Review` không mồ côi FK và để đối chiếu khi điều tra lạm dụng. Nhưng listing đã xoá **không** hiển thị ở bất kỳ đâu và đánh giá của nó **không** được tính vào bất kỳ con số nào. Về mặt người dùng, nó đã biến mất.
@@ -190,31 +195,42 @@ UNIQUE (ShopId, CategoryId) WHERE DeletedAt IS NULL
 
 ```sql
 -- [1] Target phải nhất quán với TargetKind
-ALTER TABLE "Listing" ADD CONSTRAINT ck_listing_target CHECK (
-  (TargetKind = 'ShopHome'    AND TargetPageId IS NULL AND TargetUrl IS NULL) OR
-  (TargetKind = 'ShopPage'    AND TargetPageId IS NOT NULL) OR
-  (TargetKind = 'ExternalUrl' AND TargetUrl    IS NOT NULL)
+ALTER TABLE listing ADD CONSTRAINT ck_listing_target CHECK (
+  (target_kind = 'ShopHome'    AND target_page_id IS NULL AND target_url IS NULL) OR
+  (target_kind = 'ShopPage'    AND target_page_id IS NOT NULL) OR
+  (target_kind = 'ExternalUrl' AND target_url     IS NOT NULL)
 );
 
 -- [2] Giá: nếu có cả hai thì From <= To
-ALTER TABLE "Listing" ADD CONSTRAINT ck_listing_price CHECK (
-  PriceFrom IS NULL OR PriceTo IS NULL OR PriceFrom <= PriceTo
+ALTER TABLE listing ADD CONSTRAINT ck_listing_price CHECK (
+  price_from IS NULL OR price_to IS NULL OR price_from <= price_to
 );
 
 -- [3] Thời hạn
-ALTER TABLE "Listing" ADD CONSTRAINT ck_listing_period CHECK (
-  PublishTo IS NULL OR PublishTo > PublishFrom
+ALTER TABLE listing ADD CONSTRAINT ck_listing_period CHECK (
+  publish_to IS NULL OR publish_to > publish_from
 );
 
 -- [4] Một shop chỉ có một listing đang sống trong mỗi ngành
 CREATE UNIQUE INDEX ux_listing_shop_category
-  ON "Listing" (ShopId, CategoryId)
-  WHERE DeletedAt IS NULL;
+  ON listing (shop_id, category_id)
+  WHERE NOT is_deleted;
 
--- [5] TargetPageId phải thuộc đúng Shop  → composite FK
-ALTER TABLE "Page"    ADD CONSTRAINT uq_page_id_shop UNIQUE (Id, ShopId);
-ALTER TABLE "Listing" ADD CONSTRAINT fk_listing_page
-  FOREIGN KEY (TargetPageId, ShopId) REFERENCES "Page" (Id, ShopId);
+-- [5] TargetPageId phải thuộc đúng Shop  → composite FK (#92 — `page` khai sẵn UNIQUE (id, shop_id), `05` §4)
+ALTER TABLE listing ADD CONSTRAINT fk_listing_page
+  FOREIGN KEY (target_page_id, shop_id) REFERENCES page (id, shop_id);
+
+-- [6] Đích FK ghép cho bảng trỏ vào listing (#92): Review, Lead, ShopCategoryHistory
+ALTER TABLE listing ADD CONSTRAINT uq_listing_id_shop UNIQUE (id, shop_id);
+--   review                (listing_id, shop_id) → listing (id, shop_id)
+--   lead                  (listing_id, shop_id) → listing (id, shop_id)
+--   shop_category_history (listing_id, shop_id) → listing (id, shop_id)
+-- Cột ShopId "denormalize" ở các bảng đó vì vậy KHÔNG lệch được khỏi listing.
+
+-- [7] Phường phải thuộc đúng tỉnh (#93)
+ALTER TABLE administrative_unit ADD CONSTRAINT uq_admin_unit_code_parent UNIQUE (code, parent_code);
+ALTER TABLE listing ADD CONSTRAINT fk_listing_ward_province
+  FOREIGN KEY (ward_code, province_code) REFERENCES administrative_unit (code, parent_code);
 ```
 
 > `Page` (và `PageKind`) là entity của module `Website`, chốt ở Quyết định #33 — thiết kế chi tiết ở **Phase 2**. Ràng buộc [5] chỉ áp khi module đó tồn tại; ở Phase 1 mọi shop `Hosted` chưa có website nên `TargetKind` thực dùng là `ExternalUrl`.
@@ -251,6 +267,42 @@ Cho phép: xuống dòng. Không cho phép: thẻ HTML, markdown link, script. S
 `Status` là **derived** — hàm của `PublishFrom`/`PublishTo` + `ModerationStatus` + shop có bấm gỡ hay không. Lưu cột để tiện query ở Portal, nhưng:
 
 ⚠️ **Query search PHẢI lọc `publishFrom <= now <= publishTo` trực tiếp**, không tin vào cột `Status` hay độ trễ của Hangfire. Job trễ 10 phút = tin hết hạn vẫn hiển thị, mà shop đã ngừng trả tiền. Job chỉ để dọn dẹp và nhắc gia hạn.
+
+### 4.5 Địa chỉ hành chính — 2 cấp + "khu vực" (Quyết định #93)
+
+Từ **01/07/2025** Việt Nam còn **2 cấp**: 34 tỉnh/thành và xã/phường/đặc khu — **không còn quận/huyện**,
+mã đơn vị đổi. Nhưng người dùng vẫn tìm "spa quận 7", "sửa xe Thủ Đức" trong nhiều năm tới.
+
+```
+administrative_unit                       -- bảng tham chiếu, platform quản trị, KHÔNG thuộc shop
+─────────────────────────────────────────────
+code            string  PK                -- mã chính thức
+level           enum    { Province, Ward, LegacyArea }
+name            string                    -- "Phường Tân Hưng", "Quận 7 (cũ)"
+slug            string                    -- dùng trong URL landing
+parent_code     string? → administrative_unit   -- Ward → Province; LegacyArea → Province
+valid_from      date
+valid_to        date?                     -- NULL = còn hiệu lực
+replaced_by     string? → administrative_unit   -- đơn vị cũ sáp nhập vào đâu
+
+ward_legacy_area                          -- ánh xạ phường MỚI → khu vực CŨ (n:1)
+ward_code       string  PK → administrative_unit (level = Ward)
+area_code       string     → administrative_unit (level = LegacyArea)
+```
+
+| Dùng cho | Cấp |
+|---|---|
+| Địa chỉ hiển thị, lọc chính xác | `ProvinceCode` + `WardCode` (hiện hành) |
+| Landing SEO, gợi ý tìm kiếm | `ProvinceCode` và `AreaCode` — vd. `vsite.vn/spa/quan-7` = khu vực "Quận 7 (cũ)" |
+| Lọc theo phường | `WardCode` — URL lọc, **`noindex`** (quá mịn cho landing) |
+
+- `ProvinceCode` và `AreaCode` **suy ra lúc ghi** từ `WardCode`, shop chỉ chọn phường. `ward_legacy_area`
+  là ánh xạ **n:1 chốt một lần** (không có hiệu lực theo thời gian — khu vực cũ đã đóng băng từ
+  01/07/2025); phường đổi tiếp thì job remap theo `replaced_by`. Phường mới trải trên hai quận cũ
+  → chọn quận chứa phần lớn diện tích (bảng ánh xạ quyết định một lần, không theo từng listing).
+- Đơn vị hành chính đổi tiếp (sáp nhập lần sau) → thêm dòng mới + `valid_to`/`replaced_by`, job remap
+  `listing`; **không** sửa mã cũ tại chỗ (URL landing cũ 301 theo `replaced_by`).
+- `Address` lưu nguyên văn shop nhập — không dựng lại từ mã (địa chỉ cũ trên biển hiệu vẫn hợp lệ với khách).
 
 ---
 
@@ -295,8 +347,8 @@ Trang hồ sơ **gộp hiển thị** đánh giá của tất cả `Listing` đa
 Review
 ─────────────────────────────────────────────
 Id                 UUID       PK
-ListingId          UUID       NOT NULL → Listing
-ShopId             UUID       NOT NULL → Shop          -- denormalize
+ListingId          UUID       NOT NULL → Listing   -- FK ghép (ListingId, ShopId) → Listing (Id, ShopId) (#92, §4.1 [6])
+ShopId             UUID       NOT NULL → Shop          -- denormalize, FK ghép giữ nó luôn khớp Listing
 UserId             UUID       NOT NULL → User
 
 Rating             smallint   NOT NULL  CHECK (Rating BETWEEN 1 AND 5)
@@ -391,8 +443,8 @@ Không có giao dịch trên vsite, nên `Lead` là nguồn dữ liệu duy nh�
 Lead
 ─────────────────────────────────────────────
 Id             UUID       PK
-ListingId      UUID       NOT NULL → Listing
-ShopId         UUID       NOT NULL → Shop        -- denormalize
+ListingId      UUID       NOT NULL → Listing     -- FK ghép (ListingId, ShopId) → Listing (Id, ShopId) (#92, §4.1 [6])
+ShopId         UUID       NOT NULL → Shop        -- denormalize, FK ghép giữ nó luôn khớp Listing
 UserId         UUID?                             -- null nếu khách chưa đăng nhập
 SessionKey     string?                           -- hash, để dedupe khách ẩn danh
 Kind           enum       NOT NULL
@@ -433,7 +485,7 @@ listingId, shopId, shopName, shopKind
 categoryId, categoryPath[]        -- cả nhánh, để filter theo node cha
 title, description
 imagePath (đường dẫn fthumb_ của ImageUrls[0] — file bất biến nên denormalize an toàn, 08 #75)
-location (geo_point), wardCode, districtCode, provinceCode
+location (geo_point), provinceCode, wardCode, areaCode   -- #93, areaCode = khu vực cũ cho landing/gợi ý
 priceFrom, priceTo, hasPriceInfo
 ratingAvg, reviewCount
 targetUrl (đã resolve sẵn)
@@ -450,9 +502,9 @@ publishFrom, publishTo
 
 ### 8.3 Landing page SEO khu vực
 
-`(CategoryId × ProvinceCode/DistrictCode)` → landing page tĩnh, có canonical, được index. Ví dụ `vsite.vn/spa/quan-7`.
+`(CategoryId × ProvinceCode)` và `(CategoryId × AreaCode)` → landing page tĩnh, có canonical, được index. Ví dụ `vsite.vn/spa/quan-7` (khu vực "Quận 7 (cũ)", #93 / §4.5). Lọc theo phường (`WardCode`) là URL lọc, `noindex`.
 
-⚠️ **Mọi URL có ≥2 điều kiện lọc phải `noindex`.** Tổ hợp filter sinh không gian URL vô hạn; không có quy tắc này thì crawl budget của toàn platform bị đốt sạch (mở rộng của Quyết định #10).
+⚠️ **Mọi URL có ≥2 điều kiện lọc phải `noindex`** — trừ đúng hai dạng landing ở trên `(ngành × tỉnh)`, `(ngành × khu vực)`, là trang tĩnh có canonical, không phải URL lọc. Tổ hợp filter sinh không gian URL vô hạn; không có quy tắc này thì crawl budget của toàn platform bị đốt sạch (mở rộng của Quyết định #10).
 
 ---
 

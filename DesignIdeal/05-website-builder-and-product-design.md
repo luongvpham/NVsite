@@ -1,9 +1,9 @@
 # vsite — Thiết Kế Entity: Website Builder & Product (Phase 2)
 
-> **STATUS:** `SPEC` · **Tasks:** `MEDIA-001,REFACTOR-DB-001` · **Changelog:** `Docs/tasks/MEDIA-001/changelog.md` · **Stale:** `§9 tên bảng media_assets (thực tế media_asset, số ít snake_case — REFACTOR-DB-001) — MediaAsset đã code (Bước 4), phần còn lại của tài liệu (Website/Page/Product) vẫn là spec`
+> **STATUS:** `SPEC` · **Tasks:** `MEDIA-001,REFACTOR-DB-001,DESIGN-STEP5-PREP` · **Changelog:** `Docs/tasks/MEDIA-001/changelog.md` · **Stale:** `§9, §20 và #55/#56 ghi tên bảng media_assets (thực tế media_asset, số ít snake_case — REFACTOR-DB-001); #55 công thức quota SourceAssetId IS NULL (thực tế Kind IN (Library, Direct)) — MediaAsset đã code (Bước 4), phần còn lại của tài liệu (Website/Page/Product) vẫn là spec`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
-> 📌 **§0 là nơi định nghĩa Quyết định `#40–#58`.** Không chép sang `02` — tra số ở
+> 📌 **§0 là nơi định nghĩa Quyết định `#40–#58`, `#92`, `#94`, `#95`** (#93 — địa chỉ hành chính — ở `04` §4.5). Không chép sang `02` — tra số ở
 > [`DECISIONS.md`](DECISIONS.md). `MediaAsset`, ảnh `Listing`/`Product` và pipeline ảnh mô tả chi tiết ở
 > [`08-media-asset-design.md`](08-media-asset-design.md) (định nghĩa `#69–#86` và `#88`).
 
@@ -11,7 +11,7 @@
 >
 > **Phạm vi:** hai module Phase 2 — `Website` (builder + renderer) và `Product` (hàng hoá). Module `Service` thiết kế riêng, tài liệu này chỉ tham chiếu tới nó ở phần Data Binding.
 >
-> **Quy ước:** PostgreSQL, tên bảng snake_case số nhiều, tên entity C# PascalCase số ít. Mọi bảng thuộc shop đều có `ShopId` và tuân Quyết định #21 (tenant isolation).
+> **Quy ước:** PostgreSQL, tên bảng **snake_case số ít** (`page`, `site_publication` — quy ước DB ở `backend/CLAUDE.md`), tên entity C# PascalCase số ít. **Mọi bảng thuộc shop đều có `ShopId`** — kể cả bảng con 1:1 như `page_draft`, `theme` — và **mọi FK tới bảng thuộc shop là FK ghép `(X, ShopId) → (Id, ShopId)`** (#92). Tuân Quyết định #21 (tenant isolation).
 
 ---
 
@@ -38,6 +38,9 @@
 | **#57** | Tỉ lệ ảnh sản phẩm do **danh mục** quyết định (`ShopProductCategory.ImageRatio`). File full **crop theo tỉ lệ danh mục lúc upload** (shop chọn vùng crop), thumb resize giữ đúng tỉ lệ đó (#79). Đổi tỉ lệ danh mục hoặc chuyển sản phẩm sang danh mục khác thì **ảnh cũ giữ tỉ lệ cũ** — hiển thị bằng `object-fit: cover`; muốn đúng tỉ lệ mới thì upload lại. Không có job sinh lại |
 | **#58** | **Không hỗ trợ `srcset` responsive ở Phase 2.** Mỗi vị trí ảnh dùng một preset cố định, chọn ở mức ~2× độ rộng CSS lớn nhất để đủ nét trên màn retina. Hoãn được vì URL luôn sinh từ `resolveImage()` và chữ ký hàm giữ nguyên (#74) — thêm `srcset` sau là sinh thêm file cho mỗi vị trí + sửa hàm đó, không đổi component |
 | **#54** | `Service` **không có `System` page riêng** (không `ServiceListing`/`ServiceDetail`). Số dịch vụ mỗi shop nhỏ (thường 2–3), không có filter/facet/variant — hiển thị hoàn toàn qua component bind trên trang `Composable`, cùng khuôn với `Timeline`/`Gallery`. Nếu shop cần trang riêng cho một dịch vụ, họ tạo `Page` thường và lắp component — không cần route hệ thống cố định. Phù hợp với cách `Listing.TargetPageId` (`04` §4) chỉ trỏ tới `ShopHome`/`ShopPage`/`ExternalUrl`, không có đích kiểu `ServiceDetail` |
+| **#92** | **Mọi bảng thuộc shop có `ShopId`** (kể cả bảng con 1:1: `PageDraft`, `Theme`, `NavigationConfig`, `ShopAttributeOption`, `ProductVariant`…) và **mọi FK tới entity thuộc shop là FK ghép** `(X, ShopId) → (Id, ShopId)`; bảng cha khai `UNIQUE (Id, ShopId)`. DB tự chặn trỏ chéo shop, Global Query Filter (#21.2) áp được cho mọi bảng. Khoá **int identity** (`ShopProductCategory`, `ShopAttribute`, `ShopAttributeOption`, `ShopServiceGroup`) giữ nguyên — URL ngắn; chấp nhận lộ bộ đếm toàn hệ. FK ghép có `ON DELETE SET NULL` phải ghi rõ cột: `SET NULL (X)` (Postgres 15+), nếu không Postgres set NULL cả `ShopId` |
+| **#94** | Mọi document JSONB có vòng đời dài — `PageDraft.Tree`, `SitePublication.Snapshot`, `WebsiteTemplate.Snapshot`, `Theme.Tokens`, `NavigationConfig.Items` — có **`schemaVersion` (int) ở cấp gốc**, đọc qua bộ nâng cấp (upcaster) theo version. **Node** trong tree vẫn **không** có version (#43 giữ nguyên) — version chỉ bảo vệ shape của vỏ (`pages`, `seo`, `navigation`…), thứ #43 không che |
+| **#95** | `CategoryAttribute` **không dùng sentinel `CategoryId = 0`**: `CategoryId` nullable (`NULL` = áp toàn shop), có `ShopId`, `UNIQUE NULLS NOT DISTINCT (ShopId, CategoryId, AttributeId)` (Postgres 15+), FK ghép tới category và attribute |
 
 ---
 
@@ -70,13 +73,13 @@ Gốc của module. Một shop `Hosted` có đúng một website.
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
 | `Id` | uuid PK | |
-| `ShopId` | uuid FK → `shops` | **UNIQUE** — enforce 1:1 |
+| `ShopId` | uuid FK → `shop` | **UNIQUE** — enforce 1:1. Khai thêm `UNIQUE (Id, ShopId)` làm đích FK ghép cho bảng con (#92) |
 | `Status` | enum | `Draft` · `Published` · `Suspended` |
-| `SeedTemplateId` | uuid? FK → `website_templates` | Chỉ để thống kê/hỗ trợ. **Không** phải quan hệ sống (#45) |
-| `CurrentPublicationId` | uuid? FK → `site_publications` | Bản đang phục vụ công chúng. NULL = chưa publish lần nào |
+| `SeedTemplateId` | uuid? FK → `website_template` | Chỉ để thống kê/hỗ trợ. **Không** phải quan hệ sống (#45) |
+| `CurrentPublicationId` | uuid? | Bản đang phục vụ công chúng. NULL = chưa publish lần nào. FK ghép `(CurrentPublicationId, Id) → site_publication (Id, WebsiteId)` — rollback không thể trỏ sang bản publish của website khác (#92) |
 | `DefaultSeoTitle` | varchar(160) | Fallback khi `Page.SeoTitle` rỗng |
 | `DefaultSeoDescription` | varchar(320) | |
-| `DefaultOgImageId` | uuid? | Bản Library. FK ghép `(DefaultOgImageId, ShopId) → media_assets (Id, ShopId)` (#76). Render bằng phái sinh `1200x630,cover` (#73) |
+| `DefaultOgImageId` | uuid? | Bản Library. FK ghép `(DefaultOgImageId, ShopId) → media_asset (Id, ShopId)` (#76). Render bằng phái sinh `1200x630,cover` (#73) |
 | `FaviconAssetId` | uuid? | Bản Library. FK ghép như trên (#76). Định dạng favicon: `08` §10 |
 | `TrackingSnippets` | jsonb | `{ ga4?: string, metaPixel?: string }` — whitelist ID, **không** cho nhập HTML thô |
 | `CreatedAt` / `UpdatedAt` | timestamptz | |
@@ -91,13 +94,15 @@ Gốc của module. Một shop `Hosted` có đúng một website.
 
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
-| `WebsiteId` | uuid PK, FK | 1:1 |
+| `WebsiteId` | uuid PK | 1:1. FK ghép `(WebsiteId, ShopId) → website (Id, ShopId)` |
+| `ShopId` | uuid NOT NULL | #92 |
 | `PresetKey` | varchar(50)? | Preset gốc đã chọn (`spa-lavender`...), để hiển thị trong UI |
 | `Tokens` | jsonb NOT NULL | Xem shape bên dưới |
 | `UpdatedAt` | timestamptz | |
 
 ```json
 {
+  "schemaVersion": 1,
   "colors": { "primary": "#7c3aed", "secondary": "#a78bfa",
               "background": "#ffffff", "surface": "#f9fafb",
               "text": "#111827", "textMuted": "#6b7280", "border": "#e5e7eb" },
@@ -121,13 +126,14 @@ Gốc của module. Một shop `Hosted` có đúng một website.
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
 | `Id` | uuid PK | |
-| `WebsiteId` | uuid FK | |
+| `WebsiteId` | uuid | FK ghép `(WebsiteId, ShopId) → website (Id, ShopId)` |
+| `ShopId` | uuid NOT NULL | #92. Khai `UNIQUE (Id, ShopId)` — đích FK ghép của `Listing.TargetPageId` (`04` §4.1 [5]) và `Service.DetailPageId` (`06` §6.4) |
 | `Kind` | enum | `Composable` · `System` (#33) |
 | `SystemType` | enum? | NOT NULL khi `Kind = System`, NULL khi `Composable` |
 | `Slug` | varchar(120) | `""` cho trang chủ. UNIQUE `(WebsiteId, Slug)` |
 | `Title` | varchar(160) | Nhãn hiển thị trong portal + nguồn mặc định cho menu |
 | `SeoTitle` / `SeoDescription` | varchar(160) / (320) | Rỗng → fallback về `Website` |
-| `OgImageId` | uuid? → `media_assets` | Bản Library, phái sinh `1200x630,cover` (#73). Kiểm tenant ở handler (#77) — bảng chưa có `ShopId` để làm FK ghép |
+| `OgImageId` | uuid? | Bản Library, phái sinh `1200x630,cover` (#73). FK ghép `(OgImageId, ShopId) → media_asset (Id, ShopId)` (#76, #92) |
 | `NoIndex` | bool | Mặc định `false` |
 | `IsEnabled` | bool | Tắt = không render, không lên menu, giữ nguyên dữ liệu |
 | `SortOrder` | int | Thứ tự trong danh sách quản lý (không phải thứ tự menu) |
@@ -156,15 +162,16 @@ Tách khỏi `Page` vì hai lý do: tree là cột nặng (có thể vài trăm 
 
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
-| `PageId` | uuid PK, FK | 1:1 |
-| `Tree` | jsonb NOT NULL | Component Tree, xem §6 |
+| `PageId` | uuid PK | 1:1. FK ghép `(PageId, ShopId) → page (Id, ShopId)` |
+| `ShopId` | uuid NOT NULL | #92 |
+| `Tree` | jsonb NOT NULL | Component Tree, xem §6 — có `schemaVersion` ở gốc (#94) |
 | `IsDirty` | bool | `true` khi khác bản đã publish gần nhất |
 | `UpdatedAt` | timestamptz | |
 | `UpdatedByUserId` | uuid FK | Phục vụ Phase 4 (nhiều nhân viên cùng sửa) |
 
 **Autosave:** FE debounce ~2s, ghi đè toàn bộ `Tree`. Không patch từng phần — tree của một trang đủ nhỏ để ghi cả, và patch từng phần mở ra cả lớp lỗi đồng bộ không đáng.
 
-**Chống ghi đè lẫn nhau (Phase 4):** thêm `RowVersion` (xid/bigint) kiểm tra optimistic concurrency. Ở Phase 2 một shop chỉ có một người sửa nên chưa bật, nhưng cột nên có sẵn.
+**Chống ghi đè lẫn nhau — bật ngay từ Bước 5**, không đợi Phase 4: một người mở **hai tab** đã đủ để autosave tab cũ đè tab mới. Concurrency token `xmin` (Npgsql) + **version đi trong contract** — `GET` trả `version`, `PUT` gửi lại, lệch → `409 DRAFT_CONFLICT`. Không có version từ client thì token vô dụng (xem `Docs/tasks/REFACTOR-DB-001/changelog.md` "Chưa làm" #1, #2: map `DbUpdateConcurrencyException` → 409 làm cùng task này).
 
 ---
 
@@ -174,6 +181,7 @@ Không phải bảng, nhưng là cấu trúc dữ liệu quan trọng nhất mod
 
 ```json
 {
+  "schemaVersion": 1,
   "id": "root",
   "type": "Page",
   "children": [
@@ -218,7 +226,7 @@ Không phải bảng, nhưng là cấu trúc dữ liệu quan trọng nhất mod
 **Quy tắc bất biến:**
 
 1. `id` duy nhất **trong phạm vi một trang**, sinh client-side (`c_` + nanoid 5 ký tự). Là target của mọi operation (#14) và của Selection Context (#16).
-2. **Không** có `schemaVersion` trên node — hệ quả trực tiếp của #43 (additive-only).
+2. **Không** có `schemaVersion` trên **node** — hệ quả trực tiếp của #43 (additive-only). `schemaVersion` chỉ có ở **gốc** tree (#94), bảo vệ shape của vỏ.
 3. `props` **không bao giờ** chứa dữ liệu nghiệp vụ đã materialize, chỉ chứa nội dung tĩnh hoặc `binding` mô tả cách lấy.
 4. Ảnh lưu bằng **id** (`imageId: "media_8891"`), không lưu URL. URL dựng lúc render từ `StorageKey` — cho phép đổi CDN, xoá ảnh mà phát hiện được tham chiếu. `imageId` luôn là id của **clone** đã crop đúng preset của slot (#71, `08` §3).
 5. `children` chỉ có ở component container. Manifest khai `acceptsChildren: true/false`.
@@ -230,7 +238,8 @@ Không phải bảng, nhưng là cấu trúc dữ liệu quan trọng nhất mod
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
 | `Id` | uuid PK | |
-| `WebsiteId` | uuid FK | |
+| `WebsiteId` | uuid | FK ghép `(WebsiteId, ShopId) → website (Id, ShopId)`. Khai `UNIQUE (Id, WebsiteId)` — đích FK ghép của `Website.CurrentPublicationId` |
+| `ShopId` | uuid NOT NULL | #92 |
 | `Version` | int | Tăng dần theo website. UNIQUE `(WebsiteId, Version)` |
 | `Snapshot` | jsonb NOT NULL | Toàn bộ site, xem shape bên dưới |
 | `Note` | varchar(200)? | Shop tự ghi ("Đổi banner tết") |
@@ -239,6 +248,7 @@ Không phải bảng, nhưng là cấu trúc dữ liệu quan trọng nhất mod
 
 ```json
 {
+  "schemaVersion": 1,
   "version": 7,
   "theme": { "...tokens..." },
   "navigation": { "items": [ ... ] },
@@ -255,9 +265,13 @@ Không phải bảng, nhưng là cấu trúc dữ liệu quan trọng nhất mod
 
 **Vì sao snapshot toàn site chứ không tham chiếu ngược về `Page`:** đây là điều làm cho publish có ý nghĩa. Shop sửa 5 trang trong portal, publish một lần → công chúng thấy 5 trang thay đổi **đồng thời**, không có trạng thái nửa vời. Rollback = đổi `CurrentPublicationId`, một lệnh UPDATE, không cần replay gì. Cache invalidation theo `version`, cực đơn giản.
 
-**Đánh đổi đã chấp nhận:** dữ liệu trùng lặp giữa các phiên bản. Với site 3–7 trang của shop nhỏ, mỗi snapshot cỡ vài chục tới vài trăm KB — không đáng lo. Giữ tối đa **20 bản gần nhất** mỗi website, Hangfire job dọn định kỳ.
+**Đánh đổi đã chấp nhận:** dữ liệu trùng lặp giữa các phiên bản. Với site 3–7 trang của shop nhỏ, mỗi snapshot cỡ vài chục tới vài trăm KB — không đáng lo. Giữ tối đa **20 bản gần nhất** mỗi website, Hangfire job dọn định kỳ — **không bao giờ xoá bản đang là `Website.CurrentPublicationId`** (FK ghép sẽ chặn, job phải loại nó khỏi danh sách prune).
 
-**Runtime đọc gì:** `apps/web` chỉ đọc `site_publications` (qua cache), **không bao giờ** đọc `page_drafts`. Preview trong portal thì ngược lại. Đây là ranh giới cứng — vi phạm nghĩa là bản nháp rò ra công chúng.
+**Vòng FK `website` ↔ `site_publication`:** insert không vướng (website tạo với `CurrentPublicationId = NULL`, FK ghép bỏ qua NULL). Xoá website (hiếm, chỉ admin) thì đặt `current_publication_id = NULL` trước rồi mới xoá publication và website, trong cùng transaction — không dùng `DEFERRABLE` cho một thao tác hiếm.
+
+**`schemaVersion` ≠ `version`** (#94): `version` là số thứ tự bản publish của website (= cột `Version`); `schemaVersion` là phiên bản **shape** của document. Snapshot 20 bản gần nhất + template có thể mang `schemaVersion` cũ — `apps/web` đọc qua upcaster, không giả định shape mới nhất.
+
+**Runtime đọc gì:** `apps/web` chỉ đọc `site_publication` (qua cache), **không bao giờ** đọc `page_draft`. Preview trong portal thì ngược lại. Đây là ranh giới cứng — vi phạm nghĩa là bản nháp rò ra công chúng.
 
 ---
 
@@ -267,12 +281,14 @@ Theo Quyết định #34: derived + manual overlay, một màn hình kéo-thả 
 
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
-| `WebsiteId` | uuid PK, FK | 1:1 |
-| `Items` | jsonb NOT NULL | Danh sách phẳng có `children` một cấp |
+| `WebsiteId` | uuid PK | 1:1. FK ghép `(WebsiteId, ShopId) → website (Id, ShopId)` |
+| `ShopId` | uuid NOT NULL | #92 |
+| `Items` | jsonb NOT NULL | Danh sách phẳng có `children` một cấp; `schemaVersion` ở gốc (#94) |
 | `UpdatedAt` | | |
 
 ```json
 {
+  "schemaVersion": 1,
   "items": [
     { "key": "page:{pageId}",  "label": null,           "order": 0, "hidden": false },
     { "key": "page:{pageId}",  "label": "Về chúng tôi", "order": 1, "hidden": false },
@@ -328,7 +344,7 @@ Mục này chỉ giữ những điểm chạm với phần còn lại của tài
 | `IsActive` | bool | |
 | `SortOrder` | int | |
 
-**Khởi tạo website từ template** (#45): deep copy `Snapshot` → tạo `Theme`, `NavigationConfig`, các `Page` + `PageDraft`. Sinh **id node mới** cho toàn bộ tree (tránh trùng id giữa các shop, dù về kỹ thuật không bắt buộc vì id chỉ duy nhất trong trang). Ảnh trong template là ảnh placeholder dùng chung, được copy thành `MediaAsset` của shop để shop thay được.
+**Khởi tạo website từ template** (#45): nâng `Snapshot` lên `schemaVersion` hiện hành qua upcaster (#94), rồi deep copy → tạo `Theme`, `NavigationConfig`, các `Page` + `PageDraft`. Sinh **id node mới** cho toàn bộ tree (tránh trùng id giữa các shop, dù về kỹ thuật không bắt buộc vì id chỉ duy nhất trong trang). Ảnh trong template là ảnh placeholder dùng chung, được copy thành `MediaAsset` của shop để shop thay được.
 
 Sau bước này template và website **không còn quan hệ nào**.
 
@@ -368,7 +384,7 @@ Operation → [1] Kiểm Page.Kind cho phép op này không     (#33)
 ```
 Shop
  ├─1:n─ ShopProductCategory  (cây, per shop)
- │         └─n:m─ ShopAttribute   (qua category_attributes, kế thừa theo nhánh)
+ │         └─n:m─ ShopAttribute   (qua category_attribute, kế thừa theo nhánh)
  ├─1:n─ ShopAttribute
  │         └─1:n─ ShopAttributeOption
  └─1:n─ Product
@@ -394,14 +410,14 @@ Hàng hoá không lên marketplace (#48), nên cây danh mục sản phẩm là 
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
 | `Id` | int PK (identity) | int chứ không uuid — xuất hiện trong URL và trong `binding.categoryId` |
-| `ShopId` | uuid FK | |
-| `ParentId` | int? FK self | NULL = gốc |
+| `ShopId` | uuid FK | Khai `UNIQUE (Id, ShopId)` — đích FK ghép (#92) |
+| `ParentId` | int? | NULL = gốc. FK ghép `(ParentId, ShopId) → shop_product_category (Id, ShopId)` — cha luôn cùng shop |
 | `Name` | varchar(120) | |
 | `Slug` | varchar(140) | UNIQUE `(ShopId, Slug)` — **phẳng toàn shop**, không lồng theo cha |
 | `Path` | varchar(300) | Materialized path: `/1/5/12/`. Index để query cả nhánh |
 | `Depth` | smallint | Tối đa **3** (0,1,2) |
 | `Description` | text? | Hiển thị đầu trang danh mục, tốt cho SEO |
-| `ImageId` | uuid? | Ảnh đại diện danh mục — bản Library trong `media_assets`, không phải ảnh sản phẩm. FK ghép `(ImageId, ShopId) → media_assets (Id, ShopId)` (#76); phái sinh sinh sẵn theo #73 |
+| `ImageId` | uuid? | Ảnh đại diện danh mục — bản Library trong `media_asset`, không phải ảnh sản phẩm. FK ghép `(ImageId, ShopId) → media_asset (Id, ShopId)` (#76); phái sinh sinh sẵn theo #73 |
 | `ImageRatio` | enum | `R1x1` · `R2x3` · `R3x2` · `R3x4` · `R4x3` · `R16x9`. Mặc định `R1x1` (#57) |
 | `SortOrder` | int | |
 | `IsVisible` | bool | Ẩn khỏi menu/listing, không xoá dữ liệu |
@@ -432,7 +448,7 @@ Hàng hoá không lên marketplace (#48), nên cây danh mục sản phẩm là 
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
 | `Id` | int PK (identity) | **BẤT BIẾN** — là toàn bộ cơ chế rename an toàn |
-| `ShopId` | uuid FK | |
+| `ShopId` | uuid FK | Khai `UNIQUE (Id, ShopId)` — đích FK ghép (#92) |
 | `Code` | varchar(50) | Slug dùng trong URL filter (`?mau-sac=41`). UNIQUE `(ShopId, Code)` |
 | `Name` | varchar(100) | **Nhãn hiển thị — đổi tự do, không ảnh hưởng dữ liệu** |
 | `Kind` | enum | `Enum` · `Boolean` · `Number` · `Text` |
@@ -460,8 +476,9 @@ Hàng hoá không lên marketplace (#48), nên cây danh mục sản phẩm là 
 
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
-| `Id` | int PK (identity) | **BẤT BIẾN** |
-| `AttributeId` | int FK | |
+| `Id` | int PK (identity) | **BẤT BIẾN**. Khai `UNIQUE (Id, AttributeId, ShopId)` — đích FK ghép 3 cột: DB chặn luôn "option của attribute khác" (#92) |
+| `ShopId` | uuid NOT NULL | #92 |
+| `AttributeId` | int | FK ghép `(AttributeId, ShopId) → shop_attribute (Id, ShopId)` |
 | `Value` | varchar(100) | **Đổi tự do** |
 | `Code` | varchar(50) | Dùng trong URL nếu muốn `?mau-sac=do` thay vì `=41`. UNIQUE `(AttributeId, Code)` |
 | `ColorHex` | char(7)? | Cho swatch màu |
@@ -487,21 +504,23 @@ Hàng hoá không lên marketplace (#48), nên cây danh mục sản phẩm là 
 
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
-| `CategoryId` | int FK | `0` = áp cho toàn shop (giữ sentinel của hệ cũ, nhưng ghi rõ ý nghĩa) |
-| `AttributeId` | int FK | |
+| `Id` | int PK (identity) | Surrogate — PK không chứa được cột nullable |
+| `ShopId` | uuid NOT NULL | #92, #95 |
+| `CategoryId` | int? | **`NULL` = áp cho toàn shop** (#95 — bỏ sentinel `0` của hệ cũ). FK ghép `(CategoryId, ShopId) → shop_product_category (Id, ShopId)` |
+| `AttributeId` | int | FK ghép `(AttributeId, ShopId) → shop_attribute (Id, ShopId)` |
 | `IsRequired` | bool | |
 | `SortOrder` | int | |
-| PK | `(CategoryId, AttributeId)` | |
+| UNIQUE | `NULLS NOT DISTINCT (ShopId, CategoryId, AttributeId)` | Postgres 15+ — một attribute chỉ khai một lần cho "toàn shop" |
 
 **Kế thừa theo nhánh** — điểm hệ 4.8 làm đúng, giữ nguyên logic:
 
 ```
 Schema hiệu lực cho sản phẩm ở category 12
-  = CategoryAttribute WHERE CategoryId IN (12, 5, 1, 0)
-                                          └─ tách từ Path '/1/5/12/'
+  = CategoryAttribute WHERE ShopId = @shop AND (CategoryId IN (12, 5, 1) OR CategoryId IS NULL)
+                                                  └─ tách từ Path '/1/5/12/'
 ```
 
-Khai "Thương hiệu" một lần ở `CategoryId = 0`, mọi sản phẩm đều có. Khai "Kiểu cổ" ở "Áo sơ mi", chỉ áo sơ mi có.
+Khai "Thương hiệu" một lần với `CategoryId = NULL`, mọi sản phẩm của shop đều có. Khai "Kiểu cổ" ở "Áo sơ mi", chỉ áo sơ mi có.
 
 ---
 
@@ -510,8 +529,8 @@ Khai "Thương hiệu" một lần ở `CategoryId = 0`, mọi sản phẩm đ�
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
 | `Id` | uuid PK | |
-| `ShopId` | uuid FK | |
-| `CategoryId` | int FK | NOT NULL — mỗi sản phẩm thuộc đúng một node lá |
+| `ShopId` | uuid FK | Khai `UNIQUE (Id, ShopId)` — đích FK ghép (#92) |
+| `CategoryId` | int | NOT NULL — mỗi sản phẩm thuộc đúng một node lá. FK ghép `(CategoryId, ShopId) → shop_product_category (Id, ShopId)` |
 | `Name` | varchar(200) | |
 | `Slug` | varchar(220) | UNIQUE `(ShopId, Slug)` |
 | `ShortDescription` | varchar(500)? | Cho thẻ sản phẩm |
@@ -547,13 +566,15 @@ Trái tim của cơ chế rename an toàn. **Không lưu text, chỉ lưu id.**
 
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
-| `ProductId` | uuid FK | |
-| `AttributeId` | int FK | |
-| `OptionId` | int? FK | Chỉ `Kind = Enum`. NULL với các kiểu khác |
+| `Id` | bigint PK (identity) | Surrogate — PK không chứa được biểu thức hay cột nullable |
+| `ShopId` | uuid NOT NULL | #92 |
+| `ProductId` | uuid | FK ghép `(ProductId, ShopId) → product (Id, ShopId)` |
+| `AttributeId` | int | FK ghép `(AttributeId, ShopId) → shop_attribute (Id, ShopId)` |
+| `OptionId` | int? | Chỉ `Kind = Enum`. NULL với các kiểu khác. FK ghép `(OptionId, AttributeId, ShopId) → shop_attribute_option (Id, AttributeId, ShopId)` — option phải thuộc đúng attribute |
 | `NumberValue` | numeric(18,4)? | Chỉ `Kind = Number` |
 | `BoolValue` | bool? | Chỉ `Kind = Boolean` |
 | `TextValue` | varchar(500)? | Chỉ `Kind = Text` |
-| PK | `(ProductId, AttributeId, COALESCE(OptionId, 0))` | Cho phép multi-select |
+| UNIQUE | `NULLS NOT DISTINCT (ProductId, AttributeId, OptionId)` | Cho phép multi-select (khác `OptionId`); kiểu không phải `Enum` (`OptionId` NULL) chỉ một dòng. Postgres 15+ |
 
 **Multi-select tự nhiên:** một áo có cả Đỏ và Xanh → hai dòng cùng `(ProductId, AttributeId=3)`, khác `OptionId`. Không giới hạn số lượng — khác hệ cũ dùng bitmask `Int64` (tối đa 63 giá trị, không đọc được bằng mắt trong DB).
 
@@ -575,8 +596,9 @@ Quy tắc 5 là ranh giới rõ ràng thay cho cơ chế "variant override `SDat
 
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
-| `Id` | uuid PK | |
-| `ProductId` | uuid FK | |
+| `Id` | uuid PK | Khai `UNIQUE (Id, ShopId)` — đích FK ghép (#92) |
+| `ShopId` | uuid NOT NULL | #92 — trước đây thiếu cột này dù `UNIQUE (ShopId, Sku)` dùng tới |
+| `ProductId` | uuid | FK ghép `(ProductId, ShopId) → product (Id, ShopId)` |
 | `Sku` | varchar(60)? | UNIQUE `(ShopId, Sku)` khi khác NULL |
 | `Price` | numeric(14,2) | NOT NULL — variant luôn có giá riêng |
 | `CompareAtPrice` | numeric(14,2)? | |
@@ -590,9 +612,10 @@ Quy tắc 5 là ranh giới rõ ràng thay cho cơ chế "variant override `SDat
 
 | Cột | Kiểu |
 |---|---|
-| `VariantId` | uuid FK |
-| `AttributeId` | int FK (phải có `IsVariantAxis = true`) |
-| `OptionId` | int FK |
+| `ShopId` | uuid NOT NULL (#92) |
+| `VariantId` | uuid — FK ghép `(VariantId, ShopId) → product_variant (Id, ShopId)` |
+| `AttributeId` | int (phải có `IsVariantAxis = true`) — FK ghép `(AttributeId, ShopId)` |
+| `OptionId` | int — FK ghép `(OptionId, AttributeId, ShopId) → shop_attribute_option (Id, AttributeId, ShopId)` |
 | PK | `(VariantId, AttributeId)` |
 
 **Ràng buộc:**

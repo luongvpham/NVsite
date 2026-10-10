@@ -33,7 +33,7 @@
 | **#74** | **`resolveImage(imageId, preset)` giữ nguyên chữ ký** (`07` §7.1). `preset` là **assertion**: lệch với preset thật của asset thì **log cảnh báo và vẫn render**, không hard-fail |
 | **#75** | **File ảnh bất biến — cấm ghi đè.** Áp cho mọi ảnh: `MediaAsset.StorageKey` và file của `Listing`/`Product`. Mọi thay đổi (re-crop, đổi focal point, thay ảnh) sinh **đường dẫn mới**. Cache nhờ đó để `immutable` mà không bao giờ stale |
 | **#76** | **Tham chiếu ảnh vô hướng từ module khác dùng FK ghép `(ImageId, ShopId) → media_assets (Id, ShopId)`.** Chặn tenant ngay ở tầng DB, cùng khuôn `Listing.(TargetPageId, ShopId)` (`04` §4.1). Code module khác vẫn đọc/kiểm ảnh qua Public Contract interface của module Media (#1) |
-| **#77** | **Tham chiếu ảnh không diễn đạt được bằng FK thì kiểm ở handler, trong MỘT câu query.** Gồm: `imageId` trong `page_drafts.Tree` và `Page.OgImageId` (bảng `pages` chưa có `ShopId`). Mọi id phải thuộc đúng `ShopId` hiện tại, chưa xoá mềm; id trong tree phải là clone (`IsInLibrary = false`), id nghiệp vụ phải là bản Library (`IsInLibrary = true`). Sai bất kỳ điều kiện nào → fail request, không silent-fix (#21.3) |
+| **#77** | **Tham chiếu ảnh không diễn đạt được bằng FK thì kiểm ở handler, trong MỘT câu query.** Gồm: `imageId` trong `page_draft.Tree` (JSONB, không FK được). `Page.OgImageId` thì có FK ghép như mọi ảnh nghiệp vụ (#92). Mọi id phải thuộc đúng `ShopId` hiện tại, chưa xoá mềm; id trong tree phải là clone (`IsInLibrary = false`), id nghiệp vụ phải là bản Library (`IsInLibrary = true`). Sai bất kỳ điều kiện nào → fail request, không silent-fix (#21.3) |
 | **#78** | **Danh sách preset chốt 9 giá trị** (§7), chỉ dùng cho ảnh `MediaAsset`. Ảnh `Listing`/`Product` **không** đi qua whitelist preset — kích thước của chúng cố định ở #79 |
 | **#79** | **Ảnh `Listing` và `Product` không dùng `MediaAsset`.** Lưu `ImageUrls text[]` = **đường dẫn tương đối của file full**; thứ tự trong mảng là thứ tự hiển thị, `[0]` là ảnh đại diện. Mỗi entity một thư mục `shops/{shopId}/listings/{id}/` hoặc `shops/{shopId}/products/{id}/`, tên file là uuid. Thumb cùng thư mục, suy ra bằng prefix tên file: **`thumb_`** cho mọi ảnh, **`fthumb_`** (lớn hơn) chỉ sinh cho ảnh đang là ảnh đại diện, sinh khi cần. Kích thước và luật tỉ lệ ở §8 |
 | **#80** | **Ảnh variant là field `ProductVariant.ImageUrls text[]`** trên bảng variant — rỗng = dùng `Product.ImageUrls`. File nằm chung thư mục sản phẩm; nhiều variant được dùng chung một đường dẫn (upload một lần, "áp cho mọi variant cùng màu" chỉ copy đường dẫn) |
@@ -148,8 +148,8 @@ CREATE INDEX ix_media_derivative ON media_assets (SourceAssetId, Preset)
 
 | Nơi tham chiếu | Cách chặn tenant |
 |---|---|
-| `Shop.LogoId` · `Service.ImageId` · `ShopServiceGroup.ImageId` · `ShopProductCategory.ImageId` · `Website.DefaultOgImageId` · `Website.FaviconAssetId` | FK ghép `(ImageId, ShopId) → media_assets (Id, ShopId)` |
-| `imageId` trong `page_drafts.Tree` · `Page.OgImageId` | Handler lúc lưu draft / lưu page, một câu query (`pages` chưa có `ShopId` trong `05` §4) |
+| `Shop.LogoId` · `Service.ImageId` · `ShopServiceGroup.ImageId` · `ShopProductCategory.ImageId` · `Website.DefaultOgImageId` · `Website.FaviconAssetId` · `Page.OgImageId` | FK ghép `(ImageId, ShopId) → media_asset (Id, ShopId)` (#92) |
+| `imageId` trong `page_draft.Tree` | Handler lúc lưu draft, một câu query (`IMediaReferenceValidator`) |
 | `seo.ogImageId` trong `site_publications.Snapshot` | Không kiểm lại — sao chép từ `Website`/`Page` lúc publish, đã kiểm lúc ghi nguồn |
 
 Tất cả trỏ tới **bản Library** (ảnh nghiệp vụ) hoặc **clone** (ảnh trong tree) — không bao giờ trỏ vào
