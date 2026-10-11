@@ -1,6 +1,6 @@
 # vsite — Thiết Kế Entity: Service (Phase 2)
 
-> **STATUS:** `SPEC` · **Tasks:** `DESIGN-STEP5-PREP` · **Changelog:** `—` · **Stale:** `—`
+> **STATUS:** `SPEC` · **Tasks:** `DESIGN-STEP5-PREP,DESIGN-ROADMAP-001` · **Changelog:** `—` · **Stale:** `—`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 
 > **Tài liệu liên quan:** `01-project-ideal.md` (§2.1, §5.2) · `02-tech-stack-and-decision.md` (#33, #34, #38) · `04-listing-and-review-design.md` (§4 — `Listing.TargetPageId`) · `05-website-builder-and-product-design.md` (#54)
@@ -204,16 +204,14 @@ Mỗi component có 3–5 `variant` theo #13, đủ để website các shop khô
 
 ## 9. Thứ tự triển khai
 
+Thuộc Bước 9 của [`step.md`](step.md). `Page` đã có từ Bước 5a nên `DetailPageId` thêm ngay cùng `Service`:
+
 ```
 1. ShopServiceGroup
-2. Service  (chưa có DetailPageId — Page chưa tồn tại)
-3. [chờ module Website: Page xong]
-4. Thêm cột Service.DetailPageId + FK
-5. Component ServiceGrid / ServiceList / PriceTable / ServiceHighlight + manifest
-6. Binding Resolver: source "Service" + "ServiceGroup"
+2. Service (kèm DetailPageId + FK ghép)
+3. Component ServiceGrid / ServiceList / PriceTable / ServiceHighlight / ServiceGroupTabs + manifest
+4. Binding Resolver: source "Service" + "ServiceGroup" — chữ ký nhận { shopId, locale } (#98)
 ```
-
-Bước 2 và 4 tách nhau vì `Service` không phụ thuộc `Website` — shop có thể nhập dịch vụ trước khi dựng website. Nhưng cột nên được thêm trong cùng đợt migration nếu hai module làm song song.
 
 ---
 

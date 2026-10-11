@@ -26,10 +26,11 @@
 | Quy trình, lane, Gate, contract, `brief.md` | `ai-agent-development-workflow.md` |
 | Ma sát quy trình sau Gate 2, cải tiến quy trình, trần ngân sách tài liệu | `ai-agent-development-workflow.md` §9 → [`../Docs/process/improvement-proposals.md`](../Docs/process/improvement-proposals.md) |
 | Layout code backend (Domain/Application/Infrastructure, CQRS) | [`../backend/CLAUDE.md`](../backend/CLAUDE.md) ← **không** phải `architecture-guide.md` |
-| Thứ tự triển khai 11 bước | [`step.md`](step.md) |
+| Thứ tự triển khai (Bước 1–11 + Marketplace M0–M5) | [`step.md`](step.md) |
+| Đa ngôn ngữ website shop | `05-website-builder-and-product-design.md` §26 |
 | Nợ test cần Docker | [`../Docs/DOCKER-TEST-DEBT.md`](../Docs/DOCKER-TEST-DEBT.md) |
 
-**Quyết định `#N` nằm ở đâu:** `#1–#39` và `#68` → `02`. `#40–#58`, `#92`, `#94`, `#95` → `05` §0. `#93` → `04` §4.5. `#59–#67` → `07` §0. `#69–#86` và `#88` → `08` §0. `#90` → `backend/docs/modules/identity.md`. `#91` → `backend/CLAUDE.md` §OpenAPI.
+**Quyết định `#N` nằm ở đâu:** `#1–#39` và `#68` → `02`. `#40–#58`, `#92`, `#94`, `#95`, `#97`, `#98` → `05` §0. `#93` → `04` §4.5. `#96` → `step.md`. `#59–#67` → `07` §0. `#69–#86` và `#88` → `08` §0. `#90` → `backend/docs/modules/identity.md`. `#91` → `backend/CLAUDE.md` §OpenAPI.
 Chi tiết và lý do vì sao không gộp về `02`: xem đầu [`DECISIONS.md`](DECISIONS.md).
 
 ---
@@ -43,16 +44,16 @@ Chi tiết và lý do vì sao không gộp về `02`: xem đầu [`DECISIONS.md`
 | File | Trạng thái | Task đã chạm | Changelog | Đừng tin ở |
 |---|---|---|---|---|
 | `01-project-ideal.md` | ✅ Ổn định | — | — | — |
-| `02-tech-stack-and-decision.md` | ⚠️ Tài liệu thiếu phần | REFACTOR-API-001 | [`REFACTOR-API-001/changelog.md`](../Docs/tasks/REFACTOR-API-001/changelog.md) | Không chứa #40–#67, #69–#86 và #88 — xem DECISIONS.md · đường dẫn API (vd. api.vsite.vn/auth/...) thực tế có prefix /api: /api/auth/... (Quyết định #91) |
+| `02-tech-stack-and-decision.md` | ⚠️ Tài liệu thiếu phần | REFACTOR-API-001, DESIGN-ROADMAP-001 | [`REFACTOR-API-001/changelog.md`](../Docs/tasks/REFACTOR-API-001/changelog.md) | Không chứa #40–#67, #69–#86 và #88 — xem DECISIONS.md · đường dẫn API (vd. api.vsite.vn/auth/...) thực tế có prefix /api: /api/auth/... (Quyết định #91) |
 | `03-identity-entity-design.md` | ⚠️ Đã code, có lệch có chủ đích | IDENTITY-001, REFACTOR-DB-001, REFACTOR-AUTHZ-001, REFACTOR-API-001 | [`IDENTITY-001/changelog.md`](../Docs/tasks/IDENTITY-001/changelog.md) | §3.1/§3.3/§5 cột PasswordSalt · §3.3 câu upsert UserShop · §4 tên ràng buộc · §4 tên bảng/cột PascalCase có quote (thực tế snake_case, bảng User = app_user, REFACTOR-DB-001 — xem Docs/tasks/REFACTOR-DB-001/changelog.md) · mọi bảng auditable có thêm cột deleted_at · §6.1 đăng ký lại khi UserShop đã xoá mềm = khôi phục dòng cũ, đang Suspended/Invited = 409; login/refresh/reset chỉ chấp nhận UserShop chưa xoá + Active và User Active (Quyết định #90, Docs/tasks/REFACTOR-AUTHZ-001/changelog.md) · đường dẫn API (vd. api.vsite.vn/auth/verify-email) thực tế có prefix /api: /api/auth/... (Quyết định #91) |
 | `04-listing-and-review-design.md` | ⚠️ Đã code, có lệch có chủ đích | SHOP-001, MEDIA-001, DESIGN-STEP5-PREP | [`MEDIA-001/changelog.md`](../Docs/tasks/MEDIA-001/changelog.md) | Changelog trước MEDIA-001: Docs/tasks/SHOP-001/changelog.md (banner chỉ nhận một đường dẫn) · Chỉ §2.1/§2.2 (Shop) đã code — §3 trở đi (ServiceCategory/Listing/Review/Lead) vẫn là spec, chưa có dòng code nào · §2.1 Shop chưa liệt kê LogoId (FK ghép, MEDIA-001) và logoUrl trên ShopDto/ShopSummaryDto (xem Docs/tasks/MEDIA-001/changelog.md mục 13) |
-| `05-website-builder-and-product-design.md` | 📐 Thiết kế, chưa code | MEDIA-001, REFACTOR-DB-001, DESIGN-STEP5-PREP | [`MEDIA-001/changelog.md`](../Docs/tasks/MEDIA-001/changelog.md) | §9, §20 và #55/#56 ghi tên bảng media_assets (thực tế media_asset, số ít snake_case — REFACTOR-DB-001); #55 công thức quota SourceAssetId IS NULL (thực tế Kind IN (Library, Direct)) — MediaAsset đã code (Bước 4), phần còn lại của tài liệu (Website/Page/Product) vẫn là spec |
-| `06-service-design.md` | 📐 Thiết kế, chưa code | DESIGN-STEP5-PREP | — | — |
+| `05-website-builder-and-product-design.md` | 📐 Thiết kế, chưa code | MEDIA-001, REFACTOR-DB-001, DESIGN-STEP5-PREP, DESIGN-ROADMAP-001 | [`MEDIA-001/changelog.md`](../Docs/tasks/MEDIA-001/changelog.md) | §9, §20 và #55/#56 ghi tên bảng media_assets (thực tế media_asset, số ít snake_case — REFACTOR-DB-001); #55 công thức quota SourceAssetId IS NULL (thực tế Kind IN (Library, Direct)) — MediaAsset đã code (Bước 4), phần còn lại của tài liệu (Website/Page/Product) vẫn là spec |
+| `06-service-design.md` | 📐 Thiết kế, chưa code | DESIGN-STEP5-PREP, DESIGN-ROADMAP-001 | — | — |
 | `07-component-manifest-schema.md` | ⚠️ Đã code, có lệch có chủ đích | BOOTSTRAP-002, MEDIA-001, TOOLING-001 | [`TOOLING-001/changelog.md`](../Docs/tasks/TOOLING-001/changelog.md) | Changelog trước TOOLING-001: Docs/tasks/MEDIA-001/changelog.md · Changelog trước MEDIA-001: Docs/tasks/BOOTSTRAP-002/changelog.md (banner chỉ nhận một đường dẫn) · §7.2 nhãn "#67 cần xác nhận" (đã chốt) · §3 vị trí context · §9 route dev harness · §3 và §7.1 config/image-presets.json nay là {presets, surfaces} và resolveImage đã là bản thật, không còn stub · §7.4 binding.imagePresets đã code (xem Docs/tasks/MEDIA-001/changelog.md mục 4, 15) |
 | `08-media-asset-design.md` | ⚠️ Đã code, có lệch có chủ đích | MEDIA-001, REFACTOR-DB-001, REFACTOR-API-001 | [`REFACTOR-DB-001/changelog.md`](../Docs/tasks/REFACTOR-DB-001/changelog.md) | Changelog trước REFACTOR-DB-001: Docs/tasks/MEDIA-001/changelog.md (banner chỉ nhận một đường dẫn) · §2 tên bảng media_assets số nhiều (thực tế media_asset số ít, snake_case) và tên index ux_* của §3.5 (thực tế ix_media_asset_library, ux_media_asset_derivative, ix_media_asset_source) · §2 không có cột Kind (thực tế có Kind = Library/Direct/Clone/Derivative, REFACTOR-DB-001) · §2 công thức quota SourceAssetId IS NULL (thực tế Kind IN (Library, Direct)) · §3.6 ví dụ Shop có 1200x630,cover (thực tế chỉ 320x96,inside + 96x96,cover) · §5 và §10 mục 7 Cache-Control immutable (thực tế max-age=3600) · §3.5 và §9 test 6/7 chưa được chặn ở tầng request — IMediaReferenceValidator chưa nối handler nào (Bước 5) · §4 quét tham chiếu mới chỉ Shop.LogoId · §9 tiêu chí dừng chưa được chạy tay trên API + UI thật · đường dẫn API (vd. GET /shops, /shops/{shopId}/media/...) thực tế có prefix /api; /media/* (file ảnh) thì không (Quyết định #91) |
 | `ai-agent-development-workflow.md` | ✅ Quy trình đang hiệu lực | — | — | — |
 | `architecture-guide.md` | ⛔ Tham chiếu ngoại lai | — | — | 45 chỗ {Entity}, 10 chỗ {Project} chưa thay |
-| `step.md` | ✅ Ổn định | — | — | — |
+| `step.md` | ✅ Ổn định | DESIGN-ROADMAP-001 | — | — |
 <!-- GEN:END doc-status -->
 
 **Luật:** trước khi sửa/mở rộng code dựa trên một file ở trên, đọc dòng của nó trong bảng này.
@@ -69,16 +70,17 @@ lệch có chủ đích.**
 | 2 | Component Manifest + codegen + 5 component mẫu | ✅ BOOTSTRAP-002 |
 | 3 | Identity + Role + UserShop + Shop + PendingRegistration + token scope | ✅ IDENTITY-001 · test tích hợp đã chạy thật trên Docker (2026-09-27) |
 | 4 | `MediaAsset` + pipeline ảnh + Media Library + 9 preset + `/media/*` (`08`) | ✅ MEDIA-001 ⚠️ chưa nghiệm thu tay tiêu chí dừng `08` §9, `IMediaReferenceValidator` chưa nối handler — xem §4 |
-| 5 | `Website` → `Theme` → `Page` → `PageDraft` + Operations Engine | ⬜ |
-| 6 | `builder-renderer` | ⬜ |
+| 4.x | Dọn nền: nâng ImageSharp (CVE) + nghiệm thu tay `08` §9 | ⬜ |
+| 5a | `Website` → `Theme` → `Page` → `PageDraft` — BE, validate toàn tree khi `PUT` | ⬜ ⚠️ chốt quy ước một nguồn `ShopId` trước |
+| 5b | Operations Engine + editor Portal | ⬜ ⚠️ refresh token sang cookie trước |
+| 6 | `builder-renderer` hoàn thiện (`basePath`, `locale`, SSR↔CSR) + preview toàn trang | ⬜ |
 | 7 | `NavigationConfig` | ⬜ |
-| 8 | `SitePublication` + publish/rollback + cache | ⬜ ⚠️ chốt cache/TTL (`05` §25 #4) trước |
-| 9 | `Service` + Binding Resolver | ⬜ |
-| 10 | `Product` + Attribute/Variant + Elasticsearch | ⬜ |
+| 8a | Hangfire (hạ tầng job dùng chung) | ⬜ |
+| 8b | `SitePublication` + publish/rollback + cache + render công khai `apps/web` | ⬜ ⚠️ chốt cache/TTL (`05` §25 #4) trước — tính cả dữ liệu bind |
+| 9 | `Service` + Binding Resolver | ⬜ ⚠️ chốt vị trí + chữ ký Binding Resolver trước |
+| 10a/b/c | `Product`: danh mục/attribute → product/variant → outbox + ES + System page | ⬜ ⚠️ 10b: chốt UX variant (`05` §25 #6) |
 | 11 | `WebsiteTemplate` | ⬜ |
-
-`step.md` dòng 15 ghi "chốt sanitize whitelist trước Bước 5" — **việc đó đã xong ở Bước 2**
-(`config/sanitize-profiles.json`). Không còn là điều kiện chặn.
+| M0–M5 | Marketplace (Phase 1) — code sau builder (#96) | ⬜ ⚠️ M0: mô hình public read/write |
 
 ---
 
@@ -93,7 +95,12 @@ lệch có chủ đích.**
 | `02` §6 #8 | Mô hình giá hai luồng doanh thu | Trước khi bật thu phí |
 | `02` §6 #9 | Ngưỡng & quy trình kiểm duyệt listing | Trước launch |
 | `02` §6 #10 | SLA khiếu nại đánh giá — **rủi ro pháp lý** | Trước launch |
-| `05` §25 #4 | Cache/TTL cho `SitePublication` | Bước 8 |
+| `05` §25 #4 | Cache/TTL cho `SitePublication` — phải tính cả dữ liệu bind sống (`Service`/`Product` đổi không cần publish) | Bước 8b |
+| `step.md` 5a | Quy ước một nguồn `ShopId` cho handler: route hay `ITenantContext` (REFACTOR-BE-001 #3) | Bước 5a |
+| `step.md` 9 | Binding Resolver chạy ở đâu (SSR loader gọi API hay BE resolve sẵn) + chữ ký | Bước 9 |
+| `step.md` 11 | Template soạn bằng gì (builder trên shop nội bộ → xuất snapshot, hay seed JSON) | Bước 11 |
+| `05` §25 #7 | URL `System` page ở ngôn ngữ khác | Bật đa ngôn ngữ |
+| `step.md` "Đa ngôn ngữ" | Thời điểm bật tính năng đa ngôn ngữ (bước L) | — |
 
 ### Nợ kỹ thuật đã ghi nhận
 
