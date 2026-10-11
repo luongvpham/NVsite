@@ -23,10 +23,10 @@
     <!-- Identity / Auth (Quyết định #3 — không OIDC/OpenIddict, tự cấp JWT) -->
     <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="9.0.9" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
-    <!-- Pin 3.x (bản 4.x đổi license model) — Imaging pipeline (#53, #84, #85) -->
-    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <!-- Chỉ dùng trong test để vẽ ảnh mẫu (Fill) khi verify pipeline — không dùng ở code sản phẩm. -->
-    <PackageVersion Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
+    <!-- Imaging pipeline (#53, #84, #85). SkiaSharp (MIT) thay ImageSharp: mọi bản ImageSharp đã vá CVE (>= 4.1.2)
+         đòi file license lúc build — xem Docs/tasks/SEC-IMAGESHARP-001/changelog.md. -->
+    <PackageVersion Include="SkiaSharp" Version="4.153.1" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.9" />
@@ -45,5 +45,7 @@
          Đổi từ Testcontainers.Minio: minio/minio không còn publish image public (Docker Hub và
          quay.io đều từ chối pull, xác nhận 2026-09-27) — xem backend/docs/modules/media.md §6. -->
     <PackageVersion Include="Testcontainers.LocalStack" Version="3.10.0" />
+    <!-- Pin phụ thuộc bắc cầu của Testcontainers 3.10.0 (SSH.NET 2023.0.0 dính GHSA-q939-rpr3-3284). Chỉ test dùng; bỏ pin khi Testcontainers tự kéo bản >= 2026.0.0. -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
   </ItemGroup>
 </Project>

@@ -1,116 +1,127 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Webp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 using Vsite.Application.Common.Imaging;
 
 namespace Vsite.Infrastructure.Imaging;
 
 /// <summary>
-/// <see cref="ISourceImage"/> giữ ảnh gốc đã qua <see cref="ImageSharpImageProcessor.LoadAsync"/>
-/// (đã AutoOrient, đã xoá metadata) trong bộ nhớ, để render nhiều biến thể (`ImageTransform`) mà
-/// không phải decode lại. Luôn xuất WebP (Quyết định #53).
+/// <see cref="ISourceImage"/> giữ ảnh gốc đã qua <see cref="SkiaImageProcessor.LoadAsync"/>
+/// (đã áp Orientation, không mang metadata) trong bộ nhớ, để render nhiều biến thể (`ImageTransform`)
+/// mà không phải decode lại. Luôn xuất WebP (Quyết định #53).
 /// </summary>
-internal sealed class SourceImage(Image<Rgba32> image, ImageUploadOptions options) : ISourceImage
+internal sealed class SourceImage : ISourceImage
 {
-    public int Width => image.Width;
+    // Cần mipmap: thu nhỏ mạnh (vd. 25MP → 320px) bằng lọc song tuyến thường sẽ răng cưa.
+    private static readonly SKSamplingOptions Sampling = new(SKFilterMode.Linear, SKMipmapMode.Linear);
 
-    public int Height => image.Height;
+    private readonly SKBitmap _bitmap;
+    private readonly SKImage _image;
+    private readonly ImageUploadOptions _options;
 
-    public async Task<EncodedImage> RenderAsync(ImageTransform transform, CancellationToken ct)
+    public SourceImage(SKBitmap bitmap, ImageUploadOptions options)
     {
-        using var working = image.Clone(_ => { });
-        ApplyTransform(working, transform);
-
-        using var output = new MemoryStream();
-        var encoder = new WebpEncoder { Quality = options.WebpQuality };
-        await working.SaveAsWebpAsync(output, encoder, ct);
-
-        return new EncodedImage(output.ToArray(), working.Width, working.Height);
+        // Immutable → SKImage dùng chung pixel với bitmap, không nhân đôi ~100MB cho ảnh 25MP.
+        bitmap.SetImmutable();
+        _bitmap = bitmap;
+        _image = SKImage.FromBitmap(bitmap);
+        _options = options;
     }
 
-    public void Dispose() => image.Dispose();
+    public int Width => _bitmap.Width;
 
-    private static void ApplyTransform(Image<Rgba32> img, ImageTransform transform)
+    public int Height => _bitmap.Height;
+
+    public Task<EncodedImage> RenderAsync(ImageTransform transform, CancellationToken ct)
     {
-        switch (transform)
+        ct.ThrowIfCancellationRequested();
+
+        var (crop, outWidth, outHeight) = transform switch
         {
-            case ImageTransform.LongEdge longEdge:
-                ApplyLongEdge(img, longEdge.Max);
-                break;
-            case ImageTransform.Inside inside:
-                ApplyInside(img, inside.Width, inside.Height);
-                break;
-            case ImageTransform.Cover cover:
-                ApplyCover(img, cover.Width, cover.Height, cover.Focal);
-                break;
-            default:
-                throw new NotSupportedException($"ImageTransform '{transform.GetType().Name}' chưa được hỗ trợ.");
+            ImageTransform.LongEdge longEdge => PlanLongEdge(longEdge.Max),
+            ImageTransform.Inside inside => PlanInside(inside.Width, inside.Height),
+            ImageTransform.Cover cover => PlanCover(cover.Width, cover.Height, cover.Focal),
+            _ => throw new NotSupportedException($"ImageTransform '{transform.GetType().Name}' chưa được hỗ trợ."),
+        };
+
+        using var output = new SKBitmap(new SKImageInfo(outWidth, outHeight, SKColorType.Rgba8888, SKAlphaType.Premul));
+        using (var canvas = new SKCanvas(output))
+        {
+            canvas.Clear(SKColors.Transparent);
+            canvas.DrawImage(_image, crop, new SKRect(0, 0, outWidth, outHeight), Sampling, null);
         }
+
+        using var pixmap = output.PeekPixels();
+        using var data = pixmap.Encode(new SKWebpEncoderOptions(SKWebpEncoderCompression.Lossy, _options.WebpQuality))
+            ?? throw new InvalidOperationException("Không mã hoá được WebP.");
+
+        return Task.FromResult(new EncodedImage(data.ToArray(), outWidth, outHeight));
     }
+
+    public void Dispose()
+    {
+        _image.Dispose();
+        _bitmap.Dispose();
+    }
+
+    private SKRect FullRect => new(0, 0, Width, Height);
 
     /// <summary>Chỉ giới hạn cạnh dài, giữ tỉ lệ, CHỈ thu nhỏ nếu cạnh dài gốc lớn hơn <paramref name="max"/>.</summary>
-    private static void ApplyLongEdge(Image<Rgba32> img, int max)
+    private (SKRect Crop, int Width, int Height) PlanLongEdge(int max)
     {
-        var longEdge = Math.Max(img.Width, img.Height);
+        var longEdge = Math.Max(Width, Height);
         if (longEdge <= max)
         {
-            return;
+            return (FullRect, Width, Height);
         }
 
-        var scale = (double)max / longEdge;
-        var size = new Size(
-            Math.Max(1, (int)Math.Round(img.Width * scale)),
-            Math.Max(1, (int)Math.Round(img.Height * scale)));
-        img.Mutate(x => x.Resize(size));
+        var (w, h) = Scale(max / (double)longEdge);
+        return (FullRect, w, h);
     }
 
     /// <summary>Thu nhỏ để vừa khít khung (contain, giữ tỉ lệ, không crop) — CHỈ thu nhỏ.</summary>
-    private static void ApplyInside(Image<Rgba32> img, int boxWidth, int boxHeight)
+    private (SKRect Crop, int Width, int Height) PlanInside(int boxWidth, int boxHeight)
     {
-        if (img.Width <= boxWidth && img.Height <= boxHeight)
+        if (Width <= boxWidth && Height <= boxHeight)
         {
-            return;
+            return (FullRect, Width, Height);
         }
 
-        var scale = Math.Min((double)boxWidth / img.Width, (double)boxHeight / img.Height);
-        var size = new Size(
-            Math.Max(1, (int)Math.Round(img.Width * scale)),
-            Math.Max(1, (int)Math.Round(img.Height * scale)));
-        img.Mutate(x => x.Resize(size));
+        var (w, h) = Scale(Math.Min((double)boxWidth / Width, (double)boxHeight / Height));
+        return (FullRect, w, h);
     }
 
     /// <summary>Crop đúng tỉ lệ khung quanh <paramref name="focal"/> ở độ phân giải gốc, rồi CHỈ thu
     /// nhỏ nếu crop lớn hơn khung yêu cầu (R3) — ảnh nhỏ hơn preset giữ nguyên kích thước crop thật.</summary>
-    private static void ApplyCover(Image<Rgba32> img, int targetWidth, int targetHeight, FocalPoint focal)
+    private (SKRect Crop, int Width, int Height) PlanCover(int targetWidth, int targetHeight, FocalPoint focal)
     {
-        // Kích thước crop luôn ≥ 1px: ảnh 1×N hoặc N×1 với preset dọc/ngang làm phép làm tròn ra 0 →
-        // Crop ném ngoại lệ → HTTP 500 (final fix S1).
+        // Kích thước crop luôn ≥ 1px: ảnh 1×N hoặc N×1 với preset dọc/ngang làm phép làm tròn ra 0
+        // (final fix S1).
         var targetAspect = (double)targetWidth / targetHeight;
-        var srcAspect = (double)img.Width / img.Height;
+        var srcAspect = (double)Width / Height;
 
         int cropWidth, cropHeight;
         if (srcAspect > targetAspect)
         {
-            cropHeight = img.Height;
-            cropWidth = Math.Clamp((int)Math.Round(img.Height * targetAspect), 1, img.Width);
+            cropHeight = Height;
+            cropWidth = Math.Clamp((int)Math.Round(Height * targetAspect), 1, Width);
         }
         else
         {
-            cropWidth = img.Width;
-            cropHeight = Math.Clamp((int)Math.Round(img.Width / targetAspect), 1, img.Height);
+            cropWidth = Width;
+            cropHeight = Math.Clamp((int)Math.Round(Width / targetAspect), 1, Height);
         }
 
-        var centerX = (int)Math.Round(focal.X * img.Width);
-        var centerY = (int)Math.Round(focal.Y * img.Height);
-        var x = Math.Clamp(centerX - (cropWidth / 2), 0, img.Width - cropWidth);
-        var y = Math.Clamp(centerY - (cropHeight / 2), 0, img.Height - cropHeight);
+        var centerX = (int)Math.Round(focal.X * Width);
+        var centerY = (int)Math.Round(focal.Y * Height);
+        var x = Math.Clamp(centerX - (cropWidth / 2), 0, Width - cropWidth);
+        var y = Math.Clamp(centerY - (cropHeight / 2), 0, Height - cropHeight);
 
-        img.Mutate(ctx => ctx.Crop(new Rectangle(x, y, cropWidth, cropHeight)));
-
-        if (img.Width > targetWidth)
-        {
-            img.Mutate(ctx => ctx.Resize(targetWidth, targetHeight));
-        }
+        var crop = new SKRect(x, y, x + cropWidth, y + cropHeight);
+        return cropWidth > targetWidth
+            ? (crop, targetWidth, targetHeight)
+            : (crop, cropWidth, cropHeight);
     }
+
+    private (int Width, int Height) Scale(double scale) => (
+        Math.Max(1, (int)Math.Round(Width * scale)),
+        Math.Max(1, (int)Math.Round(Height * scale)));
 }

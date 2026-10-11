@@ -99,6 +99,7 @@ gồm các test endpoint 403 non-Owner (`LibraryEndpointTests`, `ShopLogoTests`,
 4. **Cảnh báo bảo mật dependency (ngoài phạm vi, phát hiện khi build):** `SixLabors.ImageSharp
    3.1.12` có NU1903 (high) GHSA-j3p4-wp97-rph4, GHSA-j9gm-c75j-xc9q, GHSA-jjfr-hcj7-qf5w. Cần task
    nâng version riêng (pipeline ảnh xử lý file người dùng upload). Đã ghi vào 00-INDEX §4.
+   **→ Đã xử lý ở `Docs/tasks/SEC-IMAGESHARP-001/changelog.md`** (thay thư viện, không nâng version).
 
 ## Giả định tôi đã tự đặt
 

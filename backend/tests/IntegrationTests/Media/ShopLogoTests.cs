@@ -5,9 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.Processing;
 using Vsite.Api.Identity;
 using Vsite.Api.Shop;
 using Vsite.Application.Common.Interfaces;
@@ -190,9 +187,8 @@ public sealed class ShopLogoTests
 
         var storagePath = Path.Combine(_factory.StorageRoot, insideDerivative.StorageKey.Replace('/', Path.DirectorySeparatorChar));
         Assert.True(File.Exists(storagePath));
-        using var image = await SixLabors.ImageSharp.Image.LoadAsync<SixLabors.ImageSharp.PixelFormats.Rgba32>(storagePath);
-        var transparentPixel = image[image.Width - 1, image.Height / 2];
-        Assert.True(transparentPixel.A < 50, $"Kỳ vọng vùng trong suốt còn alpha thấp, thực tế A={transparentPixel.A}.");
+        var transparentPixel = Vsite.IntegrationTests.Imaging.TestImages.RightEdgePixel(await File.ReadAllBytesAsync(storagePath));
+        Assert.True(transparentPixel.Alpha < 50, $"Kỳ vọng vùng trong suốt còn alpha thấp, thực tế A={transparentPixel.Alpha}.");
     }
 
     // ---- upload lần hai -> LogoId đổi sang bản mới, bản cũ vẫn còn trong Library ----
@@ -369,13 +365,7 @@ public sealed class ShopLogoTests
     }
 
     private static byte[] EncodeJpeg(int width, int height)
-    {
-        using var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(width, height);
-        image.Mutate(x => x.Fill(SixLabors.ImageSharp.Color.SeaGreen));
-        using var ms = new MemoryStream();
-        image.SaveAsJpeg(ms);
-        return ms.ToArray();
-    }
+        => Vsite.IntegrationTests.Imaging.TestImages.Jpeg(width, height);
 
     private Task<HttpResponseMessage> GetShopAsync(string token, Guid shopId)
     {

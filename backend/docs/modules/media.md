@@ -296,7 +296,7 @@ verify hash `contracts/openapi/.staging/media.v1.json` không đổi trước/sa
   `Vsite.Application/Media/{Interfaces,Dtos,Commands,Queries}/` ·
   `Vsite.Application/Common/Imaging/` (pipeline dùng chung, không thuộc riêng module nào) ·
   `Vsite.Infrastructure/Media/` + `Vsite.Infrastructure/Imaging/` (LocalDisk/S3 `IObjectStorage`,
-  `ImageSharpImageProcessor`, preset catalog) + `Vsite.Infrastructure/Persistence/Configurations/Media/` ·
+  `SkiaImageProcessor`, preset catalog) + `Vsite.Infrastructure/Persistence/Configurations/Media/` ·
   `Vsite.Api/Media/MediaEndpoints.cs` + `Vsite.Api/Media/MediaFileMiddleware.cs`.
 - `Media.dependsOn = ["Shop"]` (`Docs/architecture/dependency-map.json`) — Media dùng
   `IShopLogoWriter` (Public Contract phía Shop) và cài adapter cho `IShopLogoReader` (port của Shop, D4), Shop **không** reference

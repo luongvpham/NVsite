@@ -27,8 +27,8 @@ từ `00-INDEX` §4) · **Xong khi**.
 
 ## 4.x — Dọn nền trước Bước 5 (Lane A, task nhỏ)
 
-1. **Nâng `SixLabors.ImageSharp`** (CVE high, REFACTOR-BE-001 #4) và chạy lại test Imaging. Pipeline ảnh
-   xử lý file người dùng upload.
+1. ✅ **Xử lý CVE `SixLabors.ImageSharp`** (REFACTOR-BE-001 #4) — SEC-IMAGESHARP-001: thay bằng SkiaSharp (#84)
+   vì bản đã vá đòi license lúc build; SSH.NET (Testcontainers) cũng đã pin lên bản vá. Test Imaging + Media chạy lại xanh.
 2. **Nghiệm thu tay tiêu chí dừng `08` §9** (MEDIA-001 #5, #7). Bước 5 sẽ đưa `imageId` vào tree, nên
    không xây tiếp trên một nền chưa ai kiểm.
 

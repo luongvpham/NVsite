@@ -2,10 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using Vsite.Application.Common.Imaging;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Media;
@@ -27,7 +23,7 @@ namespace Vsite.IntegrationTests.Media;
 
 /// <summary>
 /// T6, MEDIA-001 (#55, #71, #72) — test handler-level KHÔNG cần Docker, cùng khuôn
-/// `UploadHandlerTests` (EF Core InMemory + <see cref="ImageSharpImageProcessor"/> +
+/// `UploadHandlerTests` (EF Core InMemory + <see cref="SkiaImageProcessor"/> +
 /// <see cref="LocalDiskObjectStorage"/> thật trong thư mục temp). Bù cho
 /// `LibraryEndpointTests` (Docker, Postgres+Redis Testcontainers) không chạy được trên máy không có
 /// Docker daemon — xem `Docs/DOCKER-TEST-DEBT.md`.
@@ -51,7 +47,7 @@ public sealed class LibraryHandlerTests : IDisposable
 
         var storageOptions = Options.Create(new StorageOptions { LocalDiskRoot = _storageRoot });
         _storage = new LocalDiskObjectStorage(storageOptions, new FakeHostEnvironment());
-        _processor = new ImageSharpImageProcessor(Options.Create(new ImageUploadOptions()));
+        _processor = new SkiaImageProcessor(Options.Create(new ImageUploadOptions()));
         _presetCatalog = new FakePresetCatalog(CoverPreset);
         _tenantContext = new FakeTenantContext();
     }
@@ -92,9 +88,9 @@ public sealed class LibraryHandlerTests : IDisposable
         var stored = await _storage.OpenReadAsync(result.StorageKey, CancellationToken.None);
         Assert.NotNull(stored);
         await using var content = stored!.Content;
-        using var image = await Image.LoadAsync(content);
-        Assert.Equal(CoverPreset.Width, image.Width);
-        Assert.Equal(CoverPreset.Height, image.Height);
+        var (imageWidth, imageHeight) = Vsite.IntegrationTests.Imaging.TestImages.Identify(await Vsite.IntegrationTests.Imaging.TestImages.ReadAllAsync(content));
+        Assert.Equal(CoverPreset.Width, imageWidth);
+        Assert.Equal(CoverPreset.Height, imageHeight);
     }
 
     // ---- clone từ id là clone -> 404 (không lộ tồn tại) ----
@@ -446,13 +442,7 @@ public sealed class LibraryHandlerTests : IDisposable
     }
 
     private static byte[] EncodeJpeg(int width, int height)
-    {
-        using var image = new Image<Rgba32>(width, height);
-        image.Mutate(x => x.Fill(SixLabors.ImageSharp.Color.SeaGreen));
-        using var ms = new MemoryStream();
-        image.SaveAsJpeg(ms);
-        return ms.ToArray();
-    }
+        => Vsite.IntegrationTests.Imaging.TestImages.Jpeg(width, height);
 
     private sealed class FakeHostEnvironment : IHostEnvironment
     {
