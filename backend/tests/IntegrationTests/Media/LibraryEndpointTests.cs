@@ -4,10 +4,6 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using Vsite.Api.Identity;
 using Vsite.Api.Shop;
 using Vsite.Application.Identity.Auth.Dtos;
@@ -390,13 +386,7 @@ public sealed class LibraryEndpointTests
     }
 
     private static byte[] EncodeJpeg(int width, int height)
-    {
-        using var image = new Image<Rgba32>(width, height);
-        image.Mutate(x => x.Fill(Color.SeaGreen));
-        using var ms = new MemoryStream();
-        image.SaveAsJpeg(ms);
-        return ms.ToArray();
-    }
+        => Vsite.IntegrationTests.Imaging.TestImages.Jpeg(width, height);
 
     private async Task<(string Token, Guid ShopId)> CreateOwnerWithShopAsync()
     {

@@ -5,10 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using Vsite.Api.Identity;
 using Vsite.Api.Shop;
 using Vsite.Application.Common.Interfaces;
@@ -70,9 +66,9 @@ public sealed class UploadEndpointTests
 
         var storagePath = Path.Combine(_factory.StorageRoot, asset.StorageKey.Replace('/', Path.DirectorySeparatorChar));
         Assert.True(File.Exists(storagePath));
-        using var image = await Image.LoadAsync(storagePath);
-        Assert.Equal(800, image.Width);
-        Assert.Equal(600, image.Height);
+        var (imageWidth, imageHeight) = Vsite.IntegrationTests.Imaging.TestImages.Identify(await File.ReadAllBytesAsync(storagePath));
+        Assert.Equal(800, imageWidth);
+        Assert.Equal(600, imageHeight);
     }
 
     // ---- Test bắt buộc 4: có tick -> 2 record; response trả id CLONE ----
@@ -277,13 +273,7 @@ public sealed class UploadEndpointTests
     }
 
     private static byte[] EncodeJpeg(int width, int height)
-    {
-        using var image = new Image<Rgba32>(width, height);
-        image.Mutate(x => x.Fill(Color.SeaGreen));
-        using var ms = new MemoryStream();
-        image.SaveAsJpeg(ms);
-        return ms.ToArray();
-    }
+        => Vsite.IntegrationTests.Imaging.TestImages.Jpeg(width, height);
 
     private async Task<(string Token, Guid ShopId)> CreateOwnerWithShopAsync()
     {

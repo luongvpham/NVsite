@@ -1,8 +1,4 @@
 using Microsoft.Extensions.Options;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using Vsite.Application.Common.Imaging;
 using Vsite.Domain.Exceptions;
 using Vsite.Infrastructure.Imaging;
@@ -10,72 +6,26 @@ using Vsite.Infrastructure.Imaging;
 namespace Vsite.IntegrationTests.Imaging;
 
 /// <summary>
-/// Test cho <see cref="ImageSharpImageProcessor"/> (T1, MEDIA-001, Quyết định #53/#84/#85). Không
+/// Test cho <see cref="SkiaImageProcessor"/> (T1, MEDIA-001, Quyết định #53/#84/#85). Không
 /// cần container — gọi thẳng processor với ảnh trong bộ nhớ hoặc ảnh mẫu thật ở
 /// `TestAssets/` (EXIF/multi-frame phải là file thật, không sinh được lúc chạy test).
 /// </summary>
-public sealed class ImageSharpImageProcessorTests
+public sealed class SkiaImageProcessorTests
 {
     private static readonly string AssetsDir = Path.Combine(AppContext.BaseDirectory, "TestAssets");
 
-    private static ImageSharpImageProcessor CreateProcessor(ImageUploadOptions? options = null)
+    private static SkiaImageProcessor CreateProcessor(ImageUploadOptions? options = null)
         => new(Options.Create(options ?? new ImageUploadOptions()));
 
     private static byte[] ReadAsset(string fileName) => File.ReadAllBytes(Path.Combine(AssetsDir, fileName));
 
-    private static byte[] EncodeJpeg(int width, int height)
-    {
-        using var image = new Image<Rgba32>(width, height);
-        image.Mutate(x => x.Fill(Color.SeaGreen));
-        using var ms = new MemoryStream();
-        image.SaveAsJpeg(ms);
-        return ms.ToArray();
-    }
+    private static byte[] EncodeJpeg(int width, int height) => TestImages.Jpeg(width, height);
 
-    /// <summary>JPEG nhiễu ngẫu nhiên — ảnh phẳng một màu nén xuống còn vài trăm byte, không đủ để
-    /// test giới hạn dung lượng nhỏ (<see cref="Over_max_bytes_is_rejected"/>).</summary>
-    private static byte[] EncodeNoisyJpeg(int width, int height)
-    {
-        using var image = new Image<Rgba32>(width, height);
-        var rng = new Random(42);
-        image.ProcessPixelRows(accessor =>
-        {
-            for (var y = 0; y < accessor.Height; y++)
-            {
-                var row = accessor.GetRowSpan(y);
-                for (var x = 0; x < row.Length; x++)
-                {
-                    row[x] = new Rgba32((byte)rng.Next(256), (byte)rng.Next(256), (byte)rng.Next(256));
-                }
-            }
-        });
-        using var ms = new MemoryStream();
-        image.SaveAsJpeg(ms);
-        return ms.ToArray();
-    }
+    private static byte[] EncodeNoisyJpeg(int width, int height) => TestImages.NoisyJpeg(width, height);
 
-    private static byte[] EncodePng(int width, int height)
-    {
-        using var image = new Image<Rgba32>(width, height);
-        image.Mutate(x => x.Fill(Color.SeaGreen));
-        using var ms = new MemoryStream();
-        image.SaveAsPng(ms);
-        return ms.ToArray();
-    }
+    private static byte[] EncodePng(int width, int height) => TestImages.Png(width, height);
 
-    /// <summary>Nửa trái đỏ, nửa phải xanh — dùng cho <see cref="Focal_point_shifts_crop"/>.</summary>
-    private static byte[] EncodeSplitColorPng(int width, int height)
-    {
-        using var image = new Image<Rgba32>(width, height);
-        image.Mutate(x =>
-        {
-            x.Fill(Color.Red, new Rectangle(0, 0, width / 2, height));
-            x.Fill(Color.Blue, new Rectangle(width / 2, 0, width - (width / 2), height));
-        });
-        using var ms = new MemoryStream();
-        image.SaveAsPng(ms);
-        return ms.ToArray();
-    }
+    private static byte[] EncodeSplitColorPng(int width, int height) => TestImages.SplitColorPng(width, height);
 
     // ---- Test bắt buộc 1: magic bytes, không tin extension ----
 
@@ -114,8 +64,7 @@ public sealed class ImageSharpImageProcessorTests
         using var source = await processor.LoadAsync(new MemoryStream(bytes), CancellationToken.None);
         var encoded = await source.RenderAsync(new ImageTransform.LongEdge(1600), CancellationToken.None);
 
-        var info = Image.Identify(encoded.Bytes);
-        Assert.Null(info.Metadata.ExifProfile);
+        Assert.False(TestImages.WebpHasMetadataChunk(encoded.Bytes), "WebP đầu ra không được có chunk EXIF/XMP/ICCP.");
     }
 
     // ---- R2: AutoOrient trước khi xoá EXIF ----
@@ -171,27 +120,26 @@ public sealed class ImageSharpImageProcessorTests
         using var source = await processor.LoadAsync(new MemoryStream(bytes), CancellationToken.None);
         var encoded = await source.RenderAsync(new ImageTransform.LongEdge(1600), CancellationToken.None);
 
-        using var output = Image.Load(encoded.Bytes);
-        Assert.Equal(1, output.Frames.Count);
+        Assert.True(TestImages.FrameCount(encoded.Bytes) <= 1, "WebP đầu ra phải tĩnh (Skia báo 0 hoặc 1 khung cho ảnh tĩnh).");
     }
 
     /// <summary>
-    /// Chứng minh `DecoderOptions.MaxFrames = 1` thực sự chặn decode ở TẦNG DECODER, không phải chỉ
-    /// xoá frame thừa SAU khi đã decode hết (khác với <see cref="Animated_webp_takes_first_frame"/>,
-    /// vốn pass dù có hay không `MaxFrames`). `animated-frame2-corrupt.webp` có frame 1 hợp lệ và
-    /// payload VP8 của frame 2 bị phá (74 byte cuối file ghi đè 0xFF) — nếu decoder đọc frame 2 thì
-    /// bắt buộc lỗi. `LoadAsync` phải thành công vì không bao giờ chạm tới byte của frame 2.
+    /// Khác ImageSharp (lấy được khung 1 rồi bỏ qua khung 2 hỏng): demuxer WebP của Skia kiểm tra
+    /// header MỌI khung ngay lúc `SKCodec.Create`, nên một file WebP động có khung sau bị phá bị từ
+    /// chối sớm là `CorruptImage` (422) — không bao giờ tới bước decode. Chấp nhận được: đây là file
+    /// hỏng, và từ chối sớm còn an toàn hơn. (`animated-frame2-corrupt.webp`: khung 1 hợp lệ, 74 byte
+    /// cuối — payload VP8 của khung 2 — bị ghi đè 0xFF.)
     /// </summary>
     [Fact]
-    public async Task Animated_webp_decode_never_touches_frame_2()
+    public async Task Animated_webp_with_corrupt_later_frame_is_rejected_as_corrupt()
     {
         var processor = CreateProcessor();
         var bytes = ReadAsset("animated-frame2-corrupt.webp");
 
-        using var source = await processor.LoadAsync(new MemoryStream(bytes), CancellationToken.None);
+        var ex = await Assert.ThrowsAsync<UnprocessableException>(
+            () => processor.LoadAsync(new MemoryStream(bytes), CancellationToken.None));
 
-        Assert.Equal(64, source.Width);
-        Assert.Equal(64, source.Height);
+        Assert.Equal(ImageErrorCodes.CorruptImage, ex.ErrorCode);
     }
 
     // ---- Huỷ request không được báo thành ảnh hỏng ----
@@ -201,7 +149,7 @@ public sealed class ImageSharpImageProcessorTests
     /// `ReadCappedAsync` (bước 1) — nơi KHÔNG có try/catch và chưa từng có bug. Test đó sẽ pass dù
     /// có xoá cả hai khối `catch (OperationCanceledException)` đã fix, nên không chứng minh được gì.
     /// Stream này chỉ cancel token SAU KHI `ReadCappedAsync` đọc hết input (lần `ReadAsync` trả về
-    /// 0 — EOF) — token bị huỷ đúng lúc thực thi đi vào bước 3 (`Image.IdentifyAsync`), là khối
+    /// 0 — EOF) — token bị huỷ đúng lúc thực thi đi vào bước 3 (`SKCodec.Create`), là khối
     /// try/catch thật sự được sửa.
     /// </summary>
     private sealed class CancelOnEofStream(Stream inner, CancellationTokenSource cts) : Stream
@@ -254,7 +202,7 @@ public sealed class ImageSharpImageProcessorTests
         using var stream = new CancelOnEofStream(new MemoryStream(bytes), cts);
 
         // Token còn sống lúc gọi — chỉ bị cts.Cancel() từ BÊN TRONG stream, đúng lúc
-        // `ReadCappedAsync` đọc xong (EOF), TRƯỚC khi chạm `Image.IdentifyAsync`.
+        // `ReadCappedAsync` đọc xong (EOF), TRƯỚC khi chạm `SKCodec.Create`.
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => processor.LoadAsync(stream, cts.Token));
     }
@@ -368,10 +316,9 @@ public sealed class ImageSharpImageProcessorTests
         // Focal lệch hẳn sang phải (0.9) → crop 100x100 phải rơi vào nửa phải (xanh).
         var encoded = await source.RenderAsync(new ImageTransform.Cover(100, 100, new FocalPoint(0.9f, 0.5f)), CancellationToken.None);
 
-        using var output = Image.Load<Rgba32>(encoded.Bytes);
-        var centerPixel = output[output.Width / 2, output.Height / 2];
+        var centerPixel = TestImages.CenterPixel(encoded.Bytes);
 
-        Assert.True(centerPixel.B > centerPixel.R, $"Kỳ vọng pixel giữa thiên về xanh, thực tế R={centerPixel.R} G={centerPixel.G} B={centerPixel.B}.");
+        Assert.True(centerPixel.Blue > centerPixel.Red, $"Kỳ vọng pixel giữa thiên về xanh, thực tế R={centerPixel.Red} G={centerPixel.Green} B={centerPixel.Blue}.");
     }
 
     // ---- R5: PNG alpha giữ nguyên khi xuất WebP ----
@@ -385,10 +332,9 @@ public sealed class ImageSharpImageProcessorTests
 
         var encoded = await source.RenderAsync(new ImageTransform.LongEdge(1600), CancellationToken.None);
 
-        using var output = Image.Load<Rgba32>(encoded.Bytes);
-        var transparentPixel = output[output.Width - 1, output.Height / 2];
+        var transparentPixel = TestImages.RightEdgePixel(encoded.Bytes);
 
-        Assert.True(transparentPixel.A < 50, $"Kỳ vọng vùng trong suốt còn alpha thấp, thực tế A={transparentPixel.A}.");
+        Assert.True(transparentPixel.Alpha < 50, $"Kỳ vọng vùng trong suốt còn alpha thấp, thực tế A={transparentPixel.Alpha}.");
     }
 
     [Fact]

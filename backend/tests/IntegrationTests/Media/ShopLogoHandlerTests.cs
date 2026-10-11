@@ -2,8 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using Vsite.Application.Common.Imaging;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Media;
@@ -23,7 +21,7 @@ namespace Vsite.IntegrationTests.Media;
 
 /// <summary>
 /// T7, MEDIA-001 (#73, #82) — test handler-level KHÔNG cần Docker, cùng khuôn
-/// `UploadHandlerTests`/`LibraryHandlerTests` (EF Core InMemory + <see cref="ImageSharpImageProcessor"/>
+/// `UploadHandlerTests`/`LibraryHandlerTests` (EF Core InMemory + <see cref="SkiaImageProcessor"/>
 /// + <see cref="LocalDiskObjectStorage"/> thật trong thư mục temp). Bù cho `ShopLogoTests` (Docker,
 /// Postgres+Redis Testcontainers) không chạy được trên máy không có Docker daemon — xem
 /// `Docs/DOCKER-TEST-DEBT.md`.
@@ -51,7 +49,7 @@ public sealed class ShopLogoHandlerTests : IDisposable
 
         var storageOptions = Options.Create(new StorageOptions { LocalDiskRoot = _storageRoot });
         _storage = new LocalDiskObjectStorage(storageOptions, new FakeHostEnvironment());
-        _processor = new ImageSharpImageProcessor(Options.Create(new ImageUploadOptions()));
+        _processor = new SkiaImageProcessor(Options.Create(new ImageUploadOptions()));
         _presetCatalog = new FakePresetCatalog(InsidePreset, CoverPreset);
         _tenantContext = new FakeTenantContext();
     }
@@ -134,14 +132,15 @@ public sealed class ShopLogoHandlerTests : IDisposable
         var stored = await _storage.OpenReadAsync(insideDerivative.StorageKey, CancellationToken.None);
         Assert.NotNull(stored);
         await using var content = stored!.Content;
-        using var image = await Image.LoadAsync<Rgba32>(content);
-        Assert.Equal(320, image.Width);
-        Assert.Equal(64, image.Height);
+        var derivativeBytes = await Vsite.IntegrationTests.Imaging.TestImages.ReadAllAsync(content);
+        var (imageWidth, imageHeight) = Vsite.IntegrationTests.Imaging.TestImages.Identify(derivativeBytes);
+        Assert.Equal(320, imageWidth);
+        Assert.Equal(64, imageHeight);
 
         // Nguồn trong suốt ở nửa phải (900px trở đi trên trục 1000px gốc) -> vùng tương ứng bên phải
         // của derivative (đã scale, không crop vì fit "inside") vẫn phải giữ alpha thấp.
-        var transparentPixel = image[image.Width - 1, image.Height / 2];
-        Assert.True(transparentPixel.A < 50, $"Kỳ vọng vùng trong suốt còn alpha thấp, thực tế A={transparentPixel.A}.");
+        var transparentPixel = Vsite.IntegrationTests.Imaging.TestImages.RightEdgePixel(derivativeBytes);
+        Assert.True(transparentPixel.Alpha < 50, $"Kỳ vọng vùng trong suốt còn alpha thấp, thực tế A={transparentPixel.Alpha}.");
     }
 
     // ---- upload lần hai -> LogoId đổi sang bản mới, bản cũ vẫn còn trong Library (không xoá gì) ----

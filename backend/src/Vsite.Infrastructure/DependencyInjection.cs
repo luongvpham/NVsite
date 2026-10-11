@@ -85,7 +85,7 @@ public static class DependencyInjection
     private static IServiceCollection AddImagingModule(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<ImageUploadOptions>(configuration.GetSection(ImageUploadOptions.Section));
-        services.AddScoped<IImageProcessor, ImageSharpImageProcessor>();
+        services.AddScoped<IImageProcessor, SkiaImageProcessor>();
 
         // IObjectStorage (T2, Quyết định #83): đúng MỘT provider theo Storage:Provider, mặc định
         // LocalDisk. Singleton hợp lệ cho cả hai — LocalDiskObjectStorage không giữ state theo
