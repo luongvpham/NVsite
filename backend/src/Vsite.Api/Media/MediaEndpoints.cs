@@ -69,6 +69,7 @@ public static class MediaEndpoints
             var result = await sender.Send(command, ct);
             return Results.Ok(result);
         })
+            .WithName("uploadToSlot")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireShopMembership()
             .DisableAntiforgery()
@@ -98,6 +99,7 @@ public static class MediaEndpoints
             var result = await sender.Send(command, ct);
             return Results.Ok(result);
         })
+            .WithName("uploadToLibrary")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireShopMembership()
             .DisableAntiforgery()
@@ -111,6 +113,7 @@ public static class MediaEndpoints
 
         media.MapGet("/library", async (Guid shopId, ISender sender, CancellationToken ct, int page = 1, int pageSize = 24) =>
             Results.Ok(await sender.Send(new ListLibraryQuery(shopId, page, pageSize), ct)))
+            .WithName("listLibrary")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireShopMembership()
             .Produces<PagedResult<MediaAssetDto>>()
@@ -121,6 +124,7 @@ public static class MediaEndpoints
         media.MapPost("/library/{assetId:guid}/clones", async (
             Guid shopId, Guid assetId, CloneRequest body, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new CloneFromLibraryCommand(shopId, assetId, body.Preset, body.FocalX, body.FocalY), ct)))
+            .WithName("cloneFromLibrary")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireShopMembership()
             .Produces<MediaAssetDto>()
@@ -131,6 +135,7 @@ public static class MediaEndpoints
 
         media.MapGet("/library/{assetId:guid}/references", async (Guid shopId, Guid assetId, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetReferencesQuery(shopId, assetId), ct)))
+            .WithName("getAssetReferences")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireShopMembership()
             .Produces<MediaReferencesDto>()
@@ -143,6 +148,7 @@ public static class MediaEndpoints
         media.MapGet("/library/{assetId:guid}/derivatives", async (
             Guid shopId, Guid assetId, string? preset, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetDerivativesQuery(shopId, assetId, preset), ct)))
+            .WithName("getDerivatives")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireShopMembership()
             .Produces<IReadOnlyList<MediaAssetDto>>()
@@ -156,6 +162,7 @@ public static class MediaEndpoints
             await sender.Send(new DeleteFromLibraryCommand(shopId, assetId), ct);
             return Results.NoContent();
         })
+            .WithName("deleteFromLibrary")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireShopOwner("MEDIA_OWNER_REQUIRED", "Chỉ chủ shop (Owner) mới được xoá khỏi thư viện.")
             .Produces(StatusCodes.Status204NoContent)
@@ -168,6 +175,7 @@ public static class MediaEndpoints
         // một chuỗi comma-separated phải tự parse.
         media.MapGet("/assets", async (Guid shopId, Guid[]? ids, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetAssetsByIdsQuery(shopId, ids ?? []), ct)))
+            .WithName("getAssetsByIds")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireShopMembership()
             .Produces<IReadOnlyList<MediaAssetDto>>()
@@ -177,6 +185,7 @@ public static class MediaEndpoints
 
         media.MapGet("/usage", async (Guid shopId, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetUsageQuery(shopId), ct)))
+            .WithName("getMediaUsage")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireShopMembership()
             .Produces<MediaUsageDto>()
@@ -199,6 +208,7 @@ public static class MediaEndpoints
             var result = await sender.Send(command, ct);
             return Results.Ok(result);
         })
+            .WithName("uploadShopLogo")
             .WithTags("Media").WithGroupName("media")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireShopOwner("MEDIA_OWNER_REQUIRED", "Chỉ chủ shop (Owner) mới được đổi logo.")

@@ -122,7 +122,7 @@ public sealed class ShopLogoTests
         var mediaResponse = await _client.SendAsync(mediaRequest);
         Assert.Equal(HttpStatusCode.OK, mediaResponse.StatusCode);
 
-        var patch = new HttpRequestMessage(HttpMethod.Patch, $"/shops/{shopId}")
+        var patch = new HttpRequestMessage(HttpMethod.Patch, $"/api/shops/{shopId}")
         {
             Content = JsonContent.Create(new UpdateShopRequest("Renamed Logo Shop", shop.Slug, shop.Kind, shop.ExternalUrl, shop.Status)),
             Headers = { Host = PortalHost },
@@ -154,7 +154,7 @@ public sealed class ShopLogoTests
             await db.SaveChangesAsync();
         }
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "/shops") { Headers = { Host = PortalHost } };
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/shops") { Headers = { Host = PortalHost } };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await _client.SendAsync(request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -281,7 +281,7 @@ public sealed class ShopLogoTests
     {
         var (token, shopId) = await CreateOwnerWithShopAsync();
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/shops/{shopId}/logo")
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/shops/{shopId}/logo")
         {
             Content = JsonContent.Create(new { }),
             Headers = { Host = PortalHost },
@@ -318,7 +318,7 @@ public sealed class ShopLogoTests
         using var throwingClient = throwingFactory.CreateClient();
 
         using var content = BuildLogoMultipart("logo.png");
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/shops/{shopId}/logo") { Content = content, Headers = { Host = PortalHost } };
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/shops/{shopId}/logo") { Content = content, Headers = { Host = PortalHost } };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await throwingClient.SendAsync(request);
 
@@ -351,7 +351,7 @@ public sealed class ShopLogoTests
     private async Task<HttpResponseMessage> PutLogoAsync(string token, Guid shopId, string testAssetFileName)
     {
         using var content = BuildLogoMultipart(testAssetFileName);
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/shops/{shopId}/logo") { Content = content, Headers = { Host = PortalHost } };
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/shops/{shopId}/logo") { Content = content, Headers = { Host = PortalHost } };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return await _client.SendAsync(request);
     }
@@ -379,7 +379,7 @@ public sealed class ShopLogoTests
 
     private Task<HttpResponseMessage> GetShopAsync(string token, Guid shopId)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/shops/{shopId}") { Headers = { Host = PortalHost } };
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/shops/{shopId}") { Headers = { Host = PortalHost } };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return _client.SendAsync(request);
     }
@@ -395,13 +395,13 @@ public sealed class ShopLogoTests
 
     private async Task<string> RegisterVerifyLoginGlobalAsync(string email)
     {
-        await PostAsync(PortalHost, "/auth/register", new RegisterRequest(email, Password, "Test User"));
+        await PostAsync(PortalHost, "/api/auth/register", new RegisterRequest(email, Password, "Test User"));
 
         var token = _factory.EmailSpy.ExtractLastTokenFor(email);
-        var verifyResponse = await SendAsync(HttpMethod.Get, $"/auth/verify-email?token={Uri.EscapeDataString(token)}", PortalHost);
+        var verifyResponse = await SendAsync(HttpMethod.Get, $"/api/auth/verify-email?token={Uri.EscapeDataString(token)}", PortalHost);
         Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
 
-        var loginResponse = await PostAsync(PortalHost, "/auth/login", new LoginRequest(email, Password));
+        var loginResponse = await PostAsync(PortalHost, "/api/auth/login", new LoginRequest(email, Password));
         Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
 
         var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthTokenResult>();
@@ -428,7 +428,7 @@ public sealed class ShopLogoTests
 
     private Task<HttpResponseMessage> CreateShopAsync(string token, CreateShopRequest body)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/shops")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/shops")
         {
             Content = JsonContent.Create(body),
             Headers = { Host = PortalHost },

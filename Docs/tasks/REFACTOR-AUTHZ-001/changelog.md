@@ -125,7 +125,7 @@ Trước task này, membership đã xoá mềm hoặc `Suspended`/`Invited` vẫ
 3. **Access token đã phát vẫn dùng được tới khi hết hạn (15 phút) sau khi `User` bị đình chỉ**, với
    token `vsite-main`, và token `vsite-portal` trên endpoint không có `{shopId}` (`GET /shops`,
    `/auth/me`). Token shop và mọi route `{shopId}` đã bị chặn ngay (mục 5). Chặn nốt thì cần kiểm
-   `User.Status` mỗi request (thêm một query), cần người quyết.
+   `User.Status` mỗi request (thêm một query). **Người duyệt chấp nhận rủi ro này (2026-10-09), không làm.**
 4. **Các field bảo mật của `User` vẫn setter public:** `Status`, `RoleId`, và `IsDeleted` của base
    class. Code có thể khôi phục một dòng mà không qua `RestoreAsCustomer`. Nên làm cùng nghiệp vụ
    đình chỉ (mục 2).

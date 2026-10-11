@@ -1,4 +1,4 @@
-# vsite — Registry Quyết Định (#1–#90)
+# vsite — Registry Quyết Định (#1–#95)
 
 > **File này là CHỈ MỤC, không phải nội dung.** Mỗi dòng cho bạn biết quyết định đó nói gì trong một
 > câu, nó được **định nghĩa đầy đủ ở đâu**, và nó **đã thành code chưa**. Đọc dòng ở đây trước, rồi
@@ -12,7 +12,7 @@
 ## ⚠️ Đọc trước khi tra
 
 **Không phải quyết định nào cũng nằm trong `02`.** `02` định nghĩa **#1–#39** và **#68**.
-**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** và **#88** định nghĩa tại `08` §0, **#87** tại `backend/CLAUDE.md` §OpenAPI, **#89** tại `ai-agent-development-workflow.md` §6, **#90** tại `backend/docs/modules/identity.md` §Quyết định #90.
+**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** và **#88** định nghĩa tại `08` §0, **#87** tại `backend/CLAUDE.md` §OpenAPI, **#89** tại `ai-agent-development-workflow.md` §6, **#90** tại `backend/docs/modules/identity.md` §Quyết định #90, **#91** tại `backend/CLAUDE.md` §OpenAPI, **#92**, **#94**, **#95** tại `05` §0, **#93** tại `04` §4.5.
 Không chép các quyết định đó sang `02` — cố tình không làm. Chép sang `02` sẽ tạo bản
 sao thứ hai để lệch nhau; thay vào đó registry này trỏ thẳng tới nơi định nghĩa duy nhất.
 
@@ -60,7 +60,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#18** | Contract-first: OpenAPI snapshot commit vào repo | `02 §Quyết định #18` | ✅ enforce — `contracts/contract.lock` |
 | **#19** | Quy ước bắt buộc để codegen không vỡ (enum string, không TS `enum`…) | `02 §Quyết định #19` | ✅ đã code |
 | **#20** | State ownership: TanStack Query vs Zustand | `02 §Quyết định #20` | 📐 |
-| **#21** | **Tenant security invariants** — 5 mục, xem #21.1–#21.5 dưới bảng | `02 §Quyết định #21` | ✅ enforce — `TenantIsolationTests.cs` ⚠️ **chưa chạy thật, cần Docker** |
+| **#21** | **Tenant security invariants** — 5 mục, xem #21.1–#21.5 dưới bảng | `02 §Quyết định #21` | ✅ enforce — `TenantIsolationTests` + `MediaTenantIsolationTests` (Postgres thật, Testcontainers) · `IgnoreQueryFiltersAllowlistTests` (#90) |
 | **#22** | FE 2 app (`web`, `portal`) thay vì 3, chia theo rendering strategy | `02 §Quyết định #22` | ✅ đã code |
 | **#23** | SSR cho `apps/web` (TanStack Start); `apps/portal` giữ CSR; renderer phải isomorphic | `02 §Quyết định #23` | ✅ enforce một phần — ESLint `no-restricted-globals`; **thiếu** snapshot SSR↔CSR |
 | **#24** | Reserved routes: một nguồn JSON duy nhất dùng chung FE + BE | `02 §Quyết định #24` | ✅ enforce — `config/reserved-routes.json` + `ReservedRoutesTests.cs` |
@@ -101,7 +101,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#59** | Manifest là file `.ts` object literal thuần — không import runtime, không hàm, không điều kiện | `07` §0 · §4 | ✅ enforce — `meta/manifest-schema.ts` (Zod) |
 | **#60** | BE **không** port Zod sang C#; codegen sinh `props-schemas.json` (JSON Schema 2020-12) | `07` §0 · §11 | ✅ enforce — `tests/schema-equivalence.test.ts` |
 | **#61** | Props khai ở tầng `type`; `variant` chỉ khai `usesProps` / `requiresProps` | `07` §0 · §4.2 | ✅ enforce — `meta/manifest-schema.ts` |
-| **#62** | `registry.lock.json` commit vào repo; CI so lock, breaking → fail build | `07` §0 · §5 | ✅ enforce — `scripts/check-additive.ts` |
+| **#62** | `registry.lock.json` commit vào repo; CI so lock, breaking → fail build; lock phải tồn tại và bằng đúng snapshot hiện tại, chỉ cập nhật bằng `pnpm registry:lock` (từ chối khi vi phạm) | `07` §0 · §5 | ✅ enforce — `scripts/check-additive.ts` (CI + pre-commit) + `lock-snapshot.test.ts` + `gen-registry.test.ts` (TOOLING-001) |
 | **#63** | `kind` của prop là **tập đóng 12 giá trị**; người viết component không được phát minh kind mới | `07` §0 · §4.3 | ✅ enforce — `meta/prop-kinds.ts` |
 | **#64** | Mọi prop `kind: "image"` **bắt buộc** khai `preset` nằm trong `config/image-presets.json`; whitelist là lint build-time + bảng kích thước cho pipeline BE | `07` §0 · §7.1 | ✅ enforce — `gen-registry.ts` hard-fail + `tests/config-files.test.ts`; `config/image-presets.json` đã đủ 9 preset (`ImagePresetCatalogTests.Reads_Real_ImagePresets_File_With_Nine_Presets`), shape `{ presets, surfaces }` |
 | **#65** | Prop `kind: "binding"` khai `sources` tường minh; codegen **hard-fail** nếu chứa `"Review"` | `07` §0 · §7.4 | ✅ enforce — `gen-registry.ts` + `config/binding-sources.json` + test |
@@ -116,7 +116,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#74** | `resolveImage(imageId, preset)` **giữ chữ ký**; `preset` là assertion — lệch thì cảnh báo, vẫn render | `08` §0 · §6 | ✅ đã code — `resolveImage()` thật + cảnh báo lệch preset (`packages/builder-components/src/context.test.tsx`); chữ ký không đổi |
 | **#75** | **File ảnh bất biến** — cấm ghi đè, áp cho mọi ảnh (`StorageKey` lẫn file Listing/Product); mọi thay đổi sinh đường dẫn mới | `08` §0 · §5 | ✅ enforce — `IObjectStorage.PutAsync` không ghi đè: `ObjectStorageContractTests.Put_twice_same_key_throws_and_keeps_original_content` (LocalDisk + S3/LocalStack) + `MediaDbConstraintTests.Unique_index_rejects_duplicate_StorageKey`. Phần file `Listing`/`Product` chưa có |
 | **#76** | Tham chiếu ảnh vô hướng từ module khác dùng **FK ghép `(ImageId, ShopId) → media_assets (Id, ShopId)`**; code đọc qua Public Contract (#1) | `08` §0 · §2.2 | ✅ enforce — FK ghép `Shop(LogoId, Id) → MediaAsset(Id, ShopId)` + `MediaDbConstraintTests.Composite_FK_rejects_LogoId_pointing_to_another_shops_asset`. Mới có `Shop.LogoId`; các cột `ImageId` khác theo module tương ứng |
-| **#77** | Tham chiếu `MediaAsset` không có FK (tree, `Page.OgImageId`) kiểm ở handler trong **một** câu query: cùng `ShopId`, chưa xoá, đúng loại record | `08` §0 · §3.5 | 📐 Bước 4 — `IMediaReferenceValidator` + `MediaReferenceValidatorTests` đã có, CHƯA nối vào handler nào (Bước 5) |
+| **#77** | Tham chiếu `MediaAsset` không có FK (`imageId` trong tree JSONB) kiểm ở handler trong **một** câu query: cùng `ShopId`, chưa xoá, đúng loại record | `08` §0 · §3.5 | 📐 Bước 4 — `IMediaReferenceValidator` + `MediaReferenceValidatorTests` đã có, CHƯA nối vào handler nào (Bước 5) |
 | **#78** | **9 preset** cho ảnh `MediaAsset` chốt ở `08` §7; ảnh Listing/Product không đi qua whitelist preset | `08` §0 · §7 | ✅ enforce — `config/image-presets.json` đủ 9 preset + `ImagePresetCatalogTests.Reads_Real_ImagePresets_File_With_Nine_Presets` + `gen-registry` hard-fail preset ngoài whitelist |
 | **#79** | Ảnh **Listing/Product** không dùng `MediaAsset`: `ImageUrls text[]` = đường dẫn file full, `[0]` = đại diện; thư mục theo entity; `thumb_` mọi ảnh, `fthumb_` chỉ ảnh đại diện (sinh khi cần). Listing 640×480/160×120 (4:3); Product rộng 600/160 theo tỉ lệ danh mục | `08` §0 · §8 | 📐 Listing (Phase 1) · ⏳ Product (Bước 10) — mới có hàm quy ước tên C# `ImagePaths.Thumb`/`FeaturedThumb` (Bước 4); bản TS chưa có |
 | **#80** | Ảnh variant = `ProductVariant.ImageUrls text[]` (rỗng = dùng ảnh product); file chung thư mục sản phẩm, nhiều variant dùng chung đường dẫn | `08` §0 · §8.3 | ⏳ Bước 10 |
@@ -130,6 +130,11 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#88** | `ShopDto` **và `ShopSummaryDto`** (`GET /shops`) trả sẵn **`logoUrl`** = `"/media/" + storageKey` của phái sinh `320x96,inside` của logo (đường dẫn tương đối theo domain, dùng được trên mọi host; `null` nếu chưa có logo hoặc chưa có phái sinh). **Field DTO tên `*Url` mà Portal nhận do BE trả sẵn có tiền tố `/media/`**; DB vẫn chỉ lưu key tương đối; nội dung ảnh trong builder vẫn đi qua `resolveImage()`. Prefix + hàm dựng URL nằm ở MỘT chỗ BE (`ImagePaths.MediaUrl`, cùng hằng với route mount `/media`). `Shop` đọc qua port do chính `Shop` khai báo (`IShopLogoReader`, có bản tra theo lô một câu SQL cho `GET /shops`), adapter nằm ở `Media` (Shop không reference Media). Endpoint `GET …/library/{assetId}/derivatives` vẫn giữ cho các nguồn ảnh nghiệp vụ khác | `08` §0 · §3.6 · §5 | ✅ enforce — `ShopLogoTests` (`GetShop_and_PatchShop_after_logo_return_prefixed_logoUrl_readable_via_media`, `ListShops_returns_logoUrl_…`) + `ShopLogoBatchSqlCountTests` (một câu SQL) + `ImagePathsMediaUrlTests` + `ModuleBoundaryTests` (Shop không reference Media) |
 | **#89** | **Gate 1 gọn trước production:** `contract-diff.md` chỉ ghi endpoint/field mới, auth, giả định, câu hỏi, bảng quyết định — không phân tích nhãn `BREAKING`. Chỉ thêm và **không có câu hỏi** → promote ngay, người đọc lại sau; có câu hỏi hoặc `REMOVED` → dừng. Checklist Gate 1 bắt buộc chốt mọi "Câu hỏi mở" của `data-needs.md` và chạy thử Orval trên staging. **Đảo lại** từ lần deploy production đầu tiên (sửa cùng Rule 5) | `ai-agent-development-workflow.md` §6 | ✅ quy trình — skill `contract-sync` bước 5–6 |
 | **#90** | **Vòng đời membership trong luồng auth:** chỉ `UserShop` chưa xoá mềm + `Active` (và `User` `Active`) được đăng nhập/làm mới token/reset password/vào `ownerShopIds`; refresh khi hết hiệu lực → 401 + thu hồi token cùng scope; đăng ký lại sau khi membership bị xoá mềm → **khôi phục** (Customer, Active, `Source` giữ nguyên); đang Suspended/Invited → **409** | `backend/docs/modules/identity.md` §Quyết định #90 | ✅ enforce — `MembershipLifecycleTests` (8 test) + `IgnoreQueryFiltersAllowlistTests` + helper `UserShopQueries` |
+| **#91** | **Mọi endpoint API nằm dưới `/api`** (trừ `/media/*` file ảnh public và `/openapi/*` dev) và **mọi endpoint có `operationId` tường minh** đặt theo nghiệp vụ (camelCase, vd. `listShops`) — tên hàm/hook FE không còn phụ thuộc path. Lý do: API ở root đè namespace URL của slug shop và route SPA Portal | `backend/CLAUDE.md` §OpenAPI | ✅ enforce — `ApiRoutePrefixTests` (prefix + operationId bắt buộc, không trùng) |
+| **#92** | **Mọi bảng thuộc shop có `ShopId`** (kể cả bảng con 1:1) và **mọi FK tới entity thuộc shop là FK ghép** `(X, ShopId) → (Id, ShopId)`; giữ khoá int identity (chấp nhận lộ bộ đếm); `ON DELETE SET NULL` trên FK ghép phải ghi cột `SET NULL (X)` | `05` §0 · áp dụng `05` §2–§19, `06` §4–§6, `04` §4.1 | 📐 Bước 5+ — mẫu đang chạy: `shop(logo_id, id) → media_asset(id, shop_id)` |
+| **#93** | **Địa chỉ 2 cấp** (tỉnh + xã/phường, từ 01/07/2025) qua bảng `administrative_unit` có hiệu lực theo thời gian; **"khu vực" = quận/huyện cũ** suy ra từ phường qua bảng ánh xạ, chỉ dùng cho tìm kiếm + landing SEO (`vsite.vn/spa/quan-7`); lọc theo phường thì `noindex` | `04` §4.5 | 📐 Phase 1 (Marketplace) |
+| **#94** | Document JSONB vòng đời dài (`Tree`, `Snapshot`, `Tokens`, `NavigationConfig.Items`) có **`schemaVersion` ở cấp gốc** + upcaster khi đọc; node vẫn không có version (#43) | `05` §0 · §3, §6–§8, §10 | 📐 Bước 5 |
+| **#95** | `CategoryAttribute`: bỏ sentinel `CategoryId = 0` → `CategoryId` nullable (`NULL` = toàn shop) + `ShopId` + `UNIQUE NULLS NOT DISTINCT (ShopId, CategoryId, AttributeId)` | `05` §0 · §16 | 📐 Bước 10 |
 
 ---
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { patchShopsShopIdBody, postShopsBody } from '@vsite/api-sdk';
+import { updateShopBody, createShopBody } from '@vsite/api-sdk';
 import { reservedRoutes } from './reserved-routes';
 
 /**
@@ -30,14 +30,14 @@ const EXTERNAL_URL_ISSUE = {
   path: ['externalUrl'] as (string | number)[],
 };
 
-// `postShopsBody`/`patchShopsShopIdBody` sinh từ contract (Orval) — chỉ override field `slug` bằng
+// `createShopBody`/`updateShopBody` sinh từ contract (Orval) — chỉ override field `slug` bằng
 // rule chi tiết hơn ở trên, cộng thêm ràng buộc chéo field "ExternalOnly ⇒ externalUrl" mà contract
 // không mã hoá được (business rule, không phải type shape).
-export const createShopFormSchema = postShopsBody
+export const createShopFormSchema = createShopBody
   .extend({ slug: slugSchema })
   .refine(requireExternalUrlWhenExternalOnly, EXTERNAL_URL_ISSUE);
 
-export const updateShopFormSchema = patchShopsShopIdBody
+export const updateShopFormSchema = updateShopBody
   .extend({ slug: slugSchema })
   .refine(requireExternalUrlWhenExternalOnly, EXTERNAL_URL_ISSUE);
 

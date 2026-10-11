@@ -32,42 +32,44 @@ import type {
 import { customInstance } from '../../../mutator/axios-instance';
 
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
-export const postShops = (
+
+export const createShop = (
     createShopRequest: CreateShopRequest,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<ShopDto>(
-      {url: `/shops`, method: 'POST',
+      {url: `/api/shops`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: createShopRequest, signal
     },
-      );
+      options);
     }
   
 
 
-export const getPostShopsMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postShops>>, TError,{data: CreateShopRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postShops>>, TError,{data: CreateShopRequest}, TContext> => {
+export const getCreateShopMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createShop>>, TError,{data: CreateShopRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createShop>>, TError,{data: CreateShopRequest}, TContext> => {
 
-const mutationKey = ['postShops'];
-const {mutation: mutationOptions} = options ?
+const mutationKey = ['createShop'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postShops>>, {data: CreateShopRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createShop>>, {data: CreateShopRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  postShops(data,)
+          return  createShop(data,requestOptions)
         }
 
         
@@ -75,98 +77,98 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PostShopsMutationResult = NonNullable<Awaited<ReturnType<typeof postShops>>>
-    export type PostShopsMutationBody = CreateShopRequest
-    export type PostShopsMutationError = ProblemDetails | HttpValidationProblemDetails
+    export type CreateShopMutationResult = NonNullable<Awaited<ReturnType<typeof createShop>>>
+    export type CreateShopMutationBody = CreateShopRequest
+    export type CreateShopMutationError = ProblemDetails | HttpValidationProblemDetails
 
-    export const usePostShops = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postShops>>, TError,{data: CreateShopRequest}, TContext>, }
+    export const useCreateShop = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createShop>>, TError,{data: CreateShopRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof postShops>>,
+        Awaited<ReturnType<typeof createShop>>,
         TError,
         {data: CreateShopRequest},
         TContext
       > => {
 
-      const mutationOptions = getPostShopsMutationOptions(options);
+      const mutationOptions = getCreateShopMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const getShops = (
+    export const listShops = (
     
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<ShopSummaryDto[]>(
-      {url: `/shops`, method: 'GET', signal
+      {url: `/api/shops`, method: 'GET', signal
     },
-      );
+      options);
     }
   
 
 
 
-export const getGetShopsQueryKey = () => {
+export const getListShopsQueryKey = () => {
     return [
-    `/shops`
+    `/api/shops`
     ] as const;
     }
 
     
-export const getGetShopsQueryOptions = <TData = Awaited<ReturnType<typeof getShops>>, TError = ProblemDetails>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShops>>, TError, TData>>, }
+export const getListShopsQueryOptions = <TData = Awaited<ReturnType<typeof listShops>>, TError = ProblemDetails>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listShops>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetShopsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListShopsQueryKey();
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShops>>> = ({ signal }) => getShops(signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listShops>>> = ({ signal }) => listShops(requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShops>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listShops>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetShopsQueryResult = NonNullable<Awaited<ReturnType<typeof getShops>>>
-export type GetShopsQueryError = ProblemDetails
+export type ListShopsQueryResult = NonNullable<Awaited<ReturnType<typeof listShops>>>
+export type ListShopsQueryError = ProblemDetails
 
 
-export function useGetShops<TData = Awaited<ReturnType<typeof getShops>>, TError = ProblemDetails>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShops>>, TError, TData>> & Pick<
+export function useListShops<TData = Awaited<ReturnType<typeof listShops>>, TError = ProblemDetails>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listShops>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShops>>,
+          Awaited<ReturnType<typeof listShops>>,
           TError,
-          Awaited<ReturnType<typeof getShops>>
+          Awaited<ReturnType<typeof listShops>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShops<TData = Awaited<ReturnType<typeof getShops>>, TError = ProblemDetails>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShops>>, TError, TData>> & Pick<
+export function useListShops<TData = Awaited<ReturnType<typeof listShops>>, TError = ProblemDetails>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listShops>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShops>>,
+          Awaited<ReturnType<typeof listShops>>,
           TError,
-          Awaited<ReturnType<typeof getShops>>
+          Awaited<ReturnType<typeof listShops>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShops<TData = Awaited<ReturnType<typeof getShops>>, TError = ProblemDetails>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShops>>, TError, TData>>, }
+export function useListShops<TData = Awaited<ReturnType<typeof listShops>>, TError = ProblemDetails>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listShops>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetShops<TData = Awaited<ReturnType<typeof getShops>>, TError = ProblemDetails>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShops>>, TError, TData>>, }
+export function useListShops<TData = Awaited<ReturnType<typeof listShops>>, TError = ProblemDetails>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listShops>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetShopsQueryOptions(options)
+  const queryOptions = getListShopsQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -178,81 +180,81 @@ export function useGetShops<TData = Awaited<ReturnType<typeof getShops>>, TError
 
 
 
-export const getShopsShopId = (
+export const getShop = (
     shopId: string,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<ShopDto>(
-      {url: `/shops/${shopId}`, method: 'GET', signal
+      {url: `/api/shops/${shopId}`, method: 'GET', signal
     },
-      );
+      options);
     }
   
 
 
 
-export const getGetShopsShopIdQueryKey = (shopId?: string,) => {
+export const getGetShopQueryKey = (shopId?: string,) => {
     return [
-    `/shops/${shopId}`
+    `/api/shops/${shopId}`
     ] as const;
     }
 
     
-export const getGetShopsShopIdQueryOptions = <TData = Awaited<ReturnType<typeof getShopsShopId>>, TError = ProblemDetails>(shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopId>>, TError, TData>>, }
+export const getGetShopQueryOptions = <TData = Awaited<ReturnType<typeof getShop>>, TError = ProblemDetails>(shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShop>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetShopsShopIdQueryKey(shopId);
+  const queryKey =  queryOptions?.queryKey ?? getGetShopQueryKey(shopId);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShopsShopId>>> = ({ signal }) => getShopsShopId(shopId, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShop>>> = ({ signal }) => getShop(shopId, requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, enabled: !!(shopId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShopsShopId>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(shopId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShop>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetShopsShopIdQueryResult = NonNullable<Awaited<ReturnType<typeof getShopsShopId>>>
-export type GetShopsShopIdQueryError = ProblemDetails
+export type GetShopQueryResult = NonNullable<Awaited<ReturnType<typeof getShop>>>
+export type GetShopQueryError = ProblemDetails
 
 
-export function useGetShopsShopId<TData = Awaited<ReturnType<typeof getShopsShopId>>, TError = ProblemDetails>(
- shopId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopId>>, TError, TData>> & Pick<
+export function useGetShop<TData = Awaited<ReturnType<typeof getShop>>, TError = ProblemDetails>(
+ shopId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShop>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShopsShopId>>,
+          Awaited<ReturnType<typeof getShop>>,
           TError,
-          Awaited<ReturnType<typeof getShopsShopId>>
+          Awaited<ReturnType<typeof getShop>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShopsShopId<TData = Awaited<ReturnType<typeof getShopsShopId>>, TError = ProblemDetails>(
- shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopId>>, TError, TData>> & Pick<
+export function useGetShop<TData = Awaited<ReturnType<typeof getShop>>, TError = ProblemDetails>(
+ shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShop>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getShopsShopId>>,
+          Awaited<ReturnType<typeof getShop>>,
           TError,
-          Awaited<ReturnType<typeof getShopsShopId>>
+          Awaited<ReturnType<typeof getShop>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetShopsShopId<TData = Awaited<ReturnType<typeof getShopsShopId>>, TError = ProblemDetails>(
- shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopId>>, TError, TData>>, }
+export function useGetShop<TData = Awaited<ReturnType<typeof getShop>>, TError = ProblemDetails>(
+ shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShop>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetShopsShopId<TData = Awaited<ReturnType<typeof getShopsShopId>>, TError = ProblemDetails>(
- shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShopsShopId>>, TError, TData>>, }
+export function useGetShop<TData = Awaited<ReturnType<typeof getShop>>, TError = ProblemDetails>(
+ shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getShop>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetShopsShopIdQueryOptions(shopId,options)
+  const queryOptions = getGetShopQueryOptions(shopId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -264,40 +266,40 @@ export function useGetShopsShopId<TData = Awaited<ReturnType<typeof getShopsShop
 
 
 
-export const patchShopsShopId = (
+export const updateShop = (
     shopId: string,
     updateShopRequest: UpdateShopRequest,
- ) => {
+ options?: SecondParameter<typeof customInstance>,) => {
       
       
       return customInstance<ShopDto>(
-      {url: `/shops/${shopId}`, method: 'PATCH',
+      {url: `/api/shops/${shopId}`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
       data: updateShopRequest
     },
-      );
+      options);
     }
   
 
 
-export const getPatchShopsShopIdMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchShopsShopId>>, TError,{shopId: string;data: UpdateShopRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof patchShopsShopId>>, TError,{shopId: string;data: UpdateShopRequest}, TContext> => {
+export const getUpdateShopMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateShop>>, TError,{shopId: string;data: UpdateShopRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateShop>>, TError,{shopId: string;data: UpdateShopRequest}, TContext> => {
 
-const mutationKey = ['patchShopsShopId'];
-const {mutation: mutationOptions} = options ?
+const mutationKey = ['updateShop'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchShopsShopId>>, {shopId: string;data: UpdateShopRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateShop>>, {shopId: string;data: UpdateShopRequest}> = (props) => {
           const {shopId,data} = props ?? {};
 
-          return  patchShopsShopId(shopId,data,)
+          return  updateShop(shopId,data,requestOptions)
         }
 
         
@@ -305,20 +307,20 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PatchShopsShopIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchShopsShopId>>>
-    export type PatchShopsShopIdMutationBody = UpdateShopRequest
-    export type PatchShopsShopIdMutationError = ProblemDetails | HttpValidationProblemDetails
+    export type UpdateShopMutationResult = NonNullable<Awaited<ReturnType<typeof updateShop>>>
+    export type UpdateShopMutationBody = UpdateShopRequest
+    export type UpdateShopMutationError = ProblemDetails | HttpValidationProblemDetails
 
-    export const usePatchShopsShopId = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchShopsShopId>>, TError,{shopId: string;data: UpdateShopRequest}, TContext>, }
+    export const useUpdateShop = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateShop>>, TError,{shopId: string;data: UpdateShopRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof patchShopsShopId>>,
+        Awaited<ReturnType<typeof updateShop>>,
         TError,
         {shopId: string;data: UpdateShopRequest},
         TContext
       > => {
 
-      const mutationOptions = getPatchShopsShopIdMutationOptions(options);
+      const mutationOptions = getUpdateShopMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

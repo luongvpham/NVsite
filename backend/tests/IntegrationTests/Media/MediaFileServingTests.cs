@@ -157,7 +157,7 @@ public sealed class MediaFileServingTests
         {
             { new ByteArrayContent(EncodeJpeg(1600, 1200)), "file", "photo.jpg" },
         };
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/shops/{shopId}/media/library") { Content = content, Headers = { Host = PortalHost } };
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/shops/{shopId}/media/library") { Content = content, Headers = { Host = PortalHost } };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await _client.SendAsync(request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -185,13 +185,13 @@ public sealed class MediaFileServingTests
 
     private async Task<string> RegisterVerifyLoginGlobalAsync(string email)
     {
-        await PostAsync(PortalHost, "/auth/register", new RegisterRequest(email, Password, "Test User"));
+        await PostAsync(PortalHost, "/api/auth/register", new RegisterRequest(email, Password, "Test User"));
 
         var token = _factory.EmailSpy.ExtractLastTokenFor(email);
-        var verifyResponse = await SendAsync(HttpMethod.Get, $"/auth/verify-email?token={Uri.EscapeDataString(token)}", PortalHost);
+        var verifyResponse = await SendAsync(HttpMethod.Get, $"/api/auth/verify-email?token={Uri.EscapeDataString(token)}", PortalHost);
         Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
 
-        var loginResponse = await PostAsync(PortalHost, "/auth/login", new LoginRequest(email, Password));
+        var loginResponse = await PostAsync(PortalHost, "/api/auth/login", new LoginRequest(email, Password));
         Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
 
         var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthTokenResult>();
@@ -200,7 +200,7 @@ public sealed class MediaFileServingTests
 
     private Task<HttpResponseMessage> CreateShopAsync(string token, CreateShopRequest body)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/shops")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/shops")
         {
             Content = JsonContent.Create(body),
             Headers = { Host = PortalHost },

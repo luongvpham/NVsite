@@ -126,7 +126,7 @@ public sealed class UploadEndpointTests
     {
         var (token, shopId) = await CreateOwnerWithShopAsync();
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/shops/{shopId}/media/slot-uploads")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/shops/{shopId}/media/slot-uploads")
         {
             Content = JsonContent.Create(new { preset = "800x600,cover" }),
             Headers = { Host = PortalHost },
@@ -161,7 +161,7 @@ public sealed class UploadEndpointTests
         var foreignShopId = Guid.NewGuid();
 
         using var content = BuildMultipart("800x600,cover", 0.5f, 0.5f, false, extraFields: new Dictionary<string, string> { ["shopId"] = foreignShopId.ToString() });
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/shops/{shopId}/media/slot-uploads") { Content = content, Headers = { Host = PortalHost } };
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/shops/{shopId}/media/slot-uploads") { Content = content, Headers = { Host = PortalHost } };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await _client.SendAsync(request);
 
@@ -194,7 +194,7 @@ public sealed class UploadEndpointTests
         using var throwingClient = throwingFactory.CreateClient();
 
         using var content = BuildMultipart("800x600,cover", 0.5f, 0.5f, false);
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/shops/{shopId}/media/slot-uploads") { Content = content, Headers = { Host = PortalHost } };
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/shops/{shopId}/media/slot-uploads") { Content = content, Headers = { Host = PortalHost } };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await throwingClient.SendAsync(request);
 
@@ -222,7 +222,7 @@ public sealed class UploadEndpointTests
         {
             { new ByteArrayContent(EncodeJpeg(1600, 1200)), "file", "photo.jpg" },
         };
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/shops/{shopId}/media/library") { Content = content, Headers = { Host = PortalHost } };
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/shops/{shopId}/media/library") { Content = content, Headers = { Host = PortalHost } };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await _client.SendAsync(request);
 
@@ -244,7 +244,7 @@ public sealed class UploadEndpointTests
         string token, Guid shopId, string preset, bool saveToLibrary, float focalX = 0.5f, float focalY = 0.5f)
     {
         using var content = BuildMultipart(preset, focalX, focalY, saveToLibrary);
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/shops/{shopId}/media/slot-uploads")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/shops/{shopId}/media/slot-uploads")
         {
             Content = content,
             Headers = { Host = PortalHost },
@@ -296,13 +296,13 @@ public sealed class UploadEndpointTests
 
     private async Task<string> RegisterVerifyLoginGlobalAsync(string email)
     {
-        await PostAsync(PortalHost, "/auth/register", new RegisterRequest(email, Password, "Test User"));
+        await PostAsync(PortalHost, "/api/auth/register", new RegisterRequest(email, Password, "Test User"));
 
         var token = _factory.EmailSpy.ExtractLastTokenFor(email);
-        var verifyResponse = await SendAsync(HttpMethod.Get, $"/auth/verify-email?token={Uri.EscapeDataString(token)}", PortalHost);
+        var verifyResponse = await SendAsync(HttpMethod.Get, $"/api/auth/verify-email?token={Uri.EscapeDataString(token)}", PortalHost);
         Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
 
-        var loginResponse = await PostAsync(PortalHost, "/auth/login", new LoginRequest(email, Password));
+        var loginResponse = await PostAsync(PortalHost, "/api/auth/login", new LoginRequest(email, Password));
         Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
 
         var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthTokenResult>();
@@ -311,7 +311,7 @@ public sealed class UploadEndpointTests
 
     private Task<HttpResponseMessage> CreateShopAsync(string token, CreateShopRequest body)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/shops")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/shops")
         {
             Content = JsonContent.Create(body),
             Headers = { Host = PortalHost },

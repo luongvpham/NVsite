@@ -24,7 +24,7 @@ const baseShop: ShopDto = {
 };
 
 function useShop(shop: ShopDto) {
-  server.use(http.get('*/shops/:shopId', () => HttpResponse.json(shop)));
+  server.use(http.get('*/api/shops/:shopId', () => HttpResponse.json(shop)));
 }
 
 describe('ShopLogoSection (F4/F6)', () => {
@@ -53,7 +53,7 @@ describe('ShopLogoSection (F4/F6)', () => {
 
   it('error: shop query lỗi hiện thông báo', async () => {
     server.use(
-      http.get('*/shops/:shopId', () =>
+      http.get('*/api/shops/:shopId', () =>
         HttpResponse.json({ error_code: 'SHOP_ACCESS_DENIED', title: 'denied' }, { status: 403 }),
       ),
     );
@@ -99,11 +99,11 @@ describe('ShopLogoSection (F4/F6)', () => {
       derivatives: [],
     };
     server.use(
-      http.get('*/shops/:shopId', () => {
+      http.get('*/api/shops/:shopId', () => {
         getCount += 1;
         return HttpResponse.json(current);
       }),
-      http.put('*/shops/:shopId/logo', () => {
+      http.put('*/api/shops/:shopId/logo', () => {
         current = { ...baseShop, logoId: 'd1', logoUrl: '/media/shop-1/logo-new-320x96.jpg' };
         return HttpResponse.json(uploadResponse);
       }),
@@ -122,7 +122,7 @@ describe('ShopLogoSection (F4/F6)', () => {
   it('upload lỗi HEIC hiện hướng dẫn', async () => {
     useShop(baseShop);
     server.use(
-      http.put('*/shops/:shopId/logo', () =>
+      http.put('*/api/shops/:shopId/logo', () =>
         HttpResponse.json({ error_code: 'MEDIA_HEIC_UNSUPPORTED', title: 'heic' }, { status: 422 }),
       ),
     );

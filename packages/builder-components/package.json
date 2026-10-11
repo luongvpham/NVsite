@@ -8,8 +8,10 @@
   "scripts": {
     "gen:registry": "tsx scripts/gen-registry.ts",
     "check-additive": "tsx scripts/check-additive.ts",
+    "registry:lock": "tsx scripts/registry-lock.ts",
     "test": "vitest run",
-    "lint": "eslint . --ignore-pattern generated"
+    "lint": "eslint . --ignore-pattern generated",
+    "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
     "@vsite/theme-engine": "workspace:*",

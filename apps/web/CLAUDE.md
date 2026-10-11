@@ -53,6 +53,12 @@ contracts/openapi/*.json  ──pnpm gen:api (Orval)──→  packages/api-sdk/
 - Contract sai hoặc thiếu → **DỪNG và báo**. Không tự sửa contract, không workaround.
 - Code với **MSW mock trước**, chỉ bật API thật ở bước integration. Mock sinh từ chính contract nên nếu UI chạy với mock thì chắc chắn không bám vào hành vi ngoài contract.
 - Dùng **API model** từ `api-sdk`, không tự định nghĩa lại type để "mirror" entity của BE.
+- ⚠️ **Gọi API trong SSR loader: luôn `createApiClient({ baseURL, headers, getAccessToken })` cho TỪNG
+  request** rồi truyền vào hàm sinh ra (`getShop(id, { client })`). **Không** dùng instance mặc định
+  của `@vsite/api-sdk` ở server — state cấp module dùng chung mọi request của process, token người
+  này lọt sang người khác. `baseURL` phải tuyệt đối (server không có relative URL) và phải forward Host
+  gốc của trình duyệt (BE resolve tenant theo Host, #7). Từ trình duyệt (sau hydrate) gọi qua `/api`
+  như Portal.
 
 ---
 

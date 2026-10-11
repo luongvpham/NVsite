@@ -9,8 +9,14 @@
 
 1. KHÔNG sửa file trong `generated/`. Sửa `registry/*.manifest.ts` rồi chạy `pnpm gen:registry`. (#17)
 2. KHÔNG thêm/xoá/đổi kiểu prop đã phát hành trong một manifest đang tồn tại. Đổi phá vỡ →
-   variant hoặc type mới. `check-additive` (chạy trong `gen:registry` và pre-commit hook) sẽ fail
-   build khi vi phạm 1 trong 7 rule ở `DesignIdeal/07-component-manifest-schema.md` §5. (#43, #62)
+   variant hoặc type mới. `check-additive` (chạy trong `gen:registry`, pre-commit hook và CI) sẽ fail
+   build khi vi phạm rule ở `DesignIdeal/07-component-manifest-schema.md` §5. (#43, #62)
+   **Thêm type/variant/prop mới → `pnpm registry:lock` rồi commit `registry.lock.json` cùng manifest.**
+   `gen:registry` KHÔNG tự cập nhật lock (chỉ cảnh báo); CI/pre-commit fail khi lock thiếu hoặc chưa phủ
+   phần mới. `registry:lock` từ chối ghi khi đang vi phạm — không sửa lock để lách (TOOLING-001).
+   Lock giờ bảo vệ thêm: `acceptsChildren`, `allowedChildTypes`, `link.allowKinds`, `binding.sources`.
+   Test đột biến của `gen-registry` chạy trên bản sao tạm (`VSITE_REGISTRY_DIR`…, `scripts/lib/paths.ts`)
+   — **không bao giờ** sửa `registry/` thật trong test.
 3. KHÔNG thêm `PropKind` thứ 13 vào `meta/prop-kinds.ts` khi viết component thường. 12 kind (text,
    richText, number, boolean, select, color, image, icon, link, list, group, binding) là tập đóng —
    thêm kind mới là quyết định tầng framework, cần review riêng, không tự quyết trong lúc thêm

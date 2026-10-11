@@ -275,7 +275,8 @@ Inspector.
 *.manifest.ts → pnpm gen:registry → generated/ → check-additive.ts ← registry.lock.json
 ```
 
-Sửa manifest = đổi contract; breaking phải cố ý cập nhật `registry.lock.json`, cần người duyệt. Luật
+Sửa manifest = đổi contract. Thêm mới → `pnpm registry:lock` rồi commit lock cùng manifest (CI fail
+nếu lock chưa phủ phần mới); breaking thì `registry:lock` **từ chối** — tạo type/variant mới (#43). Luật
 chi tiết: [`packages/builder-components/CLAUDE.md`](../packages/builder-components/CLAUDE.md).
 
 ⏳ **Khi tạo `builder-core`:** thêm operation type phải cập nhật đồng thời 6 chỗ — union type · Zod ·

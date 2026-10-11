@@ -109,7 +109,7 @@ public sealed class MembershipLifecycleTests(IdentityApiFactory factory)
         var email = await RegisterAtShopAsync(host);
         await MutateMembershipAsync(email, us => us.IsDeleted = true);
 
-        var response = await PostAsync(host, "/auth/forgot-password", new ForgotPasswordRequest(email));
+        var response = await PostAsync(host, "/api/auth/forgot-password", new ForgotPasswordRequest(email));
 
         Assert.True(response.IsSuccessStatusCode);
         Assert.Throws<InvalidOperationException>(() => ExtractResetToken(email));
@@ -120,12 +120,12 @@ public sealed class MembershipLifecycleTests(IdentityApiFactory factory)
     {
         var host = await CreateShopAsync();
         var email = await RegisterAtShopAsync(host);
-        await PostAsync(host, "/auth/forgot-password", new ForgotPasswordRequest(email));
+        await PostAsync(host, "/api/auth/forgot-password", new ForgotPasswordRequest(email));
         var resetToken = ExtractResetToken(email);
 
         await SetMembershipStatusAsync(email, UserShopStatus.Suspended);
 
-        var response = await PostAsync(host, "/auth/reset-password", new ResetPasswordRequest(resetToken, "NewPassword123!"));
+        var response = await PostAsync(host, "/api/auth/reset-password", new ResetPasswordRequest(resetToken, "NewPassword123!"));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
@@ -146,8 +146,8 @@ public sealed class MembershipLifecycleTests(IdentityApiFactory factory)
         });
 
         const string newPassword = "Another123!";
-        await PostAsync(host, "/auth/register", new RegisterRequest(email, newPassword, "Again"));
-        var verify = await GetAsync(host, $"/auth/verify-email?token={Uri.EscapeDataString(factory.EmailSpy.ExtractLastTokenFor(email))}");
+        await PostAsync(host, "/api/auth/register", new RegisterRequest(email, newPassword, "Again"));
+        var verify = await GetAsync(host, $"/api/auth/verify-email?token={Uri.EscapeDataString(factory.EmailSpy.ExtractLastTokenFor(email))}");
         Assert.Equal(HttpStatusCode.OK, verify.StatusCode);
 
         Assert.Equal(HttpStatusCode.OK, (await LoginAsync(host, email, newPassword)).StatusCode);
@@ -173,7 +173,7 @@ public sealed class MembershipLifecycleTests(IdentityApiFactory factory)
         var email = await RegisterAtShopAsync(host);
         await SetMembershipStatusAsync(email, UserShopStatus.Suspended);
 
-        var response = await PostAsync(host, "/auth/register", new RegisterRequest(email, "Another123!", "Again"));
+        var response = await PostAsync(host, "/api/auth/register", new RegisterRequest(email, "Another123!", "Again"));
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -185,7 +185,7 @@ public sealed class MembershipLifecycleTests(IdentityApiFactory factory)
         var email = await RegisterAtShopAsync(host);
         await SetMembershipStatusAsync(email, UserShopStatus.Invited);
 
-        var response = await PostAsync(host, "/auth/register", new RegisterRequest(email, "Another123!", "Again"));
+        var response = await PostAsync(host, "/api/auth/register", new RegisterRequest(email, "Another123!", "Again"));
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -195,12 +195,12 @@ public sealed class MembershipLifecycleTests(IdentityApiFactory factory)
     {
         var host = await CreateShopAsync();
         var email = await RegisterAtShopAsync(host);
-        await PostAsync(host, "/auth/forgot-password", new ForgotPasswordRequest(email));
+        await PostAsync(host, "/api/auth/forgot-password", new ForgotPasswordRequest(email));
         var resetToken = ExtractResetToken(email);
 
         await MutateMembershipAsync(email, us => us.IsDeleted = true);
 
-        var response = await PostAsync(host, "/auth/reset-password", new ResetPasswordRequest(resetToken, "NewPassword123!"));
+        var response = await PostAsync(host, "/api/auth/reset-password", new ResetPasswordRequest(resetToken, "NewPassword123!"));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
@@ -208,12 +208,12 @@ public sealed class MembershipLifecycleTests(IdentityApiFactory factory)
     public async Task ResetPassword_token_stops_working_when_user_is_suspended_after_it_was_issued()
     {
         var email = await RegisterAsync(host: null);
-        await PostAsync(null, "/auth/forgot-password", new ForgotPasswordRequest(email));
+        await PostAsync(null, "/api/auth/forgot-password", new ForgotPasswordRequest(email));
         var resetToken = ExtractResetToken(email);
 
         await SuspendUserAsync(email);
 
-        var response = await PostAsync(null, "/auth/reset-password", new ResetPasswordRequest(resetToken, "NewPassword123!"));
+        var response = await PostAsync(null, "/api/auth/reset-password", new ResetPasswordRequest(resetToken, "NewPassword123!"));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
@@ -245,7 +245,7 @@ public sealed class MembershipLifecycleTests(IdentityApiFactory factory)
 
     private Task<HttpResponseMessage> GetMeAsync(string host, string accessToken)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, "/auth/me");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/auth/me");
         request.Headers.Host = host;
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
         return _client.SendAsync(request);
@@ -281,9 +281,9 @@ public sealed class MembershipLifecycleTests(IdentityApiFactory factory)
     private async Task<string> RegisterAsync(string? host)
     {
         var email = $"lc-{Guid.NewGuid():N}@example.test";
-        await PostAsync(host, "/auth/register", new RegisterRequest(email, Password, "Lifecycle"));
+        await PostAsync(host, "/api/auth/register", new RegisterRequest(email, Password, "Lifecycle"));
         var token = factory.EmailSpy.ExtractLastTokenFor(email);
-        var verify = await GetAsync(host, $"/auth/verify-email?token={Uri.EscapeDataString(token)}");
+        var verify = await GetAsync(host, $"/api/auth/verify-email?token={Uri.EscapeDataString(token)}");
         Assert.Equal(HttpStatusCode.OK, verify.StatusCode);
         return email;
     }
@@ -320,10 +320,10 @@ public sealed class MembershipLifecycleTests(IdentityApiFactory factory)
     }
 
     private Task<HttpResponseMessage> LoginAsync(string? host, string email, string password = Password) =>
-        PostAsync(host, "/auth/login", new LoginRequest(email, password));
+        PostAsync(host, "/api/auth/login", new LoginRequest(email, password));
 
     private Task<HttpResponseMessage> RefreshAsync(string? host, string refreshToken) =>
-        PostAsync(host, "/auth/refresh-token", new RefreshTokenRequest(refreshToken));
+        PostAsync(host, "/api/auth/refresh-token", new RefreshTokenRequest(refreshToken));
 
     private static async Task<AuthTokenResult> ReadTokensAsync(HttpResponseMessage response)
     {

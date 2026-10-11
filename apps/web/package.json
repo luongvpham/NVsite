@@ -8,7 +8,8 @@
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "test": "vitest run",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

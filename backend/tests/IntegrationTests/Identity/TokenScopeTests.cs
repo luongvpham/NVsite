@@ -70,7 +70,7 @@ public sealed class TokenScopeTests : IAsyncLifetime
     [Fact]
     public async Task GetMe_allows_main_token()
     {
-        var response = await SendAsync(HttpMethod.Get, "/auth/me", host: null, token: _mainToken);
+        var response = await SendAsync(HttpMethod.Get, "/api/auth/me", host: null, token: _mainToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<MeDto>();
         Assert.Equal("vsite-main", body!.Audience);
@@ -79,7 +79,7 @@ public sealed class TokenScopeTests : IAsyncLifetime
     [Fact]
     public async Task GetMe_allows_shop_token()
     {
-        var response = await SendAsync(HttpMethod.Get, "/auth/me", host: _shopHost, token: _shopToken);
+        var response = await SendAsync(HttpMethod.Get, "/api/auth/me", host: _shopHost, token: _shopToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<MeDto>();
         Assert.StartsWith("shop:", body!.Audience);
@@ -88,7 +88,7 @@ public sealed class TokenScopeTests : IAsyncLifetime
     [Fact]
     public async Task ChangePassword_allows_main_token()
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/auth/me/change-password")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/me/change-password")
         {
             Content = JsonContent.Create(new ChangePasswordRequest(Password, "NewPassword123!")),
         };
@@ -102,7 +102,7 @@ public sealed class TokenScopeTests : IAsyncLifetime
     [Fact]
     public async Task ChangePassword_allows_shop_token()
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/auth/me/change-password")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/me/change-password")
         {
             Content = JsonContent.Create(new ChangePasswordRequest(Password, "NewPassword123!")),
             Headers = { Host = _shopHost },
@@ -123,7 +123,7 @@ public sealed class TokenScopeTests : IAsyncLifetime
     [Fact]
     public async Task Login_with_non_json_content_type_returns_415_without_multipart_error_code()
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/auth/login")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
         {
             Content = new StringContent("not json", System.Text.Encoding.UTF8, "text/plain"),
         };
@@ -138,13 +138,13 @@ public sealed class TokenScopeTests : IAsyncLifetime
 
     private async Task<string> RegisterVerifyLoginAsync(string? host, string email, string password)
     {
-        await PostAsync(host, "/auth/register", new RegisterRequest(email, password, "Test User"));
+        await PostAsync(host, "/api/auth/register", new RegisterRequest(email, password, "Test User"));
 
         var token = _factory.EmailSpy.ExtractLastTokenFor(email);
-        var verifyResponse = await SendAsync(HttpMethod.Get, $"/auth/verify-email?token={Uri.EscapeDataString(token)}", host);
+        var verifyResponse = await SendAsync(HttpMethod.Get, $"/api/auth/verify-email?token={Uri.EscapeDataString(token)}", host);
         Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
 
-        var loginResponse = await PostAsync(host, "/auth/login", new LoginRequest(email, password));
+        var loginResponse = await PostAsync(host, "/api/auth/login", new LoginRequest(email, password));
         Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
 
         var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthTokenResult>();

@@ -57,8 +57,9 @@ export default defineConfig({
       // changeOrigin: false — giữ nguyên Host header gốc (admin.vsite.local) khi proxy tới BE,
       // đúng cơ chế Host-based tenant resolve dùng chung toàn hệ. changeOrigin: true sẽ ghi đè
       // Host thành target (localhost:5270) và làm audience sai.
-      '/auth': { target: 'http://localhost:5270', changeOrigin: false },
-      '/shops': { target: 'http://localhost:5270', changeOrigin: false },
+      // Mọi API dưới /api (Quyết định #91) — MỘT mục proxy. Trước đây proxy riêng '/auth' + '/shops'
+      // nên route SPA /shops/... của chính Portal (F5 ở /shops/new) bị đẩy sang BE và 404.
+      '/api': { target: 'http://localhost:5270', changeOrigin: false },
       // Ảnh không đi qua API — mọi ảnh phục vụ tại /media/{storageKey} (#88). Ảnh trong nội dung
       // builder: qua resolveImage(); field DTO đặt tên *Url (vd. ShopDto.logoUrl) BE trả sẵn có
       // tiền tố /media/ nên dùng nguyên; storageKey thô của Library (chưa có imageId) qua mediaUrl().

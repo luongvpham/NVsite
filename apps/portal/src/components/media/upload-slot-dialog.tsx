@@ -1,7 +1,7 @@
 import { type MouseEvent, useState } from 'react';
 import { Button, Dialog } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
-import { usePostShopsShopIdMediaSlotUploads, type MediaAssetDto } from '@vsite/api-sdk';
+import { useUploadToSlot, type MediaAssetDto } from '@vsite/api-sdk';
 import { getErrorMessage, HEIC_UNSUPPORTED_GUIDANCE } from '../../lib/error-messages';
 import { ACCEPT_ATTR, fileSchema, fitOfPreset, isHeicFile } from '../../lib/media-validation';
 
@@ -31,7 +31,7 @@ export function UploadSlotDialog({ shopId, preset, open, onClose, onUploaded }: 
 
   const showFocalPicker = fitOfPreset(preset) !== 'inside';
 
-  const uploadMutation = usePostShopsShopIdMediaSlotUploads({
+  const uploadMutation = useUploadToSlot({
     mutation: {
       onSuccess: (result) => {
         onUploaded(result.asset);

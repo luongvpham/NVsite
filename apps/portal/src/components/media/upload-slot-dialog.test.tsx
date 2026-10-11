@@ -69,7 +69,7 @@ describe('UploadSlotDialog (F2)', () => {
 
   it('upload thành công gọi onUploaded với asset (không phải libraryAsset) và đóng dialog', async () => {
     server.use(
-      http.post('*/shops/:shopId/media/slot-uploads', () =>
+      http.post('*/api/shops/:shopId/media/slot-uploads', () =>
         HttpResponse.json({ asset: heroAsset, libraryAsset: null }),
       ),
     );
@@ -89,7 +89,7 @@ describe('UploadSlotDialog (F2)', () => {
 
   it('lỗi MEDIA_HEIC_UNSUPPORTED hiện hướng dẫn chuyển sang JPEG', async () => {
     server.use(
-      http.post('*/shops/:shopId/media/slot-uploads', () =>
+      http.post('*/api/shops/:shopId/media/slot-uploads', () =>
         HttpResponse.json({ error_code: 'MEDIA_HEIC_UNSUPPORTED', title: 'unsupported' }, { status: 422 }),
       ),
     );
@@ -122,7 +122,7 @@ describe('UploadSlotDialog (F2)', () => {
 
   it('lỗi MEDIA_FILE_TOO_LARGE từ server hiện message riêng', async () => {
     server.use(
-      http.post('*/shops/:shopId/media/slot-uploads', () =>
+      http.post('*/api/shops/:shopId/media/slot-uploads', () =>
         HttpResponse.json({ error_code: 'MEDIA_FILE_TOO_LARGE', title: 'too large' }, { status: 413 }),
       ),
     );

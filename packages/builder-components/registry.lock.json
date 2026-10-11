@@ -37,7 +37,9 @@
         "min": 2,
         "max": 4
       }
-    }
+    },
+    "acceptsChildren": false,
+    "allowedChildTypes": null
   },
   "Hero": {
     "variants": {
@@ -74,7 +76,13 @@
             "maxLength": 40
           },
           "target": {
-            "kind": "link"
+            "kind": "link",
+            "allowKinds": [
+              "anchor",
+              "external",
+              "page",
+              "systemPage"
+            ]
           }
         }
       },
@@ -90,7 +98,9 @@
           "center"
         ]
       }
-    }
+    },
+    "acceptsChildren": false,
+    "allowedChildTypes": null
   },
   "RichText": {
     "variants": {
@@ -112,7 +122,9 @@
           "justify"
         ]
       }
-    }
+    },
+    "acceptsChildren": false,
+    "allowedChildTypes": null
   },
   "Section": {
     "variants": {
@@ -141,7 +153,9 @@
           "xl"
         ]
       }
-    }
+    },
+    "acceptsChildren": true,
+    "allowedChildTypes": null
   },
   "ServiceGrid": {
     "variants": {
@@ -158,6 +172,10 @@
       },
       "source": {
         "kind": "binding",
+        "sources": [
+          "Service",
+          "ServiceGroup"
+        ],
         "imagePresets": {
           "Service": [
             "800x600,cover"
@@ -175,6 +193,8 @@
         "min": 2,
         "max": 4
       }
-    }
+    },
+    "acceptsChildren": false,
+    "allowedChildTypes": null
   }
 }

@@ -1,6 +1,6 @@
 # vsite — Component Manifest Schema & Codegen
 
-> **STATUS:** `IMPLEMENTED` · **Tasks:** `BOOTSTRAP-002,MEDIA-001` · **Changelog:** `Docs/tasks/MEDIA-001/changelog.md` · **Stale:** `Changelog trước MEDIA-001: Docs/tasks/BOOTSTRAP-002/changelog.md (banner chỉ nhận một đường dẫn) · §7.2 nhãn "#67 cần xác nhận" (đã chốt) · §3 vị trí context · §9 route dev harness · §3 và §7.1 config/image-presets.json nay là {presets, surfaces} và resolveImage đã là bản thật, không còn stub · §7.4 binding.imagePresets đã code (xem Docs/tasks/MEDIA-001/changelog.md mục 4, 15)`
+> **STATUS:** `IMPLEMENTED` · **Tasks:** `BOOTSTRAP-002,MEDIA-001,TOOLING-001` · **Changelog:** `Docs/tasks/TOOLING-001/changelog.md` · **Stale:** `Changelog trước TOOLING-001: Docs/tasks/MEDIA-001/changelog.md · Changelog trước MEDIA-001: Docs/tasks/BOOTSTRAP-002/changelog.md (banner chỉ nhận một đường dẫn) · §7.2 nhãn "#67 cần xác nhận" (đã chốt) · §3 vị trí context · §9 route dev harness · §3 và §7.1 config/image-presets.json nay là {presets, surfaces} và resolveImage đã là bản thật, không còn stub · §7.4 binding.imagePresets đã code (xem Docs/tasks/MEDIA-001/changelog.md mục 4, 15)`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
 > 📌 **§0 là nơi định nghĩa Quyết định `#59–#67`.** Câu "chép sang `02`" trong §0 đã lỗi thời — cố
@@ -36,7 +36,7 @@ Chép sang `02-tech-stack-and-decision.md` với số hiệu tương ứng.
 | **#59** | Manifest là **file `.ts` chứa object literal thuần**, không import runtime, không hàm, không điều kiện. Meta-schema viết bằng Zod (`manifestSchema`), codegen import manifest trực tiếp qua `tsx` và validate trước khi sinh gì cả. Lý do chọn `.ts` thay vì `.json`: có autocomplete + type check ngay lúc gõ, mà vẫn phân tích tĩnh được vì cấm logic |
 | **#60** | BE **không** port Zod sang C#. Codegen sinh thêm `props-schemas.json` (JSON Schema draft 2020-12); .NET validate bằng thư viện JSON Schema. Một nguồn sự thật, hai runtime, không có bản dịch tay nào để lệch |
 | **#61** | Props khai ở tầng **`type`**. `variant` **không** có props riêng — nó chỉ khai `usesProps` (hiện gì trong Inspector) và `requiresProps` (bắt buộc phải có giá trị). Đây là cơ chế làm cho #43 (additive-only) khả thi: thêm prop optional ở type level không phá vỡ variant cũ |
-| **#62** | `registry.lock.json` **commit vào repo**. CI so manifest hiện tại với lock; đổi kiểu prop, xoá prop, xoá variant, đổi `kind` → **fail build**. #43 được enforce bằng máy, không bằng code review |
+| **#62** | `registry.lock.json` **commit vào repo**. CI so manifest hiện tại với lock; đổi kiểu prop, xoá prop, xoá variant, đổi `kind`, thu hẹp ràng buộc → **fail build**. Lock **phải tồn tại và bằng đúng** snapshot hiện tại (CI fail nếu thiếu/cũ); chỉ cập nhật bằng `pnpm registry:lock`, lệnh này từ chối khi đang vi phạm (TOOLING-001). #43 được enforce bằng máy, không bằng code review |
 | **#63** | `kind` của prop là **tập đóng 12 giá trị**. Thêm kind mới = sửa meta-schema + generator + Inspector, là việc của người bảo trì framework. Người viết component mới **không** được phát minh kind |
 | **#64** | Mọi prop `kind: "image"` **bắt buộc** khai `preset`, và preset phải nằm trong `config/image-presets.json` (9 preset, `08` §7, #78). Codegen fail nếu khai preset không tồn tại. Whitelist có hai vai trò: **lint build-time** cho manifest, và **bảng kích thước** pipeline BE dùng để crop lúc đặt ảnh vào slot. Không có URL runtime nào nhận preset (#53). Component không bao giờ tự nối URL — luôn qua `resolveImage()` |
 | **#65** | Prop `kind: "binding"` khai `sources` tường minh. Codegen **hard-fail** nếu `sources` chứa `"Review"` — ranh giới cứng của `01` §7, chặn ở generator chứ không chỉ ở Operations Engine bước [5] |
@@ -254,11 +254,13 @@ Xoá variant            → FAIL
 Xoá option khỏi select → FAIL   (tree cũ có thể đang giữ giá trị đó)
 Siết maxLength / min   → FAIL
 Thêm vào requiresProps → FAIL   (tree cũ hợp lệ bỗng thành không hợp lệ)
+Thu hẹp link.allowKinds / binding.sources → FAIL   (link/binding đã lưu thành không hợp lệ)
+acceptsChildren true→false, thu hẹp allowedChildTypes → FAIL   (node con đã lưu thành không hợp lệ)
 Đổi preset của image   → CẢNH BÁO (không vỡ dữ liệu; ảnh cũ chạy preset drift (#74) tới khi được
                           sinh lại — ảnh upload thẳng không sinh lại được, `08` §1)
 ```
 
-Bảy dòng `FAIL` được kiểm bằng `scripts/check-additive.ts` so với `registry.lock.json` (#62). Chạy trong CI **và** trong pre-commit hook.
+Các dòng `FAIL` được kiểm bằng `scripts/check-additive.ts` so với `registry.lock.json` (#62). Chạy trong CI **và** trong pre-commit hook. Lock cập nhật bằng lệnh tường minh `pnpm registry:lock` (từ chối khi đang vi phạm); `check-additive` còn fail khi lock bị xoá hoặc chưa phủ type/variant/prop mới — trước TOOLING-001 lock chỉ ghi một lần lúc chưa tồn tại nên mọi thứ thêm sau không được bảo vệ.
 
 **Vì sao lock file thay vì "tin vào review":** người phá vỡ additive-only sẽ không phải bạn — sẽ là một AI agent sáu tháng nữa nhận task *"đổi prop `title` thành `heading` cho nhất quán"*. Task đó nghe hợp lý, agent làm rất nhanh, và nó phá vỡ mọi site đã publish. Chỉ có build fail chặn được.
 
@@ -685,7 +687,7 @@ Sáu nhóm assertion:
 | 2 | `props-schemas.ts` (Zod) và `props-schemas.json` (JSON Schema) cho **cùng** kết quả trên toàn bộ fixture | #60 đứng vững. Đây là test quan trọng nhất — nếu hai runtime lệch, BE và FE sẽ chấp nhận hai tập dữ liệu khác nhau |
 | 3 | Mỗi fixture `bad-*` bị reject với **error path đúng** (`items[2].image.imageId`) | Inspector hiện được lỗi ở đúng ô nhập, không phải "props không hợp lệ" |
 | 4 | `xss-richtext.json` sau sanitize không còn `on*`, `javascript:`, `<img>`, `<script>` | #67 hoạt động. Chạy cả ở Node và ở .NET |
-| 5 | `check-additive.ts` fail đúng 7 trường hợp ở §5, pass 6 trường hợp OK | #62 hoạt động. Viết test cho **chính cái checker** |
+| 5 | `check-additive.ts` fail đúng mọi dòng FAIL ở §5 (kể cả allowKinds/sources/acceptsChildren/allowedChildTypes), pass các trường hợp OK, và fail khi lock thiếu hoặc không bằng snapshot hiện tại | #62 hoạt động. Viết test cho **chính cái checker** |
 | 6 | Snapshot HTML của `home.tree.json` render **giống nhau** ở SSR và CSR | Invariant isomorphic của #23. Đây là lỗi agent vi phạm liên tục |
 
 Thêm hai test rẻ mà đáng:

@@ -3,57 +3,11 @@
  */
 import * as zod from 'zod';
 
-export const putShopsShopIdLogoParams = zod.object({
+export const uploadToSlotParams = zod.object({
   "shopId": zod.string().uuid()
 })
 
-export const putShopsShopIdLogoBody = zod.object({
-  "file": zod.instanceof(File).optional()
-})
-
-export const putShopsShopIdLogoResponse = zod.object({
-  "libraryAsset": zod.object({
-  "id": zod.string().uuid(),
-  "storageKey": zod.string(),
-  "mimeType": zod.string(),
-  "width": zod.number(),
-  "height": zod.number(),
-  "sizeBytes": zod.number(),
-  "altText": zod.string().nullable(),
-  "focalPointX": zod.number(),
-  "focalPointY": zod.number(),
-  "originalFileName": zod.string().nullable(),
-  "folder": zod.string().nullable(),
-  "isInLibrary": zod.boolean(),
-  "preset": zod.string().nullable(),
-  "sourceAssetId": zod.string().uuid().nullable(),
-  "createdAt": zod.string().datetime({})
-}),
-  "derivatives": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "storageKey": zod.string(),
-  "mimeType": zod.string(),
-  "width": zod.number(),
-  "height": zod.number(),
-  "sizeBytes": zod.number(),
-  "altText": zod.string().nullable(),
-  "focalPointX": zod.number(),
-  "focalPointY": zod.number(),
-  "originalFileName": zod.string().nullable(),
-  "folder": zod.string().nullable(),
-  "isInLibrary": zod.boolean(),
-  "preset": zod.string().nullable(),
-  "sourceAssetId": zod.string().uuid().nullable(),
-  "createdAt": zod.string().datetime({})
-}))
-})
-
-
-export const postShopsShopIdMediaSlotUploadsParams = zod.object({
-  "shopId": zod.string().uuid()
-})
-
-export const postShopsShopIdMediaSlotUploadsBody = zod.object({
+export const uploadToSlotBody = zod.object({
   "file": zod.instanceof(File).optional(),
   "preset": zod.string().optional(),
   "focalX": zod.number().optional(),
@@ -62,7 +16,7 @@ export const postShopsShopIdMediaSlotUploadsBody = zod.object({
   "altText": zod.string().nullish()
 })
 
-export const postShopsShopIdMediaSlotUploadsResponse = zod.object({
+export const uploadToSlotResponse = zod.object({
   "asset": zod.object({
   "id": zod.string().uuid(),
   "storageKey": zod.string(),
@@ -100,17 +54,17 @@ export const postShopsShopIdMediaSlotUploadsResponse = zod.object({
 })
 
 
-export const postShopsShopIdMediaLibraryParams = zod.object({
+export const uploadToLibraryParams = zod.object({
   "shopId": zod.string().uuid()
 })
 
-export const postShopsShopIdMediaLibraryBody = zod.object({
+export const uploadToLibraryBody = zod.object({
   "file": zod.instanceof(File).optional(),
   "altText": zod.string().nullish(),
   "folder": zod.string().nullish()
 })
 
-export const postShopsShopIdMediaLibraryResponse = zod.object({
+export const uploadToLibraryResponse = zod.object({
   "id": zod.string().uuid(),
   "storageKey": zod.string(),
   "mimeType": zod.string(),
@@ -129,18 +83,18 @@ export const postShopsShopIdMediaLibraryResponse = zod.object({
 })
 
 
-export const getShopsShopIdMediaLibraryParams = zod.object({
+export const listLibraryParams = zod.object({
   "shopId": zod.string().uuid()
 })
 
-export const getShopsShopIdMediaLibraryQueryPageDefault = 1;export const getShopsShopIdMediaLibraryQueryPageSizeDefault = 24;
+export const listLibraryQueryPageDefault = 1;export const listLibraryQueryPageSizeDefault = 24;
 
-export const getShopsShopIdMediaLibraryQueryParams = zod.object({
-  "page": zod.number().default(getShopsShopIdMediaLibraryQueryPageDefault),
-  "pageSize": zod.number().default(getShopsShopIdMediaLibraryQueryPageSizeDefault)
+export const listLibraryQueryParams = zod.object({
+  "page": zod.number().default(listLibraryQueryPageDefault),
+  "pageSize": zod.number().default(listLibraryQueryPageSizeDefault)
 })
 
-export const getShopsShopIdMediaLibraryResponse = zod.object({
+export const listLibraryResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.string().uuid(),
   "storageKey": zod.string(),
@@ -164,18 +118,18 @@ export const getShopsShopIdMediaLibraryResponse = zod.object({
 })
 
 
-export const postShopsShopIdMediaLibraryAssetIdClonesParams = zod.object({
+export const cloneFromLibraryParams = zod.object({
   "shopId": zod.string().uuid(),
   "assetId": zod.string().uuid()
 })
 
-export const postShopsShopIdMediaLibraryAssetIdClonesBody = zod.object({
+export const cloneFromLibraryBody = zod.object({
   "preset": zod.string(),
   "focalX": zod.number().nullable(),
   "focalY": zod.number().nullable()
 })
 
-export const postShopsShopIdMediaLibraryAssetIdClonesResponse = zod.object({
+export const cloneFromLibraryResponse = zod.object({
   "id": zod.string().uuid(),
   "storageKey": zod.string(),
   "mimeType": zod.string(),
@@ -194,28 +148,28 @@ export const postShopsShopIdMediaLibraryAssetIdClonesResponse = zod.object({
 })
 
 
-export const getShopsShopIdMediaLibraryAssetIdReferencesParams = zod.object({
+export const getAssetReferencesParams = zod.object({
   "shopId": zod.string().uuid(),
   "assetId": zod.string().uuid()
 })
 
-export const getShopsShopIdMediaLibraryAssetIdReferencesResponse = zod.object({
+export const getAssetReferencesResponse = zod.object({
   "references": zod.array(zod.object({
   "kind": zod.enum(['ShopLogo'])
 }))
 })
 
 
-export const getShopsShopIdMediaLibraryAssetIdDerivativesParams = zod.object({
+export const getDerivativesParams = zod.object({
   "shopId": zod.string().uuid(),
   "assetId": zod.string().uuid()
 })
 
-export const getShopsShopIdMediaLibraryAssetIdDerivativesQueryParams = zod.object({
+export const getDerivativesQueryParams = zod.object({
   "preset": zod.string().optional()
 })
 
-export const getShopsShopIdMediaLibraryAssetIdDerivativesResponseItem = zod.object({
+export const getDerivativesResponseItem = zod.object({
   "id": zod.string().uuid(),
   "storageKey": zod.string(),
   "mimeType": zod.string(),
@@ -232,24 +186,24 @@ export const getShopsShopIdMediaLibraryAssetIdDerivativesResponseItem = zod.obje
   "sourceAssetId": zod.string().uuid().nullable(),
   "createdAt": zod.string().datetime({})
 })
-export const getShopsShopIdMediaLibraryAssetIdDerivativesResponse = zod.array(getShopsShopIdMediaLibraryAssetIdDerivativesResponseItem)
+export const getDerivativesResponse = zod.array(getDerivativesResponseItem)
 
 
-export const deleteShopsShopIdMediaLibraryAssetIdParams = zod.object({
+export const deleteFromLibraryParams = zod.object({
   "shopId": zod.string().uuid(),
   "assetId": zod.string().uuid()
 })
 
 
-export const getShopsShopIdMediaAssetsParams = zod.object({
+export const getAssetsByIdsParams = zod.object({
   "shopId": zod.string().uuid()
 })
 
-export const getShopsShopIdMediaAssetsQueryParams = zod.object({
+export const getAssetsByIdsQueryParams = zod.object({
   "ids": zod.array(zod.string().uuid()).optional()
 })
 
-export const getShopsShopIdMediaAssetsResponseItem = zod.object({
+export const getAssetsByIdsResponseItem = zod.object({
   "id": zod.string().uuid(),
   "storageKey": zod.string(),
   "mimeType": zod.string(),
@@ -266,13 +220,59 @@ export const getShopsShopIdMediaAssetsResponseItem = zod.object({
   "sourceAssetId": zod.string().uuid().nullable(),
   "createdAt": zod.string().datetime({})
 })
-export const getShopsShopIdMediaAssetsResponse = zod.array(getShopsShopIdMediaAssetsResponseItem)
+export const getAssetsByIdsResponse = zod.array(getAssetsByIdsResponseItem)
 
 
-export const getShopsShopIdMediaUsageParams = zod.object({
+export const getMediaUsageParams = zod.object({
   "shopId": zod.string().uuid()
 })
 
-export const getShopsShopIdMediaUsageResponse = zod.object({
+export const getMediaUsageResponse = zod.object({
   "usedBytes": zod.number()
+})
+
+
+export const uploadShopLogoParams = zod.object({
+  "shopId": zod.string().uuid()
+})
+
+export const uploadShopLogoBody = zod.object({
+  "file": zod.instanceof(File).optional()
+})
+
+export const uploadShopLogoResponse = zod.object({
+  "libraryAsset": zod.object({
+  "id": zod.string().uuid(),
+  "storageKey": zod.string(),
+  "mimeType": zod.string(),
+  "width": zod.number(),
+  "height": zod.number(),
+  "sizeBytes": zod.number(),
+  "altText": zod.string().nullable(),
+  "focalPointX": zod.number(),
+  "focalPointY": zod.number(),
+  "originalFileName": zod.string().nullable(),
+  "folder": zod.string().nullable(),
+  "isInLibrary": zod.boolean(),
+  "preset": zod.string().nullable(),
+  "sourceAssetId": zod.string().uuid().nullable(),
+  "createdAt": zod.string().datetime({})
+}),
+  "derivatives": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "storageKey": zod.string(),
+  "mimeType": zod.string(),
+  "width": zod.number(),
+  "height": zod.number(),
+  "sizeBytes": zod.number(),
+  "altText": zod.string().nullable(),
+  "focalPointX": zod.number(),
+  "focalPointY": zod.number(),
+  "originalFileName": zod.string().nullable(),
+  "folder": zod.string().nullable(),
+  "isInLibrary": zod.boolean(),
+  "preset": zod.string().nullable(),
+  "sourceAssetId": zod.string().uuid().nullable(),
+  "createdAt": zod.string().datetime({})
+}))
 })

@@ -10,7 +10,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { normalizeDocument } from './lib/normalize.mjs';
-import { classifyDiff } from './lib/diff.mjs';
+import { classifyDiff, documentsEqual, firstDifference } from './lib/diff.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const STAGING_DIR = path.join(REPO_ROOT, 'contracts', 'openapi', '.staging');
@@ -36,7 +36,16 @@ for (const file of committedFiles) {
 
   if (drift.length > 0) {
     console.error(`[check-no-drift] ${file} lệch với contract đã duyệt:`);
-    for (const d of drift) console.error(`  - ${d.operation}`);
+    for (const d of drift) {
+      console.error(`  - ${d.operation}`);
+      for (const c of d.changes ?? []) console.error(`      ${c.kind}: ${c.detail}`);
+    }
+    hasDrift = true;
+  } else if (!documentsEqual(committedDoc, stagingDoc)) {
+    // Cổng chặn cuối (TOOLING-001): classifier là để BÁO CÁO cho người đọc, không phải để quyết định
+    // pass/fail. Document khác nhau ở chỗ không thuộc operation nào (component không ai dùng,
+    // securitySchemes, tags…) vẫn là lệch so với bản đã duyệt.
+    console.error(`[check-no-drift] ${file} khác contract đã duyệt ở chỗ ngoài các operation — lệch đầu tiên tại ${firstDifference(committedDoc, stagingDoc)}.`);
     hasDrift = true;
   }
 }

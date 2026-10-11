@@ -4,14 +4,14 @@ import { Button, Dialog } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
 import { mediaUrl } from '@vsite/builder-components';
 import {
-  getGetShopsShopIdMediaLibraryAssetIdReferencesQueryOptions,
-  getGetShopsShopIdMediaLibraryQueryKey,
-  getGetShopsShopIdMediaUsageQueryKey,
-  useDeleteShopsShopIdMediaLibraryAssetId,
-  useGetShopsShopIdMediaLibrary,
-  useGetShopsShopIdMediaUsage,
-  usePostShopsShopIdMediaLibrary,
-  usePostShopsShopIdMediaLibraryAssetIdClones,
+  getGetAssetReferencesQueryOptions,
+  getListLibraryQueryKey,
+  getGetMediaUsageQueryKey,
+  useDeleteFromLibrary,
+  useListLibrary,
+  useGetMediaUsage,
+  useUploadToLibrary,
+  useCloneFromLibrary,
   type MediaAssetDto,
 } from '@vsite/api-sdk';
 import { getErrorMessage, HEIC_UNSUPPORTED_GUIDANCE } from '../../lib/error-messages';
@@ -46,17 +46,17 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
   const [pendingDelete, setPendingDelete] = useState<{ asset: MediaAssetDto; referenceCount: number } | null>(null);
   const [referencesLoading, setReferencesLoading] = useState(false);
 
-  const libraryQuery = useGetShopsShopIdMediaLibrary(shopId, { page, pageSize: PAGE_SIZE });
-  const usageQuery = useGetShopsShopIdMediaUsage(shopId);
+  const libraryQuery = useListLibrary(shopId, { page, pageSize: PAGE_SIZE });
+  const usageQuery = useGetMediaUsage(shopId);
 
   const showFocalPicker = fitOfPreset(preset) !== 'inside';
 
-  const uploadMutation = usePostShopsShopIdMediaLibrary({
+  const uploadMutation = useUploadToLibrary({
     mutation: {
       onSuccess: () => {
         setUploadError(null);
-        void queryClient.invalidateQueries({ queryKey: getGetShopsShopIdMediaLibraryQueryKey(shopId) });
-        void queryClient.invalidateQueries({ queryKey: getGetShopsShopIdMediaUsageQueryKey(shopId) });
+        void queryClient.invalidateQueries({ queryKey: getListLibraryQueryKey(shopId) });
+        void queryClient.invalidateQueries({ queryKey: getGetMediaUsageQueryKey(shopId) });
       },
       onError: (error) => {
         setUploadError(getErrorMessage(getErrorCode(error)));
@@ -64,7 +64,7 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
     },
   });
 
-  const cloneMutation = usePostShopsShopIdMediaLibraryAssetIdClones({
+  const cloneMutation = useCloneFromLibrary({
     mutation: {
       onSuccess: (clonedAsset) => {
         onSelect(clonedAsset);
@@ -73,12 +73,12 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
     },
   });
 
-  const deleteMutation = useDeleteShopsShopIdMediaLibraryAssetId({
+  const deleteMutation = useDeleteFromLibrary({
     mutation: {
       onSuccess: () => {
         setPendingDelete(null);
-        void queryClient.invalidateQueries({ queryKey: getGetShopsShopIdMediaLibraryQueryKey(shopId) });
-        void queryClient.invalidateQueries({ queryKey: getGetShopsShopIdMediaUsageQueryKey(shopId) });
+        void queryClient.invalidateQueries({ queryKey: getListLibraryQueryKey(shopId) });
+        void queryClient.invalidateQueries({ queryKey: getGetMediaUsageQueryKey(shopId) });
       },
     },
   });
@@ -128,7 +128,7 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
     setReferencesLoading(true);
     try {
       const referencesResult = await queryClient.query(
-        getGetShopsShopIdMediaLibraryAssetIdReferencesQueryOptions(shopId, asset.id),
+        getGetAssetReferencesQueryOptions(shopId, asset.id),
       );
       setPendingDelete({ asset, referenceCount: referencesResult.references.length });
     } finally {

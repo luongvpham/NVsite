@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Button } from '@vsite/ui';
-import { ShopKind, usePostShops } from '@vsite/api-sdk';
+import { ShopKind, useCreateShop } from '@vsite/api-sdk';
 import { getErrorCode } from '@vsite/shared';
 import { FormField, FormSelect } from '../components/form-field';
 import { getErrorMessage } from '../lib/error-messages';
@@ -27,7 +27,7 @@ function CreateShopPage() {
 
   const kind = watch('kind');
 
-  const createShopMutation = usePostShops({
+  const createShopMutation = useCreateShop({
     mutation: {
       onSuccess: (shop) => {
         void navigate({ to: '/shops/$shopId', params: { shopId: shop.id } });

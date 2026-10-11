@@ -17,8 +17,8 @@ describe('SHOP-001 onboarding flow', () => {
     // Handler có state thật (không phải faker random) để mô phỏng shop vừa tạo xuất hiện trong
     // danh sách và load lại đúng khi sửa — ghi đè handler mặc định (faker) từ msw-server.ts.
     server.use(
-      http.post('/auth/register', () => HttpResponse.json({ verificationEmailSent: true })),
-      http.post('/auth/login', () =>
+      http.post('/api/auth/register', () => HttpResponse.json({ verificationEmailSent: true })),
+      http.post('/api/auth/login', () =>
         HttpResponse.json({
           accessToken: 'test-access-token',
           accessTokenExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
@@ -26,13 +26,13 @@ describe('SHOP-001 onboarding flow', () => {
           refreshTokenExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
         }),
       ),
-      http.post('/shops', async ({ request }) => {
+      http.post('/api/shops', async ({ request }) => {
         const body = (await request.json()) as { name: string; slug: string; kind: ShopDto['kind']; externalUrl: string | null };
         const created: ShopDto = { id: 'shop-1', status: 'Draft', logoId: null, logoUrl: null, ...body };
         shops.push(created);
         return HttpResponse.json(created);
       }),
-      http.get('/shops', () =>
+      http.get('/api/shops', () =>
         HttpResponse.json(
           shops.map((shop) => ({
             id: shop.id,
@@ -45,11 +45,11 @@ describe('SHOP-001 onboarding flow', () => {
           })),
         ),
       ),
-      http.get('/shops/:shopId', ({ params }) => {
+      http.get('/api/shops/:shopId', ({ params }) => {
         const shop = shops.find((s) => s.id === params.shopId);
         return shop ? HttpResponse.json(shop) : new HttpResponse(null, { status: 404 });
       }),
-      http.patch('/shops/:shopId', async ({ params, request }) => {
+      http.patch('/api/shops/:shopId', async ({ params, request }) => {
         const shop = shops.find((s) => s.id === params.shopId);
         if (!shop) return new HttpResponse(null, { status: 404 });
         Object.assign(shop, await request.json());

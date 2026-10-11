@@ -5,7 +5,6 @@
 export * from './authTokenResult';
 export * from './changePasswordRequest';
 export * from './forgotPasswordRequest';
-export * from './getAuthVerifyEmailParams';
 export * from './httpValidationProblemDetails';
 export * from './httpValidationProblemDetailsErrors';
 export * from './loginRequest';
@@ -15,4 +14,5 @@ export * from './refreshTokenRequest';
 export * from './registerRequest';
 export * from './registerResult';
 export * from './resetPasswordRequest';
+export * from './verifyEmailParams';
 export * from './verifyEmailResult';

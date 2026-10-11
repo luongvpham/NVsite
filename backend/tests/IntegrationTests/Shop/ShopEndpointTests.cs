@@ -140,7 +140,7 @@ public sealed class ShopEndpointTests
     {
         var (shopToken, _, shopHost) = await CreateShopWithOwnerShopTokenAsync();
 
-        var response = await SendAsync(HttpMethod.Get, "/shops", shopHost, shopToken);
+        var response = await SendAsync(HttpMethod.Get, "/api/shops", shopHost, shopToken);
 
         await AssertInsufficientScopeAsync(response);
     }
@@ -150,7 +150,7 @@ public sealed class ShopEndpointTests
     {
         var (shopToken, shopId, shopHost) = await CreateShopWithOwnerShopTokenAsync();
 
-        var response = await SendAsync(HttpMethod.Get, $"/shops/{shopId}", shopHost, shopToken);
+        var response = await SendAsync(HttpMethod.Get, $"/api/shops/{shopId}", shopHost, shopToken);
 
         await AssertInsufficientScopeAsync(response);
     }
@@ -160,7 +160,7 @@ public sealed class ShopEndpointTests
     {
         var (shopToken, shopId, shopHost) = await CreateShopWithOwnerShopTokenAsync();
 
-        var response = await PatchAsync(shopHost, $"/shops/{shopId}", shopToken,
+        var response = await PatchAsync(shopHost, $"/api/shops/{shopId}", shopToken,
             new UpdateShopRequest("New Name", NewSlug(), ShopKind.Hosted, null, ShopStatus.Active));
 
         await AssertInsufficientScopeAsync(response);
@@ -179,14 +179,14 @@ public sealed class ShopEndpointTests
         var shopB = await CreateShopAsync(ownerBToken, new CreateShopRequest("Shop B", NewSlug(), ShopKind.Hosted, null));
         var shopBId = (await shopB.Content.ReadFromJsonAsync<ShopDto>(JsonOptions))!.Id;
 
-        var response = await SendAsync(HttpMethod.Get, $"/shops/{shopBId}", PortalHost, ownerAToken);
+        var response = await SendAsync(HttpMethod.Get, $"/api/shops/{shopBId}", PortalHost, ownerAToken);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
         Assert.Equal("SHOP_ACCESS_DENIED", problem!.Extensions["error_code"]!.ToString());
 
         // Sanity: chủ shop B tự đọc được shop của mình bình thường.
-        var ownResponse = await SendAsync(HttpMethod.Get, $"/shops/{shopBId}", PortalHost, ownerBToken);
+        var ownResponse = await SendAsync(HttpMethod.Get, $"/api/shops/{shopBId}", PortalHost, ownerBToken);
         Assert.Equal(HttpStatusCode.OK, ownResponse.StatusCode);
     }
 
@@ -216,7 +216,7 @@ public sealed class ShopEndpointTests
 
         var staffToken = await LoginGlobalAsync(staffEmail);
 
-        var response = await PatchAsync(PortalHost, $"/shops/{shopDto.Id}", staffToken,
+        var response = await PatchAsync(PortalHost, $"/api/shops/{shopDto.Id}", staffToken,
             new UpdateShopRequest("Renamed", shopDto.Slug, ShopKind.Hosted, null, ShopStatus.Active));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -233,7 +233,7 @@ public sealed class ShopEndpointTests
         var shopDto = (await shop.Content.ReadFromJsonAsync<ShopDto>(JsonOptions))!;
         var newSlug = NewSlug();
 
-        var response = await PatchAsync(PortalHost, $"/shops/{shopDto.Id}", ownerToken,
+        var response = await PatchAsync(PortalHost, $"/api/shops/{shopDto.Id}", ownerToken,
             new UpdateShopRequest(shopDto.Name, newSlug, shopDto.Kind, shopDto.ExternalUrl, ShopStatus.Active));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -277,9 +277,9 @@ public sealed class ShopEndpointTests
 
     private async Task<Guid> RegisterVerifyGlobalAsync(string email)
     {
-        await PostAsync(PortalHost, "/auth/register", new RegisterRequest(email, Password, "Staff User"));
+        await PostAsync(PortalHost, "/api/auth/register", new RegisterRequest(email, Password, "Staff User"));
         var token = _factory.EmailSpy.ExtractLastTokenFor(email);
-        var verifyResponse = await SendAsync(HttpMethod.Get, $"/auth/verify-email?token={Uri.EscapeDataString(token)}", PortalHost);
+        var verifyResponse = await SendAsync(HttpMethod.Get, $"/api/auth/verify-email?token={Uri.EscapeDataString(token)}", PortalHost);
         Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
 
         await using var scope = _factory.Services.CreateAsyncScope();
@@ -289,7 +289,7 @@ public sealed class ShopEndpointTests
 
     private async Task<string> LoginGlobalAsync(string email)
     {
-        var loginResponse = await PostAsync(PortalHost, "/auth/login", new LoginRequest(email, Password));
+        var loginResponse = await PostAsync(PortalHost, "/api/auth/login", new LoginRequest(email, Password));
         Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
         var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthTokenResult>();
         return authResult!.AccessToken;
@@ -298,13 +298,13 @@ public sealed class ShopEndpointTests
     private async Task<string> RegisterVerifyLoginGlobalAsync(string email, string? host = null)
     {
         var effectiveHost = host ?? PortalHost;
-        await PostAsync(effectiveHost, "/auth/register", new RegisterRequest(email, Password, "Test User"));
+        await PostAsync(effectiveHost, "/api/auth/register", new RegisterRequest(email, Password, "Test User"));
 
         var token = _factory.EmailSpy.ExtractLastTokenFor(email);
-        var verifyResponse = await SendAsync(HttpMethod.Get, $"/auth/verify-email?token={Uri.EscapeDataString(token)}", effectiveHost);
+        var verifyResponse = await SendAsync(HttpMethod.Get, $"/api/auth/verify-email?token={Uri.EscapeDataString(token)}", effectiveHost);
         Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
 
-        var loginResponse = await PostAsync(effectiveHost, "/auth/login", new LoginRequest(email, Password));
+        var loginResponse = await PostAsync(effectiveHost, "/api/auth/login", new LoginRequest(email, Password));
         Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
 
         var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthTokenResult>();
@@ -313,7 +313,7 @@ public sealed class ShopEndpointTests
 
     private Task<HttpResponseMessage> CreateShopAsync(string token, CreateShopRequest body, string? host = null)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/shops")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/shops")
         {
             Content = JsonContent.Create(body),
             Headers = { Host = host ?? PortalHost },

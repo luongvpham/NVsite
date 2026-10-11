@@ -34,24 +34,28 @@ public static class IdentityEndpoints
 
         auth.MapPost("/register", async (RegisterRequest body, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new RegisterCommand(body.Email, body.Password, body.FullName), ct)))
+            .WithName("register")
             .Produces<RegisterResult>()
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
         auth.MapGet("/verify-email", async (string token, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new VerifyEmailCommand(token), ct)))
+            .WithName("verifyEmail")
             .Produces<VerifyEmailResult>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
         auth.MapPost("/login", async (LoginRequest body, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new LoginCommand(body.Email, body.Password), ct)))
+            .WithName("login")
             .Produces<AuthTokenResult>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
         auth.MapPost("/refresh-token", async (RefreshTokenRequest body, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new RefreshTokenCommand(body.RefreshToken), ct)))
+            .WithName("refreshToken")
             .Produces<AuthTokenResult>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
@@ -61,6 +65,7 @@ public static class IdentityEndpoints
             await sender.Send(new ForgotPasswordCommand(body.Email), ct);
             return Results.NoContent();
         })
+            .WithName("forgotPassword")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
@@ -69,6 +74,7 @@ public static class IdentityEndpoints
             await sender.Send(new ResetPasswordCommand(body.Token, body.NewPassword), ct);
             return Results.NoContent();
         })
+            .WithName("resetPassword")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
@@ -78,6 +84,7 @@ public static class IdentityEndpoints
         // token `shop:{shopId}` (xem AuthenticationSetup + ShopMembershipValidationMiddleware).
         auth.MapGet("/me", async (ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetMeQuery(), ct)))
+            .WithName("getMe")
             .RequireAuthorization()
             .Produces<MeDto>()
             .ProducesProblem(StatusCodes.Status401Unauthorized);
@@ -87,6 +94,7 @@ public static class IdentityEndpoints
             await sender.Send(new ChangePasswordCommand(body.CurrentPassword, body.NewPassword), ct);
             return Results.NoContent();
         })
+            .WithName("changePassword")
             .RequireAuthorization()
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status401Unauthorized)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkAdditive, type LockSnapshot, type LockTypeSnapshot } from './lock-snapshot';
+import { checkAdditive, findUnlocked, type LockSnapshot, type LockTypeSnapshot } from './lock-snapshot';
 
 /**
  * §9 test #5 — "Viết test cho chính cái checker": test trực tiếp checkAdditive() với fixture
@@ -176,5 +176,100 @@ describe('checkAdditive — 6 case OK không được fail (§5)', () => {
     const result = checkAdditive(baseSnapshot(), current);
     expect(result.violations).toEqual([]);
     expect(result.warnings.some((w) => w.includes('imagePresets') && w.includes('160x160,cover'))).toBe(true);
+  });
+});
+
+describe('TOOLING-001 — ràng buộc trước đây không có trong lock', () => {
+  const withType = (patch: (hero: LockTypeSnapshot) => void): LockSnapshot => {
+    const hero: LockTypeSnapshot = {
+      ...baseHero(),
+      acceptsChildren: true,
+      allowedChildTypes: ['Hero', 'RichText'],
+    };
+    hero.props.target = { kind: 'link', allowKinds: ['external', 'page'] };
+    hero.props.source = { kind: 'binding', sources: ['Service', 'ServiceGroup'] };
+    patch(hero);
+    return { Hero: hero };
+  };
+  const previous = withType(() => {});
+
+  it('thu hẹp link.allowKinds → FAIL', () => {
+    const current = withType((h) => { h.props.target = { kind: 'link', allowKinds: ['page'] }; });
+    expect(checkAdditive(previous, current).violations.some((v) => v.includes('allowKinds'))).toBe(true);
+  });
+
+  it('bỏ binding.sources → FAIL; thêm source → OK', () => {
+    const removed = withType((h) => { h.props.source = { kind: 'binding', sources: ['Service'] }; });
+    expect(checkAdditive(previous, removed).violations.some((v) => v.includes('binding.sources'))).toBe(true);
+    const added = withType((h) => { h.props.source = { kind: 'binding', sources: ['Product', 'Service', 'ServiceGroup'] }; });
+    expect(checkAdditive(previous, added).violations).toEqual([]);
+  });
+
+  it('acceptsChildren true → false → FAIL', () => {
+    const current = withType((h) => { h.acceptsChildren = false; h.allowedChildTypes = null; });
+    expect(checkAdditive(previous, current).violations.some((v) => v.includes('acceptsChildren'))).toBe(true);
+  });
+
+  it('allowedChildTypes: bỏ type → FAIL; "mọi type" → danh sách → FAIL; danh sách → "mọi type" → OK', () => {
+    const narrowed = withType((h) => { h.allowedChildTypes = ['Hero']; });
+    expect(checkAdditive(previous, narrowed).violations.some((v) => v.includes('allowedChildTypes'))).toBe(true);
+
+    const anyPrev = withType((h) => { h.allowedChildTypes = null; });
+    expect(checkAdditive(anyPrev, previous).violations.some((v) => v.includes('mọi type'))).toBe(true);
+
+    expect(checkAdditive(previous, anyPrev).violations).toEqual([]);
+  });
+
+  it('lock cũ chưa có các field mới → không báo vi phạm giả', () => {
+    expect(checkAdditive(baseSnapshot(), previous).violations).toEqual([]);
+  });
+});
+
+describe('findUnlocked — lock phải phủ hết registry hiện tại', () => {
+  it('lock khớp → rỗng', () => {
+    const snap: LockSnapshot = { Hero: { ...baseHero(), acceptsChildren: false, allowedChildTypes: null } };
+    expect(findUnlocked(snap, snap)).toEqual([]);
+  });
+
+  it('type / variant / prop (kể cả lồng) mới, field snapshot mới → liệt kê đủ', () => {
+    const locked: LockSnapshot = { Hero: { ...baseHero(), acceptsChildren: false, allowedChildTypes: null } };
+    const hero = { ...baseHero(), acceptsChildren: false, allowedChildTypes: null } as LockTypeSnapshot;
+    hero.variants.Hero02 = { requiresProps: [] };
+    hero.props.subtitle = { kind: 'text' };
+    hero.props.cta = { kind: 'group', props: { label: { kind: 'text', maxLength: 40 }, href: { kind: 'link', allowKinds: ['page'] } } };
+    const current: LockSnapshot = { Hero: hero, Gallery: { variants: {}, props: {} } };
+
+    expect(findUnlocked(locked, current).sort()).toEqual(
+      ['Gallery (type)', 'Hero.Hero02 (variant)', 'Hero.cta.href (prop)', 'Hero.subtitle (prop)'].sort(),
+    );
+  });
+
+  it('lock cũ thiếu acceptsChildren/allowedChildTypes → cần cập nhật', () => {
+    const current: LockSnapshot = { Hero: { ...baseHero(), acceptsChildren: false, allowedChildTypes: null } };
+    expect(findUnlocked(baseSnapshot(), current)).toEqual(['Hero.acceptsChildren', 'Hero.allowedChildTypes']);
+  });
+});
+
+describe('Sau review TOOLING-001', () => {
+  it('lá → container (acceptsChildren false → true + allowedChildTypes) là NỚI, không báo thu hẹp', () => {
+    const prev: LockSnapshot = { Hero: { ...baseHero(), acceptsChildren: false, allowedChildTypes: null } };
+    const curr: LockSnapshot = { Hero: { ...baseHero(), acceptsChildren: true, allowedChildTypes: ['Hero'] } };
+    expect(checkAdditive(prev, curr).violations).toEqual([]);
+  });
+
+  it('findUnlocked bắt cả GIÁ TRỊ đổi (thêm option, nới maxLength) — lock phải bằng đúng snapshot', () => {
+    const locked: LockSnapshot = { Hero: { ...baseHero(), acceptsChildren: false, allowedChildTypes: null } };
+    const hero = { ...baseHero(), acceptsChildren: false, allowedChildTypes: null } as LockTypeSnapshot;
+    hero.props.align = { kind: 'select', options: ['left', 'center', 'right'] };
+    hero.props.title = { kind: 'text', maxLength: 200 };
+    const unlocked = findUnlocked(locked, { Hero: hero });
+    expect(unlocked).toContain('Hero.props.align.options (giá trị đổi)');
+    expect(unlocked).toContain('Hero.props.title.maxLength (giá trị đổi)');
+  });
+
+  it('lock khớp từng giá trị (khác thứ tự key) → rỗng', () => {
+    const a: LockSnapshot = { Hero: { ...baseHero(), acceptsChildren: false, allowedChildTypes: null } };
+    const reordered = JSON.parse(JSON.stringify({ Hero: { allowedChildTypes: null, acceptsChildren: false, props: baseHero().props, variants: baseHero().variants } })) as LockSnapshot;
+    expect(findUnlocked(reordered, a)).toEqual([]);
   });
 });

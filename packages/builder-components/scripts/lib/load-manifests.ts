@@ -8,8 +8,9 @@ export function fail(message: string): never {
   process.exit(1);
 }
 
-export async function loadManifests(pkgRoot: string): Promise<ComponentManifest[]> {
-  const files = await fg('registry/*.manifest.ts', { cwd: pkgRoot, absolute: true });
+export async function loadManifests(pkgRoot: string, registryDir = path.join(pkgRoot, 'registry')): Promise<ComponentManifest[]> {
+  // Sort để thứ tự ổn định không phụ thuộc filesystem (artifact phải byte-identical, §9).
+  const files = (await fg('*.manifest.ts', { cwd: registryDir, absolute: true })).sort();
   const manifests: ComponentManifest[] = [];
 
   for (const file of files) {

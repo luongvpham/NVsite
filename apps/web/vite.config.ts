@@ -25,6 +25,9 @@ export default defineConfig({
       // TanStack Start + nitro/vite thì devProxy không chặn được request — /media/… bị SSR của app
       // trả 404 HTML thay vì tới API.
       '/media': { target: 'http://localhost:5270', changeOrigin: false },
+      // API (Quyết định #91) — gọi từ trình duyệt sau hydrate. SSR loader KHÔNG đi qua proxy này:
+      // ở server dùng createApiClient({ baseURL tuyệt đối, headers: Host gốc }) của @vsite/api-sdk.
+      '/api': { target: 'http://localhost:5270', changeOrigin: false },
     },
   },
   test: {

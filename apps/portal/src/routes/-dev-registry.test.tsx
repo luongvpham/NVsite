@@ -25,16 +25,16 @@ const asset: MediaAssetDto = {
 };
 
 function shop(roleCode: string): ShopSummaryDto {
-  return { id: 'shop-1', name: 'Shop', slug: 'shop', kind: 'Hosted', status: 'Active', roleCode, logoUrl: null } as ShopSummaryDto;
+  return { id: 'shop-1', name: 'Shop', slug: 'shop', kind: 'Hosted', status: 'Active', roleCode, logoUrl: null };
 }
 
 function renderControl(roleCode: string) {
   server.use(
-    http.get('*/shops', () => HttpResponse.json([shop(roleCode)])),
-    http.get('*/shops/:shopId/media/library', () =>
+    http.get('*/api/shops', () => HttpResponse.json([shop(roleCode)])),
+    http.get('*/api/shops/:shopId/media/library', () =>
       HttpResponse.json({ items: [asset], total: 1, page: 1, pageSize: 24 }),
     ),
-    http.get('*/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+    http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
   );
   renderWithQuery(
     <ImagePickerControl

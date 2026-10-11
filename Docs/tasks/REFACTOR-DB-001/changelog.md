@@ -130,7 +130,7 @@ scratchpad, cổng 55432, không đụng service Postgres của máy) và vá **
      `DbUpdateConcurrencyException` → 409.
 2. **Chưa có map chung `23505 unique_violation` → 409.** Hiện chỉ slug được kiểm trước. Unique
    khác (vd. hai request tạo shop cùng slug đồng thời) vẫn ra 500 trong race hiếm.
-3. **Tài liệu thiết kế cho Bước 5 trở đi** chưa sửa: `ShopId` + FK ghép cho mọi bảng con
+3. ✅ *Đã làm ở DESIGN-STEP5-PREP (#92–#95).* **Tài liệu thiết kế cho Bước 5 trở đi** chưa sửa: `ShopId` + FK ghép cho mọi bảng con
    (`Page`/`PageDraft`/`SitePublication`/`ProductVariant`…), địa chỉ hành chính 2 cấp từ 07/2025,
    PK của `ProductAttributeValue`, `schemaVersion` cho tree/snapshot. Đây là task riêng, chỉ sửa tài
    liệu (review mục P0 #6, #7, P1).

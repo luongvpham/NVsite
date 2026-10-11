@@ -1,6 +1,6 @@
 # vsite — Tech Stack & Quyết Định Đã Chốt
 
-> **STATUS:** `INCOMPLETE_DOC` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `Không chứa #40–#67, #69–#86 và #88 — xem DECISIONS.md`
+> **STATUS:** `INCOMPLETE_DOC` · **Tasks:** `REFACTOR-API-001` · **Changelog:** `Docs/tasks/REFACTOR-API-001/changelog.md` · **Stale:** `Không chứa #40–#67, #69–#86 và #88 — xem DECISIONS.md · đường dẫn API (vd. api.vsite.vn/auth/...) thực tế có prefix /api: /api/auth/... (Quyết định #91)`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
 > ⚠️ **File này KHÔNG chứa toàn bộ quyết định.** Ở đây có `#1–#39` và `#68`.

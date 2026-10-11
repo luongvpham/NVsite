@@ -21,9 +21,9 @@ export * from './generated/shop/shop.zod';
 // export chọn lọc, không export * cả thư mục model.
 export * from './generated/media/media/media';
 export * from './generated/media/model/cloneRequest';
-export * from './generated/media/model/getShopsShopIdMediaAssetsParams';
-export * from './generated/media/model/getShopsShopIdMediaLibraryAssetIdDerivativesParams';
-export * from './generated/media/model/getShopsShopIdMediaLibraryParams';
+export * from './generated/media/model/getAssetsByIdsParams';
+export * from './generated/media/model/getDerivativesParams';
+export * from './generated/media/model/listLibraryParams';
 export * from './generated/media/model/iFormFile';
 export * from './generated/media/model/mediaAssetDto';
 export * from './generated/media/model/mediaReferenceDto';

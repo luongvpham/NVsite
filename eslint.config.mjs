@@ -20,6 +20,8 @@ export default tseslint.config(
       '**/vitest.config.ts',
       '**/orval.config.ts',
       '**/tailwind-preset.js',
+      // Script Node thuần (.mjs) của tooling package — không thuộc tsconfig nào (TOOLING-001).
+      'packages/*/scripts/**/*.mjs',
     ],
   },
   js.configs.recommended,

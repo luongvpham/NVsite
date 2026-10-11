@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Button } from '@vsite/ui';
-import { ShopKind, ShopStatus, useGetShops, useGetShopsShopId, usePatchShopsShopId, type ShopDto } from '@vsite/api-sdk';
+import { ShopKind, ShopStatus, useListShops, useGetShop, useUpdateShop, type ShopDto } from '@vsite/api-sdk';
 import { getErrorCode } from '@vsite/shared';
 import { FormField, FormSelect } from '../components/form-field';
 import { ShopLogoSection } from '../components/shop/shop-logo-section';
@@ -16,11 +16,11 @@ export const Route = createFileRoute('/_authenticated/shops/$shopId')({
 
 function EditShopPage() {
   const { shopId } = Route.useParams();
-  const shopQuery = useGetShopsShopId(shopId);
+  const shopQuery = useGetShop(shopId);
   // Signal role duy nhất ở FE: `GET /shops` trả `roleCode` mỗi shop (SHOP-001, đã hiện ở màn danh
   // sách shop). `GET /shops/{shopId}` (ShopDto) không có field role — không tự bịa signal mới,
   // xem apps/portal/src/lib/shop-role.ts.
-  const shopsQuery = useGetShops();
+  const shopsQuery = useListShops();
   const isOwner = isShopOwner(shopsQuery.data, shopId);
 
   return (
@@ -66,7 +66,7 @@ function EditShopForm({ shopId, shop }: { shopId: string; shop: ShopDto }) {
 
   const kind = watch('kind');
 
-  const updateShopMutation = usePatchShopsShopId({
+  const updateShopMutation = useUpdateShop({
     mutation: {
       onSuccess: () => {
         void navigate({ to: '/shops' });

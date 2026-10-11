@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Button } from '@vsite/ui';
-import { postAuthLoginBody, usePostAuthLogin, type LoginRequest } from '@vsite/api-sdk';
+import { loginBody, useLogin, type LoginRequest } from '@vsite/api-sdk';
 import { getErrorCode } from '@vsite/shared';
 import { FormField } from '../components/form-field';
 import { getErrorMessage } from '../lib/error-messages';
@@ -21,11 +21,11 @@ function LoginPage() {
     setError,
     formState: { errors, isSubmitting },
   } = useForm<LoginRequest>({
-    resolver: zodResolver(postAuthLoginBody),
+    resolver: zodResolver(loginBody),
     defaultValues: { email: '', password: '' },
   });
 
-  const loginMutation = usePostAuthLogin({
+  const loginMutation = useLogin({
     mutation: {
       onSuccess: (result) => {
         setSession({ accessToken: result.accessToken, refreshToken: result.refreshToken });

@@ -125,7 +125,7 @@ public sealed class GetDerivativesEndpointTests
     private async Task<ShopLogoDto> PutLogoAsync(string token, Guid shopId)
     {
         using var content = new MultipartFormDataContent { { new ByteArrayContent(EncodeJpeg(1600, 1200)), "file", "logo.jpg" } };
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/shops/{shopId}/logo") { Content = content, Headers = { Host = PortalHost } };
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/shops/{shopId}/logo") { Content = content, Headers = { Host = PortalHost } };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await _client.SendAsync(request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -135,7 +135,7 @@ public sealed class GetDerivativesEndpointTests
     private async Task<HttpResponseMessage> GetDerivativesAsync(string token, Guid shopId, Guid assetId, string? encodedPreset)
     {
         var query = encodedPreset is null ? string.Empty : "?preset=" + encodedPreset;
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/shops/{shopId}/media/library/{assetId}/derivatives{query}")
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/shops/{shopId}/media/library/{assetId}/derivatives{query}")
         {
             Headers = { Host = PortalHost },
         };
@@ -155,17 +155,17 @@ public sealed class GetDerivativesEndpointTests
     private async Task<(string Token, Guid ShopId)> CreateOwnerWithShopAsync()
     {
         var email = $"derivatives-{Guid.NewGuid():N}@example.test";
-        await PostAsync("/auth/register", new RegisterRequest(email, Password, "Test User"));
+        await PostAsync("/api/auth/register", new RegisterRequest(email, Password, "Test User"));
 
         var verifyToken = _factory.EmailSpy.ExtractLastTokenFor(email);
-        var verify = new HttpRequestMessage(HttpMethod.Get, $"/auth/verify-email?token={Uri.EscapeDataString(verifyToken)}") { Headers = { Host = PortalHost } };
+        var verify = new HttpRequestMessage(HttpMethod.Get, $"/api/auth/verify-email?token={Uri.EscapeDataString(verifyToken)}") { Headers = { Host = PortalHost } };
         Assert.Equal(HttpStatusCode.OK, (await _client.SendAsync(verify)).StatusCode);
 
-        var loginResponse = await PostAsync("/auth/login", new LoginRequest(email, Password));
+        var loginResponse = await PostAsync("/api/auth/login", new LoginRequest(email, Password));
         Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
         var token = (await loginResponse.Content.ReadFromJsonAsync<AuthTokenResult>())!.AccessToken;
 
-        var create = new HttpRequestMessage(HttpMethod.Post, "/shops")
+        var create = new HttpRequestMessage(HttpMethod.Post, "/api/shops")
         {
             Content = JsonContent.Create(new CreateShopRequest("Derivatives Test Shop", $"deriv-{Guid.NewGuid():N}", ShopKind.Hosted, null)),
             Headers = { Host = PortalHost },
