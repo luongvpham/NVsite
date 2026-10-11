@@ -1,9 +1,9 @@
 # vsite — Thiết Kế Entity: Website Builder & Product (Phase 2)
 
-> **STATUS:** `SPEC` · **Tasks:** `MEDIA-001,REFACTOR-DB-001,DESIGN-STEP5-PREP` · **Changelog:** `Docs/tasks/MEDIA-001/changelog.md` · **Stale:** `§9, §20 và #55/#56 ghi tên bảng media_assets (thực tế media_asset, số ít snake_case — REFACTOR-DB-001); #55 công thức quota SourceAssetId IS NULL (thực tế Kind IN (Library, Direct)) — MediaAsset đã code (Bước 4), phần còn lại của tài liệu (Website/Page/Product) vẫn là spec`
+> **STATUS:** `SPEC` · **Tasks:** `MEDIA-001,REFACTOR-DB-001,DESIGN-STEP5-PREP,DESIGN-ROADMAP-001` · **Changelog:** `Docs/tasks/MEDIA-001/changelog.md` · **Stale:** `§9, §20 và #55/#56 ghi tên bảng media_assets (thực tế media_asset, số ít snake_case — REFACTOR-DB-001); #55 công thức quota SourceAssetId IS NULL (thực tế Kind IN (Library, Direct)) — MediaAsset đã code (Bước 4), phần còn lại của tài liệu (Website/Page/Product) vẫn là spec`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
-> 📌 **§0 là nơi định nghĩa Quyết định `#40–#58`, `#92`, `#94`, `#95`** (#93 — địa chỉ hành chính — ở `04` §4.5). Không chép sang `02` — tra số ở
+> 📌 **§0 là nơi định nghĩa Quyết định `#40–#58`, `#92`, `#94`, `#95`, `#97`, `#98`** (#93 — địa chỉ hành chính — ở `04` §4.5). Không chép sang `02` — tra số ở
 > [`DECISIONS.md`](DECISIONS.md). `MediaAsset`, ảnh `Listing`/`Product` và pipeline ảnh mô tả chi tiết ở
 > [`08-media-asset-design.md`](08-media-asset-design.md) (định nghĩa `#69–#86` và `#88`).
 
@@ -41,6 +41,8 @@
 | **#92** | **Mọi bảng thuộc shop có `ShopId`** (kể cả bảng con 1:1: `PageDraft`, `Theme`, `NavigationConfig`, `ShopAttributeOption`, `ProductVariant`…) và **mọi FK tới entity thuộc shop là FK ghép** `(X, ShopId) → (Id, ShopId)`; bảng cha khai `UNIQUE (Id, ShopId)`. DB tự chặn trỏ chéo shop, Global Query Filter (#21.2) áp được cho mọi bảng. Khoá **int identity** (`ShopProductCategory`, `ShopAttribute`, `ShopAttributeOption`, `ShopServiceGroup`) giữ nguyên — URL ngắn; chấp nhận lộ bộ đếm toàn hệ. FK ghép có `ON DELETE SET NULL` phải ghi rõ cột: `SET NULL (X)` (Postgres 15+), nếu không Postgres set NULL cả `ShopId` |
 | **#94** | Mọi document JSONB có vòng đời dài — `PageDraft.Tree`, `SitePublication.Snapshot`, `WebsiteTemplate.Snapshot`, `Theme.Tokens`, `NavigationConfig.Items` — có **`schemaVersion` (int) ở cấp gốc**, đọc qua bộ nâng cấp (upcaster) theo version. **Node** trong tree vẫn **không** có version (#43 giữ nguyên) — version chỉ bảo vệ shape của vỏ (`pages`, `seo`, `navigation`…), thứ #43 không che |
 | **#95** | `CategoryAttribute` **không dùng sentinel `CategoryId = 0`**: `CategoryId` nullable (`NULL` = áp toàn shop), có `ShopId`, `UNIQUE NULLS NOT DISTINCT (ShopId, CategoryId, AttributeId)` (Postgres 15+), FK ghép tới category và attribute |
+| **#97** | **Validate document JSONB theo khuôn `config/sanitize-profiles.json`** — BE là C#, không port Zod. **Tập giá trị cho phép** (key màu của `Theme.Tokens`, whitelist font, thang `scale`/`radius`/`shadow`/`sectionGap`, mã locale) là **dữ liệu JSON trong `config/`** (`theme-tokens.json`, `locales.json`): FE dựng Zod từ file, BE đọc cùng file — một nguồn, không có danh sách thứ hai viết tay. **Shape vỏ** (`Tree` gốc + node, `Tokens`, `NavigationConfig.Items`, `Snapshot`) viết bằng Zod rồi codegen sinh JSON Schema cho BE, đúng đường ống #60 của props. Test hai phía chạy chung bộ fixture |
+| **#98** | **Đa ngôn ngữ website shop = một cấu trúc, nhiều bản dịch nội dung.** Mỗi trang có **một** tree; bản dịch là overlay `i18n` trên node, chỉ cho prop `localizable`. Cột hiện có (`Page.Slug`/`Title`/SEO, `Website.DefaultSeo*`) giữ ngôn ngữ mặc định; ngôn ngữ khác nằm ở bảng `*_translation` **thêm sau** (additive). URL: ngôn ngữ mặc định không prefix, ngôn ngữ khác `/{locale}/…`. Làm ngay ở Bước 5: `Website.DefaultLocale` + `Locales`, chặn `Slug` trùng mã locale. Chi tiết §26 |
 
 ---
 
@@ -77,7 +79,9 @@ Gốc của module. Một shop `Hosted` có đúng một website.
 | `Status` | enum | `Draft` · `Published` · `Suspended` |
 | `SeedTemplateId` | uuid? FK → `website_template` | Chỉ để thống kê/hỗ trợ. **Không** phải quan hệ sống (#45) |
 | `CurrentPublicationId` | uuid? | Bản đang phục vụ công chúng. NULL = chưa publish lần nào. FK ghép `(CurrentPublicationId, Id) → site_publication (Id, WebsiteId)` — rollback không thể trỏ sang bản publish của website khác (#92) |
-| `DefaultSeoTitle` | varchar(160) | Fallback khi `Page.SeoTitle` rỗng |
+| `DefaultLocale` | varchar(10) NOT NULL | Mặc định `'vi'`. Phải thuộc `Locales` (CHECK `default_locale = ANY(locales)`) và `config/locales.json` (#98, §26) |
+| `Locales` | text[] NOT NULL | Ngôn ngữ đang bật, mặc định `{vi}`. Mã nằm trong `config/locales.json` |
+| `DefaultSeoTitle` | varchar(160) | Fallback khi `Page.SeoTitle` rỗng. Bản của `DefaultLocale` — ngôn ngữ khác ở `website_translation` (§26) |
 | `DefaultSeoDescription` | varchar(320) | |
 | `DefaultOgImageId` | uuid? | Bản Library. FK ghép `(DefaultOgImageId, ShopId) → media_asset (Id, ShopId)` (#76). Render bằng phái sinh `1200x630,cover` (#73) |
 | `FaviconAssetId` | uuid? | Bản Library. FK ghép như trên (#76). Định dạng favicon: `08` §10 |
@@ -115,7 +119,7 @@ Gốc của module. Một shop `Hosted` có đúng một website.
 
 **Vì sao jsonb chứ không phải cột riêng cho từng token:** tập token sẽ phình theo thời gian (thêm `accent`, thêm `radiusButton`...), và **không có truy vấn nào lọc theo màu**. Đây khác hẳn `Product.Price` — cái đó bắt buộc phải là cột vì có filter/sort.
 
-**Ràng buộc:** shape của `Tokens` do một Zod schema duy nhất định nghĩa, dùng chung FE/BE, validate khi ghi. Đây **không** phải "JSON blob tự do" kiểu `SiteConfig` của hệ 4.8 (#36) — khác biệt nằm ở chỗ có schema bắt buộc và phạm vi hẹp cố định.
+**Ràng buộc:** shape của `Tokens` theo #97: tập key/giá trị cho phép ở `config/theme-tokens.json` (FE và BE đọc cùng file), shape vỏ viết Zod rồi sinh JSON Schema cho BE. Validate khi ghi. Đây **không** phải "JSON blob tự do" kiểu `SiteConfig` của hệ 4.8 (#36) — khác biệt nằm ở chỗ có schema bắt buộc và phạm vi hẹp cố định.
 
 `changeTheme` (operation thứ 5, #14) ghi vào đúng bảng này.
 
@@ -130,7 +134,7 @@ Gốc của module. Một shop `Hosted` có đúng một website.
 | `ShopId` | uuid NOT NULL | #92. Khai `UNIQUE (Id, ShopId)` — đích FK ghép của `Listing.TargetPageId` (`04` §4.1 [5]) và `Service.DetailPageId` (`06` §6.4) |
 | `Kind` | enum | `Composable` · `System` (#33) |
 | `SystemType` | enum? | NOT NULL khi `Kind = System`, NULL khi `Composable` |
-| `Slug` | varchar(120) | `""` cho trang chủ. UNIQUE `(WebsiteId, Slug)` |
+| `Slug` | varchar(120) | `""` cho trang chủ. UNIQUE `(WebsiteId, Slug)`. **Không** được trùng mã locale trong `config/locales.json`, kể cả locale chưa bật (#98) — vì `/{locale}/` là prefix URL. Slug/Title/SEO ở đây là bản của `Website.DefaultLocale` |
 | `Title` | varchar(160) | Nhãn hiển thị trong portal + nguồn mặc định cho menu |
 | `SeoTitle` / `SeoDescription` | varchar(160) / (320) | Rỗng → fallback về `Website` |
 | `OgImageId` | uuid? | Bản Library, phái sinh `1200x630,cover` (#73). FK ghép `(OgImageId, ShopId) → media_asset (Id, ShopId)` (#76, #92) |
@@ -177,7 +181,7 @@ Tách khỏi `Page` vì hai lý do: tree là cột nặng (có thể vài trăm 
 
 ## 6. Component Tree — shape JSON
 
-Không phải bảng, nhưng là cấu trúc dữ liệu quan trọng nhất module. Định nghĩa một lần bằng Zod, dùng chung FE/BE (#19).
+Không phải bảng, nhưng là cấu trúc dữ liệu quan trọng nhất module. Shape vỏ định nghĩa một lần bằng Zod, BE validate bằng JSON Schema sinh ra (#97); props theo #60.
 
 ```json
 {
@@ -230,6 +234,7 @@ Không phải bảng, nhưng là cấu trúc dữ liệu quan trọng nhất mod
 3. `props` **không bao giờ** chứa dữ liệu nghiệp vụ đã materialize, chỉ chứa nội dung tĩnh hoặc `binding` mô tả cách lấy.
 4. Ảnh lưu bằng **id** (`imageId: "media_8891"`), không lưu URL. URL dựng lúc render từ `StorageKey` — cho phép đổi CDN, xoá ảnh mà phát hiện được tham chiếu. `imageId` luôn là id của **clone** đã crop đúng preset của slot (#71, `08` §3).
 5. `children` chỉ có ở component container. Manifest khai `acceptsChildren: true/false`.
+6. Key `i18n` trên node **dành riêng** cho overlay bản dịch (#98, §26). Chưa dùng trước khi bật đa ngôn ngữ, nhưng không field nào khác được lấy tên này.
 
 ---
 
@@ -250,6 +255,8 @@ Không phải bảng, nhưng là cấu trúc dữ liệu quan trọng nhất mod
 {
   "schemaVersion": 1,
   "version": 7,
+  "defaultLocale": "vi",
+  "locales": ["vi"],
   "theme": { "...tokens..." },
   "navigation": { "items": [ ... ] },
   "seo": { "defaultTitle": "...", "defaultDescription": "...", "ogImageId": "..." },
@@ -303,6 +310,8 @@ Theo Quyết định #34: derived + manual overlay, một màn hình kéo-thả 
 ```
 
 **`label: null` nghĩa là dùng nhãn gốc từ nguồn** — shop đổi tên trang thì menu tự đổi theo. Chỉ khi shop cố ý ghi đè thì `label` mới có giá trị. Đây là điểm khác hệ 4.8, nơi nhãn menu bị copy cứng.
+
+**Đa ngôn ngữ (#98):** `label` là nhãn của ngôn ngữ mặc định. Khi bật đa ngôn ngữ, item thêm `labels: { "en": "…" }` (additive, qua upcaster #94). Thiếu bản dịch thì lấy nhãn gốc từ nguồn theo locale đó (`page_translation.Title`), rồi mới tới `label`.
 
 **Đồng bộ khi nguồn thay đổi:**
 - Thêm trang / thêm category mới → **append vào cuối** với `hidden: true`, shop chủ động bật và sắp. Không tự chen vào giữa.
@@ -762,23 +771,9 @@ Thay hoàn toàn mô hình in-memory LINQ của hệ cũ (#36).
 
 ---
 
-## 24. Thứ tự triển khai đề xuất
+## 24. Thứ tự triển khai
 
-```
-1. MediaAsset + pipeline ảnh + Media Library     (không phụ thuộc gì, Builder & Listing cần — `08`)
-2. ShopProductCategory → ShopAttribute → ShopAttributeOption → CategoryAttribute
-3. Product → ProductAttributeValue → ProductVariant → ProductVariantOption
-4. Elasticsearch index + facet + Hangfire sync
-5. Component Registry manifest + codegen         (chặn tất cả phần Builder phía sau)
-6. Website → Theme → Page → PageDraft
-7. Operations Engine + Zod validate
-8. builder-renderer (dùng chung portal + web)
-9. NavigationConfig
-10. SitePublication + publish/rollback + cache
-11. WebsiteTemplate + khởi tạo từ template
-```
-
-Bước **5 là nút thắt** — mọi thứ từ 6 trở đi phụ thuộc vào nó. Nên làm manifest cho 3–4 component trước (Hero, Timeline, ProductGrid, Header) để chạy được codegen end-to-end, rồi mới mở rộng thư viện.
+Xem [`step.md`](step.md) — nguồn duy nhất cho thứ tự triển khai (Bước 5a–11 cho hai module này).
 
 ---
 
@@ -787,12 +782,83 @@ Bước **5 là nút thắt** — mọi thứ từ 6 trở đi phụ thuộc và
 | # | Vấn đề | Trạng thái |
 |---|---|---|
 | 1 | Giới hạn số trang / số ảnh / dung lượng media theo gói dịch vụ | ⚠️ Cần chốt trước khi bật thu phí (liên quan #8 ở `02` §6) |
-| 2 | Đa ngôn ngữ cho website shop (site song ngữ Việt–Anh) | ⏳ Chưa cần Phase 2, nhưng `Page`/`Theme` nên biết trước để không phải migrate |
-| 3 | Sanitize HTML từ Lexical — whitelist thẻ/thuộc tính cụ thể | ⚠️ Cần chốt trước khi cho nhập richtext |
+| 2 | Đa ngôn ngữ cho website shop (site song ngữ Việt–Anh) | ✅ Đã chốt thiết kế — #98, §26. Thời điểm bật tính năng chưa xếp (`step.md` mục "Đa ngôn ngữ") |
+| 3 | Sanitize HTML từ Lexical — whitelist thẻ/thuộc tính cụ thể | ✅ Đã chốt — #67, `config/sanitize-profiles.json`. BE chưa chạy lại sanitize — làm ở Bước 5a |
 | 4 | Chính sách cache & TTL cho `SitePublication` ở tầng CDN/Caddy | ⚠️ Cần chốt cùng lúc với publish |
 | 5 | Nhập sản phẩm hàng loạt (CSV/Excel) cho shop có nhiều SKU | ⏳ Phase 3 |
 | 6 | Sinh variant tự động từ tổ hợp trục (matrix generator) — UI nhập liệu | ⚠️ Cần thiết kế UX trước khi code, ảnh hưởng API |
+| 7 | URL `System` page ở ngôn ngữ khác: giữ slug tiếng Việt (`/en/lien-he`) hay dịch route (`/en/contact`) | ⚠️ Chốt trước khi bật đa ngôn ngữ (§26) |
 
 ---
+
+## 26. Đa ngôn ngữ (#98)
+
+Phạm vi: **nội dung website shop** (Shop Site). Không áp cho UI Portal (#66 giữ nguyên tiếng Việt thuần),
+không áp cho Shop Profile/marketplace.
+
+### 26.1 Mô hình đã chọn: một cấu trúc, nhiều bản dịch
+
+Mỗi `Page` có **một** tree. Bố cục dùng chung cho mọi ngôn ngữ; chỉ **nội dung chữ** được dịch.
+
+| Phương án | Vì sao loại |
+|---|---|
+| Mỗi ngôn ngữ một tree riêng (`PageDraft` khoá `(PageId, Locale)`) | Bố cục trôi dần giữa các bản: sửa layout phải làm N lần. Mọi tham chiếu `page:{id}` (`Listing.TargetPageId`, `Service.DetailPageId`, menu) phải nhân theo locale. Đổi PK sau này là migration lớn |
+| Prop dạng `{ vi: "…", en: "…" }` | Đổi kiểu prop `text` → object là **breaking** theo #43. Mọi manifest, validator, Inspector đều đổi. Dữ liệu shop chỉ dùng một ngôn ngữ cũng mang vỏ object |
+
+### 26.2 Lưu ở đâu
+
+| Thứ cần dịch | Ngôn ngữ mặc định | Ngôn ngữ khác | Khi nào thêm |
+|---|---|---|---|
+| Nội dung chữ trong tree | `props` của node (như hiện nay) | Overlay `node.i18n[locale]` | Khi bật tính năng — key `i18n` đã dành riêng (§6 quy tắc 6) |
+| `Page.Slug`/`Title`/`SeoTitle`/`SeoDescription` | Cột của `page` | Bảng `page_translation` | Khi bật tính năng (bảng mới, additive) |
+| `Website.DefaultSeoTitle`/`Description` | Cột của `website` | Bảng `website_translation` | Khi bật tính năng |
+| Nhãn menu | `label` | `labels[locale]` | Khi bật tính năng (upcaster #94) |
+| `Website.DefaultLocale`, `Locales` | — | — | **Bước 5a** |
+| `Theme`, ảnh, `OgImageId`, binding | Không dịch | — | — |
+| Dữ liệu nghiệp vụ (`Service`, `Product`, nhóm/danh mục) | Cột hiện có | Bảng `*_translation` | Chưa lên lộ trình. Binding Resolver nhận `locale` trong chữ ký từ Bước 9 nên thêm sau không đổi API |
+
+`page_translation`: `(PageId, ShopId, WebsiteId, Locale, Slug, Title, SeoTitle?, SeoDescription?)`, PK
+`(PageId, Locale)`, FK ghép `(PageId, ShopId) → page (Id, ShopId)` (#92), UNIQUE `(WebsiteId, Locale, Slug)`.
+`Locale` ≠ `Website.DefaultLocale` — bản mặc định chỉ nằm ở `page`.
+
+### 26.3 Overlay trên node
+
+```json
+{ "id": "c_b8e02", "type": "Timeline", "variant": "TimelineCircleTabs",
+  "props": { "heading": "Chặng đường phát triển",
+             "items": [ { "id": "i_k2p9a", "year": "2018", "title": "Mở cửa hàng đầu tiên" } ] },
+  "i18n": { "en": { "heading": "Our journey",
+                    "items[i_k2p9a].title": "Our first store" } } }
+```
+
+- Key overlay là **đường dẫn prop**. Phần tử list được trỏ bằng `id` của phần tử, không bằng index, để
+  sắp lại list không làm lệch bản dịch. Phần tử list do đó cần `id` ổn định. Trước khi bật tính năng,
+  upcaster sinh `id` cho dữ liệu cũ — chưa có overlay nào nên an toàn.
+- Chỉ prop có `localizable: true` mới được nằm trong overlay. Cờ này đã có sẵn trong `PropDefBase`
+  (`meta/prop-kinds.ts`). Mặc định cho `text`, `richText` và nhãn của `link`. Giá trị overlay validate
+  theo **đúng** schema của prop gốc; richText sanitize theo cùng profile (#67).
+- Render: ghép overlay của `locale` lên `props`; key thiếu thì dùng giá trị mặc định (fallback từng
+  prop). Portal đếm prop chưa dịch để nhắc shop.
+- Op `update` nhận thêm `locale?` (additive). Có `locale` khác mặc định thì ghi vào overlay, ngược lại ghi
+  `props`. `add`/`remove`/`move` không nhận `locale` — cấu trúc là chung.
+- Tắt một locale khỏi `Website.Locales` thì overlay của nó **giữ nguyên**, chỉ không render. Bật lại là có
+  ngay.
+
+### 26.4 URL & SEO
+
+- Ngôn ngữ mặc định không có prefix (`/gioi-thieu`). Ngôn ngữ khác có prefix `/{locale}/` +
+  slug trong `page_translation` (`/en/about`). Thiếu bản dịch slug thì dùng slug mặc định dưới prefix.
+- Vì prefix nên `Page.Slug` **không được trùng mã locale** trong `config/locales.json`. Chặn ngay từ
+  Bước 5a: slug `en` tạo hôm nay sẽ vỡ URL khi bật tính năng.
+- `<html lang>`, `hreflang` cho mọi bản đang bật, canonical theo từng bản (#10).
+- URL `System` page ở ngôn ngữ khác: còn mở (§25 #7).
+- Renderer nhận `locale` + `defaultLocale` cùng `basePath` (#11). `resolveUrl` là chỗ duy nhất ghép
+  prefix — component không tự dựng.
+
+### 26.5 `config/locales.json`
+
+Danh sách mã locale vsite hỗ trợ (`["vi", "en"]` ở Phase 2), theo khuôn #97: FE và BE đọc cùng file.
+Thêm ngôn ngữ = thêm mã vào file. Mã mới phải không trùng slug trang nào đang có — script kiểm trước
+khi merge.
 
 *Tài liệu này chưa bao gồm: module `Service` (thiết kế riêng), AI Chat Builder (Phase 3), Booking (Phase 3), Order/Cart (chưa lên lộ trình).*

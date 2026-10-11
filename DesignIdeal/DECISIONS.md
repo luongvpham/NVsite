@@ -1,4 +1,4 @@
-# vsite — Registry Quyết Định (#1–#95)
+# vsite — Registry Quyết Định (#1–#98)
 
 > **File này là CHỈ MỤC, không phải nội dung.** Mỗi dòng cho bạn biết quyết định đó nói gì trong một
 > câu, nó được **định nghĩa đầy đủ ở đâu**, và nó **đã thành code chưa**. Đọc dòng ở đây trước, rồi
@@ -12,7 +12,7 @@
 ## ⚠️ Đọc trước khi tra
 
 **Không phải quyết định nào cũng nằm trong `02`.** `02` định nghĩa **#1–#39** và **#68**.
-**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** và **#88** định nghĩa tại `08` §0, **#87** tại `backend/CLAUDE.md` §OpenAPI, **#89** tại `ai-agent-development-workflow.md` §6, **#90** tại `backend/docs/modules/identity.md` §Quyết định #90, **#91** tại `backend/CLAUDE.md` §OpenAPI, **#92**, **#94**, **#95** tại `05` §0, **#93** tại `04` §4.5.
+**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** và **#88** định nghĩa tại `08` §0, **#87** tại `backend/CLAUDE.md` §OpenAPI, **#89** tại `ai-agent-development-workflow.md` §6, **#90** tại `backend/docs/modules/identity.md` §Quyết định #90, **#91** tại `backend/CLAUDE.md` §OpenAPI, **#92**, **#94**, **#95**, **#97**, **#98** tại `05` §0, **#93** tại `04` §4.5, **#96** tại `step.md`.
 Không chép các quyết định đó sang `02` — cố tình không làm. Chép sang `02` sẽ tạo bản
 sao thứ hai để lệch nhau; thay vào đó registry này trỏ thẳng tới nơi định nghĩa duy nhất.
 
@@ -135,6 +135,9 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#93** | **Địa chỉ 2 cấp** (tỉnh + xã/phường, từ 01/07/2025) qua bảng `administrative_unit` có hiệu lực theo thời gian; **"khu vực" = quận/huyện cũ** suy ra từ phường qua bảng ánh xạ, chỉ dùng cho tìm kiếm + landing SEO (`vsite.vn/spa/quan-7`); lọc theo phường thì `noindex` | `04` §4.5 | 📐 Phase 1 (Marketplace) |
 | **#94** | Document JSONB vòng đời dài (`Tree`, `Snapshot`, `Tokens`, `NavigationConfig.Items`) có **`schemaVersion` ở cấp gốc** + upcaster khi đọc; node vẫn không có version (#43) | `05` §0 · §3, §6–§8, §10 | 📐 Bước 5 |
 | **#95** | `CategoryAttribute`: bỏ sentinel `CategoryId = 0` → `CategoryId` nullable (`NULL` = toàn shop) + `ShopId` + `UNIQUE NULLS NOT DISTINCT (ShopId, CategoryId, AttributeId)` | `05` §0 · §16 | 📐 Bước 10 |
+| **#96** | **Thứ tự code:** builder (Phase 2, Bước 5–11) làm **trước** Marketplace (Phase 1, bước M0–M5). Phạm vi ra mắt không đổi (MVP vẫn = Phase 1, #39.1); hạ tầng dùng chung (Hangfire, outbox + ES) do bên làm trước dựng | `step.md` | ✅ quy trình |
+| **#97** | Validate document JSONB theo khuôn `sanitize-profiles.json`: **tập giá trị** cho phép là JSON trong `config/` (`theme-tokens.json`, `locales.json`), FE và BE đọc cùng file; **shape vỏ** viết Zod → codegen JSON Schema cho BE như #60 | `05` §0 · §3, §6 | 📐 Bước 5a |
+| **#98** | **Đa ngôn ngữ website shop:** một tree mỗi trang + overlay `i18n` trên node (chỉ prop `localizable`); ngôn ngữ mặc định ở cột hiện có, ngôn ngữ khác ở bảng `*_translation` thêm sau; URL `/{locale}/…`. Bước 5a: `Website.DefaultLocale`/`Locales` + chặn `Slug` trùng mã locale | `05` §0 · §26 | 📐 rải 5a/6/8b/9 — bật tính năng chưa xếp bước |
 
 ---
 
@@ -154,7 +157,7 @@ Vi phạm = **lỗi bảo mật**, không phải lỗi code style. Nguyên văn 
 
 | # | Nội dung |
 |---|---|
-| **#39.1** | "MVP" = **Phase 1**. Lộ trình `01` §8 là nguồn sự thật duy nhất cho *khi nào làm gì* |
+| **#39.1** | "MVP" = **Phase 1**. Lộ trình `01` §8 là nguồn sự thật cho *tính năng nào ra mắt ở đợt nào*; **thứ tự code** do `step.md` quyết (#68, #96) |
 | **#39.2** | Tên app cũ (`customer-web` / `shop-admin` / `website-builder`) bị xoá hẳn — chỉ còn `apps/web`, `apps/portal` |
 | **#39.3** | Trang hồ sơ shop là `vsite.vn/shop/{slug}`, **không** phải `vsite.vn/{slug}` |
 | **#39.4** | Quyền ghi `Review`: khách viết cần audience `vsite-main`; shop phản hồi cần `vsite-portal` + role `Owner`/`Manager`; shop **không** có quyền gỡ |

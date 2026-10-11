@@ -1,6 +1,6 @@
 # vsite — Tech Stack & Quyết Định Đã Chốt
 
-> **STATUS:** `INCOMPLETE_DOC` · **Tasks:** `REFACTOR-API-001` · **Changelog:** `Docs/tasks/REFACTOR-API-001/changelog.md` · **Stale:** `Không chứa #40–#67, #69–#86 và #88 — xem DECISIONS.md · đường dẫn API (vd. api.vsite.vn/auth/...) thực tế có prefix /api: /api/auth/... (Quyết định #91)`
+> **STATUS:** `INCOMPLETE_DOC` · **Tasks:** `REFACTOR-API-001,DESIGN-ROADMAP-001` · **Changelog:** `Docs/tasks/REFACTOR-API-001/changelog.md` · **Stale:** `Không chứa #40–#67, #69–#86 và #88 — xem DECISIONS.md · đường dẫn API (vd. api.vsite.vn/auth/...) thực tế có prefix /api: /api/auth/... (Quyết định #91)`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
 > ⚠️ **File này KHÔNG chứa toàn bộ quyết định.** Ở đây có `#1–#39` và `#68`.
@@ -938,7 +938,7 @@ Shop.ExternalUrl string?   -- NOT NULL khi Kind = ExternalOnly
 
 Năm mục dưới đây được trích dẫn ở nơi khác bằng ký hiệu `#39.1` … `#39.5` — giữ nguyên số thứ tự, không chèn thêm mục vào giữa.
 
-**#39.1 — "MVP" = "Phase 1".** Lộ trình ở `01-project-ideal.md` mục 8 là nguồn sự thật duy nhất cho việc *khi nào làm gì*. Mọi bảng tính năng phải ghi Phase khớp với lộ trình đó:
+**#39.1 — "MVP" = "Phase 1".** Lộ trình ở `01-project-ideal.md` mục 8 là nguồn sự thật cho việc *tính năng nào ra mắt ở đợt nào*. **Thứ tự code** là chuyện khác, do `step.md` quyết (#68, #96: builder code trước Marketplace). Mọi bảng tính năng phải ghi Phase khớp với lộ trình đó:
 
 | Hạng mục | Trước đây ghi | Chốt |
 |---|---|---|

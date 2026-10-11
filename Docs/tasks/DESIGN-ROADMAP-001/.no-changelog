@@ -1,0 +1,7 @@
+Task chỉ sửa tài liệu thiết kế (không chạm code, không qua Gate 1) — nội dung nằm ở Quyết định #96–#98 trong DesignIdeal/DECISIONS.md, DesignIdeal/step.md và 05 §26.
+
+Tóm tắt (người duyệt chốt 2026-10-11):
+- #96: builder (Bước 5–11) code trước Marketplace (M0–M5); MVP vẫn = Phase 1; #39.1 sửa lại thành "01 §8 = đợt ra mắt, step.md = thứ tự code".
+- #97: validate document JSONB theo khuôn config/sanitize-profiles.json — tập giá trị trong config/*.json đọc chung FE/BE; shape vỏ Zod → JSON Schema như #60.
+- #98: đa ngôn ngữ website shop — một tree + overlay i18n trên node, *_translation thêm sau, URL /{locale}/…; Bước 5a làm Website.DefaultLocale/Locales + chặn slug trùng mã locale.
+- step.md viết lại: tách 5a/5b, 8a (Hangfire)/8b, 10a/b/c; thêm mục dọn nền 4.x, nhánh Marketplace M0–M5, bảng rải việc đa ngôn ngữ; 05 §24 thay bằng con trỏ sang step.md; 06 §9 gộp DetailPageId vào cùng Service.
