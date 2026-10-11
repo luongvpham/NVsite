@@ -61,6 +61,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: gen:registry (Program.cs fail-fast nếu thiếu derivative-presets.json)
         run: pnpm --filter @vsite/builder-components run gen:registry
+      - name: Test classifier của contract-sync (mảng, schema lồng, parameters, operationId)
+        run: node --test tools/contract-sync/lib/diff.test.mjs
       - name: Export runtime OpenAPI + check no drift vs approved contract
         run: |
           node tools/contract-sync/export.mjs
@@ -103,5 +105,17 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: pnpm build (gen:api + gen:registry + apps)
         run: pnpm build
+      # TOOLING-001 — vite build và vitest bỏ qua kiểu: trước bước này, sửa manifest làm hỏng kiểu
+      # của component vẫn ra xanh. Lint chưa từng chạy trong CI nên lỗi tồn lâu không ai thấy.
+      - name: pnpm typecheck (tsc --noEmit mọi package)
+        run: pnpm typecheck
+      - name: pnpm lint
+        run: pnpm lint
+      - name: check-additive (registry.lock.json tồn tại, phủ đủ registry, không vi phạm additive-only)
+        run: pnpm check:registry-additive
       - name: pnpm test
         run: pnpm test
+      - name: generated đã commit khớp với contract/manifest (không quên gen:api, kể cả file MỚI chưa track)
+        run: |
+          out="$(git status --porcelain -- packages/api-sdk/src/generated)"
+          if [ -n "$out" ]; then echo "$out"; echo "Chạy pnpm gen:api rồi commit packages/api-sdk/src/generated"; exit 1; fi

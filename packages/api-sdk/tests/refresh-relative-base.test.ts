@@ -21,11 +21,12 @@ it('baseURL "/": refresh gọi `/api/auth/refresh-token` với { baseURL: "/" },
   const post = vi.spyOn(axios, 'post').mockResolvedValue({ data: { accessToken: 'fresh', refreshToken: 'r2' } });
 
   // Adapter giả: lần đầu 401, lần retry (có token mới) 200 — không cần mạng.
-  sdk.axiosInstance.defaults.adapter = async (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => {
+  sdk.axiosInstance.defaults.adapter = (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => {
     const ok = config.headers.get('Authorization') === 'Bearer fresh';
     const response = { data: ok ? [] : { error_code: 'UNAUTHORIZED' }, status: ok ? 200 : 401, statusText: '', headers: {}, config };
-    if (!ok) throw new AxiosError('401', 'ERR_BAD_REQUEST', config, undefined, response as AxiosResponse);
-    return response as AxiosResponse;
+    return ok
+      ? Promise.resolve(response as AxiosResponse)
+      : Promise.reject(new AxiosError('401', 'ERR_BAD_REQUEST', config, undefined, response as AxiosResponse));
   };
   sdk.setAccessToken('stale');
   sdk.setRefreshToken('r1');
@@ -33,9 +34,9 @@ it('baseURL "/": refresh gọi `/api/auth/refresh-token` với { baseURL: "/" },
   await expect(sdk.customInstance({ url: '/api/shops', method: 'GET' })).resolves.toEqual([]);
 
   expect(post).toHaveBeenCalledTimes(1);
-  const [url, body, config] = post.mock.calls[0]!;
+  const [url, body, config] = post.mock.calls[0] ?? [];
   expect(url).toBe('/api/auth/refresh-token');
-  expect(url.startsWith('//')).toBe(false);
+  expect(url?.startsWith('//')).toBe(false);
   expect(body).toEqual({ refreshToken: 'r1' });
   expect(config).toEqual({ baseURL: '/' });
 });

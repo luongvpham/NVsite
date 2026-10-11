@@ -101,7 +101,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#59** | Manifest là file `.ts` object literal thuần — không import runtime, không hàm, không điều kiện | `07` §0 · §4 | ✅ enforce — `meta/manifest-schema.ts` (Zod) |
 | **#60** | BE **không** port Zod sang C#; codegen sinh `props-schemas.json` (JSON Schema 2020-12) | `07` §0 · §11 | ✅ enforce — `tests/schema-equivalence.test.ts` |
 | **#61** | Props khai ở tầng `type`; `variant` chỉ khai `usesProps` / `requiresProps` | `07` §0 · §4.2 | ✅ enforce — `meta/manifest-schema.ts` |
-| **#62** | `registry.lock.json` commit vào repo; CI so lock, breaking → fail build | `07` §0 · §5 | ✅ enforce — `scripts/check-additive.ts` |
+| **#62** | `registry.lock.json` commit vào repo; CI so lock, breaking → fail build; lock phải tồn tại và bằng đúng snapshot hiện tại, chỉ cập nhật bằng `pnpm registry:lock` (từ chối khi vi phạm) | `07` §0 · §5 | ✅ enforce — `scripts/check-additive.ts` (CI + pre-commit) + `lock-snapshot.test.ts` + `gen-registry.test.ts` (TOOLING-001) |
 | **#63** | `kind` của prop là **tập đóng 12 giá trị**; người viết component không được phát minh kind mới | `07` §0 · §4.3 | ✅ enforce — `meta/prop-kinds.ts` |
 | **#64** | Mọi prop `kind: "image"` **bắt buộc** khai `preset` nằm trong `config/image-presets.json`; whitelist là lint build-time + bảng kích thước cho pipeline BE | `07` §0 · §7.1 | ✅ enforce — `gen-registry.ts` hard-fail + `tests/config-files.test.ts`; `config/image-presets.json` đã đủ 9 preset (`ImagePresetCatalogTests.Reads_Real_ImagePresets_File_With_Nine_Presets`), shape `{ presets, surfaces }` |
 | **#65** | Prop `kind: "binding"` khai `sources` tường minh; codegen **hard-fail** nếu chứa `"Review"` | `07` §0 · §7.4 | ✅ enforce — `gen-registry.ts` + `config/binding-sources.json` + test |

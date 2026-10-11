@@ -25,7 +25,7 @@ const asset: MediaAssetDto = {
 };
 
 function shop(roleCode: string): ShopSummaryDto {
-  return { id: 'shop-1', name: 'Shop', slug: 'shop', kind: 'Hosted', status: 'Active', roleCode, logoUrl: null } as ShopSummaryDto;
+  return { id: 'shop-1', name: 'Shop', slug: 'shop', kind: 'Hosted', status: 'Active', roleCode, logoUrl: null };
 }
 
 function renderControl(roleCode: string) {

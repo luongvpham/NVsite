@@ -16,7 +16,8 @@ import { classifyDiff } from './lib/diff.mjs';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const STAGING_DIR = path.join(REPO_ROOT, 'contracts', 'openapi', '.staging');
 const COMMITTED_DIR = path.join(REPO_ROOT, 'contracts', 'openapi');
-const TASKS_DIR = path.join(REPO_ROOT, 'docs', 'tasks');
+// `Docs` viết hoa — Windows tha, Linux (CI) thì ghi ra thư mục `docs/` sai (00-INDEX §5, TOOLING-001).
+const TASKS_DIR = path.join(REPO_ROOT, 'Docs', 'tasks');
 
 function loadJson(filePath) {
   return existsSync(filePath) ? JSON.parse(readFileSync(filePath, 'utf8')) : null;

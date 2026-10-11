@@ -12,6 +12,7 @@
   "scripts": {
     "gen:api": "node scripts/check-contract-lock.mjs && node scripts/gen.mjs",
     "lint": "eslint . --ignore-pattern src/generated",
+    "typecheck": "tsc --noEmit -p .",
     "test": "vitest run"
   },
   "dependencies": {

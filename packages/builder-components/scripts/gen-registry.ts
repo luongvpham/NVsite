@@ -4,21 +4,16 @@
  *
  * Sinh 8 artifact: component-types.ts, props-schemas.ts (Zod), props-schemas.json (JSON Schema, #60),
  * property-panel.ts, op-rules.ts, ai-tool-schema.json, registry-map.ts, derivative-presets.json (#86).
- * check-additive vs registry.lock.json được wire vào ở 2.11 (chưa có lock file thì bỏ qua, tạo mới).
+ * check-additive vs registry.lock.json chạy trước khi ghi artifact. KHÔNG tự tạo/cập nhật lock —
+ * việc đó là lệnh tường minh `pnpm registry:lock` (TOOLING-001).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { ComponentManifest } from '../meta/manifest-schema';
 import type { PropDef } from '../meta/prop-kinds';
-import { fail, loadManifests } from './lib/load-manifests';
-import { buildLockSnapshot } from './lib/lock-snapshot';
 import { runCheckAdditive } from './check-additive';
-
-const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const REPO_ROOT = path.resolve(PKG_ROOT, '..', '..');
-const GENERATED_DIR = path.join(PKG_ROOT, 'generated');
-const LOCK_FILE = path.join(PKG_ROOT, 'registry.lock.json');
+import { fail, loadManifests } from './lib/load-manifests';
+import { GENERATED_DIR, PKG_ROOT, REGISTRY_DIR, REPO_ROOT } from './lib/paths';
 
 const imagePresetsFile = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'image-presets.json'), 'utf8')) as {
   presets: Record<string, unknown>;
@@ -517,8 +512,8 @@ function collectImagePresetsBySource(props: Record<string, PropDef>, bySource: M
   for (const prop of Object.values(props)) {
     if (prop.kind === 'binding' && prop.imagePresets) {
       for (const [source, presets] of Object.entries(prop.imagePresets)) {
-        if (!bySource.has(source)) bySource.set(source, new Set());
-        const set = bySource.get(source)!;
+        const set = bySource.get(source) ?? new Set<string>();
+        bySource.set(source, set);
         for (const preset of presets ?? []) set.add(preset);
       }
     }
@@ -535,14 +530,14 @@ function generateDerivativePresets(manifests: ComponentManifest[]): string {
   }
 
   for (const [source, presets] of Object.entries(imagePresetsFile.surfaces)) {
-    if (!bySource.has(source)) bySource.set(source, new Set());
-    const set = bySource.get(source)!;
+    const set = bySource.get(source) ?? new Set<string>();
+    bySource.set(source, set);
     for (const preset of presets) set.add(preset);
   }
 
   const result: Record<string, string[]> = {};
-  for (const source of [...bySource.keys()].sort()) {
-    result[source] = [...bySource.get(source)!].sort();
+  for (const [source, presets] of [...bySource.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    result[source] = [...presets].sort();
   }
 
   return JSON.stringify(result, null, 2) + '\n';
@@ -551,17 +546,20 @@ function generateDerivativePresets(manifests: ComponentManifest[]): string {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  const manifests = await loadManifests(PKG_ROOT);
+  const manifests = await loadManifests(PKG_ROOT, REGISTRY_DIR);
   checkCrossManifestInvariants(manifests);
 
-  // check-additive (#62) — TRƯỚC khi ghi artifact, để không sinh output cho một manifest
-  // đã vi phạm additive-only. Chưa có lock file (lần đầu) → bỏ qua, tạo mới bên dưới.
-  if (existsSync(LOCK_FILE)) {
-    const { ok, violations, warnings } = await runCheckAdditive();
-    for (const warning of warnings) console.warn(`[gen-registry] CẢNH BÁO: ${warning}`);
-    if (!ok) {
-      fail(`vi phạm additive-only (#43, #62):\n${violations.map((v) => `  - ${v}`).join('\n')}\n\nCần đổi phá vỡ thật? Tạo type/variant MỚI, không sửa cái cũ (§5).`);
-    }
+  // check-additive (#62) — TRƯỚC khi ghi artifact, để không sinh output cho một manifest đã vi phạm
+  // additive-only. Lock thiếu/cũ (chưa phủ type/prop mới) chỉ CẢNH BÁO ở đây để dev sinh code được
+  // trong lúc làm; CI và pre-commit chạy `check-additive` sẽ FAIL cho tới khi `pnpm registry:lock`
+  // (TOOLING-001 — trước đây gen-registry tự tạo lock khi thiếu, xoá lock là xoá mọi bảo vệ).
+  const { ok, violations, warnings, unlocked } = await runCheckAdditive(manifests);
+  for (const warning of warnings) console.warn(`[gen-registry] CẢNH BÁO: ${warning}`);
+  if (unlocked.length > 0) {
+    console.warn(`[gen-registry] CẢNH BÁO: registry.lock.json chưa phủ ${unlocked.length} mục — chạy \`pnpm registry:lock\` trước khi commit.`);
+  }
+  if (!ok) {
+    fail(`vi phạm additive-only (#43, #62):\n${violations.map((v) => `  - ${v}`).join('\n')}\n\nCần đổi phá vỡ thật? Tạo type/variant MỚI, không sửa cái cũ (§5).`);
   }
 
   mkdirSync(GENERATED_DIR, { recursive: true });
@@ -573,11 +571,6 @@ async function main() {
   writeFileSync(path.join(GENERATED_DIR, 'ai-tool-schema.json'), generateAiToolSchema(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'registry-map.ts'), generateRegistryMap(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'derivative-presets.json'), generateDerivativePresets(manifests));
-
-  if (!existsSync(LOCK_FILE)) {
-    writeFileSync(LOCK_FILE, JSON.stringify(buildLockSnapshot(manifests), null, 2) + '\n');
-    console.log('[gen-registry] registry.lock.json chưa tồn tại — đã tạo mới (lần đầu).');
-  }
 
   console.log(`[gen-registry] OK — ${manifests.length} manifest, 8 artifact sinh ra tại generated/`);
 }

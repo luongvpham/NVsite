@@ -28,14 +28,14 @@ const server = setupServer(
   ),
 );
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeAll(() => { server.listen({ onUnhandledRequest: 'error' }); });
 afterEach(() => {
   server.resetHandlers();
   seen.length = 0;
   setAccessToken(undefined);
   setRefreshToken(undefined);
 });
-afterAll(() => server.close());
+afterAll(() => { server.close(); });
 
 describe('createApiClient (SSR)', () => {
   it('mỗi client gửi token + Host riêng của nó, không lẫn nhau và không lẫn với instance mặc định', async () => {
@@ -72,7 +72,8 @@ describe('createApiClient (SSR)', () => {
 
 describe('instance mặc định (Portal)', () => {
   it('401 → gọi /api/auth/refresh-token ở đúng baseURL rồi retry với token mới', async () => {
-    const base = axiosInstance.defaults.baseURL!;
+    const base = axiosInstance.defaults.baseURL;
+    expect(base).toBeDefined();
     let refreshBody: unknown;
     server.use(
       http.get(`${base}${API_PREFIX}/shops`, ({ request }) =>
