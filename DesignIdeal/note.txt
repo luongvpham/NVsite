@@ -42,3 +42,16 @@ Gate 2 → merge
 [session khác] sửa workflow/CLAUDE.md + ghi DECISIONS.md
    ↓
 thêm dòng vào bảng "Đã promote — theo dõi hiệu quả"   ← chỗ hay quên nhất
+
+
+============== run
+
+C:\Windows\System32\drivers\etc\hosts
+Add 127.0.0.1  admin.vsite.local
+
+cd D:\WorkSpace\MyProject\NVsite\apps\portal
+npx pnpm@9.15.0 dev
+
+Run BE
+Run Redis
+--> http://admin.vsite.local:5173/register
