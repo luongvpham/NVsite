@@ -21,7 +21,7 @@ public sealed partial class Page : TenantAuditableEntity
     public const int MaxSeoTitleLength = 160;
     public const int MaxSeoDescriptionLength = 320;
 
-    [GeneratedRegex("^[a-z0-9]+(-[a-z0-9]+)*$")]
+    [GeneratedRegex(@"\A[a-z0-9]+(-[a-z0-9]+)*\z")]
     private static partial Regex SlugPattern();
 
     private Page()
@@ -129,7 +129,17 @@ public sealed partial class Page : TenantAuditableEntity
             throw new DomainException("PAGE_SYSTEM_SLUG_FIXED", "Không đổi được slug của trang hệ thống.");
         }
 
-        ValidateSlug(slug, allowEmpty: true, allowNull: false);
+        if (IsHomePage)
+        {
+            throw new DomainException("PAGE_HOME_SLUG_FIXED", "Không đổi được slug của trang chủ.");
+        }
+
+        if (slug == "")
+        {
+            throw new DomainException("PAGE_HOME_SLUG_FIXED", "Slug rỗng chỉ dành cho trang chủ.");
+        }
+
+        ValidateSlug(slug, allowEmpty: false, allowNull: false);
         Slug = slug;
     }
 

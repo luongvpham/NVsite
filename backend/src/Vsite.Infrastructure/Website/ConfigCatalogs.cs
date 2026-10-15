@@ -94,6 +94,17 @@ public sealed class SystemPageCatalog : ISystemPageCatalog
             throw WebsiteConfigFile.BadShape(filePath, "không có System page nào.");
         }
 
+        // Khoá phải đúng bằng tập SystemType (khai đủ kể cả loại chưa seed — G3): khoá lạ hoặc thiếu = hỏng.
+        var expected = Enum.GetNames<Vsite.Domain.Website.Enums.SystemType>();
+        var unknown = pages.Keys.Except(expected, StringComparer.Ordinal).ToList();
+        var missing = expected.Except(pages.Keys, StringComparer.Ordinal).ToList();
+        if (unknown.Count > 0 || missing.Count > 0)
+        {
+            throw WebsiteConfigFile.BadShape(
+                filePath,
+                $"khoá phải khớp enum SystemType. Khoá lạ: [{string.Join(", ", unknown)}]; thiếu: [{string.Join(", ", missing)}].");
+        }
+
         Pages = pages;
         AllRoutes = routes;
     }

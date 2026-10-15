@@ -82,6 +82,9 @@ public sealed class PageEntityTests
     [InlineData("a/b")]
     [InlineData("../x")]
     [InlineData("giới-thiệu")]
+    [InlineData("a\n")]
+    [InlineData("gioi-thieu\n")]
+    [InlineData("a\r\n")]
     public void Slug_format_is_enforced(string slug)
     {
         Assert.Equal("PAGE_SLUG_INVALID", Assert.Throws<DomainException>(() => Composable(slug)).ErrorCode);
@@ -113,6 +116,18 @@ public sealed class PageEntityTests
         var system = Page.NewSystem(ShopId, WebsiteId, SystemType.Contact, "lien-he", "Liên hệ", 2);
         Assert.Equal("PAGE_SYSTEM_SLUG_FIXED", Assert.Throws<DomainException>(() => system.ChangeSlug("khac")).ErrorCode);
         Assert.Equal("PAGE_SLUG_INVALID", Assert.Throws<DomainException>(() => page.ChangeSlug(null!)).ErrorCode);
+    }
+
+    [Fact]
+    public void Home_slug_is_fixed_and_no_other_page_can_become_home()
+    {
+        var home = Composable("");
+        Assert.Equal("PAGE_HOME_SLUG_FIXED", Assert.Throws<DomainException>(() => home.ChangeSlug("gioi-thieu")).ErrorCode);
+        Assert.Equal("", home.Slug);
+
+        var page = Composable();
+        Assert.Equal("PAGE_HOME_SLUG_FIXED", Assert.Throws<DomainException>(() => page.ChangeSlug("")).ErrorCode);
+        Assert.Equal("gioi-thieu", page.Slug);
     }
 
     [Fact]

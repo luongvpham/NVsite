@@ -40,7 +40,7 @@ public sealed class WebsiteConfigCatalogTests
     {
         var catalog = new SystemPageCatalog(Config("system-pages.json"));
 
-        foreach (var type in new[] { "Contact", "NotFound", "ProductListing", "ProductDetail", "ProductSearch", "Booking" })
+        foreach (var type in Enum.GetNames<Vsite.Domain.Website.Enums.SystemType>())
         {
             Assert.True(catalog.Pages.ContainsKey(type), $"thiếu {type}");
         }
@@ -147,6 +147,42 @@ public sealed class WebsiteConfigCatalogTests
 
         Assert.Contains("tree-envelope.schema.json", ex.Message);
         Assert.Contains("gen:registry", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("""{"Contact":{"routes":["lien-he"],"phase":2,"seedOnCreate":true},"Bogus":{"routes":[],"phase":2,"seedOnCreate":false}}""", "Bogus")]
+    [InlineData("""{"Contact":{"routes":["lien-he"],"phase":2,"seedOnCreate":true}}""", "NotFound")]
+    public void SystemPages_keys_must_equal_SystemType_enum(string json, string offending)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}-system-pages.json");
+        File.WriteAllText(path, json);
+        try
+        {
+            var ex = Assert.Throws<InvalidOperationException>(() => new SystemPageCatalog(path));
+            Assert.Contains("system-pages.json", ex.Message);
+            Assert.Contains(offending, ex.Message);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Malformed_props_schemas_error_names_the_file()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}-props-schemas.json");
+        File.WriteAllText(path, """{"Hero":{"type":"nonsense-type"}}""");
+        try
+        {
+            var ex = Assert.Throws<InvalidOperationException>(() => new WebsiteSchemaProvider(
+                Generated("tree-envelope.schema.json"), Generated("theme-tokens.schema.json"), path));
+            Assert.Contains("props-schemas.json", ex.Message);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]

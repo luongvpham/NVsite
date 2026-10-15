@@ -42,7 +42,15 @@ public sealed class WebsiteSchemaProvider : IWebsiteSchemaProvider
         _props = new Dictionary<string, JsonSchema>(StringComparer.Ordinal);
         foreach (var (type, schema) in root)
         {
-            _props[type] = FromText(schema!.ToJsonString());
+            try
+            {
+                _props[type] = FromText(schema!.ToJsonString());
+            }
+            catch (Exception ex) when (ex is JsonException or JsonSchemaException)
+            {
+                throw new InvalidOperationException(
+                    $"{Path.GetFileName(propsSchemasPath)} tại '{propsSchemasPath}': schema của '{type}' không hợp lệ: {ex.Message}", ex);
+            }
         }
 
         if (_props.Count == 0)

@@ -306,6 +306,17 @@ public sealed class WebsiteDbConstraintTests(PostgresFixture postgres)
         Assert.Equal("ck_page_slug_not_found", ex3.ConstraintName);
     }
 
+    [Fact]
+    public async Task Check_constraint_rejects_system_page_with_empty_slug()
+    {
+        await using var db = await NewDbAsync();
+        var (shop, website) = await AddWebsiteAsync(db);
+
+        var ex = await Assert.ThrowsAsync<PostgresException>(() => InsertPageSqlAsync(db, shop.Id, website.Id, "System", "Contact", ""));
+
+        Assert.Equal("ck_page_empty_slug_composable", ex.ConstraintName);
+    }
+
     // ---------------------------------------------------------------- page_draft
 
     [Fact]
