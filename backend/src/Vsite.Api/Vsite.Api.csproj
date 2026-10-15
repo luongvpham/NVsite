@@ -45,7 +45,30 @@
          pre-generate. Đọc qua DerivativePresetCatalog (T3, MEDIA-001); KHÔNG đọc 'surfaces' trong
          image-presets.json. -->
     <None Include="..\..\..\packages\builder-components\generated\derivative-presets.json" Link="generated\derivative-presets.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Module Website (T1, WEBSITE-001, Quyết định #97/#98) — config dùng chung FE+BE, link vào, không copy tay.
+         Đọc qua các catalog ở Vsite.Infrastructure/Website (fail-fast lúc startup, Program.cs). -->
+    <None Include="..\..\..\config\locales.json" Link="config\locales.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\config\theme-tokens.json" Link="config\theme-tokens.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\config\system-pages.json" Link="config\system-pages.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\config\sanitize-profiles.json" Link="config\sanitize-profiles.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\config\binding-sources.json" Link="config\binding-sources.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Artifact codegen (gitignored) cho Website — luật cây + JSON Schema vỏ Tree/Tokens + props từng component (#60, #97). -->
+    <None Include="..\..\..\packages\builder-components\generated\tree-rules.json" Link="generated\tree-rules.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\packages\builder-components\generated\tree-envelope.schema.json" Link="generated\tree-envelope.schema.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\packages\builder-components\generated\theme-tokens.schema.json" Link="generated\theme-tokens.schema.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\packages\builder-components\generated\props-schemas.json" Link="generated\props-schemas.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- Artifact codegen của module Website — thiếu thì build dừng với thông báo rõ, thay vì MSB3030. -->
+  <Target Name="EnsureWebsiteArtifacts" BeforeTargets="BeforeBuild;AssignTargetPaths">
+    <ItemGroup>
+      <_WebsiteArtifact Include="tree-rules.json;tree-envelope.schema.json;theme-tokens.schema.json;props-schemas.json" />
+      <_WebsiteArtifactMissing Include="@(_WebsiteArtifact)"
+                               Condition="!Exists('$(MSBuildProjectDirectory)\..\..\..\packages\builder-components\generated\%(Identity)')" />
+    </ItemGroup>
+    <Error Condition="'@(_WebsiteArtifactMissing)' != ''"
+           Text="Thiếu artifact codegen trong packages/builder-components/generated/: @(_WebsiteArtifactMissing) - chạy `pnpm install` rồi `pnpm --filter @vsite/builder-components run gen:registry` trước khi build backend. / Missing generated artifacts: run `pnpm --filter @vsite/builder-components run gen:registry`." />
+  </Target>
 
   <!-- derivative-presets.json nằm trong packages/builder-components/generated/ (gitignored, do codegen
        sinh). Fresh clone chưa có file → thiếu target này thì MSBuild báo MSB3030 khó hiểu. -->

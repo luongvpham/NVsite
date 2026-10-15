@@ -24,6 +24,56 @@ public sealed class ReservedRoutesTests
         Assert.Contains("media", provider.Routes.ReservedPaths);
     }
 
+    [Fact]
+    public void ReservedShopSitePaths_missing_key_defaults_to_empty_list()
+    {
+        // Config cũ (chưa có key reservedShopSitePaths — người thêm, plan §4) vẫn phải nạp được.
+        var path = WriteTemp("""{"reservedPaths":["shop"],"reservedSubdomains":["admin"]}""");
+        try
+        {
+            var routes = new ReservedRoutesProvider(path).Routes;
+
+            Assert.NotNull(routes.ReservedShopSitePaths);
+            Assert.Empty(routes.ReservedShopSitePaths);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void ReservedShopSitePaths_reads_key_when_present()
+    {
+        var path = WriteTemp("""{"reservedPaths":[],"reservedSubdomains":[],"reservedShopSitePaths":["media","api"]}""");
+        try
+        {
+            var routes = new ReservedRoutesProvider(path).Routes;
+
+            Assert.Equal(["media", "api"], routes.ReservedShopSitePaths);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact(Skip = "chờ người thêm reservedShopSitePaths vào config/reserved-routes.json — plan §4")]
+    public void ReservedShopSitePaths_in_repo_config_contains_media_and_api()
+    {
+        var provider = new ReservedRoutesProvider(Path.Combine(FindRepoRoot(), "config", "reserved-routes.json"));
+
+        Assert.Contains("media", provider.Routes.ReservedShopSitePaths);
+        Assert.Contains("api", provider.Routes.ReservedShopSitePaths);
+    }
+
+    private static string WriteTemp(string json)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}-rr.json");
+        File.WriteAllText(path, json);
+        return path;
+    }
+
     private static string FindRepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
