@@ -449,6 +449,58 @@ function generateOpRules(manifests: ComponentManifest[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// tree-rules.json (WEBSITE-001 S0-T3, #60) — luật cây cho BE (C# không đọc được op-rules.ts):
+// với mỗi type: luật op (cùng nguồn với op-rules.ts) + variants[] + BẢN ĐỒ PROP (kind; richText kèm profile,
+// binding kèm sources, image kèm preset; list/group kèm itemProps đệ quy). props-schemas.json chỉ kiểm
+// SHAPE từng prop — BE còn cần biết prop nào là ảnh/richText/binding để chạy validator ảnh, sanitize, chặn Review.
+// ---------------------------------------------------------------------------
+
+interface TreeRuleProp {
+  kind: PropDef['kind'];
+  profile?: string;
+  sources?: string[];
+  preset?: string;
+  itemProps?: Record<string, TreeRuleProp>;
+}
+
+function propsToTreeRuleProps(props: Record<string, PropDef>): Record<string, TreeRuleProp> {
+  return Object.fromEntries(Object.entries(props).map(([name, prop]) => [name, propToTreeRule(prop)]));
+}
+
+function propToTreeRule(prop: PropDef): TreeRuleProp {
+  switch (prop.kind) {
+    case 'richText':
+      return { kind: prop.kind, profile: prop.profile };
+    case 'binding':
+      return { kind: prop.kind, sources: [...prop.sources] };
+    case 'image':
+      return { kind: prop.kind, preset: prop.preset };
+    case 'list':
+      return { kind: prop.kind, itemProps: propsToTreeRuleProps(prop.itemProps) };
+    case 'group':
+      return { kind: prop.kind, itemProps: propsToTreeRuleProps(prop.props) };
+    default:
+      return { kind: prop.kind };
+  }
+}
+
+function generateTreeRules(manifests: ComponentManifest[]): string {
+  const types: Record<string, unknown> = {};
+  for (const m of manifests) {
+    types[m.type] = {
+      acceptsChildren: m.acceptsChildren,
+      allowedChildTypes: m.allowedChildTypes,
+      allowedInPageKinds: m.allowedInPageKinds,
+      maxPerPage: m.maxPerPage,
+      editableInSystemPageProps: collectEditableInSystemPagePaths(m.props),
+      variants: m.variants.map((v) => v.key),
+      props: propsToTreeRuleProps(m.props),
+    };
+  }
+  return JSON.stringify({ schemaVersion: 1, types }, null, 2) + '\n';
+}
+
+// ---------------------------------------------------------------------------
 // ai-tool-schema.json (§12, #14/#16) — enum type/variant, KHÔNG thể bịa (đúng #17).
 // ---------------------------------------------------------------------------
 
@@ -588,13 +640,14 @@ async function main() {
   writeFileSync(path.join(GENERATED_DIR, 'props-schemas.json'), generatePropsSchemasJson(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'property-panel.ts'), generatePropertyPanel(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'op-rules.ts'), generateOpRules(manifests));
+  writeFileSync(path.join(GENERATED_DIR, 'tree-rules.json'), generateTreeRules(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'ai-tool-schema.json'), generateAiToolSchema(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'registry-map.ts'), generateRegistryMap(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'derivative-presets.json'), generateDerivativePresets(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'tree-envelope.schema.json'), generateTreeEnvelopeSchemaJson());
   writeFileSync(path.join(GENERATED_DIR, 'theme-tokens.schema.json'), generateThemeTokensSchemaJson());
 
-  console.log(`[gen-registry] OK — ${manifests.length} manifest, 10 artifact sinh ra tại generated/`);
+  console.log(`[gen-registry] OK — ${manifests.length} manifest, 11 artifact sinh ra tại generated/`);
 }
 
 main().catch((error: unknown) => {

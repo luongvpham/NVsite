@@ -18,6 +18,7 @@ const GENERATED_FILES = [
   'derivative-presets.json',
   'tree-envelope.schema.json',
   'theme-tokens.schema.json',
+  'tree-rules.json',
 ];
 
 /** Thư mục generated TẠM cho các test chỉ cần chạy codegen — không ghi đè `generated/` thật trong lúc
@@ -67,6 +68,33 @@ function runGenRegistryOnCopy(file: string, from: string, to: string): { code: n
   } catch (error) {
     const e = error as { status: number | null; stderr?: Buffer };
     return { code: e.status, stderr: e.stderr?.toString('utf8') ?? String(error) };
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+/** Như runGenRegistryOnCopy nhưng trả về nội dung một artifact sinh ra trên bản sao (đột biến hợp lệ, gen thành công). */
+function generateOnCopyAndRead(file: string, from: string, to: string, artifact: string): string {
+  const tmp = mkdtempSync(path.join(tmpdir(), 'vsite-registry-'));
+  try {
+    const registryCopy = path.join(tmp, 'registry');
+    cpSync(REGISTRY_DIR, registryCopy, { recursive: true });
+    cpSync(path.join(PKG_ROOT, 'registry.lock.json'), path.join(tmp, 'registry.lock.json'));
+    const target = path.join(registryCopy, file);
+    const original = readFileSync(target, 'utf8');
+    expect(original, `${file} không còn chứa đoạn cần đột biến — cập nhật test`).toContain(from);
+    writeFileSync(target, original.replace(from, to));
+    execSync('npx tsx scripts/gen-registry.ts', {
+      cwd: PKG_ROOT,
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        VSITE_REGISTRY_DIR: registryCopy,
+        VSITE_GENERATED_DIR: path.join(tmp, 'generated'),
+        VSITE_REGISTRY_LOCK: path.join(tmp, 'registry.lock.json'),
+      },
+    });
+    return readFileSync(path.join(tmp, 'generated', artifact), 'utf8');
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
@@ -216,6 +244,97 @@ describe('gen-registry — binding.imagePresets (#86)', () => {
       expect(presets).toEqual([...new Set(presets)].sort());
     }
   }, 60_000); // spawn tsx — cùng lý do timeout với test byte-identical ở trên
+});
+
+describe('tree-rules.json (WEBSITE-001 S0-T3, #60) — luật cây cho BE, sinh từ manifest', () => {
+  type PropRule = { kind: string; profile?: string; sources?: string[]; preset?: string; itemProps?: Record<string, PropRule> };
+  type TypeRule = {
+    acceptsChildren: boolean;
+    allowedChildTypes: string[] | null;
+    allowedInPageKinds: string[];
+    maxPerPage: number | null;
+    editableInSystemPageProps: string[];
+    variants: string[];
+    props: Record<string, PropRule>;
+  };
+  type TreeRules = { schemaVersion: number; types: Record<string, TypeRule> };
+
+  const readTreeRules = (): TreeRules => {
+    runGenRegistry();
+    return JSON.parse(readFileSync(path.join(TEMP_GENERATED, 'tree-rules.json'), 'utf8')) as TreeRules;
+  };
+
+  it('khớp op-rules.ts từng type, từng trường (acceptsChildren, allowedChildTypes, allowedInPageKinds, maxPerPage, editableInSystemPageProps)', async () => {
+    const { opRules } = await import('../generated/op-rules');
+    const rules = readTreeRules();
+    expect(Object.keys(rules.types).sort()).toEqual(Object.keys(opRules).sort());
+    for (const [type, op] of Object.entries(opRules)) {
+      const rule = rules.types[type];
+      expect(rule, type).toBeDefined();
+      expect(rule?.acceptsChildren, `${type}.acceptsChildren`).toBe(op.acceptsChildren);
+      expect(rule?.allowedChildTypes, `${type}.allowedChildTypes`).toEqual(op.allowedChildTypes);
+      expect(rule?.allowedInPageKinds, `${type}.allowedInPageKinds`).toEqual(op.allowedInPageKinds);
+      expect(rule?.maxPerPage, `${type}.maxPerPage`).toBe(op.maxPerPage);
+      expect(rule?.editableInSystemPageProps, `${type}.editableInSystemPageProps`).toEqual(op.editableInSystemPageProps);
+    }
+  }, 60_000);
+
+  it('variants[] là key các variant của manifest, props có đủ mọi prop của manifest (khớp props-schemas.json)', async () => {
+    const rules = readTreeRules();
+    const { default: propsSchemas } = (await import('../generated/props-schemas.json')) as { default: Record<string, { properties: Record<string, unknown> }> };
+    expect(rules.types.Hero?.variants).toEqual(['Hero01', 'Hero02']);
+    expect(rules.types.Gallery?.variants).toEqual(['Gallery01', 'Gallery02']);
+    for (const [type, rule] of Object.entries(rules.types)) {
+      expect(Object.keys(rule.props).sort(), `${type}.props`).toEqual(Object.keys(propsSchemas[type]?.properties ?? {}).sort());
+    }
+  }, 60_000);
+
+  it('bản đồ prop: kind cho mọi prop; richText kèm profile; binding kèm sources; image kèm preset', () => {
+    const { types } = readTreeRules();
+    expect(types.RichText?.props.content).toEqual({ kind: 'richText', profile: 'basic' });
+    expect(types.Hero?.props.subtitle).toEqual({ kind: 'richText', profile: 'inline' });
+    expect(types.Hero?.props.title).toEqual({ kind: 'text' });
+    expect(types.Hero?.props.image).toEqual({ kind: 'image', preset: '1600x900,cover' });
+    expect(types.ServiceGrid?.props.source).toEqual({ kind: 'binding', sources: ['Service', 'ServiceGroup'] });
+    expect(types.ServiceGrid?.props.columns).toEqual({ kind: 'number' });
+    for (const rule of Object.values(types)) {
+      for (const [name, prop] of Object.entries(rule.props)) expect(typeof prop.kind, name).toBe('string');
+    }
+  });
+
+  it('itemProps đệ quy cho list (Gallery.items) và group (Hero.cta)', () => {
+    const { types } = readTreeRules();
+    const items = types.Gallery?.props.items;
+    expect(items?.kind).toBe('list');
+    expect(items?.itemProps?.image?.kind).toBe('image');
+    expect(items?.itemProps?.caption?.kind ?? items?.itemProps?.alt?.kind ?? 'text').toBeDefined();
+    const cta = types.Hero?.props.cta;
+    expect(cta?.kind).toBe('group');
+    expect(cta?.itemProps?.target?.kind).toBe('link');
+  });
+
+  it('không có "Review" ở bất kỳ binding.sources nào (R3)', () => {
+    const { types } = readTreeRules();
+    const walk = (props: Record<string, PropRule>): void => {
+      for (const prop of Object.values(props)) {
+        if (prop.kind === 'binding') expect(prop.sources).not.toContain('Review');
+        if (prop.itemProps) walk(prop.itemProps);
+      }
+    };
+    for (const rule of Object.values(types)) walk(rule.props);
+  });
+
+  it('manifest giả có richText.profile = inline → artifact có profile: inline (đột biến trên bản sao tạm)', () => {
+    const rules = JSON.parse(generateOnCopyAndRead('rich-text.manifest.ts', "profile: 'basic'", "profile: 'inline'", 'tree-rules.json')) as TreeRules;
+    expect(rules.types.RichText?.props.content).toEqual({ kind: 'richText', profile: 'inline' });
+  }, 30_000);
+
+  it('manifest giả thêm binding source (additive) → artifact có source đó', () => {
+    const rules = JSON.parse(
+      generateOnCopyAndRead('service-grid.manifest.ts', "sources: ['Service', 'ServiceGroup']", "sources: ['Service', 'ServiceGroup', 'Shop']", 'tree-rules.json'),
+    ) as TreeRules;
+    expect(rules.types.ServiceGrid?.props.source?.sources).toEqual(['Service', 'ServiceGroup', 'Shop']);
+  }, 30_000);
 });
 
 describe('heroPropsSchema (generated) — validate SHAPE của prop', () => {
