@@ -130,6 +130,16 @@ describe('gen-registry — nhánh FAIL của cross-manifest invariants (§6.1) k
   );
 
   it(
+    'FAIL khi richText.profile trỏ vào khoá "dangerous" (khoá danh sách nguy hiểm, không phải profile)',
+    () => {
+      const { code, stderr } = runGenRegistryOnCopy('rich-text.manifest.ts', "profile: 'basic'", "profile: 'dangerous'");
+      expect(code).not.toBe(0);
+      expect(stderr).toContain('richText.profile');
+    },
+    30_000,
+  );
+
+  it(
     'FAIL khi type trùng giữa hai manifest (#10)',
     () => {
       // Đổi type của Section trùng với Hero — checkCrossManifestInvariants phải fail trước khi

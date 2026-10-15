@@ -1,0 +1,24 @@
+{
+  "colorKeys": ["primary", "secondary", "background", "surface", "text", "textMuted", "border"],
+  "colorPattern": "^#[0-9a-fA-F]{6}$",
+  "fonts": ["Be Vietnam Pro", "Inter", "Roboto", "Montserrat", "Playfair Display", "Lora"],
+  "scale": ["compact", "comfortable", "spacious"],
+  "radius": ["none", "sm", "md", "lg", "full"],
+  "shadow": ["none", "soft", "medium", "strong"],
+  "sectionGap": ["sm", "md", "lg", "xl"],
+  "defaults": {
+    "schemaVersion": 1,
+    "colors": {
+      "primary": "#7c3aed",
+      "secondary": "#a78bfa",
+      "background": "#ffffff",
+      "surface": "#f9fafb",
+      "text": "#111827",
+      "textMuted": "#6b7280",
+      "border": "#e5e7eb"
+    },
+    "typography": { "headingFont": "Be Vietnam Pro", "bodyFont": "Inter", "scale": "comfortable" },
+    "shape": { "radius": "md", "shadow": "soft" },
+    "spacing": { "sectionGap": "lg" }
+  }
+}

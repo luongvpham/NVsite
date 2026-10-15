@@ -23,6 +23,8 @@ const imagePresets = imagePresetsFile.presets;
 const bindingSources = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'binding-sources.json'), 'utf8')) as string[];
 const sanitizeProfiles = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'sanitize-profiles.json'), 'utf8')) as Record<string, unknown>;
 
+const NON_PROFILE_KEYS = new Set(['dangerous']);
+
 function toKebabCase(pascalCase: string): string {
   return pascalCase.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 }
@@ -86,7 +88,8 @@ function checkPropInvariants(typeName: string, propName: string, prop: PropDef):
     fail(`${where}: image.preset '${prop.preset}' không có trong config/image-presets.json`);
   }
 
-  if (prop.kind === 'richText' && !(prop.profile in sanitizeProfiles)) {
+  // `dangerous` là khoá danh sách nguy hiểm trong cùng file, không phải profile sanitize.
+  if (prop.kind === 'richText' && (NON_PROFILE_KEYS.has(prop.profile) || !(prop.profile in sanitizeProfiles))) {
     fail(`${where}: richText.profile '${prop.profile}' không có trong config/sanitize-profiles.json`);
   }
 

@@ -39,6 +39,10 @@ describe('sanitizeRichText (§7.2, §9 test #4)', () => {
     expect(clean).not.toContain('data-foo');
   });
 
+  it('"dangerous" là khoá danh sách nguy hiểm, KHÔNG phải profile — không dùng để sanitize (WEBSITE-001)', () => {
+    expect(() => sanitizeRichText('<p>x</p>', 'dangerous')).toThrow();
+  });
+
   it('throws on an unknown profile name', () => {
     expect(() => sanitizeRichText('<p>x</p>', 'unknown-profile')).toThrow();
   });

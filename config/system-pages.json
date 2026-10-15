@@ -1,0 +1,8 @@
+{
+  "Contact": { "routes": ["lien-he"], "phase": 2, "seedOnCreate": true },
+  "NotFound": { "routes": [], "phase": 2, "seedOnCreate": true },
+  "ProductListing": { "routes": ["san-pham", "danh-muc"], "phase": 2, "seedOnCreate": false },
+  "ProductDetail": { "routes": ["san-pham"], "phase": 2, "seedOnCreate": false },
+  "ProductSearch": { "routes": ["tim-kiem"], "phase": 2, "seedOnCreate": false },
+  "Booking": { "routes": ["dat-lich"], "phase": 3, "seedOnCreate": false }
+}

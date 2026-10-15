@@ -6,7 +6,9 @@ interface SanitizeProfile {
   attrs: Record<string, string[]>;
 }
 
-const profiles = sanitizeProfilesJson as Record<string, SanitizeProfile>;
+// Khoá `dangerous` (danh sách thẻ/thuộc tính/scheme nguy hiểm, WEBSITE-001) nằm chung file nhưng KHÔNG phải profile.
+const NON_PROFILE_KEYS = new Set(['dangerous']);
+const profiles = sanitizeProfilesJson as unknown as Record<string, SanitizeProfile>;
 
 /**
  * Sanitize HTML từ Lexical theo profile whitelist (07 §7.2). Dùng ở FE (UX, lúc nhập/preview)
@@ -16,7 +18,7 @@ const profiles = sanitizeProfilesJson as Record<string, SanitizeProfile>;
  * a[href] chỉ https/http/mailto/tel (chặn javascript:/data:), target=_blank bị ép rel=noopener.
  */
 export function sanitizeRichText(html: string, profileName: string): string {
-  const profile = profiles[profileName];
+  const profile = NON_PROFILE_KEYS.has(profileName) ? undefined : profiles[profileName];
   if (!profile) {
     throw new Error(`sanitizeRichText: profile '${profileName}' không có trong config/sanitize-profiles.json`);
   }
