@@ -32,7 +32,8 @@ public sealed class Theme : TenantAuditableEntity
         return theme;
     }
 
-    /// <summary>Bí danh của <see cref="BaseEntity.Id"/> — theme là 1:1 với website.</summary>
+    /// <summary>Bí danh của <see cref="BaseEntity.Id"/> — theme là 1:1 với website. ⚠️ Chỉ để đọc trong code
+    /// nghiệp vụ; KHÔNG dùng trong LINQ-to-EF (không map) — query theo <c>t.Id</c>.</summary>
     public Guid WebsiteId => Id;
 
     /// <summary>Preset gốc đã chọn (<c>spa-lavender</c>…) để hiển thị trong UI.</summary>

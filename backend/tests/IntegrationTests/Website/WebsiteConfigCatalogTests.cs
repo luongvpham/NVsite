@@ -108,6 +108,18 @@ public sealed class WebsiteConfigCatalogTests
         Assert.NotEmpty(schemas.ValidateProps("Hero", """{"overlayOpacity":"nhiều"}"""));
     }
 
+    [Fact]
+    public void Schema_provider_can_be_built_many_times_in_one_process()
+    {
+        // Mỗi WebApplicationFactory dựng một host (một WebsiteSchemaProvider) — schema có $id không được
+        // đăng ký vào registry toàn cục ("Overwriting registered schemas is not permitted").
+        for (var i = 0; i < 3; i++)
+        {
+            _ = new WebsiteSchemaProvider(
+                Generated("tree-envelope.schema.json"), Generated("theme-tokens.schema.json"), Generated("props-schemas.json"));
+        }
+    }
+
     [Theory]
     [InlineData(typeof(LocaleCatalog), "locales.json")]
     [InlineData(typeof(ThemeTokenCatalog), "theme-tokens.json")]

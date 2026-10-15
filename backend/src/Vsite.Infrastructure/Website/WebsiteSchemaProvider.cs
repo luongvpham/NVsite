@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Json.Schema;
 using Vsite.Application.Website.Interfaces;
@@ -42,7 +42,7 @@ public sealed class WebsiteSchemaProvider : IWebsiteSchemaProvider
         _props = new Dictionary<string, JsonSchema>(StringComparer.Ordinal);
         foreach (var (type, schema) in root)
         {
-            _props[type] = JsonSchema.FromText(schema!.ToJsonString());
+            _props[type] = FromText(schema!.ToJsonString());
         }
 
         if (_props.Count == 0)
@@ -62,12 +62,17 @@ public sealed class WebsiteSchemaProvider : IWebsiteSchemaProvider
             ? Evaluate(schema, propsJson)
             : throw new KeyNotFoundException($"Không có props schema cho component '{componentType}'.");
 
+    // Registry RIÊNG cho mỗi schema: schema có `$id` mà đăng ký vào registry toàn cục thì lần dựng thứ hai
+    // (nhiều host trong cùng process — WebApplicationFactory, test) ném "Overwriting registered schemas".
+    private static JsonSchema FromText(string text) =>
+        JsonSchema.FromText(text, new BuildOptions { SchemaRegistry = new SchemaRegistry() });
+
     private static JsonSchema Load(string path)
     {
         var text = WebsiteConfigFile.ReadText(path);
         try
         {
-            return JsonSchema.FromText(text);
+            return FromText(text);
         }
         catch (Exception ex) when (ex is JsonException or JsonSchemaException)
         {

@@ -31,7 +31,8 @@ public sealed class PageDraft : TenantAuditableEntity
         return draft;
     }
 
-    /// <summary>Bí danh của <see cref="BaseEntity.Id"/> — draft là 1:1 với page.</summary>
+    /// <summary>Bí danh của <see cref="BaseEntity.Id"/> — draft là 1:1 với page. ⚠️ Chỉ để đọc trong code
+    /// nghiệp vụ; KHÔNG dùng trong LINQ-to-EF (không map) — query theo <c>d.Id</c>.</summary>
     public Guid PageId => Id;
 
     public string Tree { get; private set; }
