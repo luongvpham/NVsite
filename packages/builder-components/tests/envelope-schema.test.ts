@@ -79,8 +79,16 @@ describe('tree envelope — Zod ↔ JSON Schema equivalence (#97)', () => {
 
 describe('theme tokens — Zod ↔ JSON Schema equivalence (#97)', () => {
   const d = themeTokensConfig.defaults;
-  const clone = () => structuredClone(d) as Record<string, any>;
-  const mutate = (fn: (t: Record<string, any>) => void) => {
+  interface Tokens {
+    schemaVersion?: unknown;
+    colors: Record<string, unknown>;
+    typography: Record<string, unknown>;
+    shape: Record<string, unknown>;
+    spacing: Record<string, unknown>;
+    extra?: unknown;
+  }
+  const clone = () => structuredClone(d) as Tokens;
+  const mutate = (fn: (t: Tokens) => void) => {
     const t = clone();
     fn(t);
     return t;
@@ -104,7 +112,7 @@ describe('theme tokens — Zod ↔ JSON Schema equivalence (#97)', () => {
     { name: 'sectionGap ngoài enum', value: mutate((t) => (t.spacing.sectionGap = 'xxl')), valid: false },
     { name: 'thiếu schemaVersion', value: mutate((t) => delete t.schemaVersion), valid: false },
     { name: 'schemaVersion là chuỗi', value: mutate((t) => (t.schemaVersion = '1')), valid: false },
-    { name: 'thiếu nhóm typography', value: mutate((t) => delete t.typography), valid: false },
+    { name: 'thiếu nhóm typography', value: mutate((t) => delete (t as Partial<Tokens>).typography), valid: false },
     { name: 'trường lạ ở gốc', value: mutate((t) => (t.extra = 1)), valid: false },
     { name: 'trường lạ trong shape', value: mutate((t) => (t.shape.extra = 1)), valid: false },
     { name: 'không phải object', value: 'tokens', valid: false },

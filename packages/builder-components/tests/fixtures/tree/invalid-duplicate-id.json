@@ -1,0 +1,31 @@
+{
+  "description": "Hai node trùng id trong cùng trang.",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "NODE_ID_DUPLICATE"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_dup01",
+        "type": "RichText",
+        "variant": "RichText01",
+        "props": {
+          "content": "<p>a</p>"
+        }
+      },
+      {
+        "id": "c_dup01",
+        "type": "RichText",
+        "variant": "RichText01",
+        "props": {
+          "content": "<p>b</p>"
+        }
+      }
+    ]
+  }
+}

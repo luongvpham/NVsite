@@ -1,0 +1,24 @@
+{
+  "description": "Prop lạ không có trong manifest (#60: additionalProperties của props do BE chặn, props-schemas.json không chặn).",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "PROP_UNKNOWN"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {
+          "title": "x",
+          "bogus": 1
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "description": "acceptsChildren=false nhưng Hero có children.",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "NODE_CHILDREN_NOT_ACCEPTED"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {},
+        "children": [
+          {
+            "id": "c_rich1",
+            "type": "RichText",
+            "variant": "RichText01",
+            "props": {
+              "content": "<p>x</p>"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

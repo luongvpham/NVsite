@@ -1,0 +1,23 @@
+{
+  "description": "Shape prop sai (overlayOpacity là chuỗi) — theo props-schemas.json.",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "PROP_INVALID"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {
+          "overlayOpacity": "nhiều"
+        }
+      }
+    ]
+  }
+}

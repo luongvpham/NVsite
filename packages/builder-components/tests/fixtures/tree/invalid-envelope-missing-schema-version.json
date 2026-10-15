@@ -1,0 +1,13 @@
+{
+  "description": "R12: thiếu schemaVersion ở gốc.",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "TREE_ENVELOPE_INVALID"
+  ],
+  "tree": {
+    "id": "root",
+    "type": "Page",
+    "children": []
+  }
+}

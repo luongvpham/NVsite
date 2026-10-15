@@ -1,0 +1,33 @@
+{
+  "description": "R1/#21: imageId là clone của shop KHÁC (BE không được lộ id đó có tồn tại — cùng mã 422).",
+  "pageKind": "Composable",
+  "context": {
+    "media": {
+      "media_other_1": {
+        "kind": "Clone",
+        "shop": "other"
+      }
+    }
+  },
+  "expect": "invalid",
+  "errorCodes": [
+    "MEDIA_INVALID_IMAGE_REFERENCE"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {
+          "image": {
+            "imageId": "media_other_1"
+          }
+        }
+      }
+    ]
+  }
+}

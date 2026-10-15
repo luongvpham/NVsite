@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { classifyDangerous } from '../tests/helpers/richtext-danger';
 import { sanitizeRichText } from './sanitize-html';
 
 describe('sanitizeRichText (§7.2, §9 test #4)', () => {
@@ -45,5 +48,52 @@ describe('sanitizeRichText (§7.2, §9 test #4)', () => {
 
   it('throws on an unknown profile name', () => {
     expect(() => sanitizeRichText('<p>x</p>', 'unknown-profile')).toThrow();
+  });
+});
+
+/**
+ * Fixture dùng chung FE + BE (WEBSITE-001 S0-T4, R4/R5): tests/fixtures/tree/xss-richtext.json.
+ * Đóng nợ BOOTSTRAP-002 "thiếu test data: URL". BE chạy CÙNG file này (RichTextSanitizerTests).
+ */
+interface XssVector {
+  id: string;
+  input: string;
+  expect: 'reject' | 'clean' | 'pass';
+  clean?: string;
+  mustNotContain?: string[];
+  parserDependent?: boolean;
+}
+const xssFixture = JSON.parse(
+  readFileSync(path.resolve(import.meta.dirname, '..', 'tests', 'fixtures', 'tree', 'xss-richtext.json'), 'utf8'),
+) as { profile: string; vectors: XssVector[] };
+
+describe('xss-richtext.json — fixture dùng chung FE+BE (R4, R5)', () => {
+  it('có đủ ba loại expect và vector data:/javascript:/vbscript:/on*/entity-encoded', () => {
+    const expects = new Set(xssFixture.vectors.map((v) => v.expect));
+    expect([...expects].sort()).toEqual(['clean', 'pass', 'reject']);
+    const ids = xssFixture.vectors.map((v) => v.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const all = xssFixture.vectors.map((v) => v.input).join(' ');
+    for (const needle of ['data:', 'javascript:', 'vbscript:', 'onerror', '&lt;script&gt;']) expect(all).toContain(needle);
+  });
+
+  it.each(xssFixture.vectors.map((v) => [v.id, v] as const))('%s', (_id, vector) => {
+    const out = sanitizeRichText(vector.input, xssFixture.profile);
+
+    // Idempotent (R5): sanitize(sanitize(x)) == sanitize(x)
+    expect(sanitizeRichText(out, xssFixture.profile)).toBe(out);
+    // Bản sạch không bao giờ còn thứ nguy hiểm — kể cả vector BE phải từ chối.
+    expect(classifyDangerous(out)).toBe('safe');
+    for (const bad of vector.mustNotContain ?? []) expect(out.toLowerCase()).not.toContain(bad.toLowerCase());
+
+    if (vector.expect === 'pass') expect(out).toBe(vector.input);
+    if (vector.expect === 'clean') {
+      if (vector.clean !== undefined) expect(out).toBe(vector.clean);
+      expect(out).not.toBe(vector.input);
+    }
+    if (!vector.parserDependent) {
+      // Nhãn expect phải khớp danh sách "dangerous" của config (nhãn sai = fixture sai, BE sẽ test theo nhãn).
+      expect(classifyDangerous(vector.input) === 'unsafe', 'phân loại theo config/sanitize-profiles.json#dangerous').toBe(vector.expect === 'reject');
+    }
   });
 });

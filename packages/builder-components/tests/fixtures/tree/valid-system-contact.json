@@ -1,0 +1,21 @@
+{
+  "description": "Trang System Contact vừa seed: Page > RichText (RichText cho phép ở System, content editableInSystemPage).",
+  "pageKind": "System",
+  "systemType": "Contact",
+  "expect": "valid",
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_cont1",
+        "type": "RichText",
+        "variant": "RichText01",
+        "props": {
+          "content": "<p>Liên hệ với chúng tôi</p>"
+        }
+      }
+    ]
+  }
+}

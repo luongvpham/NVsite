@@ -1,0 +1,14 @@
+{
+  "description": "R12: schemaVersion 999 > hiện hành (1) => 422 SCHEMA_VERSION_UNSUPPORTED (mã cấp problem, không phải TREE_INVALID).",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "SCHEMA_VERSION_UNSUPPORTED"
+  ],
+  "tree": {
+    "schemaVersion": 999,
+    "id": "root",
+    "type": "Page",
+    "children": []
+  }
+}

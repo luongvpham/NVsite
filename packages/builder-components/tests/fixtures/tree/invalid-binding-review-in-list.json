@@ -1,0 +1,69 @@
+{
+  "description": "R3: Review chỉ nằm trong list.items[].binding. Registry hiện chưa có type nào có list chứa binding, nên fixture khai thêm type giả \"Carousel\" qua rulesOverride (gộp vào tree-rules.json lúc test; props của type override KHÔNG kiểm bằng props-schemas.json). BE: dùng rulesOverride để dựng catalog test.",
+  "pageKind": "Composable",
+  "rulesOverride": {
+    "types": {
+      "Carousel": {
+        "acceptsChildren": false,
+        "allowedChildTypes": null,
+        "allowedInPageKinds": [
+          "Composable"
+        ],
+        "maxPerPage": null,
+        "editableInSystemPageProps": [],
+        "variants": [
+          "Carousel01"
+        ],
+        "props": {
+          "slides": {
+            "kind": "list",
+            "itemProps": {
+              "title": {
+                "kind": "text"
+              },
+              "feed": {
+                "kind": "binding",
+                "sources": [
+                  "Service",
+                  "Product"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "expect": "invalid",
+  "errorCodes": [
+    "BINDING_SOURCE_NOT_ALLOWED"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_car01",
+        "type": "Carousel",
+        "variant": "Carousel01",
+        "props": {
+          "slides": [
+            {
+              "title": "ok",
+              "feed": {
+                "source": "Service"
+              }
+            },
+            {
+              "title": "bad",
+              "feed": {
+                "source": "Review"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

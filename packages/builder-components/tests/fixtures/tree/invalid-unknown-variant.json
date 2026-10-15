@@ -1,0 +1,21 @@
+{
+  "description": "Variant không thuộc type (Hero99).",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "NODE_VARIANT_UNKNOWN"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero99",
+        "props": {}
+      }
+    ]
+  }
+}

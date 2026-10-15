@@ -1,0 +1,102 @@
+{
+  "description": "Trang chủ Composable hợp lệ: Hero + Section>RichText + ServiceGrid (binding Service) + Gallery. Ảnh là clone/direct của shop.",
+  "pageKind": "Composable",
+  "context": {
+    "media": {
+      "media_clone_1": {
+        "kind": "Clone",
+        "shop": "own"
+      },
+      "media_clone_2": {
+        "kind": "Clone",
+        "shop": "own"
+      },
+      "media_direct_1": {
+        "kind": "Direct",
+        "shop": "own"
+      }
+    }
+  },
+  "expect": "valid",
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {
+          "title": "Chào mừng",
+          "image": {
+            "imageId": "media_clone_1",
+            "alt": "Banner"
+          },
+          "align": "center",
+          "overlayOpacity": 40,
+          "cta": {
+            "label": "Đặt lịch",
+            "target": {
+              "kind": "systemPage",
+              "systemType": "Booking"
+            }
+          }
+        }
+      },
+      {
+        "id": "c_sect1",
+        "type": "Section",
+        "variant": "Section01",
+        "props": {
+          "paddingY": "lg"
+        },
+        "children": [
+          {
+            "id": "c_rich1",
+            "type": "RichText",
+            "variant": "RichText01",
+            "props": {
+              "content": "<p>Spa <strong>thư giãn</strong></p>"
+            }
+          }
+        ]
+      },
+      {
+        "id": "c_grid1",
+        "type": "ServiceGrid",
+        "variant": "ServiceGrid01",
+        "props": {
+          "heading": "Dịch vụ",
+          "source": {
+            "source": "Service",
+            "filters": {
+              "take": 6
+            }
+          }
+        }
+      },
+      {
+        "id": "c_gall1",
+        "type": "Gallery",
+        "variant": "Gallery01",
+        "props": {
+          "heading": "Không gian",
+          "items": [
+            {
+              "image": {
+                "imageId": "media_clone_2"
+              },
+              "caption": "Phòng 1"
+            },
+            {
+              "image": {
+                "imageId": "media_direct_1"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

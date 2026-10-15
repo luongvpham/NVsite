@@ -1,0 +1,28 @@
+{
+  "description": "Key `i18n` trên node: vỏ cho phép (locale hợp lệ) nhưng CHƯA bật (#98) => BE từ chối.",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "I18N_NOT_ENABLED"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {
+          "title": "Xin chào"
+        },
+        "i18n": {
+          "en": {
+            "title": "Hello"
+          }
+        }
+      }
+    ]
+  }
+}

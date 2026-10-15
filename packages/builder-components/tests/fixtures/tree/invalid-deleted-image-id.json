@@ -1,0 +1,34 @@
+{
+  "description": "T7: imageId là clone đã xoá mềm.",
+  "pageKind": "Composable",
+  "context": {
+    "media": {
+      "media_gone_1": {
+        "kind": "Clone",
+        "shop": "own",
+        "deleted": true
+      }
+    }
+  },
+  "expect": "invalid",
+  "errorCodes": [
+    "MEDIA_INVALID_IMAGE_REFERENCE"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {
+          "image": {
+            "imageId": "media_gone_1"
+          }
+        }
+      }
+    ]
+  }
+}

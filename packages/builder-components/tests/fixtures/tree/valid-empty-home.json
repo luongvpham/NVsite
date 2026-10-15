@@ -1,0 +1,11 @@
+{
+  "description": "Trang chủ vừa seed (Slug \"\"): cây rỗng — hợp lệ.",
+  "pageKind": "Composable",
+  "expect": "valid",
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": []
+  }
+}

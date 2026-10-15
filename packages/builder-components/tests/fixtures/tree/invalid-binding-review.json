@@ -1,0 +1,26 @@
+{
+  "description": "R3/#65: binding.source = \"Review\" (không có trong config/binding-sources.json).",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "BINDING_SOURCE_NOT_ALLOWED"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_grid1",
+        "type": "ServiceGrid",
+        "variant": "ServiceGrid01",
+        "props": {
+          "heading": "Dịch vụ",
+          "source": {
+            "source": "Review"
+          }
+        }
+      }
+    ]
+  }
+}

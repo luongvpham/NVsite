@@ -1,0 +1,61 @@
+{
+  "description": "Vector richText dùng chung FE (sanitize-html) và BE (IRichTextSanitizer) — WEBSITE-001 R4/R5, #67. Mỗi vector: sanitize(input, profile) rồi áp expect. Xem README.md.",
+  "profile": "basic",
+  "vectors": [
+    { "id": "script-tag", "input": "<p>a</p><script>alert(1)</script>", "expect": "reject" },
+    { "id": "img-onerror", "input": "<img src=x onerror=\"alert(1)\">", "expect": "reject" },
+    { "id": "onclick-on-allowed-tag", "input": "<p onclick=\"x()\">hi</p>", "expect": "reject" },
+    { "id": "onclick-on-anchor", "input": "<a href=\"https://x.com\" onclick=\"x()\">x</a>", "expect": "reject" },
+    { "id": "href-javascript", "input": "<a href=\"javascript:alert(1)\">x</a>", "expect": "reject" },
+    { "id": "href-javascript-mixed-case", "input": "<a href=\"JaVaScRiPt:alert(1)\">x</a>", "expect": "reject" },
+    { "id": "href-javascript-entity-colon", "input": "<a href=\"javascript&#58;alert(1)\">x</a>", "expect": "reject" },
+    { "id": "href-javascript-tab-split", "input": "<a href=\"jav&#x09;ascript:alert(1)\">x</a>", "expect": "reject" },
+    { "id": "href-data-html", "input": "<a href=\"data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==\">x</a>", "expect": "reject" },
+    { "id": "href-vbscript", "input": "<a href=\"vbscript:msgbox(1)\">x</a>", "expect": "reject" },
+    { "id": "iframe", "input": "<p>a</p><iframe src=\"https://evil.example\"></iframe>", "expect": "reject" },
+    { "id": "object", "input": "<object data=\"x.swf\"></object>", "expect": "reject" },
+    { "id": "embed", "input": "<embed src=\"x.swf\">", "expect": "reject" },
+    { "id": "style-tag", "input": "<style>p{background:url(javascript:alert(1))}</style><p>a</p>", "expect": "reject" },
+    {
+      "id": "split-script-open-angle",
+      "input": "<<script>script>alert(1)<</script>/script>",
+      "expect": "reject",
+      "mustNotContain": ["<script", "alert(1)"]
+    },
+
+    {
+      "id": "split-tag-name-not-a-script-element",
+      "input": "<scr<script>ipt>alert(1)</scr</script>ipt>",
+      "expect": "clean",
+      "parserDependent": true,
+      "mustNotContain": ["<script", "<scr"],
+      "note": "Parser HTML5 đọc `scr<script` là TÊN thẻ (không phải phần tử script) => thẻ lạ bị cắt, không nằm trong danh sách nguy hiểm. Output chính xác phụ thuộc parser nên không có trường `clean`; BE (parser tuân HTML5, vd. AngleSharp) phải: 200, không báo RICHTEXT_UNSAFE, output không còn `<script`/`<scr`."
+    },
+
+    {
+      "id": "target-blank-missing-rel",
+      "input": "<a href=\"https://x.com\" target=\"_blank\">x</a>",
+      "expect": "clean",
+      "clean": "<a href=\"https://x.com\" target=\"_blank\" rel=\"noopener noreferrer\">x</a>"
+    },
+    {
+      "id": "lexical-raw-class-style-span",
+      "input": "<p class=\"PlaygroundEditorTheme__paragraph\" style=\"color:red\" dir=\"ltr\"><span style=\"white-space: pre-wrap\">Xin chào</span></p>",
+      "expect": "clean",
+      "clean": "<p>Xin chào</p>"
+    },
+    { "id": "h1-outside-whitelist-keeps-text", "input": "<h1>Tiêu đề</h1>", "expect": "clean", "clean": "Tiêu đề" },
+    { "id": "ftp-scheme-not-dangerous", "input": "<a href=\"ftp://x.com\">x</a>", "expect": "clean", "clean": "<a>x</a>" },
+    { "id": "data-attribute-is-not-data-scheme", "input": "<p data-a=\"1\" id=\"y\">t</p>", "expect": "clean", "clean": "<p>t</p>" },
+
+    { "id": "plain-formatting", "input": "<p>Xin chào <strong>bạn</strong></p>", "expect": "pass" },
+    { "id": "list", "input": "<ul><li>1</li><li>2</li></ul>", "expect": "pass" },
+    { "id": "entities-ampersand-lt", "input": "<p>a &amp; b &lt; c</p>", "expect": "pass" },
+    {
+      "id": "entity-encoded-script-is-text-not-script",
+      "input": "&lt;script&gt;alert(1)&lt;/script&gt;",
+      "expect": "pass",
+      "note": "Chuỗi đã encode là văn bản — KHÔNG được coi là script (không false-positive, R4)."
+    }
+  ]
+}
