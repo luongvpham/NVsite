@@ -10,6 +10,9 @@ using Vsite.Api.Tenancy;
 using Vsite.Application.Common.Imaging;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Website.Interfaces;
+using Vsite.Application.Website.Options;
+using Vsite.Application.Website.Validation;
+using Vsite.Application.Website.Versioning;
 using Vsite.Domain.Abstractions;
 using Vsite.Domain.ReservedRoutes;
 using Vsite.Infrastructure;
@@ -81,6 +84,13 @@ builder.Services.AddSingleton<IWebsiteSchemaProvider>(_ => new WebsiteSchemaProv
     Path.Combine(websiteArtifactDir, "theme-tokens.schema.json"),
     Path.Combine(websiteArtifactDir, "props-schemas.json")));
 
+// Validate cây (T4/T5, WEBSITE-001): giới hạn cứng từ appsettings (G6), sanitizer richText, khung upcaster (#94).
+// Chưa có IDocumentUpcaster nào (phiên bản hiện hành = 1) — thêm bước nâng = AddSingleton<IDocumentUpcaster, ...>.
+builder.Services.AddSingleton(builder.Configuration.GetSection(PageTreeLimits.SectionName).Get<PageTreeLimits>() ?? new PageTreeLimits());
+builder.Services.AddSingleton<IRichTextSanitizer, RichTextSanitizer>();
+builder.Services.AddSingleton(sp => new DocumentVersioning(sp.GetServices<IDocumentUpcaster>()));
+builder.Services.AddSingleton<PageTreeValidator>();
+
 // Quyết định #7 (thu hẹp — xem TenantResolutionMiddleware). Scoped: một TenantContext per-request,
 // middleware set giá trị, mọi handler đọc qua ITenantContext (không handler nào tự resolve ShopId).
 builder.Services.AddScoped<TenantContext>();
@@ -123,6 +133,7 @@ app.Services.GetRequiredService<ISanitizeProfileCatalog>();
 app.Services.GetRequiredService<IBindingSourceCatalog>();
 app.Services.GetRequiredService<ITreeRulesCatalog>();
 app.Services.GetRequiredService<IWebsiteSchemaProvider>();
+app.Services.GetRequiredService<PageTreeValidator>();
 
 if (app.Environment.IsDevelopment())
 {
