@@ -16,6 +16,8 @@ const GENERATED_FILES = [
   'ai-tool-schema.json',
   'registry-map.ts',
   'derivative-presets.json',
+  'tree-envelope.schema.json',
+  'theme-tokens.schema.json',
 ];
 
 /** Thư mục generated TẠM cho các test chỉ cần chạy codegen — không ghi đè `generated/` thật trong lúc

@@ -2,13 +2,15 @@
 /**
  * `pnpm gen:registry` — sinh artifact từ registry/*.manifest.ts (07-component-manifest-schema.md §6).
  *
- * Sinh 8 artifact: component-types.ts, props-schemas.ts (Zod), props-schemas.json (JSON Schema, #60),
- * property-panel.ts, op-rules.ts, ai-tool-schema.json, registry-map.ts, derivative-presets.json (#86).
+ * Sinh artifact: component-types.ts, props-schemas.ts (Zod), props-schemas.json (JSON Schema, #60),
+ * property-panel.ts, op-rules.ts, ai-tool-schema.json, registry-map.ts, derivative-presets.json (#86),
+ * tree-envelope.schema.json + theme-tokens.schema.json (vỏ Tree/Tokens, #97), tree-rules.json (luật cây cho BE, #60).
  * check-additive vs registry.lock.json chạy trước khi ghi artifact. KHÔNG tự tạo/cập nhật lock —
  * việc đó là lệnh tường minh `pnpm registry:lock` (TOOLING-001).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { buildThemeTokensJsonSchema, buildTreeEnvelopeJsonSchema } from '../meta/envelope-schema';
 import type { ComponentManifest } from '../meta/manifest-schema';
 import type { PropDef } from '../meta/prop-kinds';
 import { runCheckAdditive } from './check-additive';
@@ -21,6 +23,8 @@ const imagePresetsFile = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 
 };
 const imagePresets = imagePresetsFile.presets;
 const bindingSources = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'binding-sources.json'), 'utf8')) as string[];
+const localesConfig = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'locales.json'), 'utf8')) as string[];
+const themeTokensConfig = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'theme-tokens.json'), 'utf8')) as Parameters<typeof buildThemeTokensJsonSchema>[0];
 const sanitizeProfiles = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'sanitize-profiles.json'), 'utf8')) as Record<string, unknown>;
 
 const NON_PROFILE_KEYS = new Set(['dangerous']);
@@ -547,6 +551,19 @@ function generateDerivativePresets(manifests: ComponentManifest[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// tree-envelope.schema.json + theme-tokens.schema.json (WEBSITE-001 S0-T2, #94, #97) — shape VỎ của
+// Tree và Theme.Tokens, dựng từ config/locales.json + config/theme-tokens.json (xem meta/envelope-schema.ts).
+// ---------------------------------------------------------------------------
+
+function generateTreeEnvelopeSchemaJson(): string {
+  return JSON.stringify(buildTreeEnvelopeJsonSchema(localesConfig), null, 2) + '\n';
+}
+
+function generateThemeTokensSchemaJson(): string {
+  return JSON.stringify(buildThemeTokensJsonSchema(themeTokensConfig), null, 2) + '\n';
+}
+
+// ---------------------------------------------------------------------------
 
 async function main() {
   const manifests = await loadManifests(PKG_ROOT, REGISTRY_DIR);
@@ -574,8 +591,10 @@ async function main() {
   writeFileSync(path.join(GENERATED_DIR, 'ai-tool-schema.json'), generateAiToolSchema(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'registry-map.ts'), generateRegistryMap(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'derivative-presets.json'), generateDerivativePresets(manifests));
+  writeFileSync(path.join(GENERATED_DIR, 'tree-envelope.schema.json'), generateTreeEnvelopeSchemaJson());
+  writeFileSync(path.join(GENERATED_DIR, 'theme-tokens.schema.json'), generateThemeTokensSchemaJson());
 
-  console.log(`[gen-registry] OK — ${manifests.length} manifest, 8 artifact sinh ra tại generated/`);
+  console.log(`[gen-registry] OK — ${manifests.length} manifest, 10 artifact sinh ra tại generated/`);
 }
 
 main().catch((error: unknown) => {
