@@ -400,7 +400,7 @@ public sealed class LibraryHandlerTests : IDisposable
 
         var library = await UploadLibraryAsync(db, writer, shopId, "logo.jpg");
 
-        var referencesHandler = new GetReferencesHandler(db);
+        var referencesHandler = new GetReferencesHandler(db, []);
         var before = await referencesHandler.Handle(new GetReferencesQuery(shopId, library.Id), CancellationToken.None);
         Assert.Empty(before.References);
 
@@ -412,6 +412,38 @@ public sealed class LibraryHandlerTests : IDisposable
         var after = await referencesHandler.Handle(new GetReferencesQuery(shopId, library.Id), CancellationToken.None);
         var reference = Assert.Single(after.References);
         Assert.Equal(Vsite.Application.Media.Dtos.MediaReferenceKind.ShopLogo, reference.Kind);
+    }
+
+    /// <summary>T11 — handler gom mọi IMediaReferenceSource (không biết nguồn cụ thể).</summary>
+    [Fact]
+    public async Task GetReferences_aggregates_ShopLogo_and_every_registered_source()
+    {
+        await using var db = CreateDbContext();
+        var shopId = Guid.NewGuid();
+        _tenantContext.ShopId = shopId;
+        var assetId = Guid.NewGuid();
+        var pageId = Guid.NewGuid();
+        var shop = new Vsite.Domain.Shop.Entities.Shop(shopId, "Shop", $"shop-{shopId:N}", Vsite.Domain.Shop.Enums.ShopKind.Hosted);
+        shop.SetLogo(assetId);
+        db.Shops.Add(shop);
+        await db.SaveChangesAsync(CancellationToken.None);
+        var sources = new Vsite.Application.Media.Interfaces.IMediaReferenceSource[]
+        {
+            new StubReferenceSource(new Vsite.Application.Media.Dtos.MediaReferenceDto(Vsite.Application.Media.Dtos.MediaReferenceKind.PageDraft, pageId, "Trang chủ")),
+            new StubReferenceSource(),
+        };
+
+        var result = await new GetReferencesHandler(db, sources).Handle(new GetReferencesQuery(shopId, assetId), CancellationToken.None);
+
+        Assert.Equal(2, result.References.Count);
+        Assert.Contains(result.References, r => r.Kind == Vsite.Application.Media.Dtos.MediaReferenceKind.ShopLogo && r.PageId is null);
+        Assert.Contains(result.References, r => r.Kind == Vsite.Application.Media.Dtos.MediaReferenceKind.PageDraft && r.PageId == pageId && r.PageTitle == "Trang chủ");
+    }
+
+    private sealed class StubReferenceSource(params Vsite.Application.Media.Dtos.MediaReferenceDto[] found) : Vsite.Application.Media.Interfaces.IMediaReferenceSource
+    {
+        public Task<IReadOnlyList<Vsite.Application.Media.Dtos.MediaReferenceDto>> FindAsync(Guid assetId, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<Vsite.Application.Media.Dtos.MediaReferenceDto>>(found);
     }
 
     // ---- helpers ----
