@@ -51,6 +51,7 @@ builder.Services.AddOpenApi("media", options => options
     .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
 
 builder.Services.AddExceptionHandler<AppExceptionHandler>();
+builder.Services.AddExceptionHandler<ConcurrencyAndUniqueExceptionHandler>(); // 409 chung cho xmin lệch / 23505 (T9, R15)
 builder.Services.AddExceptionHandler<UnauthorizedAccessExceptionHandler>();
 builder.Services.AddExceptionHandler<BadHttpRequestExceptionHandler>();
 builder.Services.AddProblemDetails();
