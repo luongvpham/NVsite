@@ -188,7 +188,7 @@ fixture README (S0 đề xuất, BE dùng đúng tên; **FE 5b phải dùng cùn
 - Ràng buộc thuộc tính theo từng thẻ (`a` → href/target/rel) làm ở `PostProcessNode`. Một `HtmlSanitizer` mới mỗi lần gọi (chưa pool).
 - **R4:** `<scr<script>ipt>alert(1)</scr</script>ipt>` → **`clean`**, không reject: parser HTML5 đọc `scr<script` là tên thẻ, không tạo phần tử script
   (output `ipt&gt;alert(1)ipt&gt;`, đã encode). Nếu đổi parser phải chạy lại vector này.
-- Sanitizer **không bật unsafe cho `meta`/`style`/`template`** (bị cắt âm thầm, không reject) — FE biết khi viết `sanitize-html.ts`.
+- Sanitizer: thẻ `<style>` bị **reject** (nằm trong `dangerous.tags`); còn `style` TRONG thuộc tính, at-rule, `meta` và `template` **không bật unsafe** (bị cắt âm thầm, không reject) — FE biết khi viết `sanitize-html.ts`.
 
 ### Phân quyền (#99, #100)
 
@@ -234,11 +234,15 @@ fixture README (S0 đề xuất, BE dùng đúng tên; **FE 5b phải dùng cùn
 | 11 | Website chưa có `CurrentPublicationId`/`SeedTemplateId`/`NavigationConfig`/bảng translation; chưa có publish/rollback | Bước 7, 8b, 11, L (#98) |
 | 12 | `references` validate lại toàn bộ draft của shop có clone liên quan (đủ cho shop nhỏ; cần cache/cột index ảnh nếu thành điểm nóng); `references` của **clone id** không báo `PageDraft` | Bước 8 (job dọn mồ côi) |
 | 13 | `DeletePage` không xoá mềm draft; không có job dọn | Bước 8 |
+| 14 | `references` chưa báo `Page.OgImageId` / `Website.DefaultOgImageId` / `FaviconAssetId`: xoá ảnh Library đang làm OG không cảnh báo (đề xuất `MediaReferenceKind.PageOgImage` ở Bước 8); `UpdatePage` chỉ kiểm OG khi OG đổi | `00-INDEX.md` §4 (nợ WEBSITE-001 #14–#17) |
+| 15 | Draft cũ không qua validate (vd. lưu trước khi có luật mới) → `references` rỗng im lặng thay vì báo; thiếu test `has-pending-model-changes` (migration lệch model); race `23505` ở `CreatePage`/`CreateWebsite`/`UpdatePage` chưa có test tất định kiểu `BumpXminInterceptor` | `00-INDEX.md` §4 |
+| 16 | `ConcurrencyAndUniqueExceptionHandler` là **toàn cục**: `23505` ở Identity/Shop nay là 409 `CONFLICT_UNIQUE` thay 500 — có thể ở route chưa khai 409 trong OpenAPI | `contract-diff.md` Giả định 10; `00-INDEX.md` §4 |
+| 17 | `pnpm check:docs` **không bắt backtick lẻ** trong banner `STATUS` (regex `tools/docs/lib/doc-status.mjs` cắt Stale ở backtick thừa → mất ghi chú ở `00-INDEX` §2). Đã sửa banner `05`, chưa sửa tool (ngoài phạm vi) | Task tooling riêng |
 
 **Minor đã hoãn trong review (không chặn, không có nơi theo dõi riêng — gom ở đây):**
-- S0: `gen-registry.test.ts` assertion "itemProps đệ quy" rỗng (`?? 'text'` luôn defined); `richtext-danger.ts` thiếu vector `svg onload`, `href` khoảng trắng đầu, `srcdoc`, `img data:`; `defaults` chưa chạy qua `theme-tokens.schema.json`.
+- S0: ✅ đã trả ở đợt sửa cuối: assertion itemProps đệ quy; vector `svg onload`, `srcdoc`, mXSS math/mglyph/style. Còn thiếu: `href` khoảng trắng đầu, `img data:`, `noscript` mXSS (phụ thuộc parser).; `defaults` chưa chạy qua `theme-tokens.schema.json`.
 - A: `catch` của `WebsiteSchemaProvider` chỉ bắt `JsonException`/`JsonSchemaException`; `TreeRulesCatalog` không validate enum.
-- B: link kind khác có `url` không kiểm; `url` rỗng bị từ chối; helper TS `String.fromCodePoint` có thể `RangeError`.
+- B: ✅ link kind khác có `url` nay đã kiểm (fixture `invalid-link-url-nonexternal-kind.json`). Còn: `url` rỗng bị từ chối; helper TS `String.fromCodePoint` có thể `RangeError`.
 - C: GUID HOA giữ nguyên chuỗi trong cây (T11 so theo `Guid` nên không ảnh hưởng); `GetWebsite` dùng `FirstAsync` trang chủ (500 nếu dữ liệu hỏng); `PresetKey` chỉ kiểm độ dài.
 - D: bind JSON trước filter Owner (JSON hỏng ra 400 thay 403); không kiểm `Content-Type`; TestServer không áp `MaxRequestBodySize` nên không assert được Media 413 qua HTTP.
 
