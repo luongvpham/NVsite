@@ -36,6 +36,8 @@ từ `00-INDEX` §4) · **Xong khi**.
 
 ## 5a. `Website` → `Theme` → `Page` → `PageDraft` — backend (Lane C)
 
+> **Trạng thái:** ⏳ BE xong (WEBSITE-001), chờ Gate 1 (contract chưa promote) và Gate 2. Xem `Docs/tasks/WEBSITE-001/changelog.md`.
+
 **Gồm**
 - Entity + migration. FK ghép theo #92. `schemaVersion` + khung upcaster cho `Tree` và `Tokens` theo #94.
   `Website` có sẵn `DefaultLocale` + `Locales` (#98, `05` §26).
@@ -58,10 +60,8 @@ từ `00-INDEX` §4) · **Xong khi**.
 - `Slug` không được trùng mã locale trong `config/locales.json` (#98) hay route của `System` page.
 
 **Chốt trước:**
-- Quy ước **một nguồn `ShopId`** cho handler: route hay `ITenantContext` (REFACTOR-BE-001 #3). Handler
-  mới sẽ nhân lỗi này lên nếu chưa chốt.
-- Tên file và field cụ thể cho #97 (`config/theme-tokens.json`, `config/locales.json`): chốt trong
-  `data-needs.md`.
+- ✅ **Đã chốt (#99):** quy ước **một nguồn `ShopId`** cho handler = `ITenantContext` (ngoại lệ `CreateWebsite`). Handler Media/Shop cũ chưa đổi — nợ ở `00-INDEX.md` §4.
+- ✅ **Đã chốt:** tên file #97 = `config/theme-tokens.json`, `config/locales.json` (+ `config/system-pages.json`); xem `data-needs.md`.
 
 **Xong khi:** hai tab cùng sửa một trang thì tab cũ nhận 409. Tree chứa id bản Library, id của shop
 khác, `binding.source = "Review"` hoặc richText có `<script>` đều bị BE từ chối, dù đã bỏ qua FE.
