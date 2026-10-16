@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Vsite.Api.ExceptionHandling;
 
+/// <summary>Metadata gắn lên endpoint để <see cref="BadHttpRequestExceptionHandler"/> trả <c>error_code</c>/detail riêng khi 413
+/// (route không có metadata này giữ <c>MEDIA_FILE_TOO_LARGE</c>).</summary>
+public sealed record RequestBodyTooLargeErrorMetadata(string ErrorCode, string Detail);
+
 /// <summary>
 /// Review sau T5, MEDIA-001 (#19 — mọi lỗi phải là ProblemDetails có <c>error_code</c>). Vượt giới
 /// hạn dung lượng request (<c>IHttpMaxRequestBodySizeFeature.MaxRequestBodySize</c>, set thủ công ở
@@ -29,12 +33,17 @@ public sealed class BadHttpRequestExceptionHandler : IExceptionHandler
             return false;
         }
 
+        // Route-aware (T10, WEBSITE-001): endpoint khai RequestBodyTooLargeErrorMetadata thì dùng mã của nó; mặc định vẫn Media.
+        // UseExceptionHandler đã xoá endpoint khỏi HttpContext khi handler chạy, nên lấy từ IExceptionHandlerFeature.
+        var endpoint = httpContext.Features.Get<IExceptionHandlerFeature>()?.Endpoint ?? httpContext.GetEndpoint();
+        var perRoute = endpoint?.Metadata.GetMetadata<RequestBodyTooLargeErrorMetadata>();
+
         var problemDetails = new ProblemDetails
         {
             Status = StatusCodes.Status413PayloadTooLarge,
             Title = "Payload Too Large",
-            Detail = "File vượt quá giới hạn dung lượng cho phép.",
-            Extensions = { ["error_code"] = "MEDIA_FILE_TOO_LARGE" },
+            Detail = perRoute?.Detail ?? "File vượt quá giới hạn dung lượng cho phép.",
+            Extensions = { ["error_code"] = perRoute?.ErrorCode ?? "MEDIA_FILE_TOO_LARGE" },
         };
 
         httpContext.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;

@@ -44,6 +44,33 @@ public sealed class ShopScopedRouteFilterTests
         Assert.NotNull(endpoint.Metadata.GetMetadata<ShopMembershipRequiredMarker>());
     }
 
+    /// <summary>#100 (T10, WEBSITE-001) — MỌI endpoint của document OpenAPI "website" phải Owner-only (đọc lẫn ghi), mã lỗi
+    /// <c>WEBSITE_OWNER_REQUIRED</c>. Thêm endpoint website mới mà quên <c>RequireShopOwner</c> là RED ngay (#17).</summary>
+    [Fact]
+    public void Every_website_endpoint_requires_owner_with_WEBSITE_OWNER_REQUIRED() =>
+        AssertEveryEndpointOfDocumentIsOwnerOnly("website", "WEBSITE_OWNER_REQUIRED", expectedMinimum: 10);
+
+    private static void AssertEveryEndpointOfDocumentIsOwnerOnly(string document, string errorCode, int expectedMinimum)
+    {
+        using var factory = CreateFactory();
+        var endpoints = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .OfType<RouteEndpoint>()
+            // GetMetadata lấy metadata cuối cùng (gần endpoint nhất) — cũng bao route khai WithGroupName trực tiếp (PUT /shops/{shopId}/logo).
+            .Where(e => e.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.IEndpointGroupNameMetadata>()?.EndpointGroupName == document)
+            .ToList();
+
+        Assert.True(endpoints.Count >= expectedMinimum, $"Document '{document}' chỉ có {endpoints.Count} endpoint (kỳ vọng >= {expectedMinimum}) — map có đủ không?");
+
+        var violations = endpoints
+            .Where(e => e.Metadata.GetMetadata<ShopOwnerRequirement>() is not { } r || r.ErrorCode != errorCode
+                || e.Metadata.GetMetadata<ShopMembershipRequiredMarker>() is null)
+            .Select(e => $"{e.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.HttpMethodMetadata>()?.HttpMethods.FirstOrDefault()} {e.RoutePattern.RawText}")
+            .ToList();
+
+        Assert.True(violations.Count == 0,
+            $"Endpoint của document '{document}' thiếu .RequireShopOwner(\"{errorCode}\", …) (#100): " + string.Join(", ", violations));
+    }
+
     [Fact]
     public void Every_route_with_shopId_parameter_requires_ShopMembership_marker()
     {

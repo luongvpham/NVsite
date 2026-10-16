@@ -7,6 +7,7 @@ using Vsite.Api.Media;
 using Vsite.Api.OpenApi;
 using Vsite.Api.Shop;
 using Vsite.Api.Tenancy;
+using Vsite.Api.Website;
 using Vsite.Application.Common.Imaging;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Website.Interfaces;
@@ -46,6 +47,11 @@ builder.Services.AddOpenApi("shop", options => options
     .AddSchemaTransformer<DuplicateNullableSchemaOccurrenceTagger>()
     .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
 builder.Services.AddOpenApi("media", options => options
+    .AddSchemaTransformer<ProblemDetailsSchemaTransformer>()
+    .AddSchemaTransformer<DuplicateNullableSchemaOccurrenceTagger>()
+    .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
+
+builder.Services.AddOpenApi("website", options => options
     .AddSchemaTransformer<ProblemDetailsSchemaTransformer>()
     .AddSchemaTransformer<DuplicateNullableSchemaOccurrenceTagger>()
     .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
@@ -189,6 +195,7 @@ var api = app.MapGroup(Vsite.Application.Common.ApiRoutes.Prefix);
 api.MapIdentityEndpoints();
 api.MapShopEndpoints();
 api.MapMediaEndpoints();
+api.MapWebsiteEndpoints();
 
 app.Run();
 
