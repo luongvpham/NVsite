@@ -24,6 +24,10 @@ public sealed partial class Page : TenantAuditableEntity
     [GeneratedRegex(@"\A[a-z0-9]+(-[a-z0-9]+)*\z")]
     private static partial Regex SlugPattern();
 
+    /// <summary>Slug khác rỗng khớp khuôn <c>^[a-z0-9]+(-[a-z0-9]+)*$</c>, ≤120 ký tự (cùng luật với entity — một nguồn).</summary>
+    public static bool IsWellFormedSlug(string? slug) =>
+        slug is { Length: > 0 and <= MaxSlugLength } && SlugPattern().IsMatch(slug);
+
     private Page()
     {
         Title = null!;

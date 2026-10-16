@@ -11,6 +11,7 @@ using Vsite.Application.Common.Imaging;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Website.Interfaces;
 using Vsite.Application.Website.Options;
+using Vsite.Application.Website.Seeding;
 using Vsite.Application.Website.Validation;
 using Vsite.Application.Website.Versioning;
 using Vsite.Domain.Abstractions;
@@ -90,6 +91,11 @@ builder.Services.AddSingleton(builder.Configuration.GetSection(PageTreeLimits.Se
 builder.Services.AddSingleton<IRichTextSanitizer, RichTextSanitizer>();
 builder.Services.AddSingleton(sp => new DocumentVersioning(sp.GetServices<IDocumentUpcaster>()));
 builder.Services.AddSingleton<PageTreeValidator>();
+
+// Handler Website (T6/T8): seed trang, luật slug, validator tokens — singleton vì chỉ giữ catalog/validator bất biến.
+builder.Services.AddSingleton<ThemeTokensValidator>();
+builder.Services.AddSingleton<WebsiteSeeder>();
+builder.Services.AddSingleton<SlugRules>();
 
 // Quyết định #7 (thu hẹp — xem TenantResolutionMiddleware). Scoped: một TenantContext per-request,
 // middleware set giá trị, mọi handler đọc qua ITenantContext (không handler nào tự resolve ShopId).
