@@ -307,7 +307,7 @@ describe('tree-rules.json (WEBSITE-001 S0-T3, #60) — luật cây cho BE, sinh 
     const items = types.Gallery?.props.items;
     expect(items?.kind).toBe('list');
     expect(items?.itemProps?.image?.kind).toBe('image');
-    expect(items?.itemProps?.caption?.kind ?? items?.itemProps?.alt?.kind ?? 'text').toBeDefined();
+    expect(items?.itemProps?.caption?.kind).toBe('text');
     const cta = types.Hero?.props.cta;
     expect(cta?.kind).toBe('group');
     expect(cta?.itemProps?.target?.kind).toBe('link');

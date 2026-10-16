@@ -86,7 +86,7 @@ trong `errors[].code` thì problem là `TREE_INVALID`.
 | `PROP_INVALID` | Sai shape theo `generated/props-schemas.json` |
 | `I18N_NOT_ENABLED` | Node có key `i18n` (chưa bật #98) |
 | `BINDING_SOURCE_NOT_ALLOWED` | `binding.source` không ∈ `config/binding-sources.json` **hoặc** không ∈ `sources` khai ở prop (loại `Review`); walker đi mọi độ sâu, kể cả `list`/`group`; `source` thiếu / `null` / không phải string cũng bị từ chối |
-| `LINK_URL_UNSAFE` | Prop kind `link` (mọi độ sâu, kể cả list/group) có `kind = "external"` mà `url` không phải string, hoặc scheme ∉ https/http/mailto/tel, hoặc không phải đường dẫn nội bộ `/x` (không `//host`) / `#neo`. Chuẩn hoá trước khi so: giải mã entity, bỏ ký tự điều khiển/khoảng trắng (`JaVa<tab>Script:`), không phân biệt hoa/thường |
+| `LINK_URL_UNSAFE` | Prop kind `link` (mọi độ sâu, kể cả list/group) có `kind = "external"` (bắt buộc có url) HOẶC bất kỳ kind nào mang khoá `url`, mà `url` không phải string, hoặc scheme ∉ https/http/mailto/tel, hoặc không phải đường dẫn nội bộ `/x` (không `//host`) / `#neo`. Chuẩn hoá trước khi so: giải mã entity, bỏ ký tự điều khiển/khoảng trắng (`JaVa<tab>Script:`), không phân biệt hoa/thường |
 | `RICHTEXT_UNSAFE` | Phần sanitizer cắt có thẻ/thuộc tính/scheme thuộc `config/sanitize-profiles.json#dangerous` |
 | `MEDIA_INVALID_IMAGE_REFERENCE` | Xem "Ảnh" |
 | `SYSTEM_PAGE_STRUCTURE_CHANGED` | Trang System: đổi id/type/variant/thứ tự/cha-con (thêm, xoá, đảo node) |
@@ -131,7 +131,7 @@ Khoá `dangerous` **không phải profile** (đừng liệt kê nó như profile
 | `valid-system-edit-content` (stored/incoming) | valid | — |
 | `invalid-library-image-id`, `invalid-other-shop-image-id`, `invalid-deleted-image-id` | invalid | `MEDIA_INVALID_IMAGE_REFERENCE` |
 | `invalid-binding-review`, `-nested`, `-in-list`, `invalid-binding-source-not-declared`, `-missing`, `-null` | invalid | `BINDING_SOURCE_NOT_ALLOWED` |
-| `invalid-link-url-*` (javascript, obfuscated, entity, data, vbscript, protocol-relative, bare-host) | invalid | `LINK_URL_UNSAFE` |
+| `invalid-link-url-*` (javascript, obfuscated, entity, data, vbscript, protocol-relative, bare-host, nonexternal-kind) | invalid | `LINK_URL_UNSAFE` |
 | `valid-link-urls` | valid | — |
 | `valid-link-urls` | valid | — |
 | `invalid-unknown-prop`, `invalid-prop-wrong-type` | invalid | `PROP_UNKNOWN`, `PROP_INVALID` |

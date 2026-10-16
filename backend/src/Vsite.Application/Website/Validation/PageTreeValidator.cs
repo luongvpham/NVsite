@@ -480,13 +480,19 @@ public sealed class PageTreeValidator
             }
         }
 
-        /// <summary>Chỉ kind <c>external</c> mang url; các kind khác (page/systemPage/...) trỏ bằng id nên không kiểm.</summary>
+        /// <summary>
+        /// Kiểm <c>url</c> bất cứ khi nào khoá có mặt, KHÔNG phụ thuộc <c>kind</c> (page/internal... mang url=javascript: vẫn nguy hiểm
+        /// nếu renderer đọc). Riêng <c>external</c> bắt buộc có url hợp lệ. Url tương đối '/x', '#neo' vẫn qua theo <see cref="LinkUrlRules"/>.
+        /// </summary>
         private void CheckLink(JsonNode propValue, string propPath)
         {
-            if (propValue is not JsonObject link
-                || link["kind"] is not JsonValue kind
-                || !kind.TryGetValue<string>(out var kindText)
-                || kindText != "external")
+            if (propValue is not JsonObject link)
+            {
+                return;
+            }
+
+            var isExternal = link["kind"] is JsonValue kind && kind.TryGetValue<string>(out var kindText) && kindText == "external";
+            if (!isExternal && !link.ContainsKey("url"))
             {
                 return;
             }
@@ -495,7 +501,7 @@ public sealed class PageTreeValidator
             if (!LinkUrlRules.IsSafe(url))
             {
                 sink.Add($"{propPath}/url", TreeErrorCodes.LinkUrlUnsafe,
-                    "Liên kết ngoài chỉ nhận https/http/mailto/tel, đường dẫn nội bộ '/x' hoặc '#neo'.");
+                    "Liên kết chỉ nhận url https/http/mailto/tel, đường dẫn nội bộ '/x' hoặc '#neo'.");
             }
         }
 

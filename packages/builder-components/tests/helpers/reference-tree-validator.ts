@@ -156,8 +156,10 @@ export function validateTree(input: ValidateInput): ValidateResult {
             }
             break;
           case 'link':
-            // Chỉ kind 'external' có url; các kind khác (page/systemPage/...) không mang url.
-            if (isRecord(value) && value.kind === 'external' && !isSafeLinkUrl(value.url)) codes.add('LINK_URL_UNSAFE');
+            // Kiểm url bất cứ khi nào khoá `url` có mặt, KHÔNG phụ thuộc kind; riêng kind 'external' bắt buộc có url hợp lệ.
+            if (isRecord(value) && (value.kind === 'external' || 'url' in value) && !isSafeLinkUrl(value.url)) {
+              codes.add('LINK_URL_UNSAFE');
+            }
             break;
           case 'richText':
             if (typeof value === 'string' && rule.profile) {

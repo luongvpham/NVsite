@@ -1,0 +1,21 @@
+{
+  "description": "Link kind KHÁC external (page) nhưng mang url=javascript: => vẫn LINK_URL_UNSAFE. Url được kiểm bất cứ khi nào khoá url có mặt, không phụ thuộc kind (stored XSS nếu renderer đọc url).",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": ["LINK_URL_UNSAFE"],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {
+          "cta": { "label": "Bấm", "target": { "kind": "page", "pageId": "00000000-0000-0000-0000-000000000001", "url": "javascript:alert(1)" } }
+        }
+      }
+    ]
+  }
+}

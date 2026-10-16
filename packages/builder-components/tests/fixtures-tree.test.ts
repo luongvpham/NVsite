@@ -50,6 +50,7 @@ const REQUIRED_FILES = [
   'invalid-hero-max-per-page.json',
   'invalid-children-not-accepted.json',
   'invalid-richtext-unsafe.json',
+  'invalid-link-url-nonexternal-kind.json',
   'invalid-envelope-missing-schema-version.json',
   'invalid-envelope-schema-version-string.json',
   'invalid-envelope-extra-node-field.json',

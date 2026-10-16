@@ -16,6 +16,16 @@
     { "id": "object", "input": "<object data=\"x.swf\"></object>", "expect": "reject" },
     { "id": "embed", "input": "<embed src=\"x.swf\">", "expect": "reject" },
     { "id": "style-tag", "input": "<style>p{background:url(javascript:alert(1))}</style><p>a</p>", "expect": "reject" },
+    { "id": "svg-onload", "input": "<svg onload=\"alert(1)\"></svg><p>a</p>", "expect": "reject" },
+    { "id": "iframe-srcdoc", "input": "<iframe srcdoc=\"&lt;b&gt;x&lt;/b&gt;\"></iframe>", "expect": "reject" },
+    {
+      "id": "mxss-math-mglyph-style",
+      "input": "<math><mtext><table><mglyph><style><img src=x onerror=alert(1)>",
+      "expect": "reject",
+      "mustNotContain": ["onerror", "<style", "<img"],
+      "note": "mXSS: parser đổi namespace math/svg làm <style> thành phần tử HTML. Phải bị từ chối chứ không chỉ cắt."
+    },
+    { "id": "srcdoc-on-allowed-tag", "input": "<p srcdoc=\"&lt;b&gt;x&lt;/b&gt;\">t</p>", "expect": "clean", "clean": "<p>t</p>" },
     {
       "id": "split-script-open-angle",
       "input": "<<script>script>alert(1)<</script>/script>",
