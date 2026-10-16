@@ -71,6 +71,11 @@ public sealed class ShopScopedRouteFilterTests
             $"Endpoint của document '{document}' thiếu .RequireShopOwner(\"{errorCode}\", …) (#100): " + string.Join(", ", violations));
     }
 
+    /// <summary>#100 (T10b) — MỌI endpoint của document "media" (kể cả `PUT /shops/{shopId}/logo`) Owner-only với `MEDIA_OWNER_REQUIRED`.</summary>
+    [Fact]
+    public void Every_media_endpoint_requires_owner_with_MEDIA_OWNER_REQUIRED() =>
+        AssertEveryEndpointOfDocumentIsOwnerOnly("media", "MEDIA_OWNER_REQUIRED", expectedMinimum: 10);
+
     [Fact]
     public void Every_route_with_shopId_parameter_requires_ShopMembership_marker()
     {
