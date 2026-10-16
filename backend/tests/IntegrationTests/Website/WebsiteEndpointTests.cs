@@ -432,7 +432,7 @@ public sealed class WebsiteEndpointTests
     // ---------- 413 ----------
 
     [Fact]
-    public async Task Body_over_limit_is_413_TREE_BODY_TOO_LARGE_but_media_keeps_its_own_code()
+    public async Task Body_over_limit_is_413_TREE_BODY_TOO_LARGE()
     {
         var (owner, shopId, website) = await OwnerWithWebsiteAsync();
         var draft = await GetDraftAsync(owner.Token, shopId, website.HomePageId);
@@ -443,6 +443,51 @@ public sealed class WebsiteEndpointTests
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
         Assert.Equal("TREE_BODY_TOO_LARGE", await ErrorCode(response));
         Assert.Equal(draft.Version, (await GetDraftAsync(owner.Token, shopId, website.HomePageId)).Version);
+    }
+
+    [Fact]
+    public async Task Malformed_json_in_tree_or_envelope_is_never_500()
+    {
+        var (owner, shopId, website) = await OwnerWithWebsiteAsync();
+        var url = $"{Site(shopId)}/pages/{website.HomePageId}/draft";
+        var draft = await GetDraftAsync(owner.Token, shopId, website.HomePageId);
+        var v = draft.Version;
+        var emptyTree = TreeWith();
+
+        // (a) khoá trùng BÊN TRONG tree; (b) surrogate lẻ trong chuỗi và trong tên khoá.
+        var inTree = new[]
+        {
+            ("dup-key", "{\"schemaVersion\":1,\"id\":\"root\",\"type\":\"Page\",\"children\":[],\"children\":[]}"),
+            ("lone-surrogate-value", "{\"schemaVersion\":1,\"id\":\"root\",\"type\":\"Page\",\"children\":[{\"id\":\"c_abc12\",\"type\":\"RichText\",\"variant\":\"RichText01\",\"props\":{\"content\":\"x\\uD800y\"}}]}"),
+            ("lone-surrogate-key", "{\"schemaVersion\":1,\"id\":\"root\",\"type\":\"Page\",\"children\":[],\"\\uD800\":1}"),
+        };
+        foreach (var (label, tree) in inTree)
+        {
+            var response = await _h.SendRawJsonAsync(HttpMethod.Put, url, owner.Token, $"{{\"tree\":{tree},\"version\":{v}}}");
+            Assert.True(response.StatusCode == HttpStatusCode.UnprocessableEntity, $"{label}: {(int)response.StatusCode}");
+            var problem = await JsonOf(response);
+            Assert.Equal("TREE_INVALID", problem.GetProperty("error_code").GetString());
+            Assert.NotEmpty(problem.GetProperty("params").GetProperty("errors").EnumerateArray());
+        }
+
+        // Khoá trùng ở gốc envelope: không 500 (422/400, có error_code nếu là 422).
+        var envelopes = new[]
+        {
+            $"{{\"tree\":{emptyTree},\"tree\":{emptyTree},\"version\":{v}}}",
+            $"{{\"tree\":{emptyTree},\"version\":{v},\"version\":{v + 1}}}",
+            $"{{\"tree\":{emptyTree},\"version\":{v},\"\\uD800\":1}}",
+        };
+        foreach (var body in envelopes)
+        {
+            var response = await _h.SendRawJsonAsync(HttpMethod.Put, url, owner.Token, body);
+            Assert.True(response.StatusCode is HttpStatusCode.UnprocessableEntity or HttpStatusCode.BadRequest, $"{body}: {(int)response.StatusCode}");
+            if (response.StatusCode == HttpStatusCode.UnprocessableEntity)
+            {
+                Assert.False(string.IsNullOrEmpty(await ErrorCode(response)));
+            }
+        }
+
+        Assert.Equal(v, (await GetDraftAsync(owner.Token, shopId, website.HomePageId)).Version);
     }
 
     [Fact]

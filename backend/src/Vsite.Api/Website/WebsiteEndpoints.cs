@@ -226,16 +226,22 @@ public static class WebsiteEndpoints
             var doc = JsonDocument.Parse(bytes);
             if (doc.RootElement.ValueKind == JsonValueKind.Object)
             {
-                return doc;
+                // Khoá trùng ở gốc envelope: JsonDocument chấp nhận (last-wins) nên phải chặn tường minh, kẻo `tree`/`version` mơ hồ.
+                // Name ném InvalidOperationException với surrogate lẻ — cũng là body hỏng, không phải 500.
+                var names = new HashSet<string>(StringComparer.Ordinal);
+                if (doc.RootElement.EnumerateObject().All(p => names.Add(p.Name)))
+                {
+                    return doc;
+                }
             }
 
             doc.Dispose();
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
         }
 
-        throw new UnprocessableException(errorCode, "Body phải là một object JSON hợp lệ.");
+        throw new UnprocessableException(errorCode, "Body phải là một object JSON hợp lệ (không trùng khoá).");
     }
 
     private static (string TreeJson, long Version) ParseDraftEnvelope(byte[] bytes)
