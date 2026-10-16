@@ -1,0 +1,14 @@
+{
+  "description": "Link external https hợp lệ được lưu nguyên vẹn (các biến thể mailto/tel//x/#neo được test đơn vị phía BE; Hero tối đa 1 mỗi trang nên một fixture chỉ có một link).",
+  "pageKind": "Composable",
+  "expect": "valid",
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      { "id": "c_hero1", "type": "Hero", "variant": "Hero01", "props": { "cta": { "label": "a", "target": { "kind": "external", "url": "https://vsite.vn/x?a=1&b=2" } } } },
+      { "id": "c_sect1", "type": "Section", "variant": "Section01", "children": [] }
+    ]
+  }
+}

@@ -20,13 +20,27 @@ public static class SystemPageGuard
     public static IReadOnlyList<TreeValidationError> Compare(
         string stored, string incoming, Func<string, IReadOnlyCollection<string>> editableProps)
     {
+        try
+        {
+            return CompareCore(stored, incoming, editableProps);
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException or ArgumentException)
+        {
+            // JsonNode đọc lười: khoá trùng chỉ ném khi truy cập node, nên bọc cả phép so chứ không riêng bước parse.
+            return [Structure("Không đọc được cây để so sánh với bản đang lưu.")];
+        }
+    }
+
+    private static IReadOnlyList<TreeValidationError> CompareCore(
+        string stored, string incoming, Func<string, IReadOnlyCollection<string>> editableProps)
+    {
         List<Flat> a, b;
         try
         {
             a = Flatten(stored);
             b = Flatten(incoming);
         }
-        catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException or ArgumentException)
         {
             return [Structure("Không đọc được cây để so sánh với bản đang lưu.")];
         }

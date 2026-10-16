@@ -132,7 +132,8 @@ public sealed class PageTreeValidator
             var reader = new Utf8JsonReader(
                 Encoding.UTF8.GetBytes(json),
                 new JsonReaderOptions { MaxDepth = int.MaxValue });
-            var depth = 0;
+            // Khoá đã gặp của từng object đang mở (null cho array). Độ sâu ≤ MaxJsonDepth nên stack nhỏ.
+            var keys = new Stack<HashSet<string>?>();
             var any = false;
             while (reader.Read())
             {
@@ -140,22 +141,34 @@ public sealed class PageTreeValidator
                 switch (reader.TokenType)
                 {
                     case JsonTokenType.StartObject or JsonTokenType.StartArray:
-                        depth++;
-                        if (depth > MaxJsonDepth)
+                        if (keys.Count >= MaxJsonDepth)
                         {
                             return (TreeErrorCodes.TooDeep, $"JSON lồng quá {MaxJsonDepth} tầng.");
                         }
 
+                        keys.Push(reader.TokenType == JsonTokenType.StartObject ? new HashSet<string>(StringComparer.Ordinal) : null);
                         break;
                     case JsonTokenType.EndObject or JsonTokenType.EndArray:
-                        depth--;
+                        keys.Pop();
+                        break;
+                    case JsonTokenType.PropertyName:
+                        // GetString giải mã escape: `\uD800` lẻ ném InvalidOperationException (bắt bên dưới), nếu để lọt tới
+                        // JsonNode/JSON Schema thì thành 500. Khoá trùng: JsonNode.Parse ném ArgumentException.
+                        if (!keys.Peek()!.Add(reader.GetString()!))
+                        {
+                            return (TreeErrorCodes.EnvelopeInvalid, "JSON có khoá trùng trong cùng một object.");
+                        }
+
+                        break;
+                    case JsonTokenType.String:
+                        _ = reader.GetString();
                         break;
                 }
             }
 
             return any ? null : (TreeErrorCodes.EnvelopeInvalid, "Tài liệu rỗng.");
         }
-        catch (JsonException ex)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or ArgumentException)
         {
             return (TreeErrorCodes.EnvelopeInvalid, $"Không phải JSON hợp lệ: {ex.Message}");
         }
@@ -398,7 +411,10 @@ public sealed class PageTreeValidator
                     switch (propRule.Kind)
                     {
                         case "image":
-                            CollectImage(propValue);
+                            CollectImage(propValue, propPath);
+                            break;
+                        case "link":
+                            CheckLink(propValue, propPath);
                             break;
                         case "binding":
                             CheckBinding(propValue, propRule, propPath);
@@ -431,31 +447,55 @@ public sealed class PageTreeValidator
             }
         }
 
-        private void CollectImage(JsonNode propValue)
+        private void CollectImage(JsonNode propValue, string propPath)
         {
-            if (propValue is JsonObject image
-                && image["imageId"] is JsonValue idValue
-                && idValue.TryGetValue<string>(out var imageId)
-                && _imageSet.Add(imageId))
+            if (propValue is not JsonObject image || image["imageId"] is not { } idNode)
             {
-                _imageIds.Add(imageId);
+                return;
+            }
+
+            if (idNode is JsonValue idValue && idValue.TryGetValue<string>(out var imageId))
+            {
+                if (_imageSet.Add(imageId))
+                {
+                    _imageIds.Add(imageId);
+                }
+            }
+            else
+            {
+                sink.Add($"{propPath}/imageId", TreeErrorCodes.PropInvalid, "'imageId' phải là chuỗi.");
             }
         }
 
         private void CheckBinding(JsonNode propValue, TreePropRule rule, string propPath)
         {
-            if (propValue is not JsonObject binding
-                || !binding.TryGetPropertyValue("source", out var sourceNode)
-                || sourceNode is null)
-            {
-                return;
-            }
-
+            // source thiếu / null / không phải string = không có gì để so → từ chối, KHÔNG coi là hợp lệ.
+            JsonNode? sourceNode = null;
+            _ = propValue is JsonObject binding && binding.TryGetPropertyValue("source", out sourceNode);
             var source = sourceNode is JsonValue v && v.TryGetValue<string>(out var s) ? s : null;
             if (source is null || !owner._bindingSources.Contains(source) || rule.Sources?.Contains(source) != true)
             {
                 sink.Add($"{propPath}/source", TreeErrorCodes.BindingSourceNotAllowed,
-                    $"Nguồn dữ liệu '{source ?? sourceNode.ToJsonString()}' không được phép ở prop này.");
+                    $"Nguồn dữ liệu '{source ?? sourceNode?.ToJsonString() ?? "(thiếu)"}' không được phép ở prop này.");
+            }
+        }
+
+        /// <summary>Chỉ kind <c>external</c> mang url; các kind khác (page/systemPage/...) trỏ bằng id nên không kiểm.</summary>
+        private void CheckLink(JsonNode propValue, string propPath)
+        {
+            if (propValue is not JsonObject link
+                || link["kind"] is not JsonValue kind
+                || !kind.TryGetValue<string>(out var kindText)
+                || kindText != "external")
+            {
+                return;
+            }
+
+            var url = link["url"] is JsonValue u && u.TryGetValue<string>(out var text) ? text : null;
+            if (!LinkUrlRules.IsSafe(url))
+            {
+                sink.Add($"{propPath}/url", TreeErrorCodes.LinkUrlUnsafe,
+                    "Liên kết ngoài chỉ nhận https/http/mailto/tel, đường dẫn nội bộ '/x' hoặc '#neo'.");
             }
         }
 

@@ -1,0 +1,21 @@
+{
+  "description": "Link external có url javascript: => LINK_URL_UNSAFE (stored XSS ở renderer). Giá trị kind external là phần duy nhất có url.",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": ["LINK_URL_UNSAFE"],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {
+          "cta": { "label": "Bấm", "target": { "kind": "external", "url": "javascript:alert(1)" } }
+        }
+      }
+    ]
+  }
+}

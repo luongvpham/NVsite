@@ -133,6 +133,8 @@ app.Services.GetRequiredService<ISanitizeProfileCatalog>();
 app.Services.GetRequiredService<IBindingSourceCatalog>();
 app.Services.GetRequiredService<ITreeRulesCatalog>();
 app.Services.GetRequiredService<IWebsiteSchemaProvider>();
+WebsiteConfigConsistency.EnsureEveryTypeHasPropsSchema(
+    app.Services.GetRequiredService<ITreeRulesCatalog>(), app.Services.GetRequiredService<IWebsiteSchemaProvider>());
 app.Services.GetRequiredService<PageTreeValidator>();
 
 if (app.Environment.IsDevelopment())

@@ -24,6 +24,7 @@ public static class TreeErrorCodes
     public const string I18nNotEnabled = "I18N_NOT_ENABLED";
     public const string BindingSourceNotAllowed = "BINDING_SOURCE_NOT_ALLOWED";
     public const string RichTextUnsafe = "RICHTEXT_UNSAFE";
+    public const string LinkUrlUnsafe = "LINK_URL_UNSAFE";
     public const string SystemPageStructureChanged = "SYSTEM_PAGE_STRUCTURE_CHANGED";
     public const string SystemPagePropNotEditable = "SYSTEM_PAGE_PROP_NOT_EDITABLE";
 }

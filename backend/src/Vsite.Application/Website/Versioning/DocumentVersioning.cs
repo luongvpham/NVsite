@@ -21,6 +21,8 @@ public static class DocumentSchemaVersions
 /// <summary>
 /// Một bước nâng tài liệu từ <see cref="FromVersion"/> lên <c>FromVersion + 1</c> (#94). Chỉ biến đổi nội dung —
 /// <c>schemaVersion</c> do <see cref="DocumentVersioning"/> đặt.
+/// <para>⚠ Upcaster nhận JSON CHƯA qua vỏ/validate (chỉ biết là object có <c>schemaVersion</c> nguyên): không được giả định
+/// trường nào tồn tại hay đúng kiểu, và KHÔNG được ném (ném = 500). Gặp dữ liệu lạ thì để nguyên cho bước validate sau báo lỗi.</para>
 /// </summary>
 public interface IDocumentUpcaster
 {
