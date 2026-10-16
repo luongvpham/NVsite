@@ -38,3 +38,6 @@ coverage/
 # Component Registry — generated/ .gitignore theo 07-component-manifest-schema.md §3
 # (khác api-sdk: registry.lock.json nằm NGOÀI generated/ nên vẫn được commit)
 packages/builder-components/generated/
+
+# Agent scratch/worktree output (SDD ledger, vbin)
+.superpowers/
