@@ -81,12 +81,12 @@ public sealed class SlugRulesTests
     {
         var rules = new SlugRules(S.Locales, S.SystemPages, new FixedReservedRoutes(new ReservedRoutes([], [])));
 
-        rules.EnsureAllowed("media"); // chưa có key → không chặn (provider trả rỗng)
+        rules.EnsureAllowed("media"); // danh sách tiêm trực tiếp rỗng → không chặn (provider thật thì thiếu key đã ném)
         Assert.Throws<UnprocessableException>(() => rules.EnsureAllowed("en"));
         Assert.Throws<UnprocessableException>(() => rules.EnsureAllowed("lien-he"));
     }
 
-    [Fact(Skip = "chờ người thêm reservedShopSitePaths vào config/reserved-routes.json — plan §4")]
+    [Fact]
     public void Real_config_reserves_media_and_api()
     {
         var provider = new ReservedRoutesProvider(TreeFixtures.Config("reserved-routes.json"));

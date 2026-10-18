@@ -307,13 +307,13 @@ public sealed record UpdatePageRequest(
 /// opaque (xmin) client nhận từ <c>getPageDraft</c>/lần lưu trước.</summary>
 public sealed class SavePageDraftRequest
 {
-    public JsonElement Tree { get; set; }
-    public long Version { get; set; }
+    public required JsonElement Tree { get; set; }
+    public required long Version { get; set; }
 }
 
 /// <summary>Shape OpenAPI của body <c>updateTheme</c> — KHÔNG dùng để bind thật.</summary>
 public sealed class UpdateThemeRequest
 {
     public string? PresetKey { get; set; }
-    public JsonElement Tokens { get; set; }
+    public required JsonElement Tokens { get; set; }
 }

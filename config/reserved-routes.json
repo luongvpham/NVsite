@@ -23,5 +23,6 @@
 	"media",
     ".well-known"
   ],
+  "reservedShopSitePaths": ["media","api","assets","static"],
   "reservedSubdomains": ["www", "admin", "app", "help", "api", "cdn", "static"]
 }

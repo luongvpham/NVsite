@@ -212,9 +212,19 @@ describe('config/system-pages.json (G3)', () => {
     for (const code of locales) expect(routes, `locale '${code}' trùng route System`).not.toContain(code);
   });
 
-  // plan §4 / S0-T1: key `reservedShopSitePaths` do NGƯỜI thêm vào config/reserved-routes.json (hook chặn agent ghi).
-  // Khi key đã có: đổi todo thành test thật — mã locale và mọi route System không được trùng key đó.
-  it.todo('mã locale và route System page không trùng reservedShopSitePaths (chờ người thêm key — plan §4)');
+  // plan §4 / S0-T1: key `reservedShopSitePaths` (người thêm vào config/reserved-routes.json — hook chặn agent ghi).
+  it('mã locale và route System page không trùng reservedShopSitePaths; có media và api', () => {
+    const reserved = (readJson('config/reserved-routes.json') as { reservedShopSitePaths?: string[] })
+      .reservedShopSitePaths;
+    expect(reserved, 'thiếu key reservedShopSitePaths').toBeDefined();
+    expect(reserved).toEqual(expect.arrayContaining(['media', 'api']));
+    const locales = (readJson('config/locales.json') as string[]).map((l) => l.toLowerCase());
+    const routes = Object.values(cfg()).flatMap((e) => e.routes);
+    for (const p of reserved ?? []) {
+      expect(locales, `locale trùng reserved '${p}'`).not.toContain(p.toLowerCase());
+      expect(routes, `route System trùng reserved '${p}'`).not.toContain(p);
+    }
+  });
 });
 
 describe('config/sanitize-profiles.json — khoá dangerous (R4, plan §3 Flow 2g, §10 T4)', () => {

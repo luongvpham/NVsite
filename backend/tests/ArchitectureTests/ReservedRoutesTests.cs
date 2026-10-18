@@ -25,16 +25,15 @@ public sealed class ReservedRoutesTests
     }
 
     [Fact]
-    public void ReservedShopSitePaths_missing_key_defaults_to_empty_list()
+    public void ReservedShopSitePaths_missing_key_fails_fast()
     {
-        // Config cũ (chưa có key reservedShopSitePaths — người thêm, plan §4) vẫn phải nạp được.
+        // Thiếu key = fail-open (slug `media`/`api` lọt) → provider phải ném, app không khởi động.
         var path = WriteTemp("""{"reservedPaths":["shop"],"reservedSubdomains":["admin"]}""");
         try
         {
-            var routes = new ReservedRoutesProvider(path).Routes;
+            var ex = Assert.Throws<InvalidOperationException>(() => new ReservedRoutesProvider(path));
 
-            Assert.NotNull(routes.ReservedShopSitePaths);
-            Assert.Empty(routes.ReservedShopSitePaths);
+            Assert.Contains("reservedShopSitePaths", ex.Message);
         }
         finally
         {
@@ -58,7 +57,7 @@ public sealed class ReservedRoutesTests
         }
     }
 
-    [Fact(Skip = "chờ người thêm reservedShopSitePaths vào config/reserved-routes.json — plan §4")]
+    [Fact]
     public void ReservedShopSitePaths_in_repo_config_contains_media_and_api()
     {
         var provider = new ReservedRoutesProvider(Path.Combine(FindRepoRoot(), "config", "reserved-routes.json"));
