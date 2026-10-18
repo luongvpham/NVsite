@@ -90,7 +90,6 @@ lệch có chủ đích.**
 
 | Nguồn | Vấn đề | Chặn |
 |---|---|---|
-| `WEBSITE-001/changelog.md` "Chưa làm xong" #2 | `pnpm gen:api` + thêm `website` vào `packages/api-sdk/orval.config.ts` + generated của `media` đổi (sau promote) — việc 5b/PR riêng, chưa ai quyết; CI `fe-tests` có thể đỏ cho tới khi làm | 5b / PR riêng |
 | `02` §6 #5 | Zalo user ID app-scoped: một Zalo app duy nhất hay mỗi app là một Provider | Tích hợp Zalo Login |
 | `02` §6 #6 | Xoá tài khoản: giải phóng `EmailNormalized` thế nào | Trước launch |
 | `02` §6 #8 | Mô hình giá hai luồng doanh thu | Trước khi bật thu phí |

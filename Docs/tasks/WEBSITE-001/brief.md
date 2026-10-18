@@ -79,7 +79,7 @@ https/http/mailto/tel, đường dẫn nội bộ `/x` (không `//host`) hoặc 
 của fixture; không chép fixture sang chỗ khác.
 
 ## Việc FE cần làm
-1. **Đầu tiên:** thêm `website` vào `packages/api-sdk/orval.config.ts`, chạy `pnpm gen:api` (cả generated của `media` đổi) — lock phải khớp; **chưa ai chạy** (xem "Không thuộc phạm vi").
+1. **SDK đã sinh sẵn trong nhánh WEBSITE-001:** `website` có trong `packages/api-sdk/orval.config.ts`, `pnpm gen:api` đã chạy (generated `website` mới, `media` đổi `PageDraft`); `src/index.ts`/`src/mocks.ts` đã export `website` (bỏ `ProblemDetails*` trùng). `tree`/`tokens` ra `interface JsonElement {}` — kiểu hoá bằng Zod của `builder-components`.
 2. MSW trước (dựa fixture), chỉ bật API thật ở integration. Màn: tạo website, danh sách trang, thuộc tính trang, editor (mở draft + autosave), Theme panel.
 3. Mỗi màn có **loading · error · empty** đủ cả ba (empty: chưa có website; website chưa có trang Composable ngoài trang chủ).
 4. Autosave: xử lý `409` (hoà giải), `422` (tô đỏ theo `path`), `sanitized` (nạp lại), `413`; state theo #20; dùng API model, không mirror Domain Entity.
@@ -99,7 +99,7 @@ của fixture; không chép fixture sang chỗ khác.
 - Nới quyền Manager/Staff (nghiệp vụ nhân viên, sau).
 
 ## Acceptance
-- [ ] `pnpm gen:api` chạy được, lock khớp; `website` có trong `orval.config.ts`
+- [x] `pnpm gen:api` chạy được, lock khớp; `website` có trong `orval.config.ts` (làm ở WEBSITE-001)
 - [ ] Loading / error / empty đủ cả ba cho mọi màn
 - [ ] Zod/JSON schema của `builder-components` dùng để kiểu hoá `tree`/`tokens`
 - [ ] Test Vitest + MSW pass; mock dùng fixture tree dùng chung

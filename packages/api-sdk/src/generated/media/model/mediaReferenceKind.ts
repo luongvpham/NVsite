@@ -8,4 +8,5 @@ export type MediaReferenceKind = typeof MediaReferenceKind[keyof typeof MediaRef
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const MediaReferenceKind = {
   ShopLogo: 'ShopLogo',
+  PageDraft: 'PageDraft',
 } as const;

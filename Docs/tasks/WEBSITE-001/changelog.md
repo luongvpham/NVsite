@@ -43,8 +43,9 @@ Một lần chạy giữa chừng có 2 test `TenantResolutionTests` đỏ do `D
 - Người duyệt `luongpham` trả lời 6 câu ở `contract-diff.md`: `JsonElement` chấp nhận; trần 64 KB theme / 1 MB + 4096 tree giữ;
   `updatePage` = PUT; Media owner-only xác nhận; body `savePageDraft`/`updateTheme` khai `required`. Contract đã promote
   (`website.v1.json`, `media.v1.json`, `contract.lock`: taskId `WEBSITE-001`, approvedBy `luongpham`).
-- `Docs/tasks/WEBSITE-001/brief.md` viết cho 5b. **Còn mở:** `pnpm gen:api` + thêm `website` vào `packages/api-sdk/orval.config.ts`
-  (+ generated của `media` đổi) — thuộc 5b hoặc PR riêng, chưa ai quyết; CI `fe-tests` có thể đỏ cho tới khi làm. I2 (OG image) xem "Chưa làm xong" #14.
+- `Docs/tasks/WEBSITE-001/brief.md` viết cho 5b. **`pnpm gen:api` + `website` trong `packages/api-sdk/orval.config.ts` đã làm trong nhánh này**
+  (người duyệt cho phép, lệch plan §1 "không Orval gen"): generated `website` mới + generated `media` đổi, export trong `src/index.ts`/`src/mocks.ts`
+  (bỏ `ProblemDetails*`/`HttpValidationProblemDetails*` trùng). `pnpm lint`, `pnpm build`, `pnpm test` toàn repo xanh. I2 (OG image) xem "Chưa làm xong" #14.
 - **Task chỉ đóng sau Gate 2.**
 
 ---
@@ -220,7 +221,7 @@ fixture README (S0 đề xuất, BE dùng đúng tên; **FE 5b phải dùng cùn
 | # | Việc | Nơi theo dõi |
 |---|---|---|
 | 1 | ✅ Key `reservedShopSitePaths` + bỏ 2 `Skip` + provider bắt buộc | Đã xong (mục "Đã xong sau review" (a)) |
-| 2 | ✅ Gate 1 qua + promote + `brief.md`. **Còn mở:** `pnpm gen:api` + `website` vào `orval.config.ts` + generated `media` đổi (5b/PR riêng; CI `fe-tests` có thể đỏ tới khi làm) | `00-INDEX.md` §4 |
+| 2 | ✅ Gate 1 qua + promote + `brief.md` + `gen:api`/`orval.config.ts` (`website`) | — |
 | 3 | `requiresProps` của manifest **chưa enforce** ở BE (đúng `data-needs.md` câu 7) | Bước 5b / 6 — khi editor cần |
 | 4 | `props-schemas.json` thiếu `additionalProperties: false` ở `image`/`binding`/`cta` (nên key lạ ở các prop này lọt qua vỏ) | Sửa ở manifest/Zod (#60) trước 5b; ghi `00-INDEX.md` §4 |
 | 5 | Comment `IMediaReferenceValidator` nói `IsInLibrary` nhưng code kiểm theo `Kind` (REFACTOR-DB-001) — chỉ lệch chữ | Sửa comment khi chạm file lần sau |

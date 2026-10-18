@@ -38,4 +38,5 @@ Review xuyên đợt bằng `change-reviewer` (model mạnh nhất) trên 19 com
 - Gate 1 qua (người duyệt `luongpham`, 6 câu trả lời xong); contract `website.v1`/`media.v1` đã promote, `contract.lock` cập nhật; body `savePageDraft`/`updateTheme` đã khai `required` (điều kiện 1 và I3 xong).
 - Key `reservedShopSitePaths` đã thêm; hai `Skip` bỏ; `ReservedRoutesProvider` fail-fast khi thiếu key (điều kiện 2 xong). Test: IntegrationTests 762 pass + 1 skip cũ của Shop, ArchitectureTests 12, ComponentSchemaTests 12, builder-components 251, 0 fail, `check:docs` xanh.
 - `Docs/tasks/WEBSITE-001/brief.md` đã viết. Vẫn chờ Gate 2.
-- Còn mở: `pnpm gen:api` + `website` vào `orval.config.ts` (5b/PR riêng, CI `fe-tests` có thể đỏ tới khi làm); I2 (`references` chưa báo `Page.OgImageId`) vẫn là nợ.
+- `pnpm gen:api` + `website` trong `orval.config.ts` đã làm trong nhánh này (người duyệt đồng ý); `pnpm lint/build/test` toàn repo xanh.
+- Còn mở: Gate 2; I2 (`references` chưa báo `Page.OgImageId`) vẫn là nợ.
