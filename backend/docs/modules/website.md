@@ -7,8 +7,8 @@
 
 `Website` → `Theme` → `Page` → `PageDraft` (backend) đã code: tạo website trắng, API metadata trang, `GET`/`PUT`
 draft có `version`, validate **toàn tree** mỗi lần `PUT`. **Chưa** có publish/rollback (8b), `NavigationConfig` (7),
-bảng `*_translation` (#98), `CurrentPublicationId`/`SeedTemplateId`. Contract `website.v1`/`media.v1` còn ở
-`contracts/openapi/.staging/` — **chưa qua Gate 1**. Lệch so với `05` và mục "Chưa làm xong":
+bảng `*_translation` (#98), `CurrentPublicationId`/`SeedTemplateId`. Contract `website.v1`/`media.v1` đã qua Gate 1 và promote
+(`contracts/openapi/`, `luongpham`); chờ Gate 2. Brief cho FE: `Docs/tasks/WEBSITE-001/brief.md`. Lệch so với `05` và mục "Chưa làm xong":
 `Docs/tasks/WEBSITE-001/changelog.md`.
 
 ## Đừng nhầm: Shop Site vs Shop Profile
@@ -90,7 +90,7 @@ Singleton, resolve **eager** ở `Program.cs` — thiếu/hỏng file làm host 
 - Artifact `packages/builder-components/generated/` (gitignored): `props-schemas.json`, `tree-rules.json`, `tree-envelope.schema.json`, `theme-tokens.schema.json`.
   Fresh clone/CI chạy `pnpm install && pnpm --filter @vsite/builder-components run gen:registry` trước `dotnet build` (target `EnsureWebsiteArtifacts`).
 - `WebsiteSchemaProvider` dựng mỗi schema với `SchemaRegistry` **riêng** (nếu không, host thứ hai trong cùng process — `WebApplicationFactory` — ném "Overwriting registered schemas").
-- ⚠️ `reservedShopSitePaths` trong `reserved-routes.json` **chưa có** → provider đọc rỗng (fail-open). Người phải thêm; xem changelog "Chờ người (a)".
+- `reservedShopSitePaths` trong `reserved-routes.json` là key **bắt buộc**: thiếu → `ReservedRoutesProvider` ném lỗi lúc khởi động (fail-fast), như các catalog khác.
 
 ## Concurrency
 

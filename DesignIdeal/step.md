@@ -36,7 +36,7 @@ từ `00-INDEX` §4) · **Xong khi**.
 
 ## 5a. `Website` → `Theme` → `Page` → `PageDraft` — backend (Lane C)
 
-> **Trạng thái:** ⏳ BE xong (WEBSITE-001), chờ Gate 1 (contract chưa promote) và Gate 2. Xem `Docs/tasks/WEBSITE-001/changelog.md`.
+> **Trạng thái:** ⏳ BE xong (WEBSITE-001), Gate 1 đã qua (contract đã promote, `brief.md` đã viết), chờ Gate 2. Xem `Docs/tasks/WEBSITE-001/changelog.md`.
 
 **Gồm**
 - Entity + migration. FK ghép theo #92. `schemaVersion` + khung upcaster cho `Tree` và `Tokens` theo #94.

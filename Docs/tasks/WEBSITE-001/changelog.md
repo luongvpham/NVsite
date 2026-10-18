@@ -13,47 +13,39 @@ và chỗ nào là **việc chưa làm xong** (kèm nơi theo dõi).
 | T4–T5b | `PageTreeValidator` (vỏ → node → props → binding → richText → ảnh), `RichTextSanitizer`, `SystemPageGuard`, `DocumentVersioning` (upcaster, #94) |
 | T6–T9 | Handler: tạo website trắng + System page, API metadata Page, lưu draft nối `IMediaReferenceValidator`, `SlugRules`, Theme; map chung `DbUpdateConcurrencyException`/`23505` → 409 |
 | T10 / T10b / T11 | 10 endpoint `/api/shops/{shopId}/website…`; Media chỉ Owner (#100); `references` quét thêm `PageDraft` |
-| T12 | Contract: `website.v1.json` + `media.v1.json` ở `.staging/` — **chưa promote** (xem "Chờ người" dưới) |
+| T12 | Contract: `website.v1.json` + `media.v1.json` — **đã promote** (Gate 1 qua, `luongpham`, 2026-10-18); `brief.md` đã viết |
 
 **Đọc kèm (KHÔNG chép lại ở đây):**
 - `Docs/tasks/WEBSITE-001/plan.md` — plan; §4 giữ #99/#100 (chuyển nghĩa sang `backend/docs/modules/website.md`).
-- `Docs/tasks/WEBSITE-001/contract-diff.md` — Gate 1 vòng 1 + 5 câu hỏi.
+- `Docs/tasks/WEBSITE-001/contract-diff.md` — Gate 1 vòng 1 + 6 câu hỏi (đã trả lời hết).
+- `Docs/tasks/WEBSITE-001/brief.md` — bàn giao BE → FE cho 5b.
 - `backend/docs/modules/website.md` — quy ước vận hành module.
 - `packages/builder-components/tests/fixtures/tree/README.md` — danh sách mã lỗi chi tiết `params.errors[].code`.
 
-**Trạng thái kiểm thử khi đóng code (2026-10-16, Docker thật — `Docs/DOCKER-TEST-DEBT.md` rỗng):**
-`ComponentSchemaTests` 12 pass · `ArchitectureTests` 11 pass + 1 skip · `IntegrationTests` 755 pass + 2 skip,
-0 fail · `builder-components` 245 pass + 1 todo. Hai skip của `IntegrationTests`: skip cũ
-`ShopEndpointTests.UpdateShop_Hosted_to_ExternalOnly_...` và skip mới `SlugRulesTests.Real_config_reserves_media_and_api`
-(cùng lý do với skip của `ArchitectureTests`: chờ key `reservedShopSitePaths`, xem "Chờ người" (a)).
+**Trạng thái kiểm thử cuối (2026-10-18, Docker thật — `Docs/DOCKER-TEST-DEBT.md` rỗng, sau Gate 1 + thêm key):**
+`ComponentSchemaTests` 12 pass · `ArchitectureTests` 12 pass · `IntegrationTests` 762 pass + 1 skip (skip cũ
+`ShopEndpointTests.UpdateShop_Hosted_to_ExternalOnly_...`; hai Skip của `reservedShopSitePaths` đã bỏ) · `builder-components` 251 pass,
+0 fail · `pnpm check:docs` xanh. (Mốc đóng code trước đó 2026-10-16: IntegrationTests 755 pass + 2 skip, builder-components 245 pass + 1 todo.)
 Một lần chạy giữa chừng có 2 test `TenantResolutionTests` đỏ do `Docker.DotNet` lúc khởi động container
 (flake hạ tầng khi nhiều Testcontainers chạy dồn); chạy lại riêng 2/2 pass, lần full cuối 0 fail.
 
 ---
 
-## Chờ người (chặn đóng task)
+## Đã xong sau review (trước kia là "Chờ người")
 
-### (a) Key `reservedShopSitePaths` trong `config/reserved-routes.json`
+### (a) Key `reservedShopSitePaths` — ĐÃ XONG
+- `config/reserved-routes.json` có `reservedShopSitePaths = ["media","api","assets","static"]`; hai `Skip`
+  (`ArchitectureTests.ReservedRoutesTests...`, `SlugRulesTests.Real_config_reserves_media_and_api`) đã bỏ;
+  `ReservedRoutesProvider` nay **bắt buộc** (thiếu key → ném lỗi lúc khởi động, fail-fast); `it.todo` ở
+  `config-files.test.ts` đã thành test thật. Slug `media`/`api`/`assets`/`static` nay bị chặn (`PAGE_SLUG_RESERVED`).
 
-- Plan §4 cần key này (slug trang không được là `media`, `api`, `assets`, `static`…). Hook `guard-write.mjs`
-  chặn agent ghi vào file đó (đúng thiết kế), nên **người** phải thêm.
-- **Hiện fail-open:** `IReservedRoutesProvider` đọc thiếu key → danh sách rỗng, không vỡ gì. Hệ quả: shop
-  hiện **tạo được** trang slug `media`/`api`/`assets`/`static` (route Shop Site sẽ đụng route hệ thống ở 8b).
-- Khi đã thêm key: (1) bỏ `Skip` ở `ArchitectureTests.ReservedRoutesTests.ReservedShopSitePaths_in_repo_config_contains_media_and_api`;
-  (2) bỏ `Skip` ở `IntegrationTests/Website/SlugRulesTests.Real_config_reserves_media_and_api`;
-  (3) đổi provider sang **bắt buộc** (thiếu key → fail-fast lúc khởi động, như các catalog khác);
-  (4) đổi `it.todo` ở `packages/builder-components/tests/config-files.test.ts` thành test thật (locale/route System không trùng key).
-- Theo dõi: `00-INDEX.md` §4.
-
-### (b) Gate 1 chưa qua — contract chưa promote, `brief.md` chưa viết
-
-- `contracts/openapi/.staging/website.v1.json` và `media.v1.json` đã sinh; `contracts/contract.lock` chưa đổi.
-- Cần người trả lời 5 câu hỏi ở `contract-diff.md` rồi chạy
-  `node tools/contract-sync/promote.mjs WEBSITE-001 <tên-người-duyệt> website.v1.json media.v1.json`:
-  1. tên người duyệt (agent không tự điền); 2. `JsonElement` → schema rỗng cho `tree`/`tokens`;
-  3. trần `THEME_BODY_TOO_LARGE` 64 KB và tree `MaxBodyBytes` + 4096 byte biên; 4. `updatePage` = PUT hay PATCH;
-  5. Media owner-only đổi hành vi (#100).
-- Sau promote mới viết `brief.md` cho 5b (DoD bước 8). **Task chưa đóng được cho tới lúc đó.**
+### (b) Gate 1 — ĐÃ QUA, `brief.md` đã viết
+- Người duyệt `luongpham` trả lời 6 câu ở `contract-diff.md`: `JsonElement` chấp nhận; trần 64 KB theme / 1 MB + 4096 tree giữ;
+  `updatePage` = PUT; Media owner-only xác nhận; body `savePageDraft`/`updateTheme` khai `required`. Contract đã promote
+  (`website.v1.json`, `media.v1.json`, `contract.lock`: taskId `WEBSITE-001`, approvedBy `luongpham`).
+- `Docs/tasks/WEBSITE-001/brief.md` viết cho 5b. **Còn mở:** `pnpm gen:api` + thêm `website` vào `packages/api-sdk/orval.config.ts`
+  (+ generated của `media` đổi) — thuộc 5b hoặc PR riêng, chưa ai quyết; CI `fe-tests` có thể đỏ cho tới khi làm. I2 (OG image) xem "Chưa làm xong" #14.
+- **Task chỉ đóng sau Gate 2.**
 
 ---
 
@@ -215,14 +207,20 @@ fixture README (S0 đề xuất, BE dùng đúng tên; **FE 5b phải dùng cùn
   rồi so tập clone; một mục/trang dù nhiều chỗ; so GUID theo `Guid` (GUID HOA không lọt). `MediaReferenceKind` thêm `PageDraft`,
   `MediaReferenceDto` thêm `pageId?`/`pageTitle?` (additive; classifier gắn nhãn BREAKING chỉ vì thêm giá trị enum).
 
+#### 21. Body `savePageDraft`/`updateTheme` khai `required` bằng C# `required` trên lớp shape OpenAPI
+
+- Gate 1 câu 6 chọn "có": request body khai `required` (`SavePageDraftRequest`: `tree`, `version`; `UpdateThemeRequest`: `tokens`;
+  `requestBody.required = true`). Thực thi bằng từ khoá C# `required` trên lớp shape chỉ để sinh OpenAPI; bind/validate thật
+  vẫn thô (đọc raw body, xem #13) nên 422 khi thiếu field giữ nguyên.
+
 ---
 
 ## Chưa làm xong
 
 | # | Việc | Nơi theo dõi |
 |---|---|---|
-| 1 | Key `reservedShopSitePaths` + bỏ 2 `Skip` + provider bắt buộc (hiện **fail-open**: slug `media`/`api`/`assets`/`static` chưa bị chặn) | Mục "Chờ người (a)" trên; `00-INDEX.md` §4 |
-| 2 | Gate 1: promote contract (`contract-diff.md` câu hỏi 1–5) và `brief.md` | Mục "Chờ người (b)"; `00-INDEX.md` §3 |
+| 1 | ✅ Key `reservedShopSitePaths` + bỏ 2 `Skip` + provider bắt buộc | Đã xong (mục "Đã xong sau review" (a)) |
+| 2 | ✅ Gate 1 qua + promote + `brief.md`. **Còn mở:** `pnpm gen:api` + `website` vào `orval.config.ts` + generated `media` đổi (5b/PR riêng; CI `fe-tests` có thể đỏ tới khi làm) | `00-INDEX.md` §4 |
 | 3 | `requiresProps` của manifest **chưa enforce** ở BE (đúng `data-needs.md` câu 7) | Bước 5b / 6 — khi editor cần |
 | 4 | `props-schemas.json` thiếu `additionalProperties: false` ở `image`/`binding`/`cta` (nên key lạ ở các prop này lọt qua vỏ) | Sửa ở manifest/Zod (#60) trước 5b; ghi `00-INDEX.md` §4 |
 | 5 | Comment `IMediaReferenceValidator` nói `IsInLibrary` nhưng code kiểm theo `Kind` (REFACTOR-DB-001) — chỉ lệch chữ | Sửa comment khi chạm file lần sau |
