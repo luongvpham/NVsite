@@ -1,0 +1,50 @@
+{
+  "description": "R3: Review nằm sâu (Section > Section > ServiceGrid) — walker phải đi mọi độ sâu.",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "BINDING_SOURCE_NOT_ALLOWED"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_sect1",
+        "type": "Section",
+        "variant": "Section01",
+        "props": {},
+        "children": [
+          {
+            "id": "c_sect2",
+            "type": "Section",
+            "variant": "Section01",
+            "props": {},
+            "children": [
+              {
+                "id": "c_sect3",
+                "type": "Section",
+                "variant": "Section01",
+                "props": {},
+                "children": [
+                  {
+                    "id": "c_grid1",
+                    "type": "ServiceGrid",
+                    "variant": "ServiceGrid01",
+                    "props": {
+                      "heading": "Dịch vụ",
+                      "source": {
+                        "source": "Review"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

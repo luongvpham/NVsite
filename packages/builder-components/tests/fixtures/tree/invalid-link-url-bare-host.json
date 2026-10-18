@@ -1,0 +1,21 @@
+{
+  "description": "Link external: không scheme và không bắt đầu bằng / hoặc # (vd. evil.com) bị từ chối.",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": ["LINK_URL_UNSAFE"],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {
+          "cta": { "label": "Bấm", "target": { "kind": "external", "url": "evil.example/x" } }
+        }
+      }
+    ]
+  }
+}

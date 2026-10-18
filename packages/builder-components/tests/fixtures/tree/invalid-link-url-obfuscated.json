@@ -1,0 +1,21 @@
+{
+  "description": "Link external: JaVa<tab>Script: (hoa/thường + tab chen giữa) vẫn là javascript:.",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": ["LINK_URL_UNSAFE"],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {
+          "cta": { "label": "Bấm", "target": { "kind": "external", "url": "JaVa\tScript:alert(1)" } }
+        }
+      }
+    ]
+  }
+}

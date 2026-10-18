@@ -118,6 +118,9 @@ public static class DependencyInjection
         services.AddScoped<IMediaReferenceValidator, MediaReferenceValidator>();
         services.AddScoped<IShopLogoReader, ShopLogoReader>(); // #88 — adapter cho port của Shop
 
+        // T11 WEBSITE-001 (MEDIA-001 #2) — nguồn tham chiếu PageDraft do Website cài; đăng ký ở đây để Media không tham chiếu Website.
+        services.AddScoped<IMediaReferenceSource, Vsite.Infrastructure.Website.PageDraftReferenceSource>();
+
         return services;
     }
 }

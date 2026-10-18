@@ -1,0 +1,21 @@
+{
+  "description": "Type không có trong registry.",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "NODE_TYPE_UNKNOWN"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_ghost",
+        "type": "Ghost",
+        "variant": "Ghost01",
+        "props": {}
+      }
+    ]
+  }
+}

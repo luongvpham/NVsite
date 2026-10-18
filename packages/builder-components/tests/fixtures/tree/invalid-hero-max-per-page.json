@@ -1,0 +1,27 @@
+{
+  "description": "maxPerPage: Hero tối đa 1 trên một trang.",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "NODE_MAX_PER_PAGE_EXCEEDED"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {}
+      },
+      {
+        "id": "c_hero2",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {}
+      }
+    ]
+  }
+}

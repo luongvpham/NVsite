@@ -1,0 +1,40 @@
+{
+  "description": "R6/T5b: đổi prop KHÔNG editableInSystemPage (RichText.align) trên trang System; content giữ nguyên.",
+  "pageKind": "System",
+  "systemType": "Contact",
+  "expect": "invalid",
+  "errorCodes": [
+    "SYSTEM_PAGE_PROP_NOT_EDITABLE"
+  ],
+  "stored": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_cont1",
+        "type": "RichText",
+        "variant": "RichText01",
+        "props": {
+          "content": "<p>Liên hệ</p>"
+        }
+      }
+    ]
+  },
+  "incoming": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_cont1",
+        "type": "RichText",
+        "variant": "RichText01",
+        "props": {
+          "content": "<p>Liên hệ</p>",
+          "align": "justify"
+        }
+      }
+    ]
+  }
+}

@@ -24,5 +24,13 @@ public sealed class ReservedRoutesProvider : IReservedRoutesProvider
         var json = File.ReadAllText(filePath);
         Routes = JsonSerializer.Deserialize<ReservedRoutes>(json)
             ?? throw new InvalidOperationException($"Không parse được reserved-routes.json tại '{filePath}'.");
+
+        // Key bắt buộc (WEBSITE-001 #98/R9): thiếu key thì mặc định `[]` sẽ âm thầm cho phép slug trang `media`/`api`.
+        using var doc = JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("reservedShopSitePaths", out _))
+        {
+            throw new InvalidOperationException(
+                $"reserved-routes.json tại '{filePath}' thiếu key bắt buộc 'reservedShopSitePaths'.");
+        }
     }
 }

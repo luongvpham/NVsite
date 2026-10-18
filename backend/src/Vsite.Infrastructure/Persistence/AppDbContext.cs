@@ -5,8 +5,10 @@ using Vsite.Domain.Abstractions;
 using Vsite.Domain.Common;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Domain.Media.Entities;
+using Vsite.Domain.Website.Entities;
 using Vsite.Infrastructure.Persistence.Seed;
 using ShopEntity = Vsite.Domain.Shop.Entities.Shop;
+using WebsiteEntity = Vsite.Domain.Website.Entities.Website;
 
 namespace Vsite.Infrastructure.Persistence;
 
@@ -44,6 +46,12 @@ public sealed class AppDbContext(
 
     // ---- Media ----
     public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
+
+    // ---- Website ----
+    public DbSet<WebsiteEntity> Websites => Set<WebsiteEntity>();
+    public DbSet<Theme> Themes => Set<Theme>();
+    public DbSet<Page> Pages => Set<Page>();
+    public DbSet<PageDraft> PageDrafts => Set<PageDraft>();
 
     /// <summary>
     /// snake_case cho MỌI tên bảng/cột/khoá/index (REFACTOR-DB-001) — bật Ở ĐÂY chứ không ở

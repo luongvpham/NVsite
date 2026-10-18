@@ -5,4 +5,8 @@ import type { MediaReferenceKind } from './mediaReferenceKind';
 
 export interface MediaReferenceDto {
   kind: MediaReferenceKind;
+  /** @nullable */
+  pageId?: string | null;
+  /** @nullable */
+  pageTitle?: string | null;
 }

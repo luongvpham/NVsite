@@ -12,6 +12,10 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
+    // Hosts file trỏ `{slug}.vsite.local` về 127.0.0.1 (IPv4). Mặc định Vite chỉ nghe `localhost`,
+    // mà Node trên Windows có thể resolve thành `::1` (IPv6) → trình duyệt bị từ chối kết nối.
+    // Cùng cách với apps/portal (host cố định, không dùng `true` để khỏi mở ra mạng LAN).
+    host: '127.0.0.1',
     // Website shop dev chạy theo Host `{slug}.vsite.local:3000` (hosts file, xem
     // backend/docs/modules/identity.md). Vite mặc định CHẶN mọi hostname lạ bằng 403
     // ("Blocked request. This host is not allowed"), nên phải cho phép cả hậu tố này — nếu không

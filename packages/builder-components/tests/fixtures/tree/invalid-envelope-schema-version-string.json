@@ -1,0 +1,14 @@
+{
+  "description": "R12: schemaVersion là chuỗi \"1\".",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "TREE_ENVELOPE_INVALID"
+  ],
+  "tree": {
+    "schemaVersion": "1",
+    "id": "root",
+    "type": "Page",
+    "children": []
+  }
+}

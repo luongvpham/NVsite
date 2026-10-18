@@ -931,12 +931,24 @@
         "properties": {
           "kind": {
             "$ref": "#/components/schemas/MediaReferenceKind"
+          },
+          "pageId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          },
+          "pageTitle": {
+            "type": "string",
+            "default": null,
+            "nullable": true
           }
         }
       },
       "MediaReferenceKind": {
         "enum": [
-          "ShopLogo"
+          "ShopLogo",
+          "PageDraft"
         ]
       },
       "MediaReferencesDto": {

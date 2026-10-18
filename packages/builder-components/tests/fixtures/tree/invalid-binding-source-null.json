@@ -1,0 +1,19 @@
+{
+  "description": "R3 bổ sung: binding có source: null => BINDING_SOURCE_NOT_ALLOWED (không được coi là hợp lệ vì không có gì để so).",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": ["BINDING_SOURCE_NOT_ALLOWED"],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_grid1",
+        "type": "ServiceGrid",
+        "variant": "ServiceGrid01",
+        "props": { "heading": "Dịch vụ", "source": { "source": null } }
+      }
+    ]
+  }
+}

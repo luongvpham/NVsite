@@ -12,9 +12,15 @@
     "taskId": "REFACTOR-API-001"
   },
   "media.v1.json": {
-    "sha256": "b0e9fbd6066fd3c0eeeb64e156304c20b8ed74cdc049c39d587ba296e98cda02",
-    "approvedAt": "2026-10-09T07:16:15.838Z",
-    "approvedBy": "VietLuong Pham",
-    "taskId": "REFACTOR-API-001"
+    "sha256": "4c1c8b552628b064009917e8544fb51662f469355a2598a36ad3746d6027d3f8",
+    "approvedAt": "2026-10-18T08:55:17.801Z",
+    "approvedBy": "luongpham",
+    "taskId": "WEBSITE-001"
+  },
+  "website.v1.json": {
+    "sha256": "f1a10a97820618ece7b46345d567b3816b06bda5edd8a15878342edd42a5e557",
+    "approvedAt": "2026-10-18T08:55:17.796Z",
+    "approvedBy": "luongpham",
+    "taskId": "WEBSITE-001"
   }
 }

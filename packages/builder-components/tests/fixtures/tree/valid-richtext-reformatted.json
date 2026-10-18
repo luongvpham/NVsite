@@ -1,0 +1,36 @@
+{
+  "description": "R5: HTML Lexical thô (class/style/dir/span, h1 ngoài whitelist) => 200, lưu BẢN SẠCH (bỏ class/style/dir/span, giữ chữ). Response phải có sanitized:true. GET draft trả expectedTree.",
+  "pageKind": "Composable",
+  "expect": "valid",
+  "expectSanitized": true,
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_rich1",
+        "type": "RichText",
+        "variant": "RichText01",
+        "props": {
+          "content": "<h1>Tiêu đề</h1><p class=\"PlaygroundEditorTheme__paragraph\" dir=\"ltr\"><span style=\"white-space: pre-wrap\">Xin chào</span></p>"
+        }
+      }
+    ]
+  },
+  "expectedTree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_rich1",
+        "type": "RichText",
+        "variant": "RichText01",
+        "props": {
+          "content": "Tiêu đề<p>Xin chào</p>"
+        }
+      }
+    ]
+  }
+}

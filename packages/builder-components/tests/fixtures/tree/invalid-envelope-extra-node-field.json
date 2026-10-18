@@ -1,0 +1,24 @@
+{
+  "description": "Vỏ: node có trường lạ (additionalProperties:false).",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "TREE_ENVELOPE_INVALID"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {},
+        "style": {
+          "color": "red"
+        }
+      }
+    ]
+  }
+}

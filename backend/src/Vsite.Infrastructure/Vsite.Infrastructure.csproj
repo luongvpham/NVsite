@@ -31,6 +31,10 @@
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
     <!-- IObjectStorage LocalDisk + S3 (T2, MEDIA-001, Quyết định #75/#83) -->
     <PackageReference Include="AWSSDK.S3" />
+    <!-- Validate vỏ Tree/Tokens + props từng component bằng JSON Schema sinh từ codegen (T1, WEBSITE-001, #60/#97) -->
+    <PackageReference Include="JsonSchema.Net" />
+    <!-- IRichTextSanitizer (T4, WEBSITE-001, #67, G4) — Ganss.Xss, MIT -->
+    <PackageReference Include="HtmlSanitizer" />
   </ItemGroup>
 
 </Project>

@@ -44,6 +44,83 @@ public sealed class ShopScopedRouteFilterTests
         Assert.NotNull(endpoint.Metadata.GetMetadata<ShopMembershipRequiredMarker>());
     }
 
+    /// <summary>#100 (T10, WEBSITE-001) — MỌI endpoint của document OpenAPI "website" phải Owner-only (đọc lẫn ghi), mã lỗi
+    /// <c>WEBSITE_OWNER_REQUIRED</c>. Thêm endpoint website mới mà quên <c>RequireShopOwner</c> là RED ngay (#17).</summary>
+    [Fact]
+    public void Every_website_endpoint_requires_owner_with_WEBSITE_OWNER_REQUIRED() =>
+        AssertEveryEndpointOfDocumentIsOwnerOnly("website", "WEBSITE_OWNER_REQUIRED", expectedMinimum: 10);
+
+    private static void AssertEveryEndpointOfDocumentIsOwnerOnly(string document, string errorCode, int expectedMinimum)
+    {
+        using var factory = CreateFactory();
+        var all = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>().ToList();
+
+        var scoped = all.Where(e => BelongsToDocument(e, document)).ToList();
+        Assert.True(scoped.Count >= expectedMinimum, $"Document '{document}' chỉ có {scoped.Count} endpoint (kỳ vọng >= {expectedMinimum}) — map có đủ không?");
+
+        var violations = FindOwnerViolations(all, document, errorCode);
+        Assert.True(violations.Count == 0,
+            $"Endpoint của document '{document}' thiếu .RequireShopOwner(\"{errorCode}\", …) (#100): " + string.Join(", ", violations));
+    }
+
+    /// <summary>Thuộc document nếu khai <c>WithGroupName(document)</c> HOẶC route nằm dưới <c>/api/shops/{shopId}/{document}</c>
+    /// (media: thêm <c>PUT …/logo</c>) — kể cả khi quên <c>WithGroupName</c>, để route lạc group không lọt kiểm tra.</summary>
+    private static bool BelongsToDocument(RouteEndpoint e, string document)
+    {
+        if (e.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.IEndpointGroupNameMetadata>()?.EndpointGroupName == document)
+        {
+            return true;
+        }
+
+        var raw = (e.RoutePattern.RawText ?? string.Empty).TrimStart('/');
+        return System.Text.RegularExpressions.Regex.IsMatch(raw, $@"^api/shops/\{{shopId[^}}]*\}}/{document}(/|$)")
+            || (document == "media" && System.Text.RegularExpressions.Regex.IsMatch(raw, @"^api/shops/\{shopId[^}]*\}/logo$"));
+    }
+
+    private static List<string> FindOwnerViolations(IEnumerable<RouteEndpoint> endpoints, string document, string errorCode) =>
+        endpoints
+            .Where(e => BelongsToDocument(e, document))
+            .Where(e => e.Metadata.GetMetadata<ShopOwnerRequirement>() is not { } r || r.ErrorCode != errorCode
+                || e.Metadata.GetMetadata<ShopMembershipRequiredMarker>() is null)
+            .Select(e => $"{e.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.HttpMethodMetadata>()?.HttpMethods.FirstOrDefault()} {e.RoutePattern.RawText}")
+            .ToList();
+
+    private static RouteEndpoint FakeEndpoint(string pattern, params object[] metadata)
+    {
+        var builder = new RouteEndpointBuilder(_ => Task.CompletedTask, Microsoft.AspNetCore.Routing.Patterns.RoutePatternFactory.Parse(pattern), 0);
+        foreach (var m in metadata)
+        {
+            builder.Metadata.Add(m);
+        }
+
+        return (RouteEndpoint)builder.Build();
+    }
+
+    /// <summary>Chứng minh bộ lọc không mù: route nằm NGOÀI group (không WithGroupName) dưới prefix website/media mà chỉ
+    /// RequireShopMembership hoặc sai mã lỗi thì bị bắt; route đúng thì không.</summary>
+    [Fact]
+    public void Owner_check_catches_routes_outside_the_group_that_forgot_owner_requirement()
+    {
+        var membershipOnly = FakeEndpoint("/api/shops/{shopId:guid}/website/rogue", new ShopMembershipRequiredMarker());
+        var wrongCode = FakeEndpoint("/api/shops/{shopId:guid}/media/rogue", new ShopMembershipRequiredMarker(), new ShopOwnerRequirement("SHOP_OWNER_REQUIRED", "x"));
+        var rogueLogo = FakeEndpoint("/api/shops/{shopId:guid}/logo", new ShopMembershipRequiredMarker());
+        var good = FakeEndpoint("/api/shops/{shopId:guid}/website/ok", new ShopMembershipRequiredMarker(), new ShopOwnerRequirement("WEBSITE_OWNER_REQUIRED", "x"));
+        var unrelated = FakeEndpoint("/api/shops/{shopId:guid}", new ShopMembershipRequiredMarker());
+
+        var website = FindOwnerViolations([membershipOnly, wrongCode, rogueLogo, good, unrelated], "website", "WEBSITE_OWNER_REQUIRED");
+        var media = FindOwnerViolations([membershipOnly, wrongCode, rogueLogo, good, unrelated], "media", "MEDIA_OWNER_REQUIRED");
+
+        Assert.Equal(["/api/shops/{shopId:guid}/website/rogue"], website.Select(v => v[(v.IndexOf(' ') + 1)..]).ToList());
+        Assert.Equal(2, media.Count);
+        Assert.Contains(media, v => v.EndsWith("/media/rogue", StringComparison.Ordinal));
+        Assert.Contains(media, v => v.EndsWith("/logo", StringComparison.Ordinal));
+    }
+
+    /// <summary>#100 (T10b) — MỌI endpoint của document "media" (kể cả `PUT /shops/{shopId}/logo`) Owner-only với `MEDIA_OWNER_REQUIRED`.</summary>
+    [Fact]
+    public void Every_media_endpoint_requires_owner_with_MEDIA_OWNER_REQUIRED() =>
+        AssertEveryEndpointOfDocumentIsOwnerOnly("media", "MEDIA_OWNER_REQUIRED", expectedMinimum: 10);
+
     [Fact]
     public void Every_route_with_shopId_parameter_requires_ShopMembership_marker()
     {

@@ -1,0 +1,36 @@
+{
+  "description": "T5b: trang System chỉ đổi props.content của RichText (prop editableInSystemPage) => hợp lệ.",
+  "pageKind": "System",
+  "systemType": "Contact",
+  "expect": "valid",
+  "stored": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_cont1",
+        "type": "RichText",
+        "variant": "RichText01",
+        "props": {
+          "content": "<p>Liên hệ</p>"
+        }
+      }
+    ]
+  },
+  "incoming": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_cont1",
+        "type": "RichText",
+        "variant": "RichText01",
+        "props": {
+          "content": "<p>Liên hệ: 0900 000 000</p>"
+        }
+      }
+    ]
+  }
+}

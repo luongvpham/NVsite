@@ -7,26 +7,18 @@ thật của repo ngày 2026-09-30. **Làm theo thứ tự, tick từng ô.** T�
 > sống trong bộ nhớ (Quyết định #3), tải lại là mất phiên. Chỉ đi qua các link trong ứng dụng. Lỡ mất
 > phiên thì đăng nhập lại (việc này cũng là một phần của bước 3.4).
 
-**Đã kiểm sẵn ngày 2026-09-30 (không cần làm lại, chỉ để bạn biết nền đã vững):**
-API đang chạy ở cổng 5270 là bản mới, phục vụ `/media/…` với đúng header (`image/webp`, `Cache-Control`,
-`nosniff`); qua proxy của `apps/web`, một ảnh thử ở host `spa-abc.vsite.local:3000` ra `200`, host lạ ra `403`,
-truy cập vượt thư mục ra `404`; DB dev đã có cả hai migration; đoạn JSON Gallery ở bước 5.6 hợp lệ với schema
-của registry. Hai lỗi FE (proxy `apps/web` không hoạt động, không có link nội bộ tới `/dev-registry`) đã được
-sửa khi soạn tài liệu này, xem `changelog.md` mục 18. **Chưa kiểm được:** phía `apps/portal` (cần file hosts),
-toàn bộ luồng trình duyệt, và 413 thật. Đó là phần việc của bạn.
+**Đã chạy thử ngày 2026-10-13 (MEDIA-001-ACCEPT, xem `Docs/tasks/MEDIA-001-ACCEPT/changelog.md`):** toàn bộ phần
+API/curl (413 thật, `/media/*` trên các host, xoá/clone/logo) và các Phần 3, 4, 5 dưới đây đã đạt. Tài liệu này
+được sửa lại cho khớp môi trường thật sau lần chạy đó.
 
 ## Phần 0 — Chuẩn bị (làm một lần)
 
-- [ ] **0.1 Kiểm cổng 5270 (API).** Lúc tôi kiểm, cổng này **đã có một `Vsite.Api.exe` đang chạy**
-  (PID 13648, khởi động 21:48 ngày 2026-09-30, chạy từ `backend\src\Vsite.Api\bin\Debug`). Tôi đã thử tài
-  liệu OpenAPI của nó: **đã có endpoint mới** (`derivatives`, `logoUrl`), và nó phục vụ được `/media/…` đúng.
-  Nếu đó là API bạn vừa chạy thì **dùng luôn, đừng tắt**, và bỏ qua cửa sổ A ở Phần 1 (nhưng bạn vẫn phải
-  xem log của terminal đang chạy nó để lấy link xác thực email ở bước 2.2). Để tự kiểm một API đang chạy có
-  phải bản mới không:
+- [ ] **0.1 Kiểm cổng 5270 (API).** Nếu đã có một `Vsite.Api.exe` đang chạy ở đó thì kiểm xem có phải bản mới không:
   ```
   curl.exe -s http://localhost:5270/openapi/media.json | findstr /c:"derivatives"
   ```
-  Có dòng kết quả là bản mới. Không có, hoặc bạn muốn chạy lại từ đầu, thì tắt nó rồi làm cửa sổ A:
+  Có dòng kết quả là bản mới: **dùng luôn**, bỏ qua cửa sổ A ở Phần 1 (vẫn phải xem log của terminal đang chạy nó
+  để lấy link xác thực email ở 2.2). Không có kết quả, hoặc muốn chạy lại từ đầu, thì tắt nó rồi làm cửa sổ A:
   ```
   netstat -ano | findstr :5270
   taskkill /PID <PID> /F
@@ -34,23 +26,28 @@ toàn bộ luồng trình duyệt, và 413 thật. Đó là phần việc của 
   (Bản API đang chạy giữ khoá file trong `bin`, nên nếu `dotnet build` hay `dotnet ef` báo file bị khoá thì
   cũng phải tắt nó trước.)
 - [ ] **0.2 File hosts.** Mở Notepad bằng quyền **Administrator**, sửa `C:\Windows\System32\drivers\etc\hosts`,
-  thêm hai dòng (hiện chưa có dòng `vsite` nào):
+  thêm hai dòng:
   ```
   127.0.0.1  admin.vsite.local
   127.0.0.1  spa-abc.vsite.local
   ```
   `spa-abc` là slug của shop sẽ tạo ở bước 2.4; dùng slug khác thì sửa theo. Không cần khởi động lại máy.
-- [ ] **0.3 Postgres và Redis.** Đang chạy sẵn dạng cài trực tiếp: Postgres cổng **5433** (user `postgres`,
-  mật khẩu `password`), Redis cổng **6379**, đúng với `appsettings.Development.json`. **Không dùng
-  `docker compose up` cho việc này:** compose tạo Postgres ở cổng 5432 với user `vsite`, không khớp cấu hình
-  (đây là một điểm lệch có sẵn, chưa được sửa).
+- [ ] **0.3 Postgres và Redis.** Postgres cài trực tiếp (service `postgresql-x64-16`), cổng **5433**
+  (user `postgres`, mật khẩu `password`), đúng với `appsettings.Development.json`. **Redis (cổng 6379) là BẮT BUỘC**
+  và thường *không* chạy sẵn: thiếu nó thì mọi request qua tenant middleware (mọi API trừ `/media/*`) ra **500**
+  (`RedisConnectionException`). Dựng bằng Docker:
+  ```
+  docker run -d --name vsite-redis-accept -p 6379:6379 redis:7-alpine
+  ```
+  Sau khi khởi động lại máy container này dừng: `docker start vsite-redis-accept`. Dọn khi xong:
+  `docker rm -f vsite-redis-accept`. **Không dùng `docker compose up` cho Postgres:** compose tạo Postgres ở
+  cổng 5432 với user `vsite`, không khớp cấu hình (điểm lệch có sẵn, chưa sửa).
 - [ ] **0.4 Áp dụng migration** (API không tự migrate). Từ thư mục gốc repo:
   ```
   dotnet ef database update --project backend/src/Vsite.Infrastructure --startup-project backend/src/Vsite.Api
   ```
-  Kỳ vọng kết thúc bằng `Done.`, trong đó có migration `AddMediaAsset`. Chạy lại nhiều lần cũng an toàn.
-  **Đã kiểm trên máy bạn:** `dotnet ef migrations list` cho thấy DB dev `vsite_dev` đã có cả `InitialSchema` lẫn
-  `AddMediaAsset` (không có mục Pending), nên bước này có thể là no-op. Cứ chạy lại cho chắc.
+  Kỳ vọng kết thúc bằng `Done.`. Các migration đã được gộp thành một (`InitialSchema`, đã gồm bảng `MediaAsset`),
+  nên trên DB dev đã cập nhật lệnh này in "No migrations were applied" — bình thường. Chạy lại nhiều lần cũng an toàn.
 - [ ] **0.5 Sinh artifact codegen** mà backend cần lúc khởi động:
   ```
   pnpm install
@@ -72,7 +69,7 @@ toàn bộ luồng trình duyệt, và 413 thật. Đó là phần việc của 
 
 - [ ] **2.1** Mở `http://admin.vsite.local:5173/register`, đăng ký bằng một email tuỳ ý.
 - [ ] **2.2 Xác thực email.** Email không được gửi thật. Xem **cửa sổ A** tìm dòng `[DEV EMAIL] To=<email>`,
-  trong nội dung có link dạng `http://localhost:5270/auth/verify-email?token=…`. Mở link đó trong trình duyệt.
+  trong nội dung có link dạng `http://localhost:5270/api/auth/verify-email?token=…`. Mở link đó trong trình duyệt.
   Link hết hạn sau **20 phút**; quá hạn thì đăng ký lại bằng email khác.
 - [ ] **2.3** Vào `http://admin.vsite.local:5173/login`, đăng nhập. Ứng dụng chuyển tới `/shops`.
 - [ ] **2.4** Tạo shop: tên tuỳ ý, slug **`spa-abc`**, loại **Hosted**. Bạn thành **Owner** của shop.
@@ -107,7 +104,7 @@ Lấy đường dẫn ảnh logo ở 3.3, phần từ `/media/…` trở đi (g�
 tốt nhất trong **cửa sổ ẩn danh** (để chứng minh không cần đăng nhập). Cả bốn phải hiện **cùng một ảnh**:
 
 - [ ] `http://admin.vsite.local:5173<path>` (qua proxy portal)
-- [ ] `http://spa-abc.vsite.local:3000<path>` (qua proxy web, **host của shop**; đây là chỗ hôm nay mới sửa: trước đó bị chặn 403 và proxy không chạy)
+- [ ] `http://spa-abc.vsite.local:3000<path>` (**dùng thẻ `<img>` hoặc DevTools để kiểm; mở thẳng trên thanh địa chỉ sẽ ra 404 HTML** — lỗi đã biết MEDIA-001-ACCEPT L3. Qua proxy web, **host của shop**; đây là chỗ hôm nay mới sửa: trước đó bị chặn 403 và proxy không chạy)
 - [ ] `http://spa-abc.vsite.local:5270<path>` (thẳng vào API)
 - [ ] `http://localhost:5270<path>`
 
@@ -178,17 +175,17 @@ Cả hai phải trả **404**, không được trả nội dung file:
 ## Phần 6 — 413 thật ở Kestrel (nâng cao, tuỳ chọn nhưng nên làm)
 
 Trình duyệt chặn file > 10 MB trước khi gửi, nên phải dùng `curl.exe` để chạm được giới hạn thật của server.
-Chưa ai kiểm ngưỡng này (mới có test dịch lỗi 413 sang ProblemDetails).
+Đã kiểm ngày 2026-10-13: 12 MB ra 413 `MEDIA_FILE_TOO_LARGE`. **Gọi thẳng API (`:5270`), đừng qua proxy portal:** proxy Vite trả 502 khi API đóng kết nối giữa chừng (MEDIA-001-ACCEPT L2).
 
 - [ ] Lấy token (thay email, mật khẩu, host `admin` để đúng audience):
   ```
-  curl.exe -s -X POST http://admin.vsite.local:5173/auth/login -H "Content-Type: application/json" -d "{\"email\":\"<email>\",\"password\":\"<mật khẩu>\"}"
+  curl.exe -s -X POST http://localhost:5270/api/auth/login -H "Content-Type: application/json" -d "{\"email\":\"<email>\",\"password\":\"<mật khẩu>\"}"
   ```
   Copy `accessToken` trong kết quả.
 - [ ] Tạo file 12 MB và gửi lên:
   ```
   powershell -Command "[IO.File]::WriteAllBytes('big.png', (New-Object byte[] 12582912))"
-  curl.exe -i -X POST "http://admin.vsite.local:5173/shops/<shopId>/media/library" -H "Authorization: Bearer <accessToken>" -F "file=@big.png;type=image/png"
+  curl.exe -i -X POST "http://localhost:5270/api/shops/<shopId>/media/library" -H "Authorization: Bearer <accessToken>" -F "file=@big.png;type=image/png"
   ```
   Kỳ vọng **HTTP 413** với body `error_code: MEDIA_FILE_TOO_LARGE`. Nếu ra 500 hoặc body rỗng thì **ghi lại**, đó là lỗi thật.
 

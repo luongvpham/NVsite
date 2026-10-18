@@ -7,13 +7,20 @@ using Vsite.Api.Media;
 using Vsite.Api.OpenApi;
 using Vsite.Api.Shop;
 using Vsite.Api.Tenancy;
+using Vsite.Api.Website;
 using Vsite.Application.Common.Imaging;
 using Vsite.Application.Common.Interfaces;
+using Vsite.Application.Website.Interfaces;
+using Vsite.Application.Website.Options;
+using Vsite.Application.Website.Seeding;
+using Vsite.Application.Website.Validation;
+using Vsite.Application.Website.Versioning;
 using Vsite.Domain.Abstractions;
 using Vsite.Domain.ReservedRoutes;
 using Vsite.Infrastructure;
 using Vsite.Infrastructure.Configuration;
 using Vsite.Infrastructure.Imaging;
+using Vsite.Infrastructure.Website;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,7 +51,13 @@ builder.Services.AddOpenApi("media", options => options
     .AddSchemaTransformer<DuplicateNullableSchemaOccurrenceTagger>()
     .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
 
+builder.Services.AddOpenApi("website", options => options
+    .AddSchemaTransformer<ProblemDetailsSchemaTransformer>()
+    .AddSchemaTransformer<DuplicateNullableSchemaOccurrenceTagger>()
+    .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
+
 builder.Services.AddExceptionHandler<AppExceptionHandler>();
+builder.Services.AddExceptionHandler<ConcurrencyAndUniqueExceptionHandler>(); // 409 chung cho xmin lệch / 23505 (T9, R15)
 builder.Services.AddExceptionHandler<UnauthorizedAccessExceptionHandler>();
 builder.Services.AddExceptionHandler<BadHttpRequestExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -63,6 +76,33 @@ builder.Services.AddSingleton<IImagePresetCatalog>(_ =>
     new ImagePresetCatalog(Path.Combine(AppContext.BaseDirectory, "config", "image-presets.json")));
 builder.Services.AddSingleton<IDerivativePresetCatalog>(_ =>
     new DerivativePresetCatalog(Path.Combine(AppContext.BaseDirectory, "generated", "derivative-presets.json")));
+
+// Module Website (T1, WEBSITE-001, #97/#98) — config dùng chung FE+BE + artifact codegen, cùng pattern
+// link + đọc một lần. Resolve eager ngay dưới `builder.Build()`: thiếu/hỏng file nào thì app KHÔNG lên.
+var websiteConfigDir = Path.Combine(AppContext.BaseDirectory, "config");
+var websiteArtifactDir = Path.Combine(AppContext.BaseDirectory, "generated");
+builder.Services.AddSingleton<ILocaleCatalog>(_ => new LocaleCatalog(Path.Combine(websiteConfigDir, "locales.json")));
+builder.Services.AddSingleton<IThemeTokenCatalog>(_ => new ThemeTokenCatalog(Path.Combine(websiteConfigDir, "theme-tokens.json")));
+builder.Services.AddSingleton<ISystemPageCatalog>(_ => new SystemPageCatalog(Path.Combine(websiteConfigDir, "system-pages.json")));
+builder.Services.AddSingleton<ISanitizeProfileCatalog>(_ => new SanitizeProfileCatalog(Path.Combine(websiteConfigDir, "sanitize-profiles.json")));
+builder.Services.AddSingleton<IBindingSourceCatalog>(_ => new BindingSourceCatalog(Path.Combine(websiteConfigDir, "binding-sources.json")));
+builder.Services.AddSingleton<ITreeRulesCatalog>(_ => new TreeRulesCatalog(Path.Combine(websiteArtifactDir, "tree-rules.json")));
+builder.Services.AddSingleton<IWebsiteSchemaProvider>(_ => new WebsiteSchemaProvider(
+    Path.Combine(websiteArtifactDir, "tree-envelope.schema.json"),
+    Path.Combine(websiteArtifactDir, "theme-tokens.schema.json"),
+    Path.Combine(websiteArtifactDir, "props-schemas.json")));
+
+// Validate cây (T4/T5, WEBSITE-001): giới hạn cứng từ appsettings (G6), sanitizer richText, khung upcaster (#94).
+// Chưa có IDocumentUpcaster nào (phiên bản hiện hành = 1) — thêm bước nâng = AddSingleton<IDocumentUpcaster, ...>.
+builder.Services.AddSingleton(builder.Configuration.GetSection(PageTreeLimits.SectionName).Get<PageTreeLimits>() ?? new PageTreeLimits());
+builder.Services.AddSingleton<IRichTextSanitizer, RichTextSanitizer>();
+builder.Services.AddSingleton(sp => new DocumentVersioning(sp.GetServices<IDocumentUpcaster>()));
+builder.Services.AddSingleton<PageTreeValidator>();
+
+// Handler Website (T6/T8): seed trang, luật slug, validator tokens — singleton vì chỉ giữ catalog/validator bất biến.
+builder.Services.AddSingleton<ThemeTokensValidator>();
+builder.Services.AddSingleton<WebsiteSeeder>();
+builder.Services.AddSingleton<SlugRules>();
 
 // Quyết định #7 (thu hẹp — xem TenantResolutionMiddleware). Scoped: một TenantContext per-request,
 // middleware set giá trị, mọi handler đọc qua ITenantContext (không handler nào tự resolve ShopId).
@@ -98,6 +138,17 @@ var app = builder.Build();
 // chạm tới — file config sai shape hoặc thiếu thì app dừng ở đây, không chạy tiếp với catalog rỗng.
 app.Services.GetRequiredService<IImagePresetCatalog>();
 app.Services.GetRequiredService<IDerivativePresetCatalog>();
+app.Services.GetRequiredService<IReservedRoutesProvider>();
+app.Services.GetRequiredService<ILocaleCatalog>();
+app.Services.GetRequiredService<IThemeTokenCatalog>();
+app.Services.GetRequiredService<ISystemPageCatalog>();
+app.Services.GetRequiredService<ISanitizeProfileCatalog>();
+app.Services.GetRequiredService<IBindingSourceCatalog>();
+app.Services.GetRequiredService<ITreeRulesCatalog>();
+app.Services.GetRequiredService<IWebsiteSchemaProvider>();
+WebsiteConfigConsistency.EnsureEveryTypeHasPropsSchema(
+    app.Services.GetRequiredService<ITreeRulesCatalog>(), app.Services.GetRequiredService<IWebsiteSchemaProvider>());
+app.Services.GetRequiredService<PageTreeValidator>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -144,6 +195,7 @@ var api = app.MapGroup(Vsite.Application.Common.ApiRoutes.Prefix);
 api.MapIdentityEndpoints();
 api.MapShopEndpoints();
 api.MapMediaEndpoints();
+api.MapWebsiteEndpoints();
 
 app.Run();
 

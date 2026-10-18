@@ -4,8 +4,15 @@ Ngày 2026-10-11. Lane A (không đổi code, không đổi contract). Checklist
 `Docs/tasks/MEDIA-001/acceptance.md` (còn đúng phần lớn — xem "Tài liệu lệch" bên dưới).
 Nguồn: `MEDIA-001/changelog.md` "Chưa làm xong" #5, #7.
 
-**Trạng thái: ĐANG CHẠY — phần API/curl xong, phần UI (Phần 3, 5 của acceptance.md) chờ người bấm.**
-`00-INDEX.md` §3/§4 CHƯA đổi, vì task chưa xong.
+**Trạng thái: XONG (2026-10-13).** Phần API/curl do agent chạy; Phần 3 và 5 của acceptance.md do người bấm trên UI, đều đạt.
+`00-INDEX.md` §3 (dòng 4/4.x) và §4 đã cập nhật.
+
+**Ghi chú trung thực về phạm vi:**
+- **5.6 (Gallery):** người nghiệm thu báo UI preview "không update" sau khi chọn ảnh, nhưng "JSON thô" đổi đúng `imageId`, DB có đủ clone với id khác nhau.
+  Người nghiệm thu quyết định bỏ qua. Agent đọc mã (Inspector repeater → `setTree` → `Gallery01.resolveImage`) không thấy lỗi, chưa tái hiện → **nguyên nhân chưa biết, KHÔNG phải đã xác nhận ổn.**
+  Nếu Bước 5 dùng lại repeater + media picker thì để ý lại.
+- **Phần 4 trên trình duyệt:** agent chỉ kiểm bằng curl (xem bảng). `spa-abc.vsite.local:3000` bằng hosts IPv4 không chạy được vì L1.
+- L1 đã sửa, `acceptance.md` đã sửa. L2, L3 chưa sửa, chờ quyết định.
 
 ## Môi trường dựng được
 
@@ -43,14 +50,21 @@ Chưa kiểm tay: EXIF (test tự động đọc lại file thật), test 7/8/11
 
 ## Lỗi phát hiện — CHƯA SỬA, chờ quyết định
 
-- **L1 (trung bình) — `apps/web` dev chỉ nghe IPv6.** `Local: http://localhost:3000/`, socket `[::1]:3000`. Hosts file trỏ `spa-abc.vsite.local`
+- **L1 (trung bình) — ✅ ĐÃ SỬA 2026-10-13 (`server.host: '127.0.0.1'` trong `apps/web/vite.config.ts`; kiểm: `127.0.0.1:3000` và host shop 200, host lạ 403). `apps/web` dev chỉ nghe IPv6.** `Local: http://localhost:3000/`, socket `[::1]:3000`. Hosts file trỏ `spa-abc.vsite.local`
   về `127.0.0.1` nên trình duyệt bị từ chối kết nối (curl `000`). Cùng request qua `--resolve …:::1` ra 200. Chặn mục 4 của nghiệm thu ở trình duyệt.
   Cách tránh không đụng code: thêm `::1  spa-abc.vsite.local` vào hosts. Cách sửa: `server.host` trong `apps/web/vite.config.ts`
   (portal đã nghe `127.0.0.1`).
+- **L3 (thấp–trung bình, người nghiệm thu gặp ở Phần 4) — mở thẳng `http://spa-abc.vsite.local:3000/media/…` trên thanh địa chỉ ra "not found".**
+  Chẩn đoán (curl, cùng URL, cùng host): header `Accept: image/*` hoặc `Sec-Fetch-Dest: image` → **200 `image/webp`**; header như điều hướng
+  trình duyệt (`Accept: text/html`, `Sec-Fetch-Dest: document`) → **404 HTML** của SSR TanStack Start (`vary: sec-fetch-dest, accept`).
+  Tức proxy `server.proxy['/media']` của `apps/web` chỉ ăn với request ảnh/fetch; request dạng "document" bị SSR của app chặn trước. Portal (Vite thuần)
+  không bị: `admin.vsite.local:5173` mở thẳng được. `<img src="/media/…">` trong trang shop vẫn chạy, nên ảnh trong site shop không hỏng; chỉ **mở trực tiếp
+  URL ảnh trên host shop khi dev** là 404. Chưa biết prod có bị không (prod không dùng Vite proxy). Chưa sửa.
+  L1 đã được vượt tạm: hosts của người nghiệm thu có thêm `::1 spa-abc.vsite.local`, kết nối được.
 - **L2 (thấp) — request >11 MB qua proxy portal ra 502** (`vite http proxy error … ECONNRESET`) thay vì 413: API trả lời rồi đóng kết nối khi
   body chưa đọc hết. Trình duyệt chặn >10 MB trước khi gửi nên người dùng thường không gặp; chỉ lộ với client gọi thẳng portal.
 
-## Tài liệu lệch (`acceptance.md`, chưa sửa)
+## Tài liệu lệch (`acceptance.md`) — ✅ ĐÃ SỬA 2026-10-13
 
 - 0.3 nói Redis chạy sẵn — sai trên máy này; thiếu hẳn bước dựng Redis.
 - Link xác thực email in ra là `/api/auth/verify-email?token=…`, doc ghi `/auth/verify-email`.

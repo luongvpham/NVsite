@@ -38,3 +38,22 @@ export * from './generated/media/model/uploadShopLogoForm';
 export * from './generated/media/model/uploadToLibraryForm';
 export * from './generated/media/model/uploadToSlotForm';
 export * from './generated/media/media.zod';
+
+// website: cùng lý do tránh TS2308 — bỏ ProblemDetails/HttpValidationProblemDetails(+Errors) (đã export từ identity).
+// `JsonElement` là interface rỗng (tree/tokens): FE kiểu hoá bằng Zod của packages/builder-components.
+export * from './generated/website/website/website';
+export * from './generated/website/model/createPageRequest';
+export * from './generated/website/model/jsonElement';
+export * from './generated/website/model/nullableOfSystemType';
+export * from './generated/website/model/pageDraftDto';
+export * from './generated/website/model/pageDraftPageDto';
+export * from './generated/website/model/pageDto';
+export * from './generated/website/model/pageKind';
+export * from './generated/website/model/savePageDraftRequest';
+export * from './generated/website/model/savePageDraftResultDto';
+export * from './generated/website/model/themeDto';
+export * from './generated/website/model/updatePageRequest';
+export * from './generated/website/model/updateThemeRequest';
+export * from './generated/website/model/websiteDto';
+export * from './generated/website/model/websiteStatus';
+export * from './generated/website/website.zod';

@@ -1,0 +1,47 @@
+{
+  "description": "R6/T5b: thêm node vào trang System.",
+  "pageKind": "System",
+  "systemType": "Contact",
+  "expect": "invalid",
+  "errorCodes": [
+    "SYSTEM_PAGE_STRUCTURE_CHANGED"
+  ],
+  "stored": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_cont1",
+        "type": "RichText",
+        "variant": "RichText01",
+        "props": {
+          "content": "<p>Liên hệ</p>"
+        }
+      }
+    ]
+  },
+  "incoming": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_cont1",
+        "type": "RichText",
+        "variant": "RichText01",
+        "props": {
+          "content": "<p>Liên hệ</p>"
+        }
+      },
+      {
+        "id": "c_cont2",
+        "type": "RichText",
+        "variant": "RichText01",
+        "props": {
+          "content": "<p>thêm</p>"
+        }
+      }
+    ]
+  }
+}

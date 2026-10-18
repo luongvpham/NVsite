@@ -1,0 +1,33 @@
+{
+  "description": "R1/#71: tree chứa id ảnh bản LIBRARY (tree chỉ được chứa id clone/direct).",
+  "pageKind": "Composable",
+  "context": {
+    "media": {
+      "media_lib_1": {
+        "kind": "Library",
+        "shop": "own"
+      }
+    }
+  },
+  "expect": "invalid",
+  "errorCodes": [
+    "MEDIA_INVALID_IMAGE_REFERENCE"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {
+          "image": {
+            "imageId": "media_lib_1"
+          }
+        }
+      }
+    ]
+  }
+}

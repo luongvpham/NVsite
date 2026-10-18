@@ -2,13 +2,15 @@
 /**
  * `pnpm gen:registry` — sinh artifact từ registry/*.manifest.ts (07-component-manifest-schema.md §6).
  *
- * Sinh 8 artifact: component-types.ts, props-schemas.ts (Zod), props-schemas.json (JSON Schema, #60),
- * property-panel.ts, op-rules.ts, ai-tool-schema.json, registry-map.ts, derivative-presets.json (#86).
+ * Sinh artifact: component-types.ts, props-schemas.ts (Zod), props-schemas.json (JSON Schema, #60),
+ * property-panel.ts, op-rules.ts, ai-tool-schema.json, registry-map.ts, derivative-presets.json (#86),
+ * tree-envelope.schema.json + theme-tokens.schema.json (vỏ Tree/Tokens, #97), tree-rules.json (luật cây cho BE, #60).
  * check-additive vs registry.lock.json chạy trước khi ghi artifact. KHÔNG tự tạo/cập nhật lock —
  * việc đó là lệnh tường minh `pnpm registry:lock` (TOOLING-001).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { buildThemeTokensJsonSchema, buildTreeEnvelopeJsonSchema } from '../meta/envelope-schema';
 import type { ComponentManifest } from '../meta/manifest-schema';
 import type { PropDef } from '../meta/prop-kinds';
 import { runCheckAdditive } from './check-additive';
@@ -21,7 +23,11 @@ const imagePresetsFile = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 
 };
 const imagePresets = imagePresetsFile.presets;
 const bindingSources = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'binding-sources.json'), 'utf8')) as string[];
+const localesConfig = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'locales.json'), 'utf8')) as string[];
+const themeTokensConfig = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'theme-tokens.json'), 'utf8')) as Parameters<typeof buildThemeTokensJsonSchema>[0];
 const sanitizeProfiles = JSON.parse(readFileSync(path.join(REPO_ROOT, 'config', 'sanitize-profiles.json'), 'utf8')) as Record<string, unknown>;
+
+const NON_PROFILE_KEYS = new Set(['dangerous']);
 
 function toKebabCase(pascalCase: string): string {
   return pascalCase.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
@@ -86,7 +92,8 @@ function checkPropInvariants(typeName: string, propName: string, prop: PropDef):
     fail(`${where}: image.preset '${prop.preset}' không có trong config/image-presets.json`);
   }
 
-  if (prop.kind === 'richText' && !(prop.profile in sanitizeProfiles)) {
+  // `dangerous` là khoá danh sách nguy hiểm trong cùng file, không phải profile sanitize.
+  if (prop.kind === 'richText' && (NON_PROFILE_KEYS.has(prop.profile) || !(prop.profile in sanitizeProfiles))) {
     fail(`${where}: richText.profile '${prop.profile}' không có trong config/sanitize-profiles.json`);
   }
 
@@ -442,6 +449,58 @@ function generateOpRules(manifests: ComponentManifest[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// tree-rules.json (WEBSITE-001 S0-T3, #60) — luật cây cho BE (C# không đọc được op-rules.ts):
+// với mỗi type: luật op (cùng nguồn với op-rules.ts) + variants[] + BẢN ĐỒ PROP (kind; richText kèm profile,
+// binding kèm sources, image kèm preset; list/group kèm itemProps đệ quy). props-schemas.json chỉ kiểm
+// SHAPE từng prop — BE còn cần biết prop nào là ảnh/richText/binding để chạy validator ảnh, sanitize, chặn Review.
+// ---------------------------------------------------------------------------
+
+interface TreeRuleProp {
+  kind: PropDef['kind'];
+  profile?: string;
+  sources?: string[];
+  preset?: string;
+  itemProps?: Record<string, TreeRuleProp>;
+}
+
+function propsToTreeRuleProps(props: Record<string, PropDef>): Record<string, TreeRuleProp> {
+  return Object.fromEntries(Object.entries(props).map(([name, prop]) => [name, propToTreeRule(prop)]));
+}
+
+function propToTreeRule(prop: PropDef): TreeRuleProp {
+  switch (prop.kind) {
+    case 'richText':
+      return { kind: prop.kind, profile: prop.profile };
+    case 'binding':
+      return { kind: prop.kind, sources: [...prop.sources] };
+    case 'image':
+      return { kind: prop.kind, preset: prop.preset };
+    case 'list':
+      return { kind: prop.kind, itemProps: propsToTreeRuleProps(prop.itemProps) };
+    case 'group':
+      return { kind: prop.kind, itemProps: propsToTreeRuleProps(prop.props) };
+    default:
+      return { kind: prop.kind };
+  }
+}
+
+function generateTreeRules(manifests: ComponentManifest[]): string {
+  const types: Record<string, unknown> = {};
+  for (const m of manifests) {
+    types[m.type] = {
+      acceptsChildren: m.acceptsChildren,
+      allowedChildTypes: m.allowedChildTypes,
+      allowedInPageKinds: m.allowedInPageKinds,
+      maxPerPage: m.maxPerPage,
+      editableInSystemPageProps: collectEditableInSystemPagePaths(m.props),
+      variants: m.variants.map((v) => v.key),
+      props: propsToTreeRuleProps(m.props),
+    };
+  }
+  return JSON.stringify({ schemaVersion: 1, types }, null, 2) + '\n';
+}
+
+// ---------------------------------------------------------------------------
 // ai-tool-schema.json (§12, #14/#16) — enum type/variant, KHÔNG thể bịa (đúng #17).
 // ---------------------------------------------------------------------------
 
@@ -544,6 +603,19 @@ function generateDerivativePresets(manifests: ComponentManifest[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// tree-envelope.schema.json + theme-tokens.schema.json (WEBSITE-001 S0-T2, #94, #97) — shape VỎ của
+// Tree và Theme.Tokens, dựng từ config/locales.json + config/theme-tokens.json (xem meta/envelope-schema.ts).
+// ---------------------------------------------------------------------------
+
+function generateTreeEnvelopeSchemaJson(): string {
+  return JSON.stringify(buildTreeEnvelopeJsonSchema(localesConfig), null, 2) + '\n';
+}
+
+function generateThemeTokensSchemaJson(): string {
+  return JSON.stringify(buildThemeTokensJsonSchema(themeTokensConfig), null, 2) + '\n';
+}
+
+// ---------------------------------------------------------------------------
 
 async function main() {
   const manifests = await loadManifests(PKG_ROOT, REGISTRY_DIR);
@@ -568,11 +640,14 @@ async function main() {
   writeFileSync(path.join(GENERATED_DIR, 'props-schemas.json'), generatePropsSchemasJson(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'property-panel.ts'), generatePropertyPanel(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'op-rules.ts'), generateOpRules(manifests));
+  writeFileSync(path.join(GENERATED_DIR, 'tree-rules.json'), generateTreeRules(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'ai-tool-schema.json'), generateAiToolSchema(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'registry-map.ts'), generateRegistryMap(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'derivative-presets.json'), generateDerivativePresets(manifests));
+  writeFileSync(path.join(GENERATED_DIR, 'tree-envelope.schema.json'), generateTreeEnvelopeSchemaJson());
+  writeFileSync(path.join(GENERATED_DIR, 'theme-tokens.schema.json'), generateThemeTokensSchemaJson());
 
-  console.log(`[gen-registry] OK — ${manifests.length} manifest, 8 artifact sinh ra tại generated/`);
+  console.log(`[gen-registry] OK — ${manifests.length} manifest, 11 artifact sinh ra tại generated/`);
 }
 
 main().catch((error: unknown) => {

@@ -1,0 +1,22 @@
+{
+  "description": "allowedInPageKinds: Hero chỉ Composable, không được nằm trên trang System.",
+  "pageKind": "System",
+  "systemType": "Contact",
+  "expect": "invalid",
+  "errorCodes": [
+    "NODE_NOT_ALLOWED_IN_PAGE_KIND"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_hero1",
+        "type": "Hero",
+        "variant": "Hero01",
+        "props": {}
+      }
+    ]
+  }
+}

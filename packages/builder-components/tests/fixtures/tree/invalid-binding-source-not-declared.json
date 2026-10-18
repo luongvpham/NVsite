@@ -1,0 +1,26 @@
+{
+  "description": "Source \"Product\" có trong whitelist toàn cục nhưng ServiceGrid.source chỉ khai Service|ServiceGroup => từ chối (source phải ∈ sources khai ở prop).",
+  "pageKind": "Composable",
+  "expect": "invalid",
+  "errorCodes": [
+    "BINDING_SOURCE_NOT_ALLOWED"
+  ],
+  "tree": {
+    "schemaVersion": 1,
+    "id": "root",
+    "type": "Page",
+    "children": [
+      {
+        "id": "c_grid1",
+        "type": "ServiceGrid",
+        "variant": "ServiceGrid01",
+        "props": {
+          "heading": "Dịch vụ",
+          "source": {
+            "source": "Product"
+          }
+        }
+      }
+    ]
+  }
+}
