@@ -144,12 +144,17 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
     <Dialog open={open} onClose={onClose} title="Thư viện ảnh" className="max-w-3xl">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <label className="cursor-pointer">
-            <span className="inline-block rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">
-              Tải ảnh lên thư viện
-            </span>
-            <input type="file" accept={ACCEPT_ATTR} className="hidden" onChange={handleUploadChange} />
-          </label>
+          {/* #100: mọi route media chỉ Owner — non-Owner bấm sẽ ăn 403, nên ẩn hẳn (brief WEBSITE-002). */}
+          {isOwner ? (
+            <label className="cursor-pointer">
+              <span className="inline-block rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">
+                Tải ảnh lên thư viện
+              </span>
+              <input type="file" accept={ACCEPT_ATTR} className="hidden" onChange={handleUploadChange} />
+            </label>
+          ) : (
+            <span />
+          )}
 
           {usageQuery.isPending && <span className="text-xs text-muted-foreground">Đang tính dung lượng...</span>}
           {usageQuery.isError && (

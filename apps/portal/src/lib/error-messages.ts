@@ -26,6 +26,31 @@ const ERROR_MESSAGES: Record<string, string> = {
   MEDIA_FILE_MISSING: 'Không tìm thấy file để tải lên.',
   MEDIA_UNKNOWN_PRESET: 'Preset ảnh không hợp lệ.',
   MEDIA_OWNER_REQUIRED: 'Chỉ chủ shop (Owner) mới được thực hiện thao tác này.',
+  MEDIA_INVALID_IMAGE_REFERENCE: 'Có ảnh không còn hợp lệ (đã xoá hoặc không thuộc shop này), vui lòng chọn lại ảnh.',
+  // Website (WEBSITE-002/brief.md — bảng endpoint + "Quy ước FE phải biết")
+  WEBSITE_OWNER_REQUIRED: 'Chỉ chủ shop (Owner) mới được quản lý website.',
+  SHOP_NOT_FOUND: 'Không tìm thấy shop.',
+  WEBSITE_NOT_FOUND: 'Shop này chưa có website.',
+  WEBSITE_ALREADY_EXISTS: 'Shop này đã có website.',
+  WEBSITE_REQUIRES_HOSTED_SHOP:
+    'Chỉ shop loại "Website trên vsite" mới tạo được website. Đổi loại shop ở màn Sửa shop rồi thử lại.',
+  PAGE_NOT_FOUND: 'Không tìm thấy trang (có thể đã bị xoá).',
+  PAGE_SLUG_TAKEN: 'Đường dẫn này đã có trang khác dùng.',
+  PAGE_SLUG_RESERVED: 'Đường dẫn này được hệ thống dành riêng, hãy chọn đường dẫn khác.',
+  PAGE_SLUG_INVALID: 'Đường dẫn không hợp lệ.',
+  PAGE_NOINDEX_REQUIRED: 'Trang "Không tìm thấy" luôn phải ẩn khỏi công cụ tìm kiếm.',
+  PAGE_SYSTEM_SLUG_FIXED: 'Không đổi được đường dẫn của trang hệ thống.',
+  PAGE_HOME_SLUG_FIXED: 'Không đổi được đường dẫn của trang chủ.',
+  PAGE_NOT_DELETABLE: 'Trang này không xoá được.',
+  CONCURRENCY_CONFLICT: 'Dữ liệu vừa được thay đổi ở nơi khác. Tải lại rồi thử lại.',
+  DRAFT_CONFLICT: 'Trang vừa được lưu ở tab hoặc thiết bị khác.',
+  TREE_INVALID: 'Nội dung trang có chỗ chưa hợp lệ.',
+  TREE_BODY_TOO_LARGE: 'Trang quá lớn để lưu. Bớt khối hoặc ảnh rồi thử lại.',
+  RICHTEXT_UNSAFE: 'Đoạn văn bản có nội dung không an toàn (script, nhúng…) và bị từ chối.',
+  LINK_URL_UNSAFE: 'Liên kết không an toàn. Chỉ nhận https, http, mailto, tel, đường dẫn nội bộ hoặc #neo.',
+  SCHEMA_VERSION_UNSUPPORTED: 'Phiên bản dữ liệu trang không được hỗ trợ. Tải lại trang.',
+  THEME_INVALID: 'Giao diện có giá trị chưa hợp lệ.',
+  THEME_BODY_TOO_LARGE: 'Cấu hình giao diện quá lớn để lưu.',
 };
 
 const FALLBACK_MESSAGE = 'Có lỗi xảy ra, vui lòng thử lại.';

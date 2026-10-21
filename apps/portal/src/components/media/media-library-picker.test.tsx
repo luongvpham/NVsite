@@ -69,13 +69,26 @@ describe('MediaLibraryPicker (F3)', () => {
     expect(screen.queryByRole('button', { name: 'Xoá' })).not.toBeInTheDocument();
   });
 
+  it('ẩn nút Tải ảnh lên thư viện khi không phải Owner (#100 — mọi route media chỉ Owner)', async () => {
+    server.use(
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([asset('a1')]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+    );
+    renderWithQuery(
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
+    );
+
+    await screen.findAllByRole('img');
+    expect(screen.queryByText('Tải ảnh lên thư viện')).not.toBeInTheDocument();
+  });
+
   it('báo lỗi client khi upload thẳng vào thư viện với file vượt quá 10MB, không gọi API', async () => {
     server.use(
       http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([]))),
       http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
     );
     renderWithQuery(
-      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" isOwner open onClose={vi.fn()} onSelect={vi.fn()} />,
     );
 
     const bigFile = makeFile('big.jpg', 11 * 1024 * 1024, 'image/jpeg');
@@ -92,7 +105,7 @@ describe('MediaLibraryPicker (F3)', () => {
       http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
     );
     renderWithQuery(
-      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" isOwner open onClose={vi.fn()} onSelect={vi.fn()} />,
     );
 
     fireEvent.change(screen.getByLabelText('Tải ảnh lên thư viện', { selector: 'input' }), {

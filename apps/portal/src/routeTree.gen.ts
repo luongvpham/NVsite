@@ -17,6 +17,8 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AuthenticatedShopsIndexRouteImport } from './routes/_authenticated.shops.index'
 import { Route as AuthenticatedShopsShopIdRouteImport } from './routes/_authenticated.shops.$shopId'
 import { Route as AuthenticatedShopsNewRouteImport } from './routes/_authenticated.shops.new'
+import { Route as AuthenticatedShopsShopIdIndexRouteImport } from './routes/_authenticated.shops.$shopId.index'
+import { Route as AuthenticatedShopsShopIdWebsiteIndexRouteImport } from './routes/_authenticated.shops.$shopId.website.index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,24 +60,39 @@ const AuthenticatedShopsNewRoute = AuthenticatedShopsNewRouteImport.update({
   path: '/shops/new',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedShopsShopIdIndexRoute =
+  AuthenticatedShopsShopIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedShopsShopIdRoute,
+  } as any)
+const AuthenticatedShopsShopIdWebsiteIndexRoute =
+  AuthenticatedShopsShopIdWebsiteIndexRouteImport.update({
+    id: '/website/',
+    path: '/website/',
+    getParentRoute: () => AuthenticatedShopsShopIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dev-registry': typeof DevRegistryRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/shops/$shopId': typeof AuthenticatedShopsShopIdRoute
+  '/shops/$shopId': typeof AuthenticatedShopsShopIdRouteWithChildren
   '/shops/new': typeof AuthenticatedShopsNewRoute
   '/shops/': typeof AuthenticatedShopsIndexRoute
+  '/shops/$shopId/': typeof AuthenticatedShopsShopIdIndexRoute
+  '/shops/$shopId/website/': typeof AuthenticatedShopsShopIdWebsiteIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dev-registry': typeof DevRegistryRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/shops/$shopId': typeof AuthenticatedShopsShopIdRoute
   '/shops/new': typeof AuthenticatedShopsNewRoute
   '/shops': typeof AuthenticatedShopsIndexRoute
+  '/shops/$shopId': typeof AuthenticatedShopsShopIdIndexRoute
+  '/shops/$shopId/website': typeof AuthenticatedShopsShopIdWebsiteIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -84,9 +101,11 @@ export interface FileRoutesById {
   '/dev-registry': typeof DevRegistryRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/_authenticated/shops/$shopId': typeof AuthenticatedShopsShopIdRoute
+  '/_authenticated/shops/$shopId': typeof AuthenticatedShopsShopIdRouteWithChildren
   '/_authenticated/shops/new': typeof AuthenticatedShopsNewRoute
   '/_authenticated/shops/': typeof AuthenticatedShopsIndexRoute
+  '/_authenticated/shops/$shopId/': typeof AuthenticatedShopsShopIdIndexRoute
+  '/_authenticated/shops/$shopId/website/': typeof AuthenticatedShopsShopIdWebsiteIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -98,15 +117,18 @@ export interface FileRouteTypes {
     | '/shops/$shopId'
     | '/shops/new'
     | '/shops/'
+    | '/shops/$shopId/'
+    | '/shops/$shopId/website/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dev-registry'
     | '/login'
     | '/register'
-    | '/shops/$shopId'
     | '/shops/new'
     | '/shops'
+    | '/shops/$shopId'
+    | '/shops/$shopId/website'
   id:
     | '__root__'
     | '/'
@@ -117,6 +139,8 @@ export interface FileRouteTypes {
     | '/_authenticated/shops/$shopId'
     | '/_authenticated/shops/new'
     | '/_authenticated/shops/'
+    | '/_authenticated/shops/$shopId/'
+    | '/_authenticated/shops/$shopId/website/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -185,17 +209,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedShopsNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/shops/$shopId/': {
+      id: '/_authenticated/shops/$shopId/'
+      path: '/'
+      fullPath: '/shops/$shopId/'
+      preLoaderRoute: typeof AuthenticatedShopsShopIdIndexRouteImport
+      parentRoute: typeof AuthenticatedShopsShopIdRoute
+    }
+    '/_authenticated/shops/$shopId/website/': {
+      id: '/_authenticated/shops/$shopId/website/'
+      path: '/website'
+      fullPath: '/shops/$shopId/website/'
+      preLoaderRoute: typeof AuthenticatedShopsShopIdWebsiteIndexRouteImport
+      parentRoute: typeof AuthenticatedShopsShopIdRoute
+    }
   }
 }
 
+interface AuthenticatedShopsShopIdRouteChildren {
+  AuthenticatedShopsShopIdIndexRoute: typeof AuthenticatedShopsShopIdIndexRoute
+  AuthenticatedShopsShopIdWebsiteIndexRoute: typeof AuthenticatedShopsShopIdWebsiteIndexRoute
+}
+
+const AuthenticatedShopsShopIdRouteChildren: AuthenticatedShopsShopIdRouteChildren =
+  {
+    AuthenticatedShopsShopIdIndexRoute: AuthenticatedShopsShopIdIndexRoute,
+    AuthenticatedShopsShopIdWebsiteIndexRoute:
+      AuthenticatedShopsShopIdWebsiteIndexRoute,
+  }
+
+const AuthenticatedShopsShopIdRouteWithChildren =
+  AuthenticatedShopsShopIdRoute._addFileChildren(
+    AuthenticatedShopsShopIdRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
-  AuthenticatedShopsShopIdRoute: typeof AuthenticatedShopsShopIdRoute
+  AuthenticatedShopsShopIdRoute: typeof AuthenticatedShopsShopIdRouteWithChildren
   AuthenticatedShopsNewRoute: typeof AuthenticatedShopsNewRoute
   AuthenticatedShopsIndexRoute: typeof AuthenticatedShopsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedShopsShopIdRoute: AuthenticatedShopsShopIdRoute,
+  AuthenticatedShopsShopIdRoute: AuthenticatedShopsShopIdRouteWithChildren,
   AuthenticatedShopsNewRoute: AuthenticatedShopsNewRoute,
   AuthenticatedShopsIndexRoute: AuthenticatedShopsIndexRoute,
 }
