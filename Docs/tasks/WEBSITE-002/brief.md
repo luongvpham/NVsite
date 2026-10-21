@@ -1,4 +1,4 @@
-# WEBSITE-001 — FE brief (Bước 5b: editor)
+# WEBSITE-002 — FE brief (Bước 5b: editor; bàn giao từ WEBSITE-001)
 
 ## Contract
 - `contracts/openapi/website.v1.json` (sha256 `f1a10a97820618ece7b46345d567b3816b06bda5edd8a15878342edd42a5e557`) — module mới, 10 endpoint.
