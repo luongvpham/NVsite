@@ -18,8 +18,20 @@
 - MSW portal đăng ký `getWebsiteMock()`.
 - Test: `src/routes/-website.test.tsx` (10 ca), `error-messages.test.ts` (+1), `media-library-picker.test.tsx` (+1).
   Portal 66/66 xanh, `tsc` + `eslint` sạch.
-- **Smoke app thật (workflow §8): CHƯA chạy** — 2026-10-22 BE `:5270` trả 500 cho mọi request vì Postgres
-  (`localhost:5433`, Docker) không chạy (Docker Desktop tắt). Chạy lại khi có DB.
+- **Smoke app thật (workflow §8) — PASS 2026-10-22** qua proxy Vite `http://admin.vsite.local:5173`, BE build
+  từ `feature/WEBSITE-002` (curl + cookie jar thay trình duyệt):
+  SPA `/shops/{id}/website` → 200 `text/html` · register → verify email → login (cookie `vsite_rt` set) ·
+  refresh chỉ bằng cookie → 200 (F5 giữ phiên, #101) · tạo shop Hosted → `roleCode = "Owner"` ·
+  `GET /website` → 404 `WEBSITE_NOT_FOUND` · `GET /pages` → `200 []` · `POST /website` → 201 · `GET /pages` →
+  Trang chủ (`isHomePage`), Liên hệ (`Contact`), Không tìm thấy trang (`NotFound`) · `POST` lần 2 → 409
+  `WEBSITE_ALREADY_EXISTS`. Khớp đúng các nhánh UI F1 dựa vào.
+  **Chưa bấm tay giao diện trên trình duyệt** (không có công cụ trình duyệt trong session) — phần render đã
+  phủ bằng test `-website.test.tsx`.
+- Môi trường dev phát hiện lúc smoke (không sửa file nào): DB `vsite_dev` chưa có trên Postgres `:5433`
+  (đã tạo + `dotnet ef database update`: `InitialSchema`, `AddWebsiteModule`); BE cần Redis `:6379`
+  (`docker compose up -d redis`); process `Vsite.Api` cũ từ 2026-10-11 đã tắt, chạy lại bản mới.
+  `docker-compose.yml` dựng Postgres `:5432` user `vsite` — **lệch** connection string trong
+  `appsettings*.json` (`:5433`, `postgres`/`password`).
 
 ## Lệch so với thiết kế / plan
 - F1: `retry: false` cho `getWebsite` — 404 là trạng thái bình thường "chưa có website", không retry.
