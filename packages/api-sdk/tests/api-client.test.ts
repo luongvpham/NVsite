@@ -1,13 +1,15 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { listShops } from '../src/generated/shop/shop/shop';
 import {
   API_PREFIX,
   axiosInstance,
   createApiClient,
+  restoreSession,
   setAccessToken,
-  setRefreshToken,
+  setOnSessionExpired,
+  waitForPendingRefresh,
 } from '../src/mutator/axios-instance';
 
 // REFACTOR-API-001 — chạy trong Node (môi trường SSR thật), MSW chặn request HTTP của axios.
@@ -33,7 +35,6 @@ afterEach(() => {
   server.resetHandlers();
   seen.length = 0;
   setAccessToken(undefined);
-  setRefreshToken(undefined);
 });
 afterAll(() => { server.close(); });
 
@@ -71,10 +72,11 @@ describe('createApiClient (SSR)', () => {
 });
 
 describe('instance mặc định (Portal)', () => {
-  it('401 → gọi /api/auth/refresh-token ở đúng baseURL rồi retry với token mới', async () => {
+  // #101 — refresh token nằm ở cookie httpOnly: FE không gửi body, chỉ gửi kèm cookie (withCredentials).
+  it('401 → gọi /api/auth/refresh-token (không body, kèm cookie) ở đúng baseURL rồi retry với token mới', async () => {
     const base = axiosInstance.defaults.baseURL;
     expect(base).toBeDefined();
-    let refreshBody: unknown;
+    let refreshBody: string | undefined;
     server.use(
       http.get(`${base}${API_PREFIX}/shops`, ({ request }) =>
         request.headers.get('authorization') === 'Bearer fresh'
@@ -82,14 +84,125 @@ describe('instance mặc định (Portal)', () => {
           : HttpResponse.json({ error_code: 'UNAUTHORIZED' }, { status: 401 }),
       ),
       http.post(`${base}${API_PREFIX}/auth/refresh-token`, async ({ request }) => {
-        refreshBody = await request.json();
-        return HttpResponse.json({ accessToken: 'fresh', refreshToken: 'r2' });
+        refreshBody = await request.text();
+        return HttpResponse.json({ accessToken: 'fresh', accessTokenExpiresAt: '2030-01-01T00:00:00Z' });
       }),
     );
     setAccessToken('stale');
-    setRefreshToken('r1');
 
     await expect(listShops()).resolves.toEqual([]);
-    expect(refreshBody).toEqual({ refreshToken: 'r1' });
+    expect(refreshBody).toBe('');
+  });
+
+  it('instance Portal bật withCredentials; client SSR (createApiClient) thì không', () => {
+    expect(axiosInstance.defaults.withCredentials).toBe(true);
+    expect(createApiClient({ baseURL: BE }).defaults.withCredentials).not.toBe(true);
+  });
+
+  it('refresh 401 → onSessionExpired được gọi và request gốc reject', async () => {
+    const base = axiosInstance.defaults.baseURL;
+    server.use(
+      http.get(`${base}${API_PREFIX}/shops`, () => HttpResponse.json({ error_code: 'UNAUTHORIZED' }, { status: 401 })),
+      http.post(`${base}${API_PREFIX}/auth/refresh-token`, () =>
+        HttpResponse.json({ error_code: 'UNAUTHORIZED' }, { status: 401 }),
+      ),
+    );
+    const expired = vi.fn();
+    setOnSessionExpired(expired);
+    setAccessToken('stale');
+
+    await expect(listShops()).rejects.toMatchObject({ error_code: 'UNAUTHORIZED' });
+    expect(expired).toHaveBeenCalledTimes(1);
+    setOnSessionExpired(undefined);
+  });
+});
+
+describe('restoreSession (F5 / khởi động Portal)', () => {
+  it('thành công → trả access token và các request sau mang token đó', async () => {
+    const base = axiosInstance.defaults.baseURL;
+    server.use(
+      http.post(`${base}${API_PREFIX}/auth/refresh-token`, () =>
+        HttpResponse.json({ accessToken: 'restored', accessTokenExpiresAt: '2030-01-01T00:00:00Z' }),
+      ),
+      http.get(`${base}${API_PREFIX}/shops`, ({ request }) =>
+        request.headers.get('authorization') === 'Bearer restored' ? HttpResponse.json([]) : HttpResponse.json({}, { status: 401 }),
+      ),
+    );
+
+    await expect(restoreSession()).resolves.toBe('restored');
+    await expect(listShops()).resolves.toEqual([]);
+  });
+
+  it('401 (không có cookie / hết hạn) → undefined, không ném, không gọi onSessionExpired', async () => {
+    const base = axiosInstance.defaults.baseURL;
+    server.use(
+      http.post(`${base}${API_PREFIX}/auth/refresh-token`, () =>
+        HttpResponse.json({ error_code: 'UNAUTHORIZED' }, { status: 401 }),
+      ),
+    );
+    const expired = vi.fn();
+    setOnSessionExpired(expired);
+
+    await expect(restoreSession()).resolves.toBeUndefined();
+    expect(expired).not.toHaveBeenCalled();
+    setOnSessionExpired(undefined);
+  });
+
+  it('gọi đồng thời nhiều lần trong một tab chỉ bắn MỘT request refresh', async () => {
+    const base = axiosInstance.defaults.baseURL;
+    let calls = 0;
+    server.use(
+      http.post(`${base}${API_PREFIX}/auth/refresh-token`, async () => {
+        calls += 1;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        return HttpResponse.json({ accessToken: 'once', accessTokenExpiresAt: '2030-01-01T00:00:00Z' });
+      }),
+    );
+
+    const results = await Promise.all([restoreSession(), restoreSession(), restoreSession()]);
+
+    expect(results).toEqual(['once', 'once', 'once']);
+    expect(calls).toBe(1);
+  });
+});
+
+describe('refresh đang bay khi đăng xuất (I1)', () => {
+  const delayedRefresh = (base: string | undefined, accessToken: string) =>
+    http.post(`${base}${API_PREFIX}/auth/refresh-token`, async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      return HttpResponse.json({ accessToken, accessTokenExpiresAt: '2030-01-01T00:00:00Z' });
+    });
+
+  it('phiên bị clear trong lúc refresh đang bay → kết quả refresh bị bỏ, access token không sống lại', async () => {
+    const base = axiosInstance.defaults.baseURL;
+    server.use(delayedRefresh(base, 'zombie'));
+    setAccessToken('old');
+
+    const pending = restoreSession();
+    setAccessToken(undefined); // đăng xuất
+    await expect(pending).resolves.toBeUndefined();
+
+    let authorization: string | null = 'unset';
+    server.use(
+      http.get(`${base}${API_PREFIX}/shops`, ({ request }) => {
+        authorization = request.headers.get('authorization');
+        return HttpResponse.json([]);
+      }),
+    );
+    await listShops();
+    expect(authorization).toBeNull();
+  });
+
+  it('waitForPendingRefresh chờ refresh đang chạy xong; không có refresh nào thì resolve ngay', async () => {
+    const base = axiosInstance.defaults.baseURL;
+    await expect(waitForPendingRefresh()).resolves.toBeUndefined();
+
+    let finished = false;
+    server.use(delayedRefresh(base, 'late'));
+    const pending = restoreSession().then(() => { finished = true; });
+    await waitForPendingRefresh();
+
+    expect(finished).toBe(true);
+    await pending;
   });
 });

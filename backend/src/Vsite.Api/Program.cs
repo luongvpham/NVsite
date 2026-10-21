@@ -128,7 +128,7 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("LocalDev", policy =>
-            policy.WithOrigins("http://localhost:3000", "http://localhost:5173").AllowAnyHeader().AllowAnyMethod());
+            policy.WithOrigins("http://localhost:3000", "http://localhost:5173").AllowAnyHeader().AllowAnyMethod().AllowCredentials());
     });
 }
 

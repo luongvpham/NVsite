@@ -22,8 +22,6 @@ describe('SHOP-001 onboarding flow', () => {
         HttpResponse.json({
           accessToken: 'test-access-token',
           accessTokenExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
-          refreshToken: 'test-refresh-token',
-          refreshTokenExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
         }),
       ),
       http.post('/api/shops', async ({ request }) => {

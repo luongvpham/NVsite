@@ -28,7 +28,7 @@ function LoginPage() {
   const loginMutation = useLogin({
     mutation: {
       onSuccess: (result) => {
-        setSession({ accessToken: result.accessToken, refreshToken: result.refreshToken });
+        setSession({ accessToken: result.accessToken });
         void navigate({ to: '/shops' });
       },
       onError: (error) => {

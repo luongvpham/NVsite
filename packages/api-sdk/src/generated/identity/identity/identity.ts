@@ -21,14 +21,13 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  AuthTokenResult,
+  AccessTokenResponse,
   ChangePasswordRequest,
   ForgotPasswordRequest,
   HttpValidationProblemDetails,
   LoginRequest,
   MeDto,
   ProblemDetails,
-  RefreshTokenRequest,
   RegisterRequest,
   RegisterResult,
   ResetPasswordRequest,
@@ -188,13 +187,16 @@ export function useVerifyEmail<TData = Awaited<ReturnType<typeof verifyEmail>>, 
 
 
 
+/**
+ * Response set cookie httpOnly `vsite_rt` (refresh token, Path=/api/auth) và chỉ trả access token trong body. Client phải nhận cookie (vd. withCredentials). (#101)
+ */
 export const login = (
     loginRequest: LoginRequest,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
-      return customInstance<AuthTokenResult>(
+      return customInstance<AccessTokenResponse>(
       {url: `/api/auth/login`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: loginRequest, signal
@@ -246,25 +248,27 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const refreshToken = (
-    refreshTokenRequest: RefreshTokenRequest,
+    /**
+ * Không có body. Refresh token đi bằng cookie httpOnly `vsite_rt` (client phải gửi kèm cookie, vd. withCredentials); response set cookie mới (xoay vòng) và chỉ trả access token. 401 nếu thiếu/sai/hết hạn/đã thu hồi — cookie sai bị xoá. (#101)
+ * @summary Đổi refresh token (cookie `vsite_rt`) lấy access token mới.
+ */
+export const refreshToken = (
+    
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
-      return customInstance<AuthTokenResult>(
-      {url: `/api/auth/refresh-token`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: refreshTokenRequest, signal
+      return customInstance<AccessTokenResponse>(
+      {url: `/api/auth/refresh-token`, method: 'POST', signal
     },
       options);
     }
   
 
 
-export const getRefreshTokenMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshToken>>, TError,{data: RefreshTokenRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof refreshToken>>, TError,{data: RefreshTokenRequest}, TContext> => {
+export const getRefreshTokenMutationOptions = <TError = ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshToken>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof refreshToken>>, TError,void, TContext> => {
 
 const mutationKey = ['refreshToken'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -276,10 +280,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refreshToken>>, {data: RefreshTokenRequest}> = (props) => {
-          const {data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refreshToken>>, void> = () => {
+          
 
-          return  refreshToken(data,requestOptions)
+          return  refreshToken(requestOptions)
         }
 
         
@@ -288,19 +292,81 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type RefreshTokenMutationResult = NonNullable<Awaited<ReturnType<typeof refreshToken>>>
-    export type RefreshTokenMutationBody = RefreshTokenRequest
-    export type RefreshTokenMutationError = ProblemDetails | HttpValidationProblemDetails
+    
+    export type RefreshTokenMutationError = ProblemDetails
 
-    export const useRefreshToken = <TError = ProblemDetails | HttpValidationProblemDetails,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshToken>>, TError,{data: RefreshTokenRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+    /**
+ * @summary Đổi refresh token (cookie `vsite_rt`) lấy access token mới.
+ */
+export const useRefreshToken = <TError = ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshToken>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof refreshToken>>,
         TError,
-        {data: RefreshTokenRequest},
+        void,
         TContext
       > => {
 
       const mutationOptions = getRefreshTokenMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Thu hồi refresh token trong cookie `vsite_rt` (nếu có) và xoá cookie. Luôn 204, kể cả không có cookie hoặc token đã thu hồi. Không cần access token. (#101)
+ */
+export const logout = (
+    
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<void>(
+      {url: `/api/auth/logout`, method: 'POST', signal
+    },
+      options);
+    }
+  
+
+
+export const getLogoutMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext> => {
+
+const mutationKey = ['logout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logout>>, void> = () => {
+          
+
+          return  logout(requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutMutationResult = NonNullable<Awaited<ReturnType<typeof logout>>>
+    
+    export type LogoutMutationError = unknown
+
+    export const useLogout = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof logout>>,
+        TError,
+        void,
+        TContext
+      > => {
+
+      const mutationOptions = getLogoutMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

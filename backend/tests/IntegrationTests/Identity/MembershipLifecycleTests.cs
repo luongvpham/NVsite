@@ -1,10 +1,10 @@
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
 using Vsite.Api.Identity;
-using Vsite.Application.Identity.Auth.Dtos;
 using Vsite.Domain.Identity;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Domain.Identity.Enums;
@@ -28,7 +28,8 @@ public sealed class MembershipLifecycleTests(IdentityApiFactory factory)
 {
     private const string Password = "Password123!";
 
-    private readonly HttpClient _client = factory.CreateClient();
+    // Tắt cookie jar: test tự gắn header Cookie để điều khiển token nào được gửi (#101).
+    private readonly HttpClient _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
 
     [Fact]
     public async Task Login_at_shop_is_rejected_once_membership_is_soft_deleted_or_suspended()
@@ -322,14 +323,12 @@ public sealed class MembershipLifecycleTests(IdentityApiFactory factory)
     private Task<HttpResponseMessage> LoginAsync(string? host, string email, string password = Password) =>
         PostAsync(host, "/api/auth/login", new LoginRequest(email, password));
 
+    // #101 — refresh token đi bằng cookie, không còn trong body.
     private Task<HttpResponseMessage> RefreshAsync(string? host, string refreshToken) =>
-        PostAsync(host, "/api/auth/refresh-token", new RefreshTokenRequest(refreshToken));
+        _client.SendAsync(RefreshCookieTestHelpers.Post("/api/auth/refresh-token", host, refreshToken));
 
-    private static async Task<AuthTokenResult> ReadTokensAsync(HttpResponseMessage response)
-    {
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return (await response.Content.ReadFromJsonAsync<AuthTokenResult>())!;
-    }
+    private static Task<TokenPair> ReadTokensAsync(HttpResponseMessage response) =>
+        RefreshCookieTestHelpers.ReadTokenPairAsync(response);
 
     private Task<HttpResponseMessage> PostAsync<TBody>(string? host, string path, TBody body)
     {
