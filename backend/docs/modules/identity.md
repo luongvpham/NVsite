@@ -11,8 +11,8 @@ scope) đã xong. `IDENTITY-001` đã Gate 1 hai vòng (Round 1: 6 endpoint auth
 endpoint `/me`), kèm `Vsite.Api.Tenancy.TenantResolutionMiddleware` (resolve tenant từ Host — xem mục
 riêng bên dưới).
 
-**8 endpoint hiện có** (`Vsite.Api/Identity/IdentityEndpoints.cs`):
-- `/auth/{register,verify-email,login,refresh-token,forgot-password,reset-password}` —
+**9 endpoint hiện có** (`Vsite.Api/Identity/IdentityEndpoints.cs`):
+- `/auth/{register,verify-email,login,refresh-token,logout,forgot-password,reset-password}` —
   `AllowAnonymous` (đúng mục đích — không cần JWT hợp lệ trước để gọi các endpoint này). MỘT bộ
   route duy nhất cho mọi context (không có `{shopId}` trong route nào — xem "Tenant Resolution
   Middleware" bên dưới).
@@ -22,6 +22,28 @@ riêng bên dưới).
 
 ⚠️ **`GET /auth/me/shops` đã bị xoá ở SHOP-001** (thay bằng `GET /shops`, module `Shop`) — xem
 `Docs/tasks/SHOP-001/contract-diff.md` mục REMOVED và `changelog.md` mục A.
+
+### Refresh token = cookie httpOnly (#101, IDENTITY-002)
+
+Refresh token **không bao giờ** nằm trong body/response/JS. `login`/`refresh-token` set cookie
+`vsite_rt` và chỉ trả `{ accessToken, accessTokenExpiresAt }` (`AccessTokenResponse`).
+
+- Cờ cookie ở MỘT chỗ: `Vsite.Api/Identity/RefreshTokenCookie.cs` — `HttpOnly; SameSite=Lax;
+  Path=/api/auth`, host-only (không `Domain`), `Expires` = hạn token. `Secure = !IsDevelopment` — **không**
+  dùng `Request.IsHttps` vì chưa bật `UseForwardedHeaders` (sau Caddy luôn false).
+- `refresh-token` không body: đọc cookie, thiếu → 401 `UNAUTHORIZED` (không 422, không đụng cookie); cookie sai/hết hạn/đã thu hồi → 401 **và xoá cookie** (giữ lại thì mỗi lần mở trang bị coi là reuse, thu hồi cả nhóm). Rotation/reuse-detection
+  của `RefreshTokenHandler` giữ nguyên (#3).
+- `logout` (`AllowAnonymous`): thu hồi **đúng token gửi lên** (không thu hồi cả nhóm — khác reuse), xoá
+  cookie, luôn 204 kể cả không cookie / token lạ / đã revoke.
+- CORS dev có `AllowCredentials` (origin liệt kê tường minh). Prod cùng origin sau Caddy nên không cần.
+- ⚠️ Nợ có chủ đích: hai tab cùng refresh một lúc dùng chung cookie → tab sau gửi token vừa xoay → bị
+  coi là reuse → thu hồi cả nhóm → cả hai tab bị đăng xuất. Cách chữa nếu cần: grace window ~10s cho token
+  vừa xoay (nới #3 — quyết định bảo mật của người). CSRF chỉ dựa `SameSite=Lax`: `{slug}.vsite.vn` cùng
+  *site* với `admin.vsite.vn` nên một trang shop độc hại có thể ép logout / xoay token (không đọc được
+  response).
+- Test: `backend/tests/IntegrationTests/Identity/RefreshTokenCookieTests.cs` (tắt cookie jar của
+  `HttpClient` để điều khiển cookie bằng header — nếu để mặc định `CreateClient()` sẽ tự gửi cookie mới nhất
+  và che lỗi).
 
 **Test bắt buộc `03` §7.1** (token `shop:*` bị từ chối đúng chỗ) nằm ở
 `backend/tests/IntegrationTests/Identity/TokenScopeTests.cs` — đi qua `IdentityApiFactory`

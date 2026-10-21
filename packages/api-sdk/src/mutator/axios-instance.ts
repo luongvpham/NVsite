@@ -11,7 +11,8 @@ export const API_PREFIX = '/api';
 /**
  * Instance mặc định — dùng cho app CSR (Portal): một trình duyệt = một phiên, nên giữ token ở cấp
  * module là đúng. Access token giữ trong memory (Quyết định #3) — set qua setAccessToken(), không
- * đọc localStorage.
+ * đọc localStorage. Refresh token KHÔNG nằm ở FE: nó là cookie httpOnly do BE set (Quyết định #101),
+ * JS không đọc được — instance này chỉ cần `withCredentials` để trình duyệt gửi/nhận cookie đó.
  *
  * ⚠️ KHÔNG dùng instance này khi render ở server (apps/web SSR): state cấp module dùng chung cho
  * MỌI request của process → token của người này lọt sang request của người khác. Ở server, tạo
@@ -21,17 +22,16 @@ export const API_PREFIX = '/api';
 // Bước 1 chưa có Caddy — mặc định trỏ về Api host local (backend/src/Vsite.Api/Properties/launchSettings.json).
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5270';
 
-export const axiosInstance = axios.create({ baseURL });
+export const axiosInstance = axios.create({ baseURL, withCredentials: true });
 
 let accessToken: string | undefined;
-let refreshToken: string | undefined;
+
+/** Tăng mỗi lần phiên bị clear — refresh đang bay từ "đời" trước không được hồi sinh access token. */
+let sessionEpoch = 0;
 
 export function setAccessToken(token: string | undefined): void {
+  if (token === undefined) sessionEpoch += 1;
   accessToken = token;
-}
-
-export function setRefreshToken(token: string | undefined): void {
-  refreshToken = token;
 }
 
 /**
@@ -64,24 +64,55 @@ const REFRESH_EXEMPT_URLS = [`${API_PREFIX}/auth/login`, `${API_PREFIX}/auth/ref
 let refreshPromise: Promise<string | undefined> | null = null;
 
 async function refreshAccessToken(): Promise<string | undefined> {
-  if (!refreshToken) return undefined;
-
+  const epoch = sessionEpoch;
   try {
     // Axios bare (không qua axiosInstance → không dính interceptor 401 ở dưới). Truyền `baseURL`
     // để axios tự ghép đúng dấu `/` — KHÔNG nối chuỗi `${baseURL}/…`: với baseURL "/" (Portal) nó ra
     // "//api/…", trình duyệt hiểu thành URL protocol-relative tới host "api" (REFACTOR-API-001).
-    const response = await axios.post<{
-      accessToken: string;
-      refreshToken: string;
-    }>(`${API_PREFIX}/auth/refresh-token`, { refreshToken }, { baseURL });
+    // Không body: refresh token đi bằng cookie httpOnly (#101), `withCredentials` để trình duyệt gửi nó
+    // (và nhận cookie đã xoay) kể cả khi BE khác origin ở dev.
+    const response = await axios.post<{ accessToken: string }>(
+      `${API_PREFIX}/auth/refresh-token`,
+      undefined,
+      { baseURL, withCredentials: true },
+    );
+    // Phiên đã bị clear (đăng xuất) trong lúc request bay → bỏ kết quả, không khôi phục token.
+    if (epoch !== sessionEpoch) return undefined;
     accessToken = response.data.accessToken;
-    refreshToken = response.data.refreshToken;
     return accessToken;
   } catch {
     accessToken = undefined;
-    refreshToken = undefined;
     return undefined;
   }
+}
+
+/** Mọi lời gọi refresh trong CÙNG một tab dùng chung một promise (interceptor 401 lẫn restoreSession). */
+function refreshOnce(): Promise<string | undefined> {
+  refreshPromise ??= refreshAccessToken().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
+}
+
+/**
+ * Chờ lần refresh đang bay (nếu có) xong. Đăng xuất gọi cái này TRƯỚC `logout` để cookie đã xoay xong —
+ * không thì logout thu hồi token cũ rồi refresh dùng lại nó (bị coi là reuse, thu hồi cả nhóm), hoặc
+ * logout bỏ lỡ token mới và phiên sống lại. `refreshPromise` không bao giờ reject.
+ */
+export async function waitForPendingRefresh(): Promise<void> {
+  await refreshPromise;
+}
+
+/**
+ * Khôi phục phiên khi tải lại trang (F5) hoặc mở Portal: store rỗng nhưng cookie httpOnly còn hạn →
+ * đổi lấy access token mới. Trả access token, hoặc `undefined` nếu không có phiên (không cookie / hết hạn)
+ * — KHÔNG gọi onSessionExpired: chưa từng đăng nhập không phải "phiên hết hạn".
+ *
+ * Giới hạn đã chấp nhận (#101): hai TAB cùng refresh một lúc dùng chung cookie, tab đến sau gửi token
+ * vừa bị xoay → BE coi là reuse và thu hồi cả nhóm. `refreshOnce` chỉ chống đua trong MỘT tab.
+ */
+export function restoreSession(): Promise<string | undefined> {
+  return refreshOnce();
 }
 
 axiosInstance.interceptors.response.use(
@@ -95,10 +126,7 @@ axiosInstance.interceptors.response.use(
       if (!isExempt && !config._retriedAfterRefresh) {
         config._retriedAfterRefresh = true;
 
-        refreshPromise ??= refreshAccessToken().finally(() => {
-          refreshPromise = null;
-        });
-        const newAccessToken = await refreshPromise;
+        const newAccessToken = await refreshOnce();
 
         if (newAccessToken) {
           config.headers.set('Authorization', `Bearer ${newAccessToken}`);

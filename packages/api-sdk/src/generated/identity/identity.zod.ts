@@ -24,6 +24,9 @@ export const verifyEmailResponse = zod.object({
 })
 
 
+/**
+ * Response set cookie httpOnly `vsite_rt` (refresh token, Path=/api/auth) và chỉ trả access token trong body. Client phải nhận cookie (vd. withCredentials). (#101)
+ */
 export const loginBody = zod.object({
   "email": zod.string(),
   "password": zod.string()
@@ -31,21 +34,17 @@ export const loginBody = zod.object({
 
 export const loginResponse = zod.object({
   "accessToken": zod.string(),
-  "accessTokenExpiresAt": zod.string().datetime({}),
-  "refreshToken": zod.string(),
-  "refreshTokenExpiresAt": zod.string().datetime({})
+  "accessTokenExpiresAt": zod.string().datetime({})
 })
 
 
-export const refreshTokenBody = zod.object({
-  "refreshToken": zod.string()
-})
-
+/**
+ * Không có body. Refresh token đi bằng cookie httpOnly `vsite_rt` (client phải gửi kèm cookie, vd. withCredentials); response set cookie mới (xoay vòng) và chỉ trả access token. 401 nếu thiếu/sai/hết hạn/đã thu hồi — cookie sai bị xoá. (#101)
+ * @summary Đổi refresh token (cookie `vsite_rt`) lấy access token mới.
+ */
 export const refreshTokenResponse = zod.object({
   "accessToken": zod.string(),
-  "accessTokenExpiresAt": zod.string().datetime({}),
-  "refreshToken": zod.string(),
-  "refreshTokenExpiresAt": zod.string().datetime({})
+  "accessTokenExpiresAt": zod.string().datetime({})
 })
 
 

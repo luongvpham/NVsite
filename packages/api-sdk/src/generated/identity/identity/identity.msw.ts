@@ -15,7 +15,7 @@ import type {
 } from 'msw';
 
 import type {
-  AuthTokenResult,
+  AccessTokenResponse,
   MeDto,
   RegisterResult,
   VerifyEmailResult
@@ -26,9 +26,9 @@ export const getRegisterResponseMock = (overrideResponse: Partial< RegisterResul
 
 export const getVerifyEmailResponseMock = (overrideResponse: Partial< VerifyEmailResult > = {}): VerifyEmailResult => ({userId: faker.string.uuid(), shopMembershipCreated: faker.datatype.boolean(), ...overrideResponse})
 
-export const getLoginResponseMock = (overrideResponse: Partial< AuthTokenResult > = {}): AuthTokenResult => ({accessToken: faker.string.alpha({length: {min: 10, max: 20}}), accessTokenExpiresAt: `${faker.date.past().toISOString().split('.')[0]}Z`, refreshToken: faker.string.alpha({length: {min: 10, max: 20}}), refreshTokenExpiresAt: `${faker.date.past().toISOString().split('.')[0]}Z`, ...overrideResponse})
+export const getLoginResponseMock = (overrideResponse: Partial< AccessTokenResponse > = {}): AccessTokenResponse => ({accessToken: faker.string.alpha({length: {min: 10, max: 20}}), accessTokenExpiresAt: `${faker.date.past().toISOString().split('.')[0]}Z`, ...overrideResponse})
 
-export const getRefreshTokenResponseMock = (overrideResponse: Partial< AuthTokenResult > = {}): AuthTokenResult => ({accessToken: faker.string.alpha({length: {min: 10, max: 20}}), accessTokenExpiresAt: `${faker.date.past().toISOString().split('.')[0]}Z`, refreshToken: faker.string.alpha({length: {min: 10, max: 20}}), refreshTokenExpiresAt: `${faker.date.past().toISOString().split('.')[0]}Z`, ...overrideResponse})
+export const getRefreshTokenResponseMock = (overrideResponse: Partial< AccessTokenResponse > = {}): AccessTokenResponse => ({accessToken: faker.string.alpha({length: {min: 10, max: 20}}), accessTokenExpiresAt: `${faker.date.past().toISOString().split('.')[0]}Z`, ...overrideResponse})
 
 export const getGetMeResponseMock = (overrideResponse: Partial< MeDto > = {}): MeDto => ({userId: faker.string.uuid(), email: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), fullName: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), avatarUrl: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), phone: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), audience: faker.string.alpha({length: {min: 10, max: 20}}), ...overrideResponse})
 
@@ -57,7 +57,7 @@ export const getVerifyEmailMockHandler = (overrideResponse?: VerifyEmailResult |
   }, options)
 }
 
-export const getLoginMockHandler = (overrideResponse?: AuthTokenResult | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<AuthTokenResult> | AuthTokenResult), options?: RequestHandlerOptions) => {
+export const getLoginMockHandler = (overrideResponse?: AccessTokenResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<AccessTokenResponse> | AccessTokenResponse), options?: RequestHandlerOptions) => {
   return http.post('*/api/auth/login', async (info) => {await delay(1000);
   
     return new HttpResponse(JSON.stringify(overrideResponse !== undefined
@@ -69,7 +69,7 @@ export const getLoginMockHandler = (overrideResponse?: AuthTokenResult | ((info:
   }, options)
 }
 
-export const getRefreshTokenMockHandler = (overrideResponse?: AuthTokenResult | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<AuthTokenResult> | AuthTokenResult), options?: RequestHandlerOptions) => {
+export const getRefreshTokenMockHandler = (overrideResponse?: AccessTokenResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<AccessTokenResponse> | AccessTokenResponse), options?: RequestHandlerOptions) => {
   return http.post('*/api/auth/refresh-token', async (info) => {await delay(1000);
   
     return new HttpResponse(JSON.stringify(overrideResponse !== undefined
@@ -77,6 +77,16 @@ export const getRefreshTokenMockHandler = (overrideResponse?: AuthTokenResult | 
     : getRefreshTokenResponseMock()),
       { status: 200,
         headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getLogoutMockHandler = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.post('*/api/auth/logout', async (info) => {await delay(1000);
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 204,
+        
       })
   }, options)
 }
@@ -127,6 +137,7 @@ export const getIdentityMock = () => [
   getVerifyEmailMockHandler(),
   getLoginMockHandler(),
   getRefreshTokenMockHandler(),
+  getLogoutMockHandler(),
   getForgotPasswordMockHandler(),
   getResetPasswordMockHandler(),
   getGetMeMockHandler(),

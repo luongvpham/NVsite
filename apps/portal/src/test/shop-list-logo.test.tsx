@@ -23,7 +23,7 @@ const withoutLogo: ShopSummaryDto = { ...withLogo, id: 'shop-2', name: 'Salon Xi
 
 describe('Danh sách shop — logo (F6)', () => {
   it('hiện logo nguyên trạng khi có logoUrl, chữ cái đầu khi null', async () => {
-    useSessionStore.getState().setSession({ accessToken: 't', refreshToken: 'r' });
+    useSessionStore.getState().setSession({ accessToken: 't' });
     server.use(http.get('/api/shops', () => HttpResponse.json([withLogo, withoutLogo])));
     renderApp('/shops');
 
@@ -38,7 +38,7 @@ describe('Danh sách shop — logo (F6)', () => {
   });
 
   it('loading và error được giữ nguyên', async () => {
-    useSessionStore.getState().setSession({ accessToken: 't', refreshToken: 'r' });
+    useSessionStore.getState().setSession({ accessToken: 't' });
     server.use(
       http.get('/api/shops', () => HttpResponse.json({ error_code: 'SHOP_ACCESS_DENIED', title: 'x' }, { status: 403 })),
     );

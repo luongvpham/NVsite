@@ -2,9 +2,7 @@
  * GENERATED — DO NOT EDIT (pnpm gen:api)
  */
 
-export interface AuthTokenResult {
+export interface AccessTokenResponse {
   accessToken: string;
   accessTokenExpiresAt: string;
-  refreshToken: string;
-  refreshTokenExpiresAt: string;
 }

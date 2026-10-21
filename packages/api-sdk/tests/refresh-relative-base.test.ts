@@ -12,13 +12,13 @@ afterEach(() => {
   vi.resetModules();
 });
 
-it('baseURL "/": refresh gọi `/api/auth/refresh-token` với { baseURL: "/" }, không nối chuỗi thành "//…"', async () => {
+it('baseURL "/": refresh gọi `/api/auth/refresh-token` với { baseURL: "/", withCredentials }, không nối chuỗi thành "//…"', async () => {
   vi.stubEnv('VITE_API_BASE_URL', '/');
   vi.resetModules();
   const sdk = await import('../src/mutator/axios-instance');
   expect(sdk.axiosInstance.defaults.baseURL).toBe('/');
 
-  const post = vi.spyOn(axios, 'post').mockResolvedValue({ data: { accessToken: 'fresh', refreshToken: 'r2' } });
+  const post = vi.spyOn(axios, 'post').mockResolvedValue({ data: { accessToken: 'fresh' } });
 
   // Adapter giả: lần đầu 401, lần retry (có token mới) 200 — không cần mạng.
   sdk.axiosInstance.defaults.adapter = (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => {
@@ -29,7 +29,6 @@ it('baseURL "/": refresh gọi `/api/auth/refresh-token` với { baseURL: "/" },
       : Promise.reject(new AxiosError('401', 'ERR_BAD_REQUEST', config, undefined, response as AxiosResponse));
   };
   sdk.setAccessToken('stale');
-  sdk.setRefreshToken('r1');
 
   await expect(sdk.customInstance({ url: '/api/shops', method: 'GET' })).resolves.toEqual([]);
 
@@ -37,6 +36,7 @@ it('baseURL "/": refresh gọi `/api/auth/refresh-token` với { baseURL: "/" },
   const [url, body, config] = post.mock.calls[0] ?? [];
   expect(url).toBe('/api/auth/refresh-token');
   expect(url?.startsWith('//')).toBe(false);
-  expect(body).toEqual({ refreshToken: 'r1' });
-  expect(config).toEqual({ baseURL: '/' });
+  // #101 — không body (refresh token ở cookie httpOnly), kèm cookie qua withCredentials.
+  expect(body).toBeUndefined();
+  expect(config).toEqual({ baseURL: '/', withCredentials: true });
 });
