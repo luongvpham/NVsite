@@ -7,12 +7,14 @@ import {
   getGetAssetReferencesQueryOptions,
   getListLibraryQueryKey,
   getGetMediaUsageQueryKey,
+  MediaReferenceKind,
   useDeleteFromLibrary,
   useListLibrary,
   useGetMediaUsage,
   useUploadToLibrary,
   useCloneFromLibrary,
   type MediaAssetDto,
+  type MediaReferenceDto,
 } from '@vsite/api-sdk';
 import { getErrorMessage, HEIC_UNSUPPORTED_GUIDANCE } from '../../lib/error-messages';
 import { formatBytes } from '../../lib/format-bytes';
@@ -20,10 +22,18 @@ import { ACCEPT_ATTR, fileSchema, fitOfPreset, isHeicFile } from '../../lib/medi
 
 const PAGE_SIZE = 24;
 
-export interface MediaLibraryPickerProps {
+/** Một dòng "ảnh đang dùng ở đâu" cho cảnh báo xoá. `pageTitle` có thể thiếu (trang đã xoá mềm) → không in `null`. */
+function describeReference(reference: MediaReferenceDto): string {
+  switch (reference.kind) {
+    case MediaReferenceKind.ShopLogo:
+      return 'Logo shop';
+    case MediaReferenceKind.PageDraft:
+      return reference.pageTitle ? `Trang ${reference.pageTitle}` : 'Một trang';
+  }
+}
+
+interface MediaLibraryPickerBaseProps {
   shopId: string;
-  /** Preset của slot đang chọn ảnh cho — dùng để gọi clone (#71: luôn clone, không đặt id Library vào tree). */
-  preset: string;
   /** Fail-safe: mặc định `false` — ẩn nút xoá cho tới khi caller (F5) xác nhận role Owner thật,
    * chỉ bật khi biết chắc là Owner, không suy đoán. */
   isOwner?: boolean;
@@ -33,17 +43,26 @@ export interface MediaLibraryPickerProps {
 }
 
 /**
+ * - `clone` (mặc định): chọn ảnh cho một slot trong cây → luôn clone ra bản riêng theo `preset` (#71: không
+ *   đặt id Library vào tree).
+ * - `library`: trả thẳng bản **Library**, không clone, không cần preset — dành cho `ogImageId` của
+ *   Page/Website (brief WEBSITE-002 "Media": OG là bản Library, ảnh trong cây mới là Clone/Direct).
+ */
+export type MediaLibraryPickerProps = MediaLibraryPickerBaseProps &
+  ({ mode?: 'clone'; preset: string } | { mode: 'library'; preset?: undefined });
+
+/**
  * F3 — picker Media Library: danh sách phân trang, upload thẳng vào thư viện, chọn ảnh → clone vào
  * slot, xoá (cảnh báo tham chiếu nhưng không chặn), hiện dung lượng đã dùng.
  */
-export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onClose, onSelect }: MediaLibraryPickerProps) {
+export function MediaLibraryPicker({ shopId, mode = 'clone', preset = '', isOwner = false, open, onClose, onSelect }: MediaLibraryPickerProps) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadHeic, setUploadHeic] = useState(false);
   const [selectedForClone, setSelectedForClone] = useState<MediaAssetDto | null>(null);
   const [cloneFocal, setCloneFocal] = useState({ x: 0.5, y: 0.5 });
-  const [pendingDelete, setPendingDelete] = useState<{ asset: MediaAssetDto; referenceCount: number } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ asset: MediaAssetDto; references: MediaReferenceDto[] } | null>(null);
   const [referencesLoading, setReferencesLoading] = useState(false);
 
   const libraryQuery = useListLibrary(shopId, { page, pageSize: PAGE_SIZE });
@@ -98,6 +117,14 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
     uploadMutation.mutate({ shopId, data: { file } });
   }
 
+  function handlePick(asset: MediaAssetDto) {
+    if (mode === 'library') {
+      onSelect(asset);
+      return;
+    }
+    openCloneStep(asset);
+  }
+
   function openCloneStep(asset: MediaAssetDto) {
     setSelectedForClone(asset);
     setCloneFocal({ x: asset.focalPointX, y: asset.focalPointY });
@@ -130,7 +157,7 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
       const referencesResult = await queryClient.query(
         getGetAssetReferencesQueryOptions(shopId, asset.id),
       );
-      setPendingDelete({ asset, referenceCount: referencesResult.references.length });
+      setPendingDelete({ asset, references: referencesResult.references });
     } finally {
       setReferencesLoading(false);
     }
@@ -193,7 +220,7 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
                   <button
                     type="button"
                     className="block w-full overflow-hidden rounded border border-border"
-                    onClick={() => { openCloneStep(asset); }}
+                    onClick={() => { handlePick(asset); }}
                   >
                     <img
                       src={mediaUrl(asset.storageKey)}
@@ -273,10 +300,17 @@ export function MediaLibraryPicker({ shopId, preset, isOwner = false, open, onCl
         {pendingDelete && (
           <div role="alertdialog" className="space-y-2 rounded border border-destructive/50 bg-destructive/10 p-3">
             <p className="text-sm">
-              {pendingDelete.referenceCount > 0
-                ? `Ảnh này đang được dùng ở ${pendingDelete.referenceCount} nơi (vd. logo shop). Ảnh sẽ ẩn khỏi thư viện; các nơi đang dùng vẫn hiển thị bình thường.`
+              {pendingDelete.references.length > 0
+                ? `Ảnh này đang được dùng ở ${String(pendingDelete.references.length)} nơi. Ảnh sẽ ẩn khỏi thư viện; các nơi đang dùng vẫn hiển thị bình thường.`
                 : 'Xoá ảnh này khỏi thư viện?'}
             </p>
+            {pendingDelete.references.length > 0 && (
+              <ul className="list-disc pl-5 text-sm">
+                {pendingDelete.references.map((reference, index) => (
+                  <li key={`${reference.kind}-${reference.pageId ?? index}`}>{describeReference(reference)}</li>
+                ))}
+              </ul>
+            )}
             {deleteMutation.isError && (
               <p role="alert" className="text-sm text-destructive">
                 {getErrorMessage(getErrorCode(deleteMutation.error))}

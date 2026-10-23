@@ -37,7 +37,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   PAGE_NOT_FOUND: 'Không tìm thấy trang (có thể đã bị xoá).',
   PAGE_SLUG_TAKEN: 'Đường dẫn này đã có trang khác dùng.',
   PAGE_SLUG_RESERVED: 'Đường dẫn này được hệ thống dành riêng, hãy chọn đường dẫn khác.',
-  PAGE_SLUG_INVALID: 'Đường dẫn không hợp lệ.',
+  PAGE_SLUG_INVALID: 'Đường dẫn không hợp lệ: chỉ dùng chữ thường không dấu, số và dấu gạch ngang (vd. gioi-thieu).',
   PAGE_NOINDEX_REQUIRED: 'Trang "Không tìm thấy" luôn phải ẩn khỏi công cụ tìm kiếm.',
   PAGE_SYSTEM_SLUG_FIXED: 'Không đổi được đường dẫn của trang hệ thống.',
   PAGE_HOME_SLUG_FIXED: 'Không đổi được đường dẫn của trang chủ.',

@@ -33,7 +33,31 @@
   `docker-compose.yml` dựng Postgres `:5432` user `vsite` — **lệch** connection string trong
   `appsettings*.json` (`:5433`, `postgres`/`password`).
 
+### F2 — Tạo / sửa / xoá trang
+- `PageList`: nút "Tạo trang", mỗi dòng "Sửa" (mọi trang, kể cả trang chủ/System) và "Xoá" (**chỉ** khi
+  `deletable`; hộp xác nhận `role=alertdialog`; 409 `PAGE_NOT_DELETABLE` hiện trong hộp).
+- `PageFormDialog` (tạo/sửa metadata, RHF + Zod): trang chủ + System → slug khoá và gửi `slug: null`;
+  NotFound → `noIndex` bật cứng + khoá; `PAGE_SLUG_TAKEN|RESERVED|INVALID` gắn ô slug,
+  `PAGE_NOINDEX_REQUIRED` gắn ô noindex, `MEDIA_INVALID_IMAGE_REFERENCE` gắn mục ảnh, `CONCURRENCY_CONFLICT`
+  → báo + nút "Tải lại" (làm mới danh sách, đóng dialog); mã còn lại → alert chung.
+- `lib/page-validation.ts`: phản chiếu `SlugRules.cs`/`Page.cs` — chiếm chỗ (locales, route System page, `reservedShopSitePaths`;
+  **không** `reservedPaths`) kiểm trước, rồi khuôn `^[a-z0-9]+(-[a-z0-9]+)*$` ≤120; title ≤160, SEO title ≤160,
+  SEO description ≤320; SEO rỗng → `null`.
+- `MediaLibraryPicker`: `mode="library"` trả thẳng bản Library (không clone, không cần `preset`) cho `ogImageId`
+  (brief "Media"); cảnh báo xoá ảnh liệt kê từng nơi dùng ("Logo shop", "Trang {pageTitle}", thiếu tiêu đề →
+  "Một trang") — Flow 7.
+- Test: `page-validation.test.ts` (11), `page-form-dialog.test.tsx` (17), `page-list.test.tsx` (6),
+  `media-library-picker.test.tsx` (+3). Portal 105/105, `tsc` + `eslint` sạch. Test Escape đã kiểm đột biến
+  (bỏ guard → fail).
+- **Chưa kiểm với BE thật** (Docker/Redis tắt lúc làm F2): các `error_code` ở trên lấy từ brief + `SlugRules.cs`,
+  chưa gọi thật. Cần chạy lại smoke API (tạo trang trùng slug, slug `lien-he`/`en`, sửa trang chủ với `slug:null`,
+  NotFound `noIndex:false`, xoá trang System).
+
 ## Lệch so với thiết kế / plan
 - F1: `retry: false` cho `getWebsite` — 404 là trạng thái bình thường "chưa có website", không retry.
+- F2: form dùng schema Zod viết tay (trường dạng chuỗi cho SEO) thay vì `createPageBody`/`updatePageBody` sinh từ
+  contract — contract coi SEO là `string | null`, form cần chuỗi rỗng; kiểu payload vẫn ràng bằng
+  `CreatePageRequest`/`UpdatePageRequest` của SDK (compile-time).
+- F2: danh sách vẫn chưa hiện nhãn ảnh OG; ảnh chọn xong hiện ngay từ asset vừa chọn (không round-trip `assets?ids=`).
 
 ## Chưa làm xong
