@@ -39,5 +39,9 @@ coverage/
 # (khác api-sdk: registry.lock.json nằm NGOÀI generated/ nên vẫn được commit)
 packages/builder-components/generated/
 
-# Agent scratch/worktree output (SDD ledger, vbin)
+# Agent scratch/worktree output (SDD ledger, vbin, burn runner logs)
 .superpowers/
+
+# weekend-burn: batch file phải sống sót qua git checkout giữa nhánh task (skill weekend-burn)
+Docs/process/burn/*
+!Docs/process/burn/README.md

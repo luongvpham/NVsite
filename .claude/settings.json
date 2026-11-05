@@ -22,6 +22,21 @@
     ]
   },
   "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/appsettings.Production*.json)",
+      "Bash(git reset --hard*)",
+      "PowerShell(git reset --hard*)",
+      "Bash(git clean *)",
+      "PowerShell(git clean *)",
+      "Bash(git branch -D *)",
+      "PowerShell(git branch -D *)",
+      "Bash(docker system prune*)",
+      "PowerShell(docker system prune*)",
+      "Bash(docker volume rm*)",
+      "PowerShell(docker volume rm*)"
+    ],
     "allow": [
       "mcp__codegraph__codegraph_**",
       "mcp__okf-producer__**",
@@ -84,7 +99,29 @@
       "PowerShell(git checkout*)",
       "PowerShell(git add*)",
       "PowerShell(git commit*)",
-      "PowerShell(git stash*)"
+      "PowerShell(git stash*)",
+      "Bash(pnpm lint*)",
+      "Bash(pnpm tsc --noEmit*)",
+      "Bash(pnpm vitest run*)",
+      "Bash(docker info*)",
+      "Bash(docker version*)",
+      "Bash(dotnet list *)",
+      "Bash(git check-ignore *)",
+      "Bash(where *)",
+      "PowerShell(pnpm lint*)",
+      "PowerShell(pnpm tsc --noEmit*)",
+      "PowerShell(pnpm vitest run*)",
+      "PowerShell(docker info*)",
+      "PowerShell(docker version*)",
+      "PowerShell(dotnet list *)",
+      "PowerShell(git check-ignore *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Select-String *)",
+      "PowerShell(findstr *)",
+      "PowerShell(Get-ChildItem*)",
+      "PowerShell(ConvertFrom-Json*)",
+      "PowerShell(Get-Process*)",
+      "PowerShell(Get-NetTCPConnection*)"
     ]
   }
 }

@@ -262,6 +262,7 @@ là máy sinh rule.
 | 12 | **Task chạm code phải có `changelog.md`** và banner `STATUS` đã cập nhật |
 | 13 | **Đề xuất quy trình phải qua người duyệt**; mọi rule đã promote có mốc rà lại để còn gỡ được |
 | 14 | **Subagent chạy lệnh foreground.** Chạy nền rồi kết thúc lượt = treo. Báo "đang chạy" phải kiểm bằng `git`/danh sách agent, không tin lời agent |
+| 15 | **Burn không người trông** (skill `weekend-burn`): chỉ bước đã có plan, trên nhánh task, tuần tự, mode `auto` — không bypass. Không push, merge, mở D{n}; Gate 2 như thường |
 
 ---
 
@@ -305,7 +306,8 @@ Registry trước Identity, vì build-time và rủi ro cao nhất).
 | Cơ chế | Nguồn duy nhất |
 |---|---|
 | Hook chặn ghi contract/generated | `.claude/hooks/guard-write.mjs` · `guard-bash.mjs`, khai ở `.claude/settings.json` |
-| Quyền lệnh tự cho phép | `.claude/settings.json` `permissions.allow` |
+| Quyền lệnh tự cho phép / cấm | `.claude/settings.json` `permissions.allow` · `deny` |
+| Burn không người trông | `.claude/skills/weekend-burn/SKILL.md` · `tools/burn/run.mjs` · `Docs/process/burn/README.md` |
 | Skill lập plan từ requirement | `.claude/skills/plan-task/SKILL.md` + `references/plan-template.md` |
 | Skill sync contract | `.claude/skills/contract-sync/SKILL.md` |
 | Kiểm lock trước Orval | `packages/api-sdk/scripts/check-contract-lock.mjs` (trong `gen:api`) |
