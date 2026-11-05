@@ -35,10 +35,31 @@ contract, không đổi runtime của app. Plan + review bản nháp gốc:
 - `git push` **không** bị deny ở session thường (người quyết Q3). Burn chặn bằng `--disallowedTools`.
 - Gate 1 trong burn tự promote theo #89 với `approvedBy = burn-auto` (Q1, Q2).
 
+## Smoke test (2026-11-06, nhánh `feature/BURN-SMOKE`, runner headless)
+
+| Kiểm | Kết quả |
+|---|---|
+| F1 lane A (`clampPercent` + test) | `PASS` — commit `6722279` + changelog + `review.md`, reviewer 0 Critical |
+| F2 cần field không có trong `website.v1` | `BLOCKED` đúng lý do, không viết code, không sửa contract, không mở D{n} |
+| Tree sạch sau mỗi bước · `contracts/`, `config/`, generated không đổi · `master` không có commit mới | ✅ |
+| Permission denial trong `claude -p --permission-mode auto` | **0** (13 lượt/bước, 2–3 phút/bước) |
+| Chạy lại cùng batch | Bỏ qua cả hai bước, 0 lần gọi `claude` |
+| Chi phí | $1.45 + $0.89 |
+
+**Sửa sau smoke:** runner ghi giờ máy thay vì UTC; gọi `claude` bằng một chuỗi lệnh (hết cảnh báo Node
+DEP0190); tự gỡ `CLAUDECODE`/`CLAUDE_CODE_*` để chạy được cả khi gọi từ trong một session Claude Code.
+
+**Ma sát lộ ra (chưa sửa, theo dõi ở P11):**
+- `guard-bash.mjs` chặn nhầm lệnh **chỉ đọc** contract nếu cùng dòng có `>` ở bất kỳ đâu (`2>&1`, email
+  trong `Co-Authored-By: <…>`). Burn chưa dính, nhưng một implementer viết lệnh ghép kiểu đó sẽ bị
+  `BLOCKED` → skill coi là ma sát. Sửa: chỉ khớp khi đường dẫn bảo vệ đứng **sau** toán tử ghi.
+- Agent đặt tên vòng mở lại là `BURN-SMOKE-D1`; workflow §6.1 đánh số D{n} từ 2. Chỉ là chữ trong
+  `Cần người quyết`, không tạo file.
+- `review.md` do burn tạo chỉ có 2 mục để trống thay vì đủ khung workflow §9 (`Tự động`, …).
+
 ## Chưa làm xong
 
-- **Smoke test thật** (plan §7 "Smoke test") — chưa chạy. Cần commit TOOLING-002 trước, vì runner đòi
-  tree sạch và skill phải có mặt trên nhánh smoke. Theo dõi: P11.
+- Xoá nhánh `feature/BURN-SMOKE` sau khi người xem xong (rule deny `git branch -D` chặn agent — đúng ý).
 - Ngưỡng dừng theo `rate_limits.seven_day` (status line) — chưa làm, chờ dữ liệu 2 lần burn (plan §7).
 - Dọn ~497 rule một-lần trong `.claude/settings.local.json` (`/fewer-permission-prompts`) — việc của
   người, file local không commit.

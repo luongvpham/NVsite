@@ -66,7 +66,11 @@ export function nextItem({ queue, log }, skip = new Set()) {
 
 const read = () => readFileSync(BATCH, 'utf8');
 const write = (t) => writeFileSync(BATCH, t);
-const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
+const now = () => {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; // giờ máy, không UTC
+};
 
 function setBanner(field, value) {
   const t = read().replace(new RegExp(`(\\*\\*${field}:\\*\\* )\`?[^·\\n]*?\`?(\\s*(·|$))`, 'm'), `$1\`${value}\`$2`);
@@ -125,9 +129,13 @@ function runClaude(item, n) {
     return { dry: true };
   }
   console.log(`[burn] ${now()} → ${item.id} ${item.step}`);
-  // Windows: claude là claude.cmd → cần shell; tự quote từng arg cho cmd.exe. Prompt đi qua stdin.
-  const res = spawnSync(win ? 'claude' : 'claude', win ? args.map((a) => `"${a}"`) : args, {
+  // Windows: claude là claude.cmd → cần shell; tự ghép + quote thành một chuỗi lệnh cho cmd.exe
+  // (truyền mảng args kèm shell:true bị Node cảnh báo DEP0190). Prompt đi qua stdin.
+  // Gỡ biến CLAUDECODE / CLAUDE_CODE_* của session cha: runner gọi từ trong Claude Code vẫn chạy như terminal thường.
+  const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => k !== 'CLAUDECODE' && !k.startsWith('CLAUDE_CODE_')));
+  const res = spawnSync(win ? ['claude', ...args.map((a) => `"${a}"`)].join(' ') : 'claude', win ? [] : args, {
     cwd: REPO_ROOT,
+    env,
     input: prompt,
     encoding: 'utf8',
     shell: win,

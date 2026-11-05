@@ -1,6 +1,6 @@
 # Plan: Weekend-burn mode & giảm permission prompt
 
-> **STATUS:** `ĐÃ APPLY — Giai đoạn 1 + 2, chờ smoke thật` · **Ngày:** 2026-11-06 · **Task:** TOOLING-002 ([changelog](../tasks/TOOLING-002/changelog.md)) · **Theo dõi:** P11 ở [`improvement-proposals.md`](improvement-proposals.md)
+> **STATUS:** `ĐÃ APPLY — Giai đoạn 1 + 2, smoke headless PASS 2026-11-06` · **Ngày:** 2026-11-06 · **Task:** TOOLING-002 ([changelog](../tasks/TOOLING-002/changelog.md)) · **Theo dõi:** P11 ở [`improvement-proposals.md`](improvement-proposals.md)
 > **Loại:** đề xuất quy trình (Rule 13) — người đã duyệt §6 ngày 2026-11-06.
 > **Khảo sát:** `.claude/` (settings, hooks, 2 agent, 3 skill), workflow §1–§14, `improvement-proposals.md`
 > (P1–P10, trần ngân sách), plan.md của WEBSITE-002 (nhánh `feature/WEBSITE-002`), `.superpowers/sdd/`, Claude Code 2.1.202.
