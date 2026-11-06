@@ -53,7 +53,7 @@ Chi tiết ở `DesignIdeal/ai-agent-development-workflow.md`. **Tuần tự BE 
 1. **Không bao giờ ghi thẳng vào `contracts/openapi/*.json`.** Script sync chỉ ghi `contracts/openapi/.staging/`. Promote bằng script riêng (`tools/contract-sync/promote.mjs`).
 2. **Không bao giờ overwrite contract bằng runtime swagger.** Swagger *đề xuất*, người *duyệt*, contract *chốt*.
 3. **Gate 1 gọn trước production (#89):** chỉ thêm + không câu hỏi → promote ngay; có câu hỏi hoặc `REMOVED` → dừng chờ người; BREAKING thì sửa luôn, không tạo `v2`. Từ production: Gate 1 luôn dừng. FE phát hiện thiếu field giữa chừng → vòng `{ID}-D{n}`. Chi tiết: `DesignIdeal/ai-agent-development-workflow.md` §6, §6.1.
-4. **Contract sai hoặc thiếu → DỪNG và báo.** Không tự sửa, không làm tạm rồi sửa sau.
+4. **Contract sai hoặc thiếu → DỪNG và báo.** Không tự sửa, không làm tạm rồi sửa sau. Ngoại lệ: burn trước production (#102).
 5. **File generated không sửa tay**: `packages/api-sdk/src/generated/**`, `packages/builder-components/generated/**`.
 
 Quy tắc 1, 5 và `config/reserved-routes.json` có hook `.claude/hooks/guard-write.mjs` chặn — bị `BLOCKED` là đúng, đừng tìm cách ghi vòng.
