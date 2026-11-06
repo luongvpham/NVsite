@@ -1,4 +1,4 @@
-# vsite — Registry Quyết Định (#1–#100)
+# vsite — Registry Quyết Định (#1–#102)
 
 > **File này là CHỈ MỤC, không phải nội dung.** Mỗi dòng cho bạn biết quyết định đó nói gì trong một
 > câu, nó được **định nghĩa đầy đủ ở đâu**, và nó **đã thành code chưa**. Đọc dòng ở đây trước, rồi
@@ -12,7 +12,7 @@
 ## ⚠️ Đọc trước khi tra
 
 **Không phải quyết định nào cũng nằm trong `02`.** `02` định nghĩa **#1–#39** và **#68**.
-**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** và **#88** định nghĩa tại `08` §0, **#87** tại `backend/CLAUDE.md` §OpenAPI, **#89** tại `ai-agent-development-workflow.md` §6, **#90** tại `backend/docs/modules/identity.md` §Quyết định #90, **#91** tại `backend/CLAUDE.md` §OpenAPI, **#92**, **#94**, **#95**, **#97**, **#98** tại `05` §0, **#93** tại `04` §4.5, **#96** tại `step.md`, **#99**, **#100** tại `backend/docs/modules/website.md`.
+**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** và **#88** định nghĩa tại `08` §0, **#87** tại `backend/CLAUDE.md` §OpenAPI, **#89** tại `ai-agent-development-workflow.md` §6, **#102** tại `ai-agent-development-workflow.md` §6.1, **#90** tại `backend/docs/modules/identity.md` §Quyết định #90, **#91** tại `backend/CLAUDE.md` §OpenAPI, **#92**, **#94**, **#95**, **#97**, **#98** tại `05` §0, **#93** tại `04` §4.5, **#96** tại `step.md`, **#99**, **#100** tại `backend/docs/modules/website.md`.
 Không chép các quyết định đó sang `02` — cố tình không làm. Chép sang `02` sẽ tạo bản
 sao thứ hai để lệch nhau; thay vào đó registry này trỏ thẳng tới nơi định nghĩa duy nhất.
 
@@ -141,6 +141,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#99** | Handler tenant-scoped lấy `ShopId` từ **`ITenantContext` duy nhất**; command chỉ mang id con. Ngoại lệ: lệnh tạo aggregate gốc (`CreateWebsite`) nhận `shopId` tường minh. Handler Media/Shop cũ chưa đổi (nợ) | `backend/docs/modules/website.md` §Quy ước phân quyền và tenant | ✅ enforce ở Website (WEBSITE-001) — handler Media/Shop cũ chưa đổi (nợ, `00-INDEX.md` §4) |
 | **#100** | **Website và Media chỉ `Owner`** — mọi endpoint `/api/shops/{shopId}/website…` và `/api/shops/{shopId}/media/**`, đọc lẫn ghi. Lý do: `RequireShopMembership` nhận cả `Customer`, và khách có token global gọi được | `backend/docs/modules/website.md` §Quy ước phân quyền và tenant | ✅ enforce — Website + 10/10 route Media (`ShopScopedRouteFilterTests`, `MediaOwnerOnlyTests`); `GET /api/shops/{shopId}` còn mở cho Customer (nợ) |
 | **#101** | **Refresh token chỉ sống trong cookie `vsite_rt` `HttpOnly; Secure; SameSite=Lax; Path=/api/auth`, host-only** — không bao giờ trong body/response/JS. `Secure = !IsDevelopment` (chưa có `UseForwardedHeaders`). Có `POST /api/auth/logout` (AllowAnonymous, thu hồi token đang dùng, xoá cookie, luôn 204). Nợ có chủ đích: đa tab đua refresh có thể đăng xuất cả hai (không grace window); CSRF chỉ dựa `SameSite=Lax` | `backend/docs/modules/identity.md` · `Docs/tasks/IDENTITY-002/plan.md` | ✅ đã code — IDENTITY-002 (`RefreshTokenCookieTests`); nợ: đa tab, CSRF chỉ Lax |
+| **#102** | **Burn tự duyệt contract trước production** (mở rộng #89): bước burn thiếu field/endpoint → burn tự mở vòng D{n}, tự quyết tên/kiểu/nullable, promote `approvedBy = burn-auto`, ghi từng quyết định vào "Người duyệt đã quyết" của `contract-diff-D{n}.md`; người đọc lại ở Gate 2. Vẫn dừng: `REMOVED` · đổi auth policy endpoint đã có · chạm #21 · quá 2 vòng/task. **Đảo lại** từ lần deploy production đầu tiên (cùng #89, Rule 5) | `ai-agent-development-workflow.md` §6.1 | ✅ quy trình — skill `weekend-burn` (TOOLING-002) |
 
 ---
 

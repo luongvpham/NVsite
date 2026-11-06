@@ -34,6 +34,11 @@ contract, không đổi runtime của app. Plan + review bản nháp gốc:
 - Không có batch branch, không có Task ID batch (R6). Không có `weekend-burn-implementation-notes.md` (R16).
 - `git push` **không** bị deny ở session thường (người quyết Q3). Burn chặn bằng `--disallowedTools`.
 - Gate 1 trong burn tự promote theo #89 với `approvedBy = burn-auto` (Q1, Q2).
+- **#102 (người quyết sau smoke, Q6):** trước production burn tự mở vòng D{n} khi bước thiếu
+  field/endpoint — tự quyết tên/kiểu/nullable, promote `burn-auto`, ghi vào "Người duyệt đã quyết". Hàng
+  rào còn lại: `REMOVED`, đổi auth policy endpoint đã có, chạm #21, > 2 vòng/task. Sửa: skill (STATUS
+  `NEEDS-CONTRACT`, mục "Vòng D{n} tự động", mẫu prompt D{n}), workflow §6.1 + Rule 15 + §6 ghi chú đảo
+  lại, `DECISIONS.md` #102, root `CLAUDE.md` contract rule 4 (thêm ngoại lệ).
 
 ## Smoke test (2026-11-06, nhánh `feature/BURN-SMOKE`, runner headless)
 

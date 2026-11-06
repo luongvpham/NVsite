@@ -37,7 +37,7 @@ Bản nháp đúng về mục tiêu và ràng buộc. Sai ở **ba chỗ** (khi�
 | R5 | `defaultMode: auto` cho session thường | Đặt ở project settings thì vô hiệu | Đặt ở `~/.claude/settings.json` (cá nhân) hoặc khởi động bằng `claude --permission-mode auto` |
 | R6 | Batch branch `feature/BATCH-YYYY-WNN` | Workflow §2: **mỗi task một nhánh `feature/{ID}` → một PR** | Burn chạy trên **nhánh của task**. Batch chỉ là danh sách ở `Docs/process/burn/{YYYY-MM-DD}.md`, không tạo nhánh. Không tạo Task ID mới |
 | R7 | Gate 1 "vẫn phải tồn tại", không rõ burn xử lý ra sao | #89: chỉ thêm + không câu hỏi → **promote luôn, không chờ người** | Burn **được** promote theo #89 với `approvedBy = burn-auto-#89`. Có câu hỏi hoặc `REMOVED` → bước đó `BLOCKED`, dừng task đó |
-| R8 | Vòng D{n} "tự động" | Rule 9: FE thiếu field → dừng, mở D{n} có người | Burn **không tự mở D{n}**. FE thiếu field → `BLOCKED` |
+| R8 | Vòng D{n} "tự động" | Rule 9: FE thiếu field → dừng, mở D{n} có người | ~~Burn không tự mở D{n}~~ → **đổi theo Q6 / #102:** trước production burn tự mở D{n} + tự promote, hàng rào: `REMOVED`, auth policy, #21, > 2 vòng/task |
 | R9 | Reviewer điền "Ma sát quy trình" | §9: điền **sau khi người quyết ở Gate 2** — bằng chứng giá trị nhất chỉ có lúc đó | Burn ghi mục **"Ma sát — nháp từ burn"** (prompt treo, bước BLOCKED, giả định tự đặt). Người chốt mục thật ở Gate 2 |
 | R10 | "Hỏi, đừng đoán" không được nhắc | Root `CLAUDE.md`: hình dạng API, field, nullable, module, tenant → **phải hỏi** | Không người để hỏi → nhóm câu hỏi đó = `BLOCKED`. Mọi thứ khác → ghi "Giả định tôi đã tự đặt" |
 | R11 | Không nhắc Docker | P3: lane C BE cần Docker. `DOCKER-TEST-DEBT.md` có quy ước riêng | Pre-flight chạy `docker info`. Không có Docker → bỏ bước BE cần Testcontainers và ghi nợ theo quy ước |
@@ -104,14 +104,15 @@ của nó (mỗi bước một subagent + review), nhưng tự định nghĩa lu
 |---|---|---|
 | `PASS` | DoD đủ, review không còn Critical | Bước tiếp |
 | `PASS-WITH-DEBT` | Xong, nhưng có test Docker ghi nợ hoặc Warning | Bước tiếp, liệt kê trong report |
-| `BLOCKED` | Cần người: câu hỏi nhóm "hỏi, đừng đoán" (R10) · contract thiếu/sai (R8) · Gate 1 có câu hỏi/`REMOVED` (R7) · chọn nhầm lane (Rule 11) · Critical sau một lần sửa | **Dừng task này**, chuyển sang task kế tiếp trong danh sách |
+| `NEEDS-CONTRACT` | (#102) Bước thiếu field/endpoint | Supervisor mở vòng D{n} tự động rồi chạy lại bước |
+| `BLOCKED` | Cần người: ranh giới module / tenant (R10) · hàng rào D{n} của #102 (`REMOVED`, auth policy, #21, > 2 vòng) · chọn nhầm lane (Rule 11) · Critical sau một lần sửa | **Dừng task này**, chuyển sang task kế tiếp trong danh sách |
 | `HALT` | Invariant có thể đã bị phá (#21 tenant, hook `BLOCKED` mà agent cố đi vòng), build nhánh hỏng mà không tự cứu được | **Dừng cả batch** |
 
 ### 4.3 Không bao giờ làm, kể cả khi `auto` cho phép
 
 `git push` · merge · `git reset --hard` / `git clean` / force checkout trên thay đổi chưa commit ·
 ghi `contracts/openapi/*.json` ngoài `promote.mjs` · `config/reserved-routes.json` · sửa `DECISIONS.md`
-(quyết định mới → ghi vào report để người chốt) · mở vòng D{n} · tạo nhánh/Task ID mới · sửa
+(quyết định mới → ghi vào report để người chốt) · tạo nhánh/Task ID mới · sửa
 `.claude/**` hoặc settings.
 
 ### 4.4 Chạy tiếp được sau khi bị cắt
@@ -172,6 +173,7 @@ giữ nguyên allow.
 | Q3 | Deny `git push` cho cả session thường? | **Không deny** — vẫn bị hỏi như hiện tại. Burn chặn push bằng `--disallowedTools` |
 | Q4 | Làm runner headless (Giai đoạn 2)? | **Có** — `tools/burn/run.mjs` |
 | Q5 | Batch đầu tiên | **Chạy sau**, người tự chọn |
+| Q6 | (sau smoke) Contract thiếu giữa chừng có cần dừng chờ người? | **Không** — đang giai đoạn phát triển, contract đổi là bình thường → **#102**: burn tự mở D{n}, tự quyết + ghi lại, promote `burn-auto`. Smoke F2 trước đó `BLOCKED` chính vì luật cũ |
 
 ---
 
@@ -185,7 +187,7 @@ giữ nguyên allow.
 2. `Docs/process/burn/README.md` (≤ 1 KB): định dạng file danh sách batch.
 3. `.claude/settings.json`: thêm `deny` ở §5.2 (sau khi người trả lời Q3).
 4. Workflow: thêm 1 dòng ở §13 (`Burn không người trông | .claude/skills/weekend-burn/SKILL.md`) và
-   **Rule 15**: *"Burn: chỉ trên nhánh task, tuần tự, `auto` không bypass; không push/merge/D{n}; Gate 2
+   **Rule 15**: *"Burn: chỉ trên nhánh task, tuần tự, `auto` không bypass; không push/merge; D{n} tự động theo #102; Gate 2
    như thường."* Giữ dưới trần 22 KB.
 5. `improvement-proposals.md`: thêm dòng **P11** vào bảng "Đã promote". Mốc rà lại: sau 2 lần burn. Đo
    số prompt treo, số bước `BLOCKED` vì lý do đúng/sai, số Critical lọt sang Gate 2.

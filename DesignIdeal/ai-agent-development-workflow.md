@@ -129,7 +129,7 @@ ngược chiều nguồn sự thật (#18). Script chỉ ghi `contracts/openapi/
 > `contract-diff.md` sau. Có câu hỏi hoặc `REMOVED` (gần như luôn là bug) → dừng.
 >
 > **Từ lần deploy production đầu tiên:** BREAKING mặc định là bug; phân loại đầy đủ và Gate 1 luôn dừng.
-> Người bật lại phải sửa **Rule 5** ở §10 và dòng #89 ở `DECISIONS.md` cùng lúc.
+> Người bật lại phải sửa **Rule 5** ở §10 và dòng #89, #102 ở `DECISIONS.md` cùng lúc.
 
 **Mục tiêu: 2 phút.** Người đọc `contract-diff.md`, không đọc JSON. Mẫu:
 [`Docs/tasks/MEDIA-001-D3/contract-diff.md`](../Docs/tasks/MEDIA-001-D3/contract-diff.md).
@@ -165,7 +165,12 @@ vòng `{ID}-D{n}` (n từ 2):
 4. FE tiếp tục từ chỗ dừng.
 
 Mỗi vòng tốn một lượt chờ người — nhiều vòng trong một task là tín hiệu Bước 0 đang hụt, ghi vào "Ma sát
-quy trình" (§9). *(MEDIA-001 dùng folder `MEDIA-001-D2…D4` riêng, trước quy ước này.)*
+quy trình" (§9).
+
+**Burn trước production (#102):** không ai chờ — burn tự mở D{n}, tự quyết tên/kiểu/nullable, promote với
+`approvedBy = burn-auto`, ghi từng quyết định vào bảng "Người duyệt đã quyết" của `contract-diff-D{n}.md`.
+Vẫn dừng khi: `REMOVED` · đổi auth policy của endpoint đã có · chạm #21 · quá 2 vòng/task · đã production.
+Người đọc lại ở Gate 2. Chi tiết: skill `weekend-burn`. *(MEDIA-001 dùng folder `MEDIA-001-D2…D4` riêng, trước quy ước này.)*
 
 ---
 
@@ -262,7 +267,7 @@ là máy sinh rule.
 | 12 | **Task chạm code phải có `changelog.md`** và banner `STATUS` đã cập nhật |
 | 13 | **Đề xuất quy trình phải qua người duyệt**; mọi rule đã promote có mốc rà lại để còn gỡ được |
 | 14 | **Subagent chạy lệnh foreground.** Chạy nền rồi kết thúc lượt = treo. Báo "đang chạy" phải kiểm bằng `git`/danh sách agent, không tin lời agent |
-| 15 | **Burn không người trông** (skill `weekend-burn`): chỉ bước đã có plan, trên nhánh task, tuần tự, mode `auto` — không bypass. Không push, merge, mở D{n}; Gate 2 như thường |
+| 15 | **Burn không người trông** (skill `weekend-burn`): chỉ bước đã có plan, trên nhánh task, tuần tự, mode `auto` — không bypass. Không push, merge; trước production tự mở D{n} + tự promote (#102, §6.1); Gate 2 như thường |
 
 ---
 
