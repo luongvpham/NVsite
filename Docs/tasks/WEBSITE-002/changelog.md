@@ -49,9 +49,23 @@
 - Test: `page-validation.test.ts` (11), `page-form-dialog.test.tsx` (17), `page-list.test.tsx` (6),
   `media-library-picker.test.tsx` (+3). Portal 105/105, `tsc` + `eslint` sạch. Test Escape đã kiểm đột biến
   (bỏ guard → fail).
-- **Chưa kiểm với BE thật** (Docker/Redis tắt lúc làm F2): các `error_code` ở trên lấy từ brief + `SlugRules.cs`,
-  chưa gọi thật. Cần chạy lại smoke API (tạo trang trùng slug, slug `lien-he`/`en`, sửa trang chủ với `slug:null`,
-  NotFound `noIndex:false`, xoá trang System).
+- **Kiểm với BE thật — PASS 2026-11-06** (Docker bật; BE `feature/WEBSITE-002`, qua proxy Vite
+  `admin.vsite.local:5173`; 61/61 kiểm tra): tạo trang 201 + `Location`; trùng slug 409 `PAGE_SLUG_TAKEN`;
+  reserved 422 `PAGE_SLUG_RESERVED` cho `lien-he en EN vi media api assets static san-pham danh-muc tim-kiem dat-lich`;
+  `blog`/`about` **không** bị giữ chỗ (xác nhận FE không được dùng `reservedPaths`); sai khuôn 422 `PAGE_SLUG_INVALID`
+  (`Dich-Vu a--b -a a- dịch-vụ "a b" a_b "" 121 ký tự`), đúng 120 ký tự → 201; title 161 ký tự → 422
+  `VALIDATION_ERROR` (FE chặn trước nên ít gặp); `ogImageId` lạ → 422 `MEDIA_INVALID_IMAGE_REFERENCE`;
+  **OG = bản Library → 201, OG = bản Clone → 422** (đúng lý do picker `mode="library"` không clone);
+  trang chủ `slug:null` → 200 giữ `""`, `slug:"abc"` → 422 `PAGE_HOME_SLUG_FIXED`; System `slug:null` → 200, `slug:"x"`
+  → 422 `PAGE_SYSTEM_SLUG_FIXED`; NotFound `noIndex:false` → 422 `PAGE_NOINDEX_REQUIRED`, `noIndex:true` + `slug:null`
+  → 200; xoá trang chủ/Contact/NotFound → 409 `PAGE_NOT_DELETABLE`, xoá trang thường 204, xoá lần hai 404
+  `PAGE_NOT_FOUND`, xoá rồi tạo lại cùng slug 201; `deletable` chỉ `true` ở trang Composable không phải trang chủ;
+  người không có membership gọi website/pages/upload Library → 403 `SHOP_ACCESS_DENIED`; không token → 401.
+  Chưa phủ: role Manager/Staff có membership (BE đã có test R16 ở WEBSITE-001) và `CONCURRENCY_CONFLICT` của
+  `updatePage` (cần đua hai request thật).
+- **Test Docker của BE — PASS 2026-11-06**: `dotnet test backend/tests/IntegrationTests --filter "Website|Media"`
+  → 587 pass, 0 fail, 1 skip (có sẵn: `ShopEndpointTests.UpdateShop_Hosted_to_ExternalOnly_…`). `Docs/DOCKER-TEST-DEBT.md`
+  rỗng, nhánh này không đổi dòng nào trong `backend/`.
 
 ## Lệch so với thiết kế / plan
 - F1: `retry: false` cho `getWebsite` — 404 là trạng thái bình thường "chưa có website", không retry.
