@@ -67,7 +67,25 @@
   → 587 pass, 0 fail, 1 skip (có sẵn: `ShopEndpointTests.UpdateShop_Hosted_to_ExternalOnly_…`). `Docs/DOCKER-TEST-DEBT.md`
   rỗng, nhánh này không đổi dòng nào trong `backend/`.
 
+### F3 — Nền packages: export schema cây/theme + kiểu lỗi có cấu trúc
+- `builder-components/src/index.ts` export thêm `treeEnvelopeSchema`, `themeTokensSchema`, `NODE_ID_PATTERN`
+  (từ `meta/envelope-schema.ts`), `opRules` (từ `generated/op-rules.ts`), `sanitizeRichText`, `isSafeLinkUrl`.
+  Không sửa manifest/generated; `pnpm gen:registry` chạy lại không đổi file nào.
+- `isSafeLinkUrl` chuyển từ `tests/helpers/reference-tree-validator.ts` sang `src/link-url.ts`; helper test import
+  lại — một nguồn, 44 fixture cây vẫn xanh.
+- `shared/src/errors/problem-details.ts`: `ProblemDetails.params?: unknown`; kiểu `TreeValidationError`,
+  `TreeValidationParams` (`errors[] {path, code, message}` + `truncated`), `DraftConflictParams`
+  (`currentVersion`, `updatedAt`, `updatedByUserId | null`); guard `isTreeValidationParams`,
+  `isDraftConflictParams`; `getProblemParams(error, guard)` → `undefined` khi thiếu/sai hình dạng (không cast mù).
+  Hình dạng đối chiếu `WebsiteExceptions.cs` (`DocumentInvalidParams`, `DraftConflictParams`).
+- Test: `builder-components/tests/public-exports.test.ts` (28: vỏ cây, theme, id node, `opRules`, `sanitizeRichText`,
+  `isSafeLinkUrl` kể cả mọi `invalid-link-url-*` + `valid-link-urls` của fixture dùng chung), `shared` +5 ca
+  `getProblemParams`. `pnpm -r test` xanh (builder-components 279, shared 7, portal 105, renderer/api-sdk/…),
+  `tsc` + `eslint` sạch ở builder-components/shared/portal, `pnpm --filter @vsite/web build` và `@vsite/portal build` OK.
+
 ## Lệch so với thiết kế / plan
+- F3: `props-schemas.ts` (Zod props theo type) **chưa** export — plan F3 không liệt kê; F4 cần `safeParse` props
+  sẽ export lúc đó (ghi lại ở F4).
 - F1: `retry: false` cho `getWebsite` — 404 là trạng thái bình thường "chưa có website", không retry.
 - F2: form dùng schema Zod viết tay (trường dạng chuỗi cho SEO) thay vì `createPageBody`/`updatePageBody` sinh từ
   contract — contract coi SEO là `string | null`, form cần chuỗi rỗng; kiểu payload vẫn ràng bằng
