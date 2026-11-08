@@ -4,11 +4,13 @@ import { describe, expect, it } from 'vitest';
 import themeTokensJson from '../../../config/theme-tokens.json';
 import {
   NODE_ID_PATTERN,
+  getPropsSchema,
   isSafeLinkUrl,
   opRules,
   sanitizeRichText,
   themeTokensSchema,
   treeEnvelopeSchema,
+  treeRules,
 } from '../src/index';
 
 /**
@@ -83,6 +85,36 @@ describe('opRules', () => {
     expect(opRules.RichText.allowedInPageKinds).toContain('System');
     expect(opRules.Hero.allowedInPageKinds).not.toContain('System');
     expect(opRules.RichText.editableInSystemPageProps).toEqual(['content']);
+  });
+});
+
+describe('treeRules', () => {
+  it('có bản đồ prop + variants cho đúng các type của opRules (Engine dùng để duyệt prop theo path)', () => {
+    expect(Object.keys(treeRules.types).sort()).toEqual(Object.keys(opRules).sort());
+    expect(treeRules.types.Hero.variants).toEqual(['Hero01', 'Hero02']);
+    expect(treeRules.types.Hero.props.cta.kind).toBe('group');
+    expect(treeRules.types.ServiceGrid.props.source.kind).toBe('binding');
+  });
+});
+
+describe('getPropsSchema', () => {
+  it('mọi type có luật đều có Zod props (chống lệch khi thêm type mới)', () => {
+    for (const type of Object.keys(opRules)) expect(getPropsSchema(type), type).toBeDefined();
+  });
+
+  it('type lạ → undefined', () => {
+    expect(getPropsSchema('Carousel')).toBeUndefined();
+    expect(getPropsSchema('')).toBeUndefined();
+    expect(getPropsSchema('constructor')).toBeUndefined();
+  });
+
+  it('kiểm shape prop: Hero.overlayOpacity ≤ 80, Section.paddingY chỉ sm|lg', () => {
+    const hero = getPropsSchema('Hero');
+    expect(hero?.safeParse({ overlayOpacity: 40 }).success).toBe(true);
+    expect(hero?.safeParse({ overlayOpacity: 200 }).success).toBe(false);
+    const section = getPropsSchema('Section');
+    expect(section?.safeParse({ paddingY: 'lg' }).success).toBe(true);
+    expect(section?.safeParse({ paddingY: 'xl' }).success).toBe(false);
   });
 });
 

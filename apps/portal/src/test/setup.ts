@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom/vitest';
+import { configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { server } from './msw-server';
+
+// Mặc định 1000 ms của `findBy*`/`waitFor` không đủ cho test đầu tiên của một file khi cache transform còn nguội
+// (route code-split + cả cây import nạp lần đầu) — từng làm một ca fail rồi tự hết khi chạy lại. Chỉ nới trần chờ.
+configure({ asyncUtilTimeout: 4000 });
 
 // jsdom không hiện thực window.scrollTo — TanStack Router gọi nó khi scroll-restoration chạy sau
 // mỗi lần điều hướng, chỉ log noise, không phải lỗi test thật.

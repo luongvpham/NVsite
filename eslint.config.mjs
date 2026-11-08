@@ -48,4 +48,26 @@ export default tseslint.config(
       'no-restricted-globals': ['error', { name: 'window', message: 'Isomorphic (#23) — không dùng window trong logic render chính.' }, { name: 'document', message: 'Isomorphic (#23) — không dùng document trong logic render chính.' }],
     },
   },
+  {
+    // Ranh giới kiến trúc: `builder-core` (Operations Engine + store) CHỈ dùng bởi apps/portal. builder-renderer phải chạy
+    // ở apps/web (chỉ render), builder-components là model mà chính builder-core import (import ngược = vòng phụ thuộc).
+    files: [
+      'packages/builder-renderer/**/*.{ts,tsx}',
+      'packages/builder-components/**/*.{ts,tsx}',
+      'apps/web/**/*.{ts,tsx}',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@vsite/builder-core', '@vsite/builder-core/*'],
+              message: 'builder-core chỉ dùng bởi apps/portal — renderer/components/apps/web không được import (CLAUDE.md root, builder-renderer/CLAUDE.md).',
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

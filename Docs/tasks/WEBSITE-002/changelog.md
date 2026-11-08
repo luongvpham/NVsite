@@ -83,7 +83,50 @@
   `getProblemParams`. `pnpm -r test` xanh (builder-components 279, shared 7, portal 105, renderer/api-sdk/…),
   `tsc` + `eslint` sạch ở builder-components/shared/portal, `pnpm --filter @vsite/web build` và `@vsite/portal build` OK.
 
+### F4 — `packages/builder-core`: Operations Engine + store undo/redo
+- Package mới `@vsite/builder-core` (chỉ portal dùng): `immer` + `zundo` + `zustand` (vanilla) + `zod`; thuần TS, test ở Node.
+  `CLAUDE.md` của package ghi ranh giới, invariant và checklist 6 chỗ khi thêm op.
+- **5 op** (Zod `operationSchema`): `add {parentId,index,node}` · `remove {nodeId}` · `move {nodeId,toParentId,toIndex}` ·
+  `update {nodeId,path,value}` · `changeTheme {tokens}`. `validateOperation` theo `05` §11: [1] PageKind (System: add/remove/move
+  → `SYSTEM_PAGE_STRUCTURE_CHANGED`, update chỉ `editableInSystemPageProps` → `SYSTEM_PAGE_PROP_NOT_EDITABLE`), [2]
+  `allowedInPageKinds`, [3] đích tồn tại, [4] props (khoá lạ, Zod, link), [5] binding source (cấm `Review`), + `maxPerPage`,
+  `acceptsChildren`, `allowedChildTypes`, id trùng, i18n, độ sâu/số node. Mã lỗi dùng ĐÚNG tên mã BE.
+- `applyOperation` (Immer, structural sharing; op không đổi gì trả chính cây cũ) và `executeOperation` (parse → validate → apply,
+  không ném lỗi). Store: `loadDraft` (xoá lịch sử), `loadTheme`, `dispatch`, `select`, `undo/redo`, `canUndo/canRedo`; zundo chỉ
+  chụp `tree` (giới hạn 100 bước), so tham chiếu cây để không ghi bước thừa.
+- `tree/`: `findNode`, đo cây, `pointerOf`/`resolvePointer` (JSON Pointer ↔ node + prop path, cho F8 tô đỏ lỗi 422), `limits`
+  (1 MB byte UTF-8 / sâu 20 / 2000 node / theme 64 KB — khớp `PageTreeLimits` của BE), `generateNodeId` (`c_` + 8 ký tự mật mã).
+- `builder-components`: export thêm `treeRules` (bản đồ prop + variants) và `getPropsSchema(type)` (Zod props theo type, tra theo tên).
+- ESLint: `no-restricted-imports` chặn `builder-renderer`, `builder-components`, `apps/web` import `@vsite/builder-core`
+  (đã thử: file mồi import bị báo lỗi).
+- Test: **130** ở `builder-core` — luật theo bảng `05` §11, apply (đóng băng sâu + structural sharing), `setIn`, store, và
+  **hợp đồng với BE bằng fixture chung** (`tests/fixtures/tree/*.json`, nạp trực tiếp): mọi cây Composable hợp lệ dựng lại được
+  bằng chuỗi op `add`; mọi cây không hợp lệ thuộc phạm vi Engine bị từ chối đúng mã; cặp System stored/incoming → `update`
+  tương đương được/bị từ chối đúng; danh sách fixture bỏ qua có chủ đích được chốt trong test. Kiểm đột biến 4 luật quan
+  trọng (bỏ chặn System, bỏ kiểm link, bỏ kiểm binding source, history ghi cả select/theme) — mỗi đột biến làm 4–10 ca fail.
+  `builder-components` 283 (+4), toàn workspace `test`/`typecheck`/`lint` xanh, `gen:registry` không đổi file, web + portal build OK.
+
 ## Lệch so với thiết kế / plan
+- F4: `update` mang MỘT đường dẫn mỗi op (`{nodeId, path, value}`, `value` undefined = xoá prop / gỡ phần tử mảng) thay vì "props
+  patch" — khớp `onChange(path, value)` của Inspector và `update_component_props` của AI. Sửa nhiều prop = nhiều op.
+- F4: node `add` **không** mang `children` (thêm nhánh = nhiều op, cha trước con) và **không** điền props mặc định từ manifest như
+  plan ghi — component tự có mặc định khi thiếu prop, cây không phình và không lệch khi manifest đổi (#43). `requiresProps` vẫn
+  chưa enforce (bắt ở publish, 8b). `add` thiếu `variant` bị từ chối (`NODE_VARIANT_UNKNOWN`): renderer tra `Type/Variant`.
+- F4: Engine chặn `add`/`move` vượt độ sâu 20 / 2000 node (`TREE_TOO_DEEP`/`TREE_TOO_MANY_NODES`, mã của BE); 1 MB chỉ **đo**
+  (`checkTreeLimits`) — F8 chặn gửi. `toIndex` của `move` tính sau khi gỡ node khỏi chỗ cũ.
+- F4: Engine **không** kiểm `richText` nguy hiểm — bộ phân loại (`classifyDangerous`) ghi rõ "chỉ dùng trong test, không phải
+  hiện thực của BE", nên không nâng lên production. BE từ chối (`RICHTEXT_UNSAFE`), FE làm sạch ở control Lexical (F10). Với
+  textarea hiện tại, nội dung độc chỉ bị chặn khi BE trả 422.
+- F4: mã chỉ-FE (không gửi/nhận BE): `INVALID_OPERATION`, `TARGET_NOT_FOUND`, `INDEX_OUT_OF_RANGE`, `MOVE_INTO_DESCENDANT`, `NO_DRAFT`.
+  Trang System: add/remove/move trả `SYSTEM_PAGE_STRUCTURE_CHANGED` trước cả luật node (chặt hơn BE, cùng kết luận).
+- F4: không có `invert()` từng op (workflow §11 viết trước #42) — undo là zundo chụp trạng thái (G2). `changeTheme` đi qua
+  cùng cửa `dispatch` nhưng ghi `themeDraft` ngoài lịch sử cây và dùng được khi chưa nạp draft.
+- F4: luật ESLint chặn import `builder-core` mở rộng sang `builder-components` và `apps/web` (plan chỉ nêu renderer): components
+  bị `builder-core` import nên import ngược sẽ thành vòng; `apps/web` không có Engine.
+- F4: fixture nạp bằng `import.meta.glob` (không `node:fs`) vì thêm `@types/node` riêng cho `builder-core` làm pnpm tách thêm một
+  biến thể `vitest` → kiểu của `jest-dom` hỏng ở `builder-renderer`/`builder-components` (lint đỏ).
+- F4: `apps/portal/src/test/setup.ts` nới `asyncUtilTimeout` lên 4000 ms — một ca F1 (`Owner thấy link Website`) từng fail một lần
+  khi cache transform còn nguội sau cài lại, chạy lại thì hết.
 - F3: `props-schemas.ts` (Zod props theo type) **chưa** export — plan F3 không liệt kê; F4 cần `safeParse` props
   sẽ export lúc đó (ghi lại ở F4).
 - F1: `retry: false` cho `getWebsite` — 404 là trạng thái bình thường "chưa có website", không retry.
