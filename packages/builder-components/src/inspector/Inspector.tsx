@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { colorTokens } from '@vsite/theme-engine';
+import { themeColorKeys } from '@vsite/theme-engine';
 import { setAtPath, type PathSegment } from './path-utils';
 import type { PropertyPanelField } from './types';
 
@@ -199,7 +199,7 @@ function FieldControl({
               onChange(e.target.value);
             }}
           >
-            {Object.keys(colorTokens).map((token) => (
+            {themeColorKeys.map((token) => (
               <option key={token} value={token}>
                 {token}
               </option>

@@ -1,3 +1,4 @@
+import { colorVar, headingFontVar, radiusVar } from '@vsite/theme-engine';
 import type { GalleryProps } from '../../generated/component-types';
 import { useRenderContext } from '../context';
 
@@ -9,7 +10,11 @@ export default function Gallery01({ heading, items, columns }: GalleryProps) {
 
   return (
     <div>
-      {heading ? <h2 className="mb-4 text-2xl font-semibold">{heading}</h2> : null}
+      {heading ? (
+        <h2 className="mb-4 text-2xl font-semibold" style={{ fontFamily: headingFontVar }}>
+          {heading}
+        </h2>
+      ) : null}
       <div className={`grid gap-4 ${GRID_COLS_CLASS[columns ?? 3]}`}>
         {(items ?? []).map((item, i) => (
           <figure key={i}>
@@ -17,10 +22,15 @@ export default function Gallery01({ heading, items, columns }: GalleryProps) {
               <img
                 src={ctx.resolveImage(item.image.imageId, '800x800,cover')}
                 alt={item.image.alt ?? item.caption ?? ''}
-                className="aspect-square w-full rounded object-cover"
+                className="aspect-square w-full object-cover"
+                style={{ borderRadius: radiusVar }}
               />
             ) : null}
-            {item.caption ? <figcaption className="mt-1 text-sm text-muted-foreground">{item.caption}</figcaption> : null}
+            {item.caption ? (
+              <figcaption className="mt-1 text-sm" style={{ color: colorVar('textMuted') }}>
+                {item.caption}
+              </figcaption>
+            ) : null}
           </figure>
         ))}
       </div>

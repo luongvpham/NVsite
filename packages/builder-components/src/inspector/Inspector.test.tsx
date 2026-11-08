@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { heroPropertyPanel } from '../../generated/property-panel';
+import { heroPropertyPanel, sectionPropertyPanel } from '../../generated/property-panel';
 import { Inspector } from './Inspector';
 
 describe('Inspector (§10 — property-panel.ts đủ metadata để sinh form dùng được)', () => {
@@ -10,6 +10,20 @@ describe('Inspector (§10 — property-panel.ts đủ metadata để sinh form d
     expect(screen.getByDisplayValue('Chào mừng')).toBeInTheDocument();
     expect(screen.getByText('Tiêu đề')).toBeInTheDocument();
     expect(screen.getByText('Nút hành động')).toBeInTheDocument(); // group fieldset (cta)
+  });
+
+  it('color-token liệt kê KEY màu của theme per-shop (config/theme-tokens.json), không còn key của theme tĩnh', () => {
+    const onChange = vi.fn();
+    render(<Inspector fields={sectionPropertyPanel} values={{ background: 'primary' }} onChange={onChange} />);
+
+    const select = screen.getByDisplayValue('primary');
+    const options = within(select).getAllByRole('option').map((option) => option.textContent);
+    expect(options).toEqual(['primary', 'secondary', 'background', 'surface', 'text', 'textMuted', 'border']);
+    expect(options).not.toContain('foreground');
+    expect(options).not.toContain('muted');
+
+    fireEvent.change(select, { target: { value: 'surface' } });
+    expect(onChange).toHaveBeenCalledWith(['background'], 'surface');
   });
 
   it('calls onChange with the correct path when editing the title field', () => {

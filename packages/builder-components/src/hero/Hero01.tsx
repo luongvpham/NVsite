@@ -1,3 +1,4 @@
+import { colorVar, headingFontVar, radiusVar } from '@vsite/theme-engine';
 import type { HeroProps } from '../../generated/component-types';
 import { useRenderContext } from '../context';
 
@@ -14,10 +15,16 @@ export default function Hero01({ title, subtitle, image, overlayOpacity, align, 
     >
       <div className="absolute inset-0 bg-black" style={{ opacity: (overlayOpacity ?? 35) / 100 }} />
       <div className="relative z-10 max-w-xl px-6 text-white">
-        <h1 className="text-3xl font-bold">{title}</h1>
+        <h1 className="text-3xl font-bold" style={{ fontFamily: headingFontVar }}>
+          {title}
+        </h1>
         {subtitle ? <p className="mt-2 text-lg">{subtitle}</p> : null}
         {cta?.label ? (
-          <a href={ctaHref ?? '#'} className="mt-4 inline-block rounded bg-white px-4 py-2 text-black">
+          <a
+            href={ctaHref ?? '#'}
+            className="mt-4 inline-block px-4 py-2"
+            style={{ backgroundColor: colorVar('primary'), color: colorVar('background'), borderRadius: radiusVar }}
+          >
             {cta.label}
           </a>
         ) : null}

@@ -106,7 +106,36 @@
   trọng (bỏ chặn System, bỏ kiểm link, bỏ kiểm binding source, history ghi cả select/theme) — mỗi đột biến làm 4–10 ca fail.
   `builder-components` 283 (+4), toàn workspace `test`/`typecheck`/`lint` xanh, `gen:registry` không đổi file, web + portal build OK.
 
+### F5 — Theme qua CSS variables
+- `theme-engine/src/css-vars.ts` (thuần, isomorphic): `tokensToCssVars(tokens)` → `--vs-color-<key>` (camelCase → kebab:
+  `textMuted` → `--vs-color-text-muted`), `--vs-font-heading|body`, `--vs-font-scale`, `--vs-radius`, `--vs-shadow`,
+  `--vs-section-gap`; `defaultThemeVars`; `colorVar(key)`; hằng `radiusVar`/`shadowVar`/`sectionGapVar`/`headingFontVar`/
+  `bodyFontVar` (mỗi cái có giá trị mặc định làm dự phòng trong `var()`); `themeStyle(tokens)` = biến + nền/chữ/font/cỡ chữ
+  của khung chứa trang (F6 đặt ở canvas, 8b ở `apps/web`); `themeColorKeys`.
+- **Chỉ whitelist**: mọi giá trị đi vào CSS phải thuộc tập của `config/theme-tokens.json` (màu qua `colorPattern`); đầu vào
+  sai/thiếu không ném lỗi mà rơi về mặc định từng phần; chuỗi lạ không bao giờ xuất hiện trong kết quả (không chèn CSS được).
+- 8 variant của 5 component đọc `var(--vs-*)` cho màu/bo góc/bóng/font tiêu đề/khoảng cách; không còn class màu của chrome
+  tĩnh (`bg-primary`, `text-muted-foreground`, `bg-muted`, `border-border`, `bg-white`, `text-black`). Section: `background` là
+  KEY màu của theme (key lạ/thiếu/key cũ như `muted`, `foreground` → `background`); khoảng cách trên/dưới theo
+  `--vs-section-gap` (`sm` = 40% của `lg`). Inspector `color-token` liệt kê `colorKeys` của config thay cho key của theme tĩnh.
+- `theme-engine` có hạ tầng test (vitest, môi trường node) và bỏ `composite` trong tsconfig (để import JSON cấu hình).
+- Test: `theme-engine` 49 (đầy đủ tập giá trị của config phải có ánh xạ; đầu vào hỏng; chống chèn CSS; `colorVar`);
+  `builder-components` +27 (`theme-vars.node.test.tsx` — 8 variant render ở Node, không còn class chrome, có `var(--vs-…)`;
+  Inspector liệt kê key màu mới); `builder-renderer` +3 (SSR `renderToString` ở Node: khung chứa mang biến của theme, component
+  đọc đúng biến; không đặt theme thì vẫn ra màu mặc định, không rơi về chrome). Kiểm đột biến 3 chỗ (bỏ kiểm pattern màu,
+  `colorVar` nhận key bất kỳ, font không qua whitelist) — mỗi đột biến làm 1–2 ca fail. `pnpm -r test/typecheck/lint` xanh,
+  `gen:registry` không đổi, web + portal build OK.
+
 ## Lệch so với thiết kế / plan
+- F5: **không xoá** `colorTokens` của `theme-engine` như plan dự kiến — `packages/ui/tailwind-preset.js` (màu của chrome portal/web:
+  nút, viền, chữ phụ) vẫn dùng nó. Chỉ component builder thôi dùng; tên giống nhau nhưng là hai thứ khác (chrome tĩnh vs theme của shop).
+- F5: màu/bo góc/font của component đi qua `style` inline với `var(--vs-*, mặc định)` thay vì class Tailwind tuỳ ý
+  (`bg-[var(--…)]`) — không phụ thuộc Tailwind quét `@source`, và chuỗi `style` kiểm được nguyên văn ở test SSR. Layout vẫn dùng Tailwind.
+- F5: biến `--vs-font-scale` (0.9375 / 1 / 1.0625) và font body chỉ có tác dụng khi khung chứa dùng `themeStyle()`; component không tự
+  đặt cỡ chữ gốc. Màu chữ trên nền `primary` của nút CTA lấy `--vs-color-background` (chưa tính độ tương phản tự động).
+- F5: `Hero01` vẫn giữ lớp phủ `bg-black` + chữ `text-white` trên ảnh (không phải màu theme).
+- F5: `builder-renderer` thêm devDependency `@vsite/theme-engine` (chỉ để test SSR), `builder-components`/`builder-renderer` thêm
+  `@types/react-dom` (test dùng `react-dom/server`).
 - F4: `update` mang MỘT đường dẫn mỗi op (`{nodeId, path, value}`, `value` undefined = xoá prop / gỡ phần tử mảng) thay vì "props
   patch" — khớp `onChange(path, value)` của Inspector và `update_component_props` của AI. Sửa nhiều prop = nhiều op.
 - F4: node `add` **không** mang `children` (thêm nhánh = nhiều op, cha trước con) và **không** điền props mặc định từ manifest như
