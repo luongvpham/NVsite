@@ -26,6 +26,20 @@ describe('Inspector (§10 — property-panel.ts đủ metadata để sinh form d
     expect(onChange).toHaveBeenCalledWith(['background'], 'surface');
   });
 
+  it('isFieldDisabled khoá đúng field được chỉ định, field khác vẫn sửa được', () => {
+    render(
+      <Inspector
+        fields={heroPropertyPanel}
+        values={{ title: 'khoá', subtitle: 'mở' }}
+        onChange={vi.fn()}
+        isFieldDisabled={(field) => field.name === 'title'}
+      />,
+    );
+
+    expect(screen.getByDisplayValue('khoá')).toBeDisabled();
+    expect(screen.getByDisplayValue('mở')).toBeEnabled();
+  });
+
   it('calls onChange with the correct path when editing the title field', () => {
     const onChange = vi.fn();
     render(<Inspector fields={heroPropertyPanel} values={{ title: 'x' }} onChange={onChange} />);

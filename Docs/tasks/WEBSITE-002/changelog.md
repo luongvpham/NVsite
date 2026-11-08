@@ -126,7 +126,33 @@
   `colorVar` nhận key bất kỳ, font không qua whitelist) — mỗi đột biến làm 1–2 ca fail. `pnpm -r test/typecheck/lint` xanh,
   `gen:registry` không đổi, web + portal build OK.
 
+### F6 — Khung editor: nạp draft, canvas, chọn node, Inspector, undo/redo
+- `builder-renderer`: `RenderTree` nhận gốc `Page` (render con, không render gốc) + `decorateNode?(node, rendered)`; truyền node
+  thường / không truyền `decorateNode` thì output y như cũ. Export `PageRoot`, `DecorateNode`.
+- `builder-components` `Inspector`: prop `isFieldDisabled?` (bọc từng field trong `<fieldset disabled>`) — trang System khoá prop
+  ngoài `editableInSystemPageProps`. Chỉ là UI; Engine vẫn từ chối op.
+- Route `/shops/$shopId/website/pages/$pageId` (`OwnerOnlyGate` ngoài cùng → non-Owner không có request draft). `EditorShell`:
+  `getPageDraft` (`staleTime: Infinity`, không refetch khi focus) → `treeEnvelopeSchema.safeParse` (hỏng → "Dữ liệu trang không đọc
+  được", không cho sửa) → `EditorSession` tạo store và `loadDraft` **một lần** (#20). Lỗi/404 map qua `error-messages`.
+- `EditorCanvas`: `builder-renderer` thật; mỗi node bọc `div[data-node-id]` (click/Enter chọn, chặn điều hướng link, viền chọn);
+  theme đang sửa áp bằng `themeStyle(themeDraft)`; cây rỗng → "Trang trống — thêm khối từ bảng bên trái".
+- `useMediaMap`: `mediaMap` từ `getAssetsByIds` cho mọi `imageId` trong cây + điền thẳng ảnh vừa chọn. `collect-image-ids.ts`.
+- `InspectorPanel` → op `update {nodeId, path, value}`; op bị Engine từ chối hiện `message` tại chỗ. Toolbar Hoàn tác/Làm lại
+  (theo `temporal` của zundo) + Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y (bỏ qua khi focus ô nhập).
+- `PageList` có prop `renderOpenEditor`; `WebsiteOverview` truyền link "Soạn nội dung" (prop để `PageList` test không cần router).
+- `ImagePickerControl` (+ test) chuyển từ `routes/dev-registry.tsx` sang `components/media/`; **xoá** `/dev-registry`, link DEV ở
+  `_authenticated.tsx` và link ở trang chủ; `routeTree.gen.ts` sinh lại. `apps/portal` thêm dependency `@vsite/builder-core`.
+- Test: `-editor.test.tsx` (16: loading/404/Zod hỏng/rỗng/non-Owner không request, chọn node + Inspector, sửa title → canvas đổi,
+  undo/redo bằng nút + phím + bỏ qua khi gõ, System chỉ bật `content`), `renderTree.test.tsx` +4, `Inspector.test.tsx` +1.
+  Portal 121/121, `pnpm -r typecheck/lint` sạch, `gen:registry` không đổi, web build OK. Đột biến (bỏ khoá field System) → 1 ca fail.
+
 ## Lệch so với thiết kế / plan
+- F6: `decorateNode` được gọi **con trước, cha sau** (chữ ký `(node, rendered)` cần `rendered` của cha đã chứa con).
+- F6: mỗi lần gõ một ký tự ở Inspector là một op `update` = **một bước undo**; lịch sử giới hạn 100 bước nên gõ dài sẽ đầy. Chưa gộp
+  (plan không nêu) — cần gộp op liên tiếp cùng `nodeId+path` trong cửa sổ ngắn; nên làm cùng F8 khi autosave chốt nhịp lưu.
+- F6: control `lexical` vẫn là textarea stub (F10); chưa có ô nhập URL cho link nên đường `LINK_URL_UNSAFE` qua UI chưa thử được
+  (đã phủ ở `builder-core`).
+- F6: `/dev-registry` bị xoá nên nghiệm thu tay MEDIA-001 (08 §9) qua trang này không còn — dùng picker trong editor.
 - F5: **không xoá** `colorTokens` của `theme-engine` như plan dự kiến — `packages/ui/tailwind-preset.js` (màu của chrome portal/web:
   nút, viền, chữ phụ) vẫn dùng nó. Chỉ component builder thôi dùng; tên giống nhau nhưng là hai thứ khác (chrome tĩnh vs theme của shop).
 - F5: màu/bo góc/font của component đi qua `style` inline với `var(--vs-*, mặc định)` thay vì class Tailwind tuỳ ý

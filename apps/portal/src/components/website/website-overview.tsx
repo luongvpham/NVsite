@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { Button } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
 import { getGetWebsiteQueryKey, getListPagesQueryKey, useCreateWebsite, useGetWebsite } from '@vsite/api-sdk';
@@ -30,7 +31,20 @@ export function WebsiteOverview({ shopId }: { shopId: string }) {
     );
   }
 
-  return <PageList shopId={shopId} />;
+  return (
+    <PageList
+      shopId={shopId}
+      renderOpenEditor={(page) => (
+        <Link
+          to="/shops/$shopId/website/pages/$pageId"
+          params={{ shopId, pageId: page.id }}
+          className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+        >
+          Soạn nội dung
+        </Link>
+      )}
+    />
+  );
 }
 
 function CreateWebsitePanel({ shopId }: { shopId: string }) {

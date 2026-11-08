@@ -2,9 +2,9 @@ import { fireEvent, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import type { MediaAssetDto, ShopSummaryDto } from '@vsite/api-sdk';
-import { renderWithQuery } from '../test/render-with-query';
-import { server } from '../test/msw-server';
-import { ImagePickerControl } from './dev-registry';
+import { renderWithQuery } from '../../test/render-with-query';
+import { server } from '../../test/msw-server';
+import { ImagePickerControl } from './image-picker-control';
 
 const asset: MediaAssetDto = {
   id: 'a1',
@@ -49,7 +49,7 @@ function renderControl(roleCode: string) {
   fireEvent.click(screen.getByRole('button', { name: 'Chọn từ thư viện' }));
 }
 
-describe('dev-registry ImagePickerControl — isOwner wiring (W3)', () => {
+describe('ImagePickerControl — isOwner wiring (W3)', () => {
   it('Owner (roleCode từ GET /shops) thấy nút Xoá trong picker', async () => {
     renderControl('Owner');
 

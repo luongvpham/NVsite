@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
@@ -21,7 +21,14 @@ function slugLabel(page: PageDto): string {
 type FormState = { type: 'create' } | { type: 'edit'; page: PageDto } | null;
 
 /** Danh sách trang (Flow 2): tạo, sửa metadata, xoá. Không phân trang; sắp theo `sortOrder` (chỉ đọc). */
-export function PageList({ shopId }: { shopId: string }) {
+export function PageList({
+  shopId,
+  renderOpenEditor,
+}: {
+  shopId: string;
+  /** Liên kết mở editor cho một trang — do nơi gọi cấp (cần router), để bảng này test được độc lập. */
+  renderOpenEditor?: (page: PageDto) => ReactNode;
+}) {
   const queryClient = useQueryClient();
   const pagesQuery = useListPages(shopId);
   const [form, setForm] = useState<FormState>(null);
@@ -122,6 +129,7 @@ export function PageList({ shopId }: { shopId: string }) {
               {page.isDirty && (
                 <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">Có thay đổi chưa xuất bản</span>
               )}
+              {renderOpenEditor?.(page)}
               <Button
                 type="button"
                 variant="outline"

@@ -17,6 +17,7 @@
     "@tanstack/react-router": "1.170.32",
     "@vsite/api-sdk": "workspace:*",
     "@vsite/builder-components": "workspace:*",
+    "@vsite/builder-core": "workspace:*",
     "@vsite/builder-renderer": "workspace:*",
     "@vsite/shared": "workspace:*",
     "@vsite/theme-engine": "workspace:*",

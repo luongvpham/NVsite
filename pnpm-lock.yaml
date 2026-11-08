@@ -47,6 +47,9 @@ importers:
       '@vsite/builder-components':
         specifier: workspace:*
         version: link:../../packages/builder-components
+      '@vsite/builder-core':
+        specifier: workspace:*
+        version: link:../../packages/builder-core
       '@vsite/builder-renderer':
         specifier: workspace:*
         version: link:../../packages/builder-renderer

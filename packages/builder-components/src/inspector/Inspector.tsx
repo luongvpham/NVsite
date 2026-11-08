@@ -33,9 +33,18 @@ export interface InspectorProps {
   onChange: (path: PathSegment[], value: unknown) => void;
   pathPrefix?: PathSegment[];
   renderMediaPicker?: RenderMediaPicker;
+  /** Khoá field (vd. prop không thuộc `editableInSystemPageProps` ở trang System). Chỉ là UI — Engine vẫn từ chối op. */
+  isFieldDisabled?: (field: PropertyPanelField) => boolean;
 }
 
-export function Inspector({ fields, values, onChange, pathPrefix = [], renderMediaPicker }: InspectorProps) {
+export function Inspector({
+  fields,
+  values,
+  onChange,
+  pathPrefix = [],
+  renderMediaPicker,
+  isFieldDisabled,
+}: InspectorProps) {
   const groups = new Map<string, PropertyPanelField[]>();
   for (const field of fields) {
     const list = groups.get(field.group) ?? [];
@@ -53,15 +62,20 @@ export function Inspector({ fields, values, onChange, pathPrefix = [], renderMed
               .slice()
               .sort((a, b) => a.order - b.order)
               .map((field) => (
-                <FieldControl
+                <fieldset
                   key={field.name}
-                  field={field}
-                  value={values[field.name]}
-                  onChange={(v) => {
-                    onChange([...pathPrefix, field.name], v);
-                  }}
-                  renderMediaPicker={renderMediaPicker}
-                />
+                  disabled={isFieldDisabled?.(field) ?? false}
+                  className="m-0 min-w-0 border-0 p-0 disabled:opacity-60"
+                >
+                  <FieldControl
+                    field={field}
+                    value={values[field.name]}
+                    onChange={(v) => {
+                      onChange([...pathPrefix, field.name], v);
+                    }}
+                    renderMediaPicker={renderMediaPicker}
+                  />
+                </fieldset>
               ))}
           </div>
         </fieldset>
