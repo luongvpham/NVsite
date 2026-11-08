@@ -27,7 +27,9 @@ manifest, áp lên Component Tree bằng Immer, giữ lịch sử undo bằng zu
    Query → Zustand ở chỗ khác; thấy cần làm vậy nghĩa là thiết kế đang sai.
 4. **Undo = zundo chụp trạng thái cây (#42)**, không có `invert()`, không có op-log. Lịch sử chỉ gồm `tree`
    (`partialize`); chọn node và `themeDraft` không phải bước undo. Chỉ ghi bước khi **tham chiếu cây đổi** — op không đổi gì
-   (update cùng giá trị, move về chỗ cũ) phải trả lại chính cây cũ.
+   (update cùng giá trị, move về chỗ cũ) phải trả lại chính cây cũ. **Gộp bước:** các `update` liên tiếp cùng `nodeId`+`path`
+   cách nhau < `UPDATE_COALESCE_MS` (2 s, cửa sổ trượt, bằng nhịp debounce autosave) là MỘT bước — bước của lần gõ đầu giữ bản
+   trước đợt gõ. Op khác, undo/redo, `loadDraft` cắt đợt. Vẫn là snapshot, không op-log (WEBSITE-002 F8).
 5. `toIndex` của `move` tính trong danh sách con của đích **sau khi gỡ node**. Độ sâu/số node dùng cùng quy ước BE
    (con của gốc = tầng 1; tối đa 20 tầng, 2000 node, 1 MB, theme 64 KB — `tree/limits.ts`).
 

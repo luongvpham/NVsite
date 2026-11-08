@@ -168,7 +168,47 @@
 - **Chưa kiểm được:** thao tác kéo bằng chuột thật. jsdom không có layout nên không mô phỏng được dnd-kit; phần test chỉ phủ logic thả và nối dây.
   Cần người bấm tay trên trình duyệt (xem mục "Chưa làm xong").
 
+### F8 — Autosave
+- `builder-core` store: **gộp các op `update` liên tiếp** cùng `nodeId`+`path` cách nhau < `UPDATE_COALESCE_MS` (2 s, cửa sổ trượt, bằng nhịp debounce
+  autosave) thành MỘT bước undo — gõ một câu = một bước, không đầy 100 bước. Cài bằng zundo `pause()/resume()` quanh `set`; op khác, undo/redo,
+  `loadDraft` cắt đợt; update không đổi gì không làm mới mốc. `createEditorStore({ now?, coalesceMs? })` để test. Invariant 4 của
+  `builder-core/CLAUDE.md` thêm một câu (vẫn snapshot, không op-log — không đổi nghĩa).
+- `apps/portal/src/lib/autosave/`: `AutosaveController` (thuần TS, test bằng fake timer; `start()/dispose()` chạy lại được cho StrictMode), `classifySaveError`
+  (409 / 422 / 413 / tạm thời — theo `error_code` rồi `status`), `mapTreeErrors` (422 `path` → nodeId + propPath qua `resolvePointer`; không gắn được → banner).
+  Hook `use-autosave.ts` nối với `savePageDraft`/`getPageDraft` (GET thẳng, **không** qua cache Query).
+- Quy tắc của controller: một PUT tại một thời điểm (R1); "đã lưu" = tham chiếu cây hiện tại === tham chiếu cây của PUT thành công gần nhất; `version` chỉ
+  gán nguyên văn từ response PUT/GET; response PUT không ghi đè cây local; `sanitized` → GET rồi `loadDraft` **chỉ khi** cây hiện tại vẫn đúng là cây vừa gửi
+  (R2), ngược lại bỏ — lần lưu sạch kế tiếp sẽ nạp; lỗi (mạng/5xx/422/413) không tự vòng lặp: chỉ thử lại khi cây đổi tiếp hoặc bấm "Thử lại"; vượt
+  1 MB / sâu 20 / 2000 node → không gửi (`blocked`), quay về bản đã lưu (undo) thì hết chặn (R6).
+- 409: dừng autosave; `ConflictDialog` **bắt buộc chọn** (Escape/nền không đóng): "Tải bản mới" (GET → `loadDraft`, xoá lịch sử) hoặc "Giữ bản của tôi" →
+  xác nhận ghi đè → **GET lấy `version`** → PUT cây local (R8, không dùng `params.currentVersion`). GET lỗi/bản server không đọc được → ở lại dialog, báo lỗi,
+  không mất cây local.
+- UI: `AutosaveStatus` ("Đã lưu / Chưa lưu / Đang lưu… / Lỗi + Thử lại / quá lớn / chưa hợp lệ / có bản mới hơn"), `ValidationBanner` (quá lớn; lỗi 422 không gắn
+  node; "còn lỗi khác" khi `truncated`), canvas `data-invalid` viền đỏ, Inspector danh sách lỗi của khối + ô đỏ qua prop mới **`invalidPaths`**
+  (`builder-components`; mức field — `['cta','label']` tô cả `cta`), `LeavePrompt` + `useBlocker` (điều hướng trong app) + `enableBeforeUnload` (đóng tab).
+  `packages/ui` `Dialog` thêm prop `dismissible` (mặc định `true`).
+- `EditorShell`: `getPageDraft` thêm **`gcTime: 0`** — cache chỉ đúng lúc mở phiên; không bỏ thì mở lại editor lấy cây + version cũ → 409 giả/mất thay đổi.
+- Test: `builder-core` +6 (gộp bước), `lib/autosave` 33 (controller 23: debounce, version, R1, R2 ×4, 409 ×6, 422 ×3 dùng fixture
+  `invalid-prop-wrong-type`, 413, 1 MB, 2000 node, 5xx; lib 10), `Inspector` +2, `-editor-autosave.test.tsx` 14 (MSW + fake timer: PUT/version, sanitized,
+  409 ×3, 422 ×3, 413, 2000 node, 5xx, blocker ×2, mở lại → GET mới). Portal 223, builder-components 315, builder-core 136; `pnpm -r typecheck/lint` sạch,
+  `gen:registry` không đổi, web + portal build OK. Đột biến 11 chỗ (bỏ gộp bước, bỏ chặn PUT song song, sanitized không kiểm cây, keepMine dùng
+  currentVersion, bỏ chặn giới hạn, 409 không dừng, bỏ banner cho path mồ côi, bỏ `gcTime:0`, bỏ truyền `invalidPaths`, tắt blocker, Inspector không tô) —
+  mỗi đột biến làm 1–2 ca fail, đã khôi phục.
+- **Smoke BE thật** (HTTP, BE sẵn ở :5270, shop smoke): PUT liên tiếp dùng version trả về → 200; version cũ → **409** `params {currentVersion, updatedAt,
+  updatedByUserId}`; prop sai kiểu và richText độc → **422** `error_code: TREE_INVALID`, `params.errors[{path, code, message}]` (mã con `PROP_INVALID`/`RICHTEXT_UNSAFE`
+  ở `errors[].code`); ~1,2 MB → **413** `TREE_BODY_TOO_LARGE`; HTML Lexical thô → 200 `sanitized:true`, GET trả bản sạch cùng version. Hình dạng khớp bộ phân loại.
+  Draft smoke đã trả về bản ban đầu. **Chưa smoke bằng trình duyệt** (xem "Chưa làm xong").
+
 ## Lệch so với thiết kế / plan
+- F8: `error_code` của 422 là `TREE_INVALID` kể cả lỗi richText độc (mã con ở `errors[].code`) — `RICHTEXT_UNSAFE`/`LINK_URL_UNSAFE` ở bảng `error-messages` chỉ dùng nếu BE
+  đổi. Thông báo của từng lỗi con hiện nguyên văn `message` của BE (vd. `PROP_INVALID` là tiếng Anh kỹ thuật: `Value is "string" but should be "number"`) — chưa có bảng
+  Việt hoá mã con; nên làm khi chốt UX lỗi (F9–F11 hoặc Bước 6).
+- F8: lỗi tô đỏ ở Inspector mức **field** (không tới từng phần tử của repeater/ô trong group); danh sách lỗi của khối ghi đủ path/mã nên không mất thông tin.
+- F8: lỗi 413 không kèm body (proxy chặn trước BE) phân loại thành "tạm thời" (mutator chỉ ném `response.data`, mất `status`) — BE thật trả `error_code`, nên đủ.
+- F8: rời trang chỉ cảnh báo + cho "Ở lại/Rời đi"; **không** tự flush khi rời (tránh PUT mồ côi sau khi phiên đã huỷ). Đóng tab dùng `beforeunload` chuẩn của trình duyệt.
+- F8: `getPageDraft` `gcTime: 0` (xem trên) — hệ quả: mỗi lần mở editor luôn GET mới, kể cả quay lại từ danh sách trang.
+- F8: Dialog `dismissible` thêm vào `packages/ui` (additive) chỉ để `ConflictDialog` không bị Escape/nền đóng.
+- F6 (mục "mỗi lần gõ một ký tự = một bước undo") → **đã xử lý ở F8** (gộp bước theo cửa sổ 2 s).
 - F7: chỉ cài `@dnd-kit/core`, **không** cài `@dnd-kit/sortable` như plan ghi — vùng thả là slot tường minh nên `sortable` không có việc.
 - F7: nút Lên/Xuống chỉ đổi chỗ trong **cùng cha** (không rời/vào Section); rời/vào Section làm bằng kéo-thả. Muốn bàn phím làm được cả hai thì
   thêm "Đưa ra ngoài/Vào khối trên" sau.
@@ -221,3 +261,5 @@
 ## Chưa làm xong
 - F7: nghiệm thu tay kéo-thả trên trình duyệt thật — kéo từ palette vào trang rỗng / vào Section rỗng / giữa hai khối; kéo node đổi chỗ, vào và ra Section;
   rê vào chỗ không hợp lệ (Hero thứ hai, Section vào chính nó) thấy thanh đỏ + lý do; thả → alert; bấm để chọn vẫn chọn được; link trong khối không điều hướng.
+- F8: smoke bằng trình duyệt thật (không dùng được ở session này): hai tab cùng trang → sửa ở tab A, đợi "Đã lưu", sửa ở tab B → tab B nhận 409 → dialog; thử cả "Tải bản mới"
+  và "Giữ bản của tôi". Cây quá lớn (nhiều ảnh/khối) → banner, không PUT. Tắt mạng giữa chừng → "Lỗi" + Thử lại. Đóng tab khi "Chưa lưu" → trình duyệt hỏi.

@@ -9,4 +9,10 @@ export * from './operations/result';
 export { applyOperation, executeOperation, type ExecuteResult } from './operations/apply';
 export { validateOperation, validateThemeTokens, type ValidationContext } from './operations/validate';
 export { setIn } from './operations/paths';
-export { createEditorStore, type EditorState, type EditorStore } from './store/editor-store';
+export {
+  createEditorStore,
+  UPDATE_COALESCE_MS,
+  type EditorState,
+  type EditorStore,
+  type EditorStoreOptions,
+} from './store/editor-store';

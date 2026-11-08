@@ -10,6 +10,23 @@ import { PageKind, type TreeEnvelope } from '../tree/types';
 /** Số bước undo giữ lại (#42: chỉ client, trong một phiên — không persist op-log). */
 const HISTORY_LIMIT = 100;
 
+/**
+ * Các op `update` liên tiếp cùng `nodeId` + `path` cách nhau chưa tới chừng này gộp vào MỘT bước undo (gõ một câu ở Inspector
+ * = một bước, không phải một bước mỗi ký tự — lịch sử chỉ 100 bước). Cửa sổ trượt: mỗi lần gõ làm mới mốc.
+ * Cố ý bằng nhịp debounce autosave (2 s) — một "đợt gõ" cũng là một lần lưu.
+ */
+export const UPDATE_COALESCE_MS = 2000;
+
+export interface EditorStoreOptions {
+  /** Đồng hồ (ms) — chỉ để test; mặc định `Date.now`. */
+  now?: () => number;
+  /** Ghi đè `UPDATE_COALESCE_MS` (test). */
+  coalesceMs?: number;
+}
+
+const samePath = (a: readonly (string | number)[], b: readonly (string | number)[]) =>
+  a.length === b.length && a.every((seg, i) => seg === b[i]);
+
 export interface EditorState {
   /** Cây đang sửa của trang đang mở; `null` khi chưa nạp draft. Đây là **bản làm việc**, nạp một lần từ Query (#20). */
   tree: TreeEnvelope | null;
@@ -43,7 +60,12 @@ function reconcileSelection(tree: TreeEnvelope | null, selectedId: string | null
  * Store vanilla (không phụ thuộc React → test được ở Node, dùng ở UI qua `useStore(store, selector)`).
  * Mỗi phiên editor tạo một store riêng.
  */
-export function createEditorStore(): EditorStore {
+export function createEditorStore(options: EditorStoreOptions = {}): EditorStore {
+  const now = options.now ?? Date.now;
+  const coalesceMs = options.coalesceMs ?? UPDATE_COALESCE_MS;
+  /** Op `update` gần nhất đã đổi cây — để gộp bước undo. Mọi thứ khác (op khác, undo/redo, nạp lại) xoá nó. */
+  let lastUpdate: { nodeId: string; path: readonly (string | number)[]; at: number } | null = null;
+
   const store: EditorStore = createStore<EditorState>()(
     temporal<EditorState, [], [], History>(
       (set, get) => ({
@@ -53,6 +75,7 @@ export function createEditorStore(): EditorStore {
         themeDraft: null,
 
         loadDraft: (tree, pageKind) => {
+          lastUpdate = null;
           set({ tree, pageKind, selectedId: null });
           store.temporal.getState().clear();
         },
@@ -80,7 +103,30 @@ export function createEditorStore(): EditorStore {
           if (!checked.ok) return checked;
 
           const next = applyOperation(tree, op);
-          set({ tree: next, selectedId: reconcileSelection(next, selectedId) });
+          if (next === tree) return OK; // op không đổi gì: không đụng lịch sử, không đổi mốc gộp
+
+          const at = now();
+          const merge =
+            op.type === 'update' &&
+            lastUpdate !== null &&
+            lastUpdate.nodeId === op.nodeId &&
+            samePath(lastUpdate.path, op.path) &&
+            at - lastUpdate.at < coalesceMs;
+          lastUpdate = op.type === 'update' ? { nodeId: op.nodeId, path: op.path, at } : null;
+
+          const patch = { tree: next, selectedId: reconcileSelection(next, selectedId) };
+          if (merge) {
+            // Cùng đợt gõ: đổi cây nhưng không ghi bước mới (bước của lần gõ đầu đã giữ bản trước đợt).
+            const temporal = store.temporal.getState();
+            temporal.pause();
+            try {
+              set(patch);
+            } finally {
+              temporal.resume();
+            }
+          } else {
+            set(patch);
+          }
           return OK;
         },
 
@@ -92,11 +138,13 @@ export function createEditorStore(): EditorStore {
         },
 
         undo: () => {
+          lastUpdate = null;
           store.temporal.getState().undo();
           set((state) => ({ selectedId: reconcileSelection(state.tree, state.selectedId) }));
         },
 
         redo: () => {
+          lastUpdate = null;
           store.temporal.getState().redo();
           set((state) => ({ selectedId: reconcileSelection(state.tree, state.selectedId) }));
         },

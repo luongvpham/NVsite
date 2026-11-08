@@ -58,9 +58,12 @@ function indexPositions(tree: TreeEnvelope): Map<string, NodePosition> {
 export function EditorCanvas({
   store,
   mediaMap,
+  invalidNodeIds,
 }: {
   store: EditorStore;
   mediaMap: Readonly<Record<string, MediaRef>>;
+  /** Node mà BE báo lỗi (422) — viền đỏ. */
+  invalidNodeIds?: ReadonlySet<string>;
 }) {
   const tree = useStore(store, (s) => s.tree);
   const selectedId = useStore(store, (s) => s.selectedId);
@@ -82,6 +85,7 @@ export function EditorCanvas({
           nodeType={node.type}
           position={position}
           selected={node.id === selectedId}
+          invalid={invalidNodeIds?.has(node.id) ?? false}
           draggable={structureEditable}
           showSlots={structureEditable && dragging}
         >
@@ -89,7 +93,7 @@ export function EditorCanvas({
         </CanvasNode>
       );
     },
-    [positions, selectedId, store, structureEditable, dragging],
+    [positions, selectedId, store, structureEditable, dragging, invalidNodeIds],
   );
 
   if (!tree) return null;
@@ -127,6 +131,7 @@ function CanvasNode({
   nodeType,
   position,
   selected,
+  invalid,
   draggable,
   showSlots,
   children,
@@ -136,6 +141,7 @@ function CanvasNode({
   nodeType: string;
   position: NodePosition;
   selected: boolean;
+  invalid: boolean;
   draggable: boolean;
   showSlots: boolean;
 }>) {
@@ -167,10 +173,13 @@ function CanvasNode({
         {...listeners}
         data-node-id={nodeId}
         data-selected={selected ? 'true' : undefined}
+        data-invalid={invalid ? 'true' : undefined}
         aria-label={`Khối ${nodeType}`}
         tabIndex={0}
         className={`${
-          selected
+          invalid
+            ? 'cursor-pointer outline-2 -outline-offset-2 outline-destructive'
+            : selected
             ? 'cursor-pointer outline-2 -outline-offset-2 outline-primary'
             : 'cursor-pointer hover:outline hover:outline-1 hover:-outline-offset-1 hover:outline-primary/40'
         } ${isDragging ? 'opacity-40' : ''}`}

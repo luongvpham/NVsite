@@ -59,4 +59,24 @@ describe('Inspector (§10 — property-panel.ts đủ metadata để sinh form d
     // của chính nó — path không lồng sâu hơn, tránh Inspector cha phải biết cấu trúc con.
     expect(onChange).toHaveBeenCalledWith(['cta'], { label: 'Liên hệ ngay' });
   });
+  it('invalidPaths tô đỏ đúng field (cả khi đường dẫn đi sâu hơn field), field khác không bị tô', () => {
+    render(
+      <Inspector
+        fields={heroPropertyPanel}
+        values={{ title: 'a', subtitle: 'b', cta: { label: 'c' } }}
+        onChange={vi.fn()}
+        invalidPaths={[['title'], ['cta', 'label']]}
+      />,
+    );
+    const wrapperOf = (value: string) => screen.getByDisplayValue(value).closest('fieldset[data-invalid], fieldset');
+    expect(screen.getByDisplayValue('a').closest('fieldset[disabled], fieldset')?.getAttribute('data-invalid')).toBe('true');
+    expect(wrapperOf('b')?.getAttribute('data-invalid')).toBeNull();
+    // `cta.label` nằm trong field `cta` → field `cta` bị tô.
+    expect(document.querySelectorAll('[data-invalid="true"]').length).toBe(2);
+  });
+
+  it('không có invalidPaths → không field nào bị tô', () => {
+    render(<Inspector fields={heroPropertyPanel} values={{ title: 'a' }} onChange={vi.fn()} />);
+    expect(document.querySelectorAll('[data-invalid]').length).toBe(0);
+  });
 });

@@ -7,23 +7,25 @@ export interface DialogProps {
   title: string;
   children: ReactNode;
   className?: string;
+  /** `false` = bắt buộc chọn một hành động trong dialog: ẩn nút ✕, Escape và bấm nền không đóng. Mặc định `true`. */
+  dismissible?: boolean;
 }
 
 /**
  * Modal đơn giản dùng chung cho các dialog trong portal (upload-to-slot, media library picker...).
  * Không có focus-trap đầy đủ — chỉ đóng bằng Escape/backdrop, đủ cho MVP Bước 4.
  */
-export function Dialog({ open, onClose, title, children, className }: DialogProps) {
+export function Dialog({ open, onClose, title, children, className, dismissible = true }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !dismissible) return;
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') onClose();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => { document.removeEventListener('keydown', handleKeyDown); };
-  }, [open, onClose]);
+  }, [open, onClose, dismissible]);
 
   if (!open) return null;
 
@@ -31,7 +33,7 @@ export function Dialog({ open, onClose, title, children, className }: DialogProp
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (dismissible && event.target === event.currentTarget) onClose();
       }}
     >
       <div
@@ -43,14 +45,16 @@ export function Dialog({ open, onClose, title, children, className }: DialogProp
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-          <button
-            type="button"
-            aria-label="Đóng"
-            className="rounded p-1 text-muted-foreground hover:bg-muted"
-            onClick={onClose}
-          >
-            ✕
-          </button>
+          {dismissible && (
+            <button
+              type="button"
+              aria-label="Đóng"
+              className="rounded p-1 text-muted-foreground hover:bg-muted"
+              onClick={onClose}
+            >
+              ✕
+            </button>
+          )}
         </div>
         {children}
       </div>

@@ -135,8 +135,9 @@ describe('undo / redo (#42: chỉ client, trong một phiên)', () => {
     expect(store.getState().tree?.children).toHaveLength(105);
   });
 
-  it('update cùng một prop nhiều lần vẫn là từng bước undo được', () => {
-    const store = createEditorStore();
+  it('update cùng một prop cách nhau quá cửa sổ gộp vẫn là từng bước undo được', () => {
+    let t = 0;
+    const store = createEditorStore({ now: () => (t += 5000) });
     store.getState().loadDraft(envelope([hero()]), PageKind.Composable);
     store.getState().dispatch({ type: 'update', nodeId: 'c_hero1', path: ['title'], value: 'A' });
     store.getState().dispatch({ type: 'update', nodeId: 'c_hero1', path: ['title'], value: 'AB' });
@@ -228,5 +229,93 @@ describe('theme (changeTheme — ngoài lịch sử của cây)', () => {
     store.getState().loadTheme(tokens());
     expect(history(store).pastStates).toHaveLength(0);
     expect(store.getState().themeDraft).toEqual(tokens());
+  });
+});
+
+describe('gộp op update liên tiếp vào một bước undo', () => {
+  const setup = () => {
+    let t = 1000;
+    const store = createEditorStore({ now: () => t });
+    store.getState().loadDraft(envelope([hero('c_hero1', { title: '' }), richText('c_rt001')]), PageKind.Composable);
+    const type = (nodeId: string, path: string[], value: string, advance = 100) => {
+      t += advance;
+      return store.getState().dispatch({ type: 'update', nodeId, path, value });
+    };
+    return { store, type, tick: (ms: number) => (t += ms) };
+  };
+  const title = (store: ReturnType<typeof createEditorStore>) => {
+    const node = store.getState().tree?.children[0];
+    return (node?.props as { title?: string } | undefined)?.title;
+  };
+
+  it('gõ nhiều ký tự liên tiếp → một bước; undo về trước đợt gõ, redo về sau đợt gõ', () => {
+    const { store, type } = setup();
+    for (const v of ['H', 'He', 'Hel', 'Hell', 'Hello']) expect(type('c_hero1', ['title'], v)).toEqual({ ok: true });
+
+    expect(title(store)).toBe('Hello');
+    expect(history(store).pastStates).toHaveLength(1);
+    store.getState().undo();
+    expect(title(store)).toBe('');
+    store.getState().redo();
+    expect(title(store)).toBe('Hello');
+  });
+
+  it('cửa sổ trượt: mỗi lần gõ làm mới mốc; nghỉ đủ lâu thì sang bước mới', () => {
+    const { store, type, tick } = setup();
+    type('c_hero1', ['title'], 'a', 0);
+    type('c_hero1', ['title'], 'ab', 1500);
+    type('c_hero1', ['title'], 'abc', 1500); // cách lần trước 1.5 s < 2 s dù cách lần đầu 3 s
+    expect(history(store).pastStates).toHaveLength(1);
+
+    tick(2000);
+    type('c_hero1', ['title'], 'abcd', 0);
+    expect(history(store).pastStates).toHaveLength(2);
+    store.getState().undo();
+    expect(title(store)).toBe('abc');
+  });
+
+  it('khác node hoặc khác path → bước riêng', () => {
+    const { store, type } = setup();
+    type('c_hero1', ['title'], 'x');
+    type('c_hero1', ['subtitle'], 'y');
+    expect(history(store).pastStates).toHaveLength(2);
+    type('c_rt001', ['content'], '<p>b</p>');
+    expect(history(store).pastStates).toHaveLength(3);
+  });
+
+  it('xen op khác (add) hoặc undo giữa các lần gõ → không gộp xuyên qua', () => {
+    const { store, type } = setup();
+    type('c_hero1', ['title'], 'a');
+    store.getState().dispatch(addRichText('c_new01', 2));
+    type('c_hero1', ['title'], 'ab');
+    expect(history(store).pastStates).toHaveLength(3);
+
+    store.getState().undo(); // bỏ lần gõ 'ab'
+    type('c_hero1', ['title'], 'abc');
+    expect(history(store).pastStates).toHaveLength(3);
+    expect(title(store)).toBe('abc');
+  });
+
+  it('loadDraft xoá mốc gộp; update không đổi gì không làm mới mốc, không ghi bước', () => {
+    const { store, type } = setup();
+    type('c_hero1', ['title'], 'a', 0);
+    type('c_hero1', ['title'], 'a', 1900); // cùng giá trị: no-op
+    type('c_hero1', ['title'], 'ab', 200); // 2.1 s sau lần đổi thật → bước mới
+    expect(history(store).pastStates).toHaveLength(2);
+
+    store.getState().loadDraft(envelope([hero('c_hero1', { title: '' })]), PageKind.Composable);
+    type('c_hero1', ['title'], 'z');
+    expect(history(store).pastStates).toHaveLength(1);
+  });
+
+  it('gõ trong đợt mới xoá nhánh redo', () => {
+    const { store, type, tick } = setup();
+    type('c_hero1', ['title'], 'a');
+    tick(5000);
+    type('c_hero1', ['title'], 'ab');
+    store.getState().undo();
+    expect(history(store).futureStates).toHaveLength(1);
+    type('c_hero1', ['title'], 'ac');
+    expect(history(store).futureStates).toHaveLength(0);
   });
 });

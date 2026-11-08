@@ -35,6 +35,11 @@ export interface InspectorProps {
   renderMediaPicker?: RenderMediaPicker;
   /** Khoá field (vd. prop không thuộc `editableInSystemPageProps` ở trang System). Chỉ là UI — Engine vẫn từ chối op. */
   isFieldDisabled?: (field: PropertyPanelField) => boolean;
+  /**
+   * Các đường dẫn prop (tính từ gốc `props` của node, như `update.path`) mà BE báo sai (422) — field chứa chúng được tô đỏ.
+   * Mức chi tiết là field của Inspector này: `['items', 2, 'label']` tô cả field `items`. Chỉ là UI.
+   */
+  invalidPaths?: readonly (readonly PathSegment[])[];
 }
 
 export function Inspector({
@@ -44,6 +49,7 @@ export function Inspector({
   pathPrefix = [],
   renderMediaPicker,
   isFieldDisabled,
+  invalidPaths,
 }: InspectorProps) {
   const groups = new Map<string, PropertyPanelField[]>();
   for (const field of fields) {
@@ -65,7 +71,8 @@ export function Inspector({
                 <fieldset
                   key={field.name}
                   disabled={isFieldDisabled?.(field) ?? false}
-                  className="m-0 min-w-0 border-0 p-0 disabled:opacity-60"
+                  data-invalid={isFieldInvalid(invalidPaths, pathPrefix, field.name) ? 'true' : undefined}
+                  className="m-0 min-w-0 border-0 p-0 disabled:opacity-60 data-[invalid=true]:rounded data-[invalid=true]:ring-2 data-[invalid=true]:ring-destructive data-[invalid=true]:ring-offset-2"
                 >
                   <FieldControl
                     field={field}
@@ -81,6 +88,18 @@ export function Inspector({
         </fieldset>
       ))}
     </div>
+  );
+}
+
+/** Field `name` có nằm trên (hoặc là tổ tiên của) một đường dẫn lỗi không — tính sau `pathPrefix`. */
+function isFieldInvalid(
+  invalidPaths: InspectorProps['invalidPaths'],
+  pathPrefix: readonly PathSegment[],
+  name: string,
+): boolean {
+  if (!invalidPaths) return false;
+  return invalidPaths.some(
+    (path) => path.length > pathPrefix.length && pathPrefix.every((seg, i) => path[i] === seg) && path[pathPrefix.length] === name,
   );
 }
 

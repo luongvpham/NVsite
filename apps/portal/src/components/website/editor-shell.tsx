@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useBlocker } from '@tanstack/react-router';
 import { useStore } from 'zustand';
 import { Button } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
@@ -21,11 +22,15 @@ import {
 } from '@vsite/builder-core';
 import { getErrorMessage } from '../../lib/error-messages';
 import { useMediaMap } from '../../hooks/use-media-map';
+import { useAutosave } from '../../hooks/use-autosave';
+import type { AutosaveController, AutosaveState } from '../../lib/autosave/autosave-controller';
+import type { NodeErrors } from '../../lib/autosave/map-tree-errors';
 import { ImagePickerControl } from '../media/image-picker-control';
 import { siblingMove } from '../../lib/sibling-move';
 import { ComponentPalette } from './component-palette';
 import { EditorCanvas } from './editor-canvas';
 import { EditorDnd } from './editor-dnd';
+import { AutosaveStatus, ConflictDialog, LeavePrompt, ValidationBanner } from './autosave-ui';
 
 /**
  * Khung editor (Flow 4). Server state ở TanStack Query, cây đang sửa ở store (#20):
@@ -38,6 +43,9 @@ export function EditorShell({ shopId, pageId }: { shopId: string; pageId: string
       staleTime: Infinity,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
+      // Bản trong cache chỉ đúng lúc mở phiên (autosave làm nó cũ dần). Bỏ ngay khi rời editor để lần mở sau
+      // GET lại — không thì mở lại với cây + version cũ → 409 giả hoặc mất thay đổi đã lưu.
+      gcTime: 0,
     },
   });
 
@@ -70,15 +78,17 @@ export function EditorShell({ shopId, pageId }: { shopId: string; pageId: string
     );
   }
 
-  return <EditorSession key={pageId} shopId={shopId} draft={draftQuery.data} tree={parsed.data} />;
+  return <EditorSession key={pageId} shopId={shopId} pageId={pageId} draft={draftQuery.data} tree={parsed.data} />;
 }
 
 function EditorSession({
   shopId,
+  pageId,
   draft,
   tree,
 }: {
   shopId: string;
+  pageId: string;
   draft: PageDraftDto;
   tree: TreeEnvelope;
 }) {
@@ -96,16 +106,36 @@ function EditorSession({
 
   useEditorShortcuts(store);
 
+  const { controller, state: autosave } = useAutosave({
+    store,
+    shopId,
+    pageId,
+    initialVersion: draft.version,
+  });
+
+  // Rời trang khi còn thay đổi chưa lên server: cảnh báo (đóng tab/reload qua beforeunload, điều hướng trong app qua dialog).
+  const blocker = useBlocker({
+    shouldBlockFn: () => controller.hasUnsavedChanges,
+    enableBeforeUnload: () => controller.hasUnsavedChanges,
+    withResolver: true,
+  });
+
+  const nodeErrors = autosave.invalid?.mapped.byNode;
+  const invalidNodeIds = useMemo(() => new Set(nodeErrors?.keys()), [nodeErrors]);
+
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
-      <Toolbar store={store} />
+      <Toolbar store={store} autosave={autosave} controller={controller} />
+      <ValidationBanner state={autosave} />
+      <ConflictDialog state={autosave} controller={controller} />
+      {blocker.status === 'blocked' && <LeavePrompt onStay={blocker.reset} onLeave={blocker.proceed} />}
       <EditorDnd store={store}>
         <div className="grid min-h-0 flex-1 grid-cols-[14rem_1fr_20rem]">
           <nav aria-label="Bảng khối" className="overflow-y-auto border-r border-border p-3">
             <ComponentPalette store={store} />
           </nav>
           <div className="overflow-y-auto border-r border-border">
-            <EditorCanvas store={store} mediaMap={mediaMap} />
+            <EditorCanvas store={store} mediaMap={mediaMap} invalidNodeIds={invalidNodeIds} />
           </div>
           <aside aria-label="Thuộc tính khối" className="overflow-y-auto p-4">
             <InspectorPanel
@@ -113,6 +143,7 @@ function EditorSession({
               shopId={shopId}
               mediaMap={mediaMap}
               onAssetResolved={addAsset}
+              nodeErrors={nodeErrors}
             />
           </aside>
         </div>
@@ -121,7 +152,15 @@ function EditorSession({
   );
 }
 
-function Toolbar({ store }: { store: EditorStore }) {
+function Toolbar({
+  store,
+  autosave,
+  controller,
+}: {
+  store: EditorStore;
+  autosave: AutosaveState;
+  controller: AutosaveController;
+}) {
   const canUndo = useStore(store.temporal, (s) => s.pastStates.length > 0);
   const canRedo = useStore(store.temporal, (s) => s.futureStates.length > 0);
 
@@ -155,6 +194,7 @@ function Toolbar({ store }: { store: EditorStore }) {
       >
         Làm lại
       </Button>
+      <AutosaveStatus state={autosave} controller={controller} />
     </div>
   );
 }
@@ -210,11 +250,14 @@ function InspectorPanel({
   shopId,
   mediaMap,
   onAssetResolved,
+  nodeErrors,
 }: {
   store: EditorStore;
   shopId: string;
   mediaMap: Parameters<typeof ImagePickerControl>[0]['mediaMap'];
   onAssetResolved: Parameters<typeof ImagePickerControl>[0]['onAssetResolved'];
+  /** Lỗi 422 theo node (R5: có thể trỏ node không còn — lúc đó không có mục ở đây). */
+  nodeErrors: ReadonlyMap<string, NodeErrors> | undefined;
 }) {
   const tree = useStore(store, (s) => s.tree);
   const selectedId = useStore(store, (s) => s.selectedId);
@@ -233,6 +276,7 @@ function InspectorPanel({
     );
   }
 
+  const thisNodeErrors = nodeErrors?.get(node.id);
   const fields = propertyPanels[node.type] ?? [];
   const editableOnSystem = Object.hasOwn(placementRules, node.type)
     ? (placementRules[node.type]?.editableInSystemPageProps ?? [])
@@ -258,6 +302,15 @@ function InspectorPanel({
           {opError}
         </p>
       )}
+      {thisNodeErrors && (
+        <ul aria-label="Lỗi của khối này" className="list-disc space-y-1 pl-5 text-sm text-destructive">
+          {thisNodeErrors.errors.map((error, i) => (
+            <li key={`${error.path}:${error.code}:${String(i)}`}>
+              {error.message} <span className="text-xs opacity-70">({error.code})</span>
+            </li>
+          ))}
+        </ul>
+      )}
       {fields.length === 0 ? (
         <p className="text-sm text-muted-foreground">Khối này không có thuộc tính nào để sửa.</p>
       ) : (
@@ -266,6 +319,7 @@ function InspectorPanel({
           fields={fields}
           values={node.props ?? {}}
           onChange={handleChange}
+          invalidPaths={thisNodeErrors?.propPaths}
           isFieldDisabled={(field) =>
             pageKind === PageKind.System && !editableOnSystem.includes(field.name)
           }

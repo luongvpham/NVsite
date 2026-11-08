@@ -357,11 +357,11 @@ Section / ra ngoài); nút Xoá + phím Delete → `remove`. Vùng thả không 
 → map JSON Pointer → nodeId + prop path → canvas viền đỏ + Inspector ô đỏ (prop `invalidPaths` của
 Inspector); gốc → `ValidationBanner`; `truncated` → "còn lỗi khác" (R5). 413 → banner. Mạng/5xx → giữ
 "Chưa lưu", nút Thử lại. Trạng thái `AutosaveStatus`. `beforeunload` + router blocker khi còn chưa lưu.
-- [ ] Test trước (fake timers + MSW): debounce gộp nhiều sửa thành 1 PUT; PUT gửi đúng `version` lần
+- [x] Test trước (fake timers + MSW): debounce gộp nhiều sửa thành 1 PUT; PUT gửi đúng `version` lần
   trước; sửa trong lúc PUT bay → PUT thứ hai sau, version mới; `sanitized` → GET lại; 409 → dialog, hai
   nhánh (Tải bản mới / Giữ bản của tôi → GET rồi PUT); 422 dùng **fixture invalid** (`errorCodes` → MSW trả
   `params.errors`) tô đúng node; path không tồn tại không crash; 413; vượt 2000 node không gửi
-- [ ] FAIL → PASS · Commit `feat(portal): autosave draft — 409/422/sanitized/413 (WEBSITE-002 F8)`
+- [x] FAIL → PASS · Commit `feat(portal): autosave draft — 409/422/sanitized/413 (WEBSITE-002 F8)`
 
 ### F9: Theme panel
 Tab "Giao diện" trong editor. `getTheme` → `themeTokensSchema.safeParse` → `themeDraft` (op
