@@ -9,6 +9,7 @@ export { propertyPanel } from '../generated/property-panel';
 export { opRules } from '../generated/op-rules';
 export { default as treeRules } from '../generated/tree-rules.json';
 export { getPropsSchema } from './props-schemas';
+export { componentManifests } from './manifests';
 export { NODE_ID_PATTERN, themeTokensSchema, treeEnvelopeSchema } from '../meta/envelope-schema';
 export { isSafeLinkUrl } from './link-url';
 export { sanitizeRichText } from './sanitize-html';

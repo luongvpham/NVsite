@@ -146,7 +146,35 @@
   undo/redo bằng nút + phím + bỏ qua khi gõ, System chỉ bật `content`), `renderTree.test.tsx` +4, `Inspector.test.tsx` +1.
   Portal 121/121, `pnpm -r typecheck/lint` sạch, `gen:registry` không đổi, web build OK. Đột biến (bỏ khoá field System) → 1 ca fail.
 
+### F7 — Kéo-thả: thêm / di chuyển / xoá khối
+- `builder-components`: export `componentManifests` (`src/manifests.ts`, chỉ đọc `registry/*.manifest.ts`) làm nguồn nhãn tiếng Việt cho
+  palette; `tests/manifests.test.ts` buộc danh sách phủ đúng mọi type/variant của `tree-rules.json` (thêm component mà quên là fail).
+- **Palette** (`ComponentPalette`): lọc theo `allowedInPageKinds` của loại trang; mỗi kiểu hiển thị một nút "Thêm …". Nút hỏi cùng
+  `validateOperation` mà `dispatch` dùng nên tắt kèm đúng lý do Engine sẽ nêu (Hero thứ hai → "tối đa một lần"). Trang System: ẩn hẳn,
+  chỉ còn một dòng giải thích. Vị trí thêm do `resolveAddTarget`: chọn Section → cuối Section; chọn khối khác → ngay sau nó; chưa chọn → cuối trang.
+- **Lên / Xuống / Xoá khối** (`NodeActions`, nhóm "Thao tác với khối", ẩn ở System) + phím **Delete** (bỏ qua khi đang gõ ở ô nhập, và ở System):
+  cùng op `move`/`remove` với kéo-thả. `siblingMove` đổi chỗ với anh em liền kề, **cùng cha**. Xoá node đang chọn → bỏ chọn (store).
+- **Kéo-thả thật** (`@dnd-kit/core`, `EditorDnd`): kéo nút palette → `add`; kéo node trên canvas → `move` (cùng cha / vào Section / ra ngoài).
+  Vùng thả là các "slot" giữa các khối + cuối mỗi khối chứa + cuối trang (chỉ hiện lúc đang kéo; không chiếm chỗ lúc thường). Rê vào slot:
+  xanh nếu thả được, đỏ kèm lý do nếu Engine sẽ từ chối (`evaluateDrop`, gọi trước khi thả); thả vào chỗ sai → alert "Không thả được: …".
+  `evaluateDrop` thuần: `toIndex` của `move` trừ 1 khi cùng cha và thả phía sau; thả ngay trước/sau chính nó = no-op (không thêm bước undo).
+  Chỉ PointerSensor (kéo ≥ 8px nên bấm để chọn vẫn bình thường) + `pointerWithin` (không tự đoán "gần nhất").
+- `ImagePickerControl`/test không đổi. `editor-helpers.ts` (test): helper dùng chung, `-editor.test.tsx` chuyển sang dùng.
+- Test: `drop-operation.test.ts` (15), `add-target` (5), `sibling-move` (4), `editor-dnd.test.tsx` (12, gọi thẳng `onDragEnd` của DndContext:
+  add/move/no-op/chặn/System/xoá lỗi cũ), `-editor-structure.test.tsx` (18: palette, vị trí thêm, Hero thứ hai bị chặn, Lên/Xuống, Xoá, Delete,
+  undo từng thao tác, System), `manifests.test.ts` (2). Portal 176/176, `pnpm -r test/typecheck/lint` sạch, `gen:registry` không đổi,
+  web + portal build OK. Kiểm đột biến 6 chỗ (vị trí vào Section, nút tắt khi bị chặn, guard "đang gõ", `toIndex` của Xuống, chọn node mới sau thả,
+  hai bài trước) — mỗi đột biến làm 1–6 ca fail.
+- **Chưa kiểm được:** thao tác kéo bằng chuột thật. jsdom không có layout nên không mô phỏng được dnd-kit; phần test chỉ phủ logic thả và nối dây.
+  Cần người bấm tay trên trình duyệt (xem mục "Chưa làm xong").
+
 ## Lệch so với thiết kế / plan
+- F7: chỉ cài `@dnd-kit/core`, **không** cài `@dnd-kit/sortable` như plan ghi — vùng thả là slot tường minh nên `sortable` không có việc.
+- F7: nút Lên/Xuống chỉ đổi chỗ trong **cùng cha** (không rời/vào Section); rời/vào Section làm bằng kéo-thả. Muốn bàn phím làm được cả hai thì
+  thêm "Đưa ra ngoài/Vào khối trên" sau.
+- F7: không có KeyboardSensor của dnd-kit — nó tranh Enter/Space với việc chọn khối; đường bàn phím là các nút Thêm/Lên/Xuống/Xoá.
+- F7: nút palette bị tắt (Engine từ chối ở vị trí gợi ý) thì cũng không kéo được; các luật chặn hiện có (maxPerPage, loại trang) không phụ thuộc vị trí nên chưa thành vấn đề.
+- F7: chưa có `touch-action: none` cho cảm ứng (editor làm cho desktop).
 - F6: `decorateNode` được gọi **con trước, cha sau** (chữ ký `(node, rendered)` cần `rendered` của cha đã chứa con).
 - F6: mỗi lần gõ một ký tự ở Inspector là một op `update` = **một bước undo**; lịch sử giới hạn 100 bước nên gõ dài sẽ đầy. Chưa gộp
   (plan không nêu) — cần gộp op liên tiếp cùng `nodeId+path` trong cửa sổ ngắn; nên làm cùng F8 khi autosave chốt nhịp lưu.
@@ -191,3 +219,5 @@
 - F2: danh sách vẫn chưa hiện nhãn ảnh OG; ảnh chọn xong hiện ngay từ asset vừa chọn (không round-trip `assets?ids=`).
 
 ## Chưa làm xong
+- F7: nghiệm thu tay kéo-thả trên trình duyệt thật — kéo từ palette vào trang rỗng / vào Section rỗng / giữa hai khối; kéo node đổi chỗ, vào và ra Section;
+  rê vào chỗ không hợp lệ (Hero thứ hai, Section vào chính nó) thấy thanh đỏ + lý do; thả → alert; bấm để chọn vẫn chọn được; link trong khối không điều hướng.

@@ -22,7 +22,10 @@ import {
 import { getErrorMessage } from '../../lib/error-messages';
 import { useMediaMap } from '../../hooks/use-media-map';
 import { ImagePickerControl } from '../media/image-picker-control';
+import { siblingMove } from '../../lib/sibling-move';
+import { ComponentPalette } from './component-palette';
 import { EditorCanvas } from './editor-canvas';
+import { EditorDnd } from './editor-dnd';
 
 /**
  * Khung editor (Flow 4). Server state ở TanStack Query, cây đang sửa ở store (#20):
@@ -30,7 +33,12 @@ import { EditorCanvas } from './editor-canvas';
  */
 export function EditorShell({ shopId, pageId }: { shopId: string; pageId: string }) {
   const draftQuery = useGetPageDraft(shopId, pageId, {
-    query: { retry: false, staleTime: Infinity, refetchOnWindowFocus: false, refetchOnReconnect: false },
+    query: {
+      retry: false,
+      staleTime: Infinity,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
   });
 
   const parsed = useMemo(
@@ -65,30 +73,50 @@ export function EditorShell({ shopId, pageId }: { shopId: string; pageId: string
   return <EditorSession key={pageId} shopId={shopId} draft={draftQuery.data} tree={parsed.data} />;
 }
 
-function EditorSession({ shopId, draft, tree }: { shopId: string; draft: PageDraftDto; tree: TreeEnvelope }) {
+function EditorSession({
+  shopId,
+  draft,
+  tree,
+}: {
+  shopId: string;
+  draft: PageDraftDto;
+  tree: TreeEnvelope;
+}) {
   // Nạp một lần lúc mở phiên — "mở bản nháp để sửa", không phải mirror Query → Zustand.
   const [store] = useState<EditorStore>(() => {
     const created = createEditorStore();
-    created.getState().loadDraft(tree, draft.page.kind === 'System' ? PageKind.System : PageKind.Composable);
+    created
+      .getState()
+      .loadDraft(tree, draft.page.kind === 'System' ? PageKind.System : PageKind.Composable);
     return created;
   });
 
   const workingTree = useStore(store, (s) => s.tree);
   const { mediaMap, addAsset } = useMediaMap(shopId, workingTree);
 
-  useUndoRedoShortcuts(store);
+  useEditorShortcuts(store);
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       <Toolbar store={store} />
-      <div className="grid min-h-0 flex-1 grid-cols-[1fr_20rem]">
-        <div className="overflow-y-auto border-r border-border">
-          <EditorCanvas store={store} mediaMap={mediaMap} />
+      <EditorDnd store={store}>
+        <div className="grid min-h-0 flex-1 grid-cols-[14rem_1fr_20rem]">
+          <nav aria-label="Bảng khối" className="overflow-y-auto border-r border-border p-3">
+            <ComponentPalette store={store} />
+          </nav>
+          <div className="overflow-y-auto border-r border-border">
+            <EditorCanvas store={store} mediaMap={mediaMap} />
+          </div>
+          <aside aria-label="Thuộc tính khối" className="overflow-y-auto p-4">
+            <InspectorPanel
+              store={store}
+              shopId={shopId}
+              mediaMap={mediaMap}
+              onAssetResolved={addAsset}
+            />
+          </aside>
         </div>
-        <aside aria-label="Thuộc tính khối" className="overflow-y-auto p-4">
-          <InspectorPanel store={store} shopId={shopId} mediaMap={mediaMap} onAssetResolved={addAsset} />
-        </aside>
-      </div>
+      </EditorDnd>
     </div>
   );
 }
@@ -98,7 +126,11 @@ function Toolbar({ store }: { store: EditorStore }) {
   const canRedo = useStore(store.temporal, (s) => s.futureStates.length > 0);
 
   return (
-    <div role="toolbar" aria-label="Công cụ soạn trang" className="flex items-center gap-2 border-b border-border px-4 py-2">
+    <div
+      role="toolbar"
+      aria-label="Công cụ soạn trang"
+      className="flex items-center gap-2 border-b border-border px-4 py-2"
+    >
       <Button
         type="button"
         variant="outline"
@@ -127,18 +159,30 @@ function Toolbar({ store }: { store: EditorStore }) {
   );
 }
 
-/** Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y — bỏ qua khi đang gõ trong ô nhập (trình duyệt tự undo chữ ở đó). */
-function useUndoRedoShortcuts(store: EditorStore) {
+/** Đang gõ trong ô nhập → phím tắt của editor phải nhường cho trình duyệt (undo chữ, xoá chữ…). */
+function isTypingTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+  );
+}
+
+/** Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y (undo/redo) và Delete (xoá khối đang chọn) — bỏ qua khi đang gõ trong ô nhập. */
+function useEditorShortcuts(store: EditorStore) {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
-      const target = e.target;
-      if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
-      ) {
+      if (isTypingTarget(e.target)) return;
+
+      if (e.key === 'Delete' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        const { selectedId, pageKind } = store.getState();
+        // Trang System có cấu trúc cố định; Engine cũng từ chối, nhưng không cần nuốt phím khi chắc chắn vô ích.
+        if (!selectedId || pageKind === PageKind.System) return;
+        e.preventDefault();
+        store.getState().dispatch({ type: 'remove', nodeId: selectedId });
         return;
       }
+
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
       const key = e.key.toLowerCase();
       if (key === 'z' && !e.shiftKey) {
         e.preventDefault();
@@ -156,7 +200,10 @@ function useUndoRedoShortcuts(store: EditorStore) {
 }
 
 const propertyPanels = propertyPanel as Record<string, PropertyPanelField[]>;
-const placementRules = opRules as unknown as Record<string, { editableInSystemPageProps: readonly string[] }>;
+const placementRules = opRules as unknown as Record<
+  string,
+  { editableInSystemPageProps: readonly string[] }
+>;
 
 function InspectorPanel({
   store,
@@ -181,7 +228,9 @@ function InspectorPanel({
 
   const node = tree && selectedId ? findNode(tree, selectedId)?.node : undefined;
   if (!node) {
-    return <p className="text-sm text-muted-foreground">Chọn một khối trên trang để sửa thuộc tính.</p>;
+    return (
+      <p className="text-sm text-muted-foreground">Chọn một khối trên trang để sửa thuộc tính.</p>
+    );
   }
 
   const fields = propertyPanels[node.type] ?? [];
@@ -199,8 +248,10 @@ function InspectorPanel({
       <h2 className="text-sm font-semibold text-foreground">
         {node.type} <span className="font-normal text-muted-foreground">({node.variant})</span>
       </h2>
-      {pageKind === PageKind.System && (
+      {pageKind === PageKind.System ? (
         <p className="text-xs text-muted-foreground">Trang hệ thống: chỉ sửa được phần nội dung.</p>
+      ) : (
+        tree && <NodeActions store={store} tree={tree} nodeId={node.id} onError={setOpError} />
       )}
       {opError && (
         <p role="alert" className="text-sm text-destructive">
@@ -215,7 +266,9 @@ function InspectorPanel({
           fields={fields}
           values={node.props ?? {}}
           onChange={handleChange}
-          isFieldDisabled={(field) => pageKind === PageKind.System && !editableOnSystem.includes(field.name)}
+          isFieldDisabled={(field) =>
+            pageKind === PageKind.System && !editableOnSystem.includes(field.name)
+          }
           renderMediaPicker={({
             field,
             value,
@@ -236,6 +289,67 @@ function InspectorPanel({
           )}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * Lên/Xuống/Xoá cho khối đang chọn — đường bàn phím (a11y) cho cùng các op `move`/`remove` mà kéo-thả dùng.
+ * Ẩn ở trang System (cấu trúc cố định).
+ */
+function NodeActions({
+  store,
+  tree,
+  nodeId,
+  onError,
+}: {
+  store: EditorStore;
+  tree: TreeEnvelope;
+  nodeId: string;
+  onError: (message: string | null) => void;
+}) {
+  const up = siblingMove(tree, nodeId, 'up');
+  const down = siblingMove(tree, nodeId, 'down');
+
+  const run = (op: unknown) => {
+    const result = store.getState().dispatch(op);
+    onError(result.ok ? null : result.message);
+  };
+
+  return (
+    <div role="group" aria-label="Thao tác với khối" className="flex flex-wrap gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={!up}
+        onClick={() => {
+          if (up) run({ type: 'move', nodeId, ...up });
+        }}
+      >
+        Lên
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={!down}
+        onClick={() => {
+          if (down) run({ type: 'move', nodeId, ...down });
+        }}
+      >
+        Xuống
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          run({ type: 'remove', nodeId });
+        }}
+      >
+        Xoá khối
+      </Button>
     </div>
   );
 }

@@ -1,66 +1,26 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { delay, http, HttpResponse } from 'msw';
+import { delay, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { ShopSummaryDto } from '@vsite/api-sdk';
 import { useSessionStore } from '../stores/session-store';
-import { renderApp } from '../test/render-app';
-import { server } from '../test/msw-server';
-// Fixture dùng chung với BE — nạp trực tiếp, không chép (plan §6).
-import validHome from '../../../../packages/builder-components/tests/fixtures/tree/valid-home.json';
-import validEmptyHome from '../../../../packages/builder-components/tests/fixtures/tree/valid-empty-home.json';
-import validSystemContact from '../../../../packages/builder-components/tests/fixtures/tree/valid-system-contact.json';
+import {
+  draftBody,
+  nodeEl,
+  openEditor,
+  openFixture,
+  validEmptyHome,
+  validHome,
+  validSystemContact,
+} from '../test/editor-helpers';
 
 afterEach(() => {
   useSessionStore.getState().clearSession();
 });
 
-const PATH = '/shops/shop-1/website/pages/p-1';
-
-function shop(roleCode: string): ShopSummaryDto {
-  return { id: 'shop-1', name: 'Spa ABC', slug: 'spa-abc', kind: 'Hosted', status: 'Active', roleCode, logoUrl: null };
-}
-
-interface Fixture {
-  pageKind: string;
-  systemType?: string;
-  tree: unknown;
-}
-
-function draftBody(fixture: Fixture) {
-  return {
-    tree: fixture.tree,
-    version: 1,
-    isDirty: false,
-    updatedAt: '2026-11-08T00:00:00Z',
-    page: { id: 'p-1', kind: fixture.pageKind, systemType: fixture.systemType ?? null },
-  };
-}
-
-function openEditor(draft: () => Response | Promise<Response>, role = 'Owner') {
-  useSessionStore.getState().setSession({ accessToken: 't' });
-  server.use(
-    http.get('*/api/shops', () => HttpResponse.json([shop(role)])),
-    http.get('*/api/shops/:shopId/website/pages/:pageId/draft', draft),
-    // Ảnh trong fixture: không có asset thật → rỗng (canvas rơi về placeholder).
-    http.get('*/api/shops/:shopId/media/assets', () => HttpResponse.json([])),
-  );
-  return renderApp(PATH);
-}
-
-const openFixture = (fixture: Fixture, role?: string) =>
-  openEditor(() => HttpResponse.json(draftBody(fixture)), role);
-
-function nodeEl(id: string): HTMLElement {
-  const el = document.querySelector<HTMLElement>(`[data-node-id="${id}"]`);
-  if (!el) throw new Error(`Không thấy node ${id} trên canvas`);
-  return el;
-}
-
 describe('Editor — nạp draft (Flow 4)', () => {
   it('đang tải → hiện "Đang tải trang", rồi canvas với nội dung của cây', async () => {
     openEditor(async () => {
       await delay(150);
-      return HttpResponse.json(draftBody(validHome as Fixture));
+      return HttpResponse.json(draftBody(validHome));
     });
     expect(await screen.findByText('Đang tải trang...')).toBeInTheDocument();
     expect(await screen.findByText('Chào mừng')).toBeInTheDocument();
@@ -91,7 +51,7 @@ describe('Editor — nạp draft (Flow 4)', () => {
     let draftCalls = 0;
     openEditor(() => {
       draftCalls += 1;
-      return HttpResponse.json(draftBody(validHome as Fixture));
+      return HttpResponse.json(draftBody(validHome));
     }, 'Manager');
     expect(await screen.findByText(/Chỉ chủ shop/)).toBeInTheDocument();
     expect(draftCalls).toBe(0);
@@ -217,7 +177,7 @@ describe('Editor — undo/redo (#42)', () => {
 });
 
 describe('Editor — trang System (R3)', () => {
-  const contact: Fixture = validSystemContact;
+  const contact = validSystemContact;
 
   it('Inspector chỉ bật `content`, prop khác bị khoá', async () => {
     openFixture(contact);
