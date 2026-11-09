@@ -46,6 +46,20 @@ const COLOR_PATTERN = new RegExp(config.colorPattern);
 /** Các key màu của theme (`primary`, `secondary`, … `textMuted`) — Inspector liệt kê, Section.background tham chiếu. */
 export const themeColorKeys: readonly string[] = config.colorKeys;
 
+/**
+ * Tập giá trị cho phép của từng token (cùng nguồn `config/theme-tokens.json` với BE) — Theme panel dựng control từ đây,
+ * không viết tay danh sách thứ hai (#24-tinh thần: một nguồn).
+ */
+export const themeOptions = {
+  colorKeys: config.colorKeys,
+  colorPattern: config.colorPattern,
+  fonts: config.fonts,
+  scale: config.scale,
+  radius: config.radius,
+  shadow: config.shadow,
+  sectionGap: config.sectionGap,
+} as const;
+
 const kebab = (key: string): string => key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 
 // ── Bảng ánh xạ giá trị của config → giá trị CSS. Thiếu một giá trị là test `css-vars.test.ts` đỏ. ──

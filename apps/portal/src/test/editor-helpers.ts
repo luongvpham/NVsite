@@ -3,6 +3,7 @@ import type { ShopSummaryDto } from '@vsite/api-sdk';
 import { useSessionStore } from '../stores/session-store';
 import { renderApp } from './render-app';
 import { server } from './msw-server';
+import themeConfig from '../../../../config/theme-tokens.json';
 // Fixture dùng chung với BE — nạp trực tiếp, không chép (plan §6).
 import validHomeJson from '../../../../packages/builder-components/tests/fixtures/tree/valid-home.json';
 import validEmptyHomeJson from '../../../../packages/builder-components/tests/fixtures/tree/valid-empty-home.json';
@@ -17,6 +18,13 @@ export interface Fixture {
 export const validHome: Fixture = validHomeJson;
 export const validEmptyHome: Fixture = validEmptyHomeJson;
 export const validSystemContact: Fixture = validSystemContactJson;
+
+/** Theme mặc định của config — dùng chung với BE (cùng file). */
+export const defaultTheme = themeConfig.defaults;
+
+export function themeBody(tokens: unknown = defaultTheme, presetKey: string | null = 'classic') {
+  return { presetKey, tokens, updatedAt: '2026-11-08T00:00:00Z' };
+}
 
 export const EDITOR_PATH = '/shops/shop-1/website/pages/p-1';
 
@@ -34,19 +42,25 @@ export function draftBody(fixture: Fixture) {
   };
 }
 
-export function openEditor(draft: () => Response | Promise<Response>, role = 'Owner') {
+export function openEditor(
+  draft: () => Response | Promise<Response>,
+  role = 'Owner',
+  theme: () => Response | Promise<Response> = () => HttpResponse.json(themeBody()),
+) {
   useSessionStore.getState().setSession({ accessToken: 't' });
   server.use(
     http.get('*/api/shops', () => HttpResponse.json([shop(role)])),
     http.get('*/api/shops/:shopId/website/pages/:pageId/draft', draft),
+    // Editor luôn GET theme lúc mở phiên; test không quan tâm thì trả theme mặc định (test theme tự `server.use` đè).
+    http.get('*/api/shops/:shopId/website/theme', theme),
     // Ảnh trong fixture: không có asset thật → rỗng (canvas rơi về placeholder).
     http.get('*/api/shops/:shopId/media/assets', () => HttpResponse.json([])),
   );
   return renderApp(EDITOR_PATH);
 }
 
-export const openFixture = (fixture: Fixture, role?: string) =>
-  openEditor(() => HttpResponse.json(draftBody(fixture)), role);
+export const openFixture = (fixture: Fixture, role?: string, theme?: () => Response | Promise<Response>) =>
+  openEditor(() => HttpResponse.json(draftBody(fixture)), role, theme);
 
 export function nodeEl(id: string): HTMLElement {
   const el = document.querySelector<HTMLElement>(`[data-node-id="${id}"]`);

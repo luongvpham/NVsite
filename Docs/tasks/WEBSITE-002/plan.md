@@ -368,9 +368,9 @@ Tab "Giao diện" trong editor. `getTheme` → `themeTokensSchema.safeParse` →
 `changeTheme`). Control lấy tập giá trị từ `config/theme-tokens.json`. Canvas đổi ngay. "Lưu theme" →
 `updateTheme {presetKey (giữ nguyên), tokens}`; "Hoàn tác" → về bản đã lưu; rời tab còn chưa lưu → nhắc.
 422 `THEME_INVALID` → tô đỏ theo `params.errors[].path`; 413 `THEME_BODY_TOO_LARGE`.
-- [ ] Test trước: loading/error/404 `WEBSITE_NOT_FOUND`; đổi màu → biến CSS canvas đổi; lưu gửi body đúng;
+- [x] Test trước: loading/error/404 `WEBSITE_NOT_FOUND`; đổi màu → biến CSS canvas đổi; lưu gửi body đúng;
   422 tô ô; màu sai pattern bị chặn client
-- [ ] FAIL → PASS · Commit `feat(portal): Theme panel — preview CSS vars + lưu (WEBSITE-002 F9)`
+- [x] FAIL → PASS · Commit `feat(portal): Theme panel — preview CSS vars + lưu (WEBSITE-002 F9)`
 
 ### F10: Lexical cho RichText
 Cài `lexical` + `@lexical/react` + `@lexical/html` (vào `builder-components` vì Inspector ở đó — lazy load

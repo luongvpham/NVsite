@@ -199,7 +199,21 @@
   ở `errors[].code`); ~1,2 MB → **413** `TREE_BODY_TOO_LARGE`; HTML Lexical thô → 200 `sanitized:true`, GET trả bản sạch cùng version. Hình dạng khớp bộ phân loại.
   Draft smoke đã trả về bản ban đầu. **Chưa smoke bằng trình duyệt** (xem "Chưa làm xong").
 
+### F9 — Theme panel
+- Tab "Giao diện" ở cột phải editor (cạnh "Thuộc tính"; có dấu • khi theme chưa lưu). `useThemeDraft` (`hooks/use-theme-draft.ts`): `getTheme` (`retry:false`, `staleTime: Infinity`, `gcTime: 0`) → `themeTokensSchema.safeParse` → `store.loadTheme` **một lần lúc mở phiên** (canvas thấy theme đã lưu ngay, không đợi mở tab); sửa qua op `changeTheme` (ngoài lịch sử undo của cây); "bản đã lưu" giữ trong hook để so (`themeEquals`, không phụ thuộc thứ tự khoá) và để "Hoàn tác".
+- Control dựng từ `themeOptions` (theme-engine export thêm, đọc `config/theme-tokens.json` — không viết tay danh sách thứ hai): 7 màu (ô chọn màu + ô hex), 2 font, cỡ chữ, bo góc, đổ bóng, khoảng cách khối. Màu sai `colorPattern` bị chặn ở client (báo lỗi, không gửi op, canvas giữ màu hợp lệ gần nhất; rời ô thì trả về màu hợp lệ).
+- "Lưu theme" → `updateTheme {presetKey (giữ nguyên từ GET, kể cả null), tokens}`; một PUT tại một thời điểm; thành công → bản đã lưu = bản vừa gửi (sửa tiếp trong lúc lưu vẫn tính là chưa lưu). 422 `THEME_INVALID` → `params.errors[].path` (JSON Pointer `/colors/primary`) → tô đúng ô + `message` của BE; path không gắn được vào ô nào → liệt kê ở banner; sửa tiếp thì xoá lỗi. 413 `THEME_BODY_TOO_LARGE` → báo, giữ bản đang sửa. 404 `WEBSITE_NOT_FOUND` → báo, không có "Thử lại". Tokens không qua Zod → "không đọc được", không cho sửa.
+- Rời khi chưa lưu: đổi tab → `LeaveThemeTabPrompt` ("Ở lại để lưu" / "Chuyển tab"); rời trang → `useBlocker` + `beforeunload` nay tính cả `theme.dirty` (trước chỉ có autosave).
+- `test/editor-helpers.ts`: `openEditor`/`openFixture` nhận thêm responder cho GET theme (mặc định trả theme của config); thêm `themeBody`, `defaultTheme`.
+- Test: `lib/theme-edit.test.ts` 16, `routes/-editor-theme.test.tsx` 22 (nạp: loading/404/lỗi+thử lại/Zod hỏng/tập giá trị; sửa: hex + ô màu + select đổi biến CSS canvas, màu sai bị chặn, Hoàn tác, không là bước undo cây; lưu: body đúng + presetKey, null, chống PUT đôi, 422 tô ô + banner + xoá lỗi, 413, 422 không params; rời: nhắc đổi tab, blocker, không chặn khi sạch, non-Owner không request theme). Portal 261, builder-core 136, builder-renderer 10, theme-engine 49; `pnpm -r typecheck/lint` sạch, `gen:registry` không đổi, web + portal build OK. Đột biến 5 chỗ (bỏ chặn màu, `presetKey: null` cứng, bỏ blocker theme, Hoàn tác không nạp lại, ô hex không đồng bộ sau Hoàn tác) — mỗi đột biến làm 1–2 ca fail; đột biến cuối là lỗi thật do test bắt được và đã sửa trước commit.
+- **Chưa kiểm được:** BE thật (PUT/GET theme) và trình duyệt thật — xem "Chưa làm xong".
+
 ## Lệch so với thiết kế / plan
+- F9: lỗi 422 theme hiện nguyên văn `message` của BE (tiếng Anh kỹ thuật như F8); chưa có bảng Việt hoá mã con. Panel chỉ sửa 12 ô của config — không có UI đổi `presetKey`/chọn preset (plan: giữ nguyên).
+- F9: theme là state của **website** nhưng store tạo theo **trang** (`EditorSession` remount khi đổi `pageId`) → mỗi trang GET theme mới; theme chưa lưu mất khi sang trang khác (đã có cảnh báo rời trang). Nếu cần giữ xuyên trang thì nâng store lên cấp website — chưa làm.
+- F9: "rời tab nhắc" chỉ cảnh báo, bản sửa vẫn nằm ở canvas (không tự lưu/không tự bỏ); `LeaveThemeTabPrompt` chỉ có hai nút.
+- F9: không chặn khi `schemaVersion` của theme khác bản FE biết — Zod (`themeTokensSchema`) từ chối thì rơi vào "không đọc được".
+- F9: `themeOptions` thêm vào `theme-engine` (additive, portal được phép ghi) thay vì để portal import thẳng `config/*.json`.
 - F8: `error_code` của 422 là `TREE_INVALID` kể cả lỗi richText độc (mã con ở `errors[].code`) — `RICHTEXT_UNSAFE`/`LINK_URL_UNSAFE` ở bảng `error-messages` chỉ dùng nếu BE
   đổi. Thông báo của từng lỗi con hiện nguyên văn `message` của BE (vd. `PROP_INVALID` là tiếng Anh kỹ thuật: `Value is "string" but should be "number"`) — chưa có bảng
   Việt hoá mã con; nên làm khi chốt UX lỗi (F9–F11 hoặc Bước 6).
@@ -263,3 +277,4 @@
   rê vào chỗ không hợp lệ (Hero thứ hai, Section vào chính nó) thấy thanh đỏ + lý do; thả → alert; bấm để chọn vẫn chọn được; link trong khối không điều hướng.
 - F8: smoke bằng trình duyệt thật (không dùng được ở session này): hai tab cùng trang → sửa ở tab A, đợi "Đã lưu", sửa ở tab B → tab B nhận 409 → dialog; thử cả "Tải bản mới"
   và "Giữ bản của tôi". Cây quá lớn (nhiều ảnh/khối) → banner, không PUT. Tắt mạng giữa chừng → "Lỗi" + Thử lại. Đóng tab khi "Chưa lưu" → trình duyệt hỏi.
+- F9: smoke với BE thật + trình duyệt: đổi màu thấy canvas đổi; Lưu rồi F5 thấy giữ; gửi theme cố tình sai (sửa tay request) thấy ô đỏ; đổi tab/rời trang khi chưa lưu thì có nhắc. Chưa chạy `GET/PUT /theme` với BE thật ở session này (hình dạng `params.errors[].path` đang dựa vào `ThemeTokensValidator.cs` + fixture, chưa thấy bằng mắt).

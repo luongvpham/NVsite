@@ -155,6 +155,27 @@ export function ConflictDialog({ state, controller }: { state: AutosaveState; co
   );
 }
 
+/** Rời tab "Giao diện" khi theme chưa lưu: bản sửa còn trên canvas nhưng chưa lên server. */
+export function LeaveThemeTabPrompt({ onStay, onLeave }: { onStay: () => void; onLeave: () => void }) {
+  return (
+    <Dialog open onClose={onStay} title="Giao diện chưa lưu">
+      <div className="space-y-4">
+        <p className="text-sm">
+          Các thay đổi giao diện chưa được lưu. Chúng vẫn hiện trên canvas nhưng sẽ mất khi rời trang.
+        </p>
+        <div className="flex gap-2">
+          <Button type="button" onClick={onStay}>
+            Ở lại để lưu
+          </Button>
+          <Button type="button" variant="outline" onClick={onLeave}>
+            Chuyển tab
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
 /** Router blocker: rời trang khi còn thay đổi chưa lưu. */
 export function LeavePrompt({ onStay, onLeave }: { onStay: () => void; onLeave: () => void }) {
   return (

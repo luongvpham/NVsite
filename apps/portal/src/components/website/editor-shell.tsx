@@ -30,7 +30,9 @@ import { siblingMove } from '../../lib/sibling-move';
 import { ComponentPalette } from './component-palette';
 import { EditorCanvas } from './editor-canvas';
 import { EditorDnd } from './editor-dnd';
-import { AutosaveStatus, ConflictDialog, LeavePrompt, ValidationBanner } from './autosave-ui';
+import { useThemeDraft } from '../../hooks/use-theme-draft';
+import { AutosaveStatus, ConflictDialog, LeavePrompt, LeaveThemeTabPrompt, ValidationBanner } from './autosave-ui';
+import { ThemePanel } from './theme-panel';
 
 /**
  * Khung editor (Flow 4). Server state ở TanStack Query, cây đang sửa ở store (#20):
@@ -113,10 +115,23 @@ function EditorSession({
     initialVersion: draft.version,
   });
 
+  const theme = useThemeDraft(store, shopId);
+  const [tab, setTab] = useState<SideTab>('props');
+  const [leaveThemeTo, setLeaveThemeTo] = useState<SideTab | null>(null);
+
+  const requestTab = (next: SideTab) => {
+    if (next === tab) return;
+    // Rời tab Giao diện khi còn bản chưa lưu → nhắc (Flow 6). Bản sửa vẫn nằm ở canvas, nhưng chưa lên server.
+    if (tab === 'theme' && theme.dirty) setLeaveThemeTo(next);
+    else setTab(next);
+  };
+
   // Rời trang khi còn thay đổi chưa lên server: cảnh báo (đóng tab/reload qua beforeunload, điều hướng trong app qua dialog).
+  // Theme không đi qua autosave nên tính riêng.
+  const hasUnsaved = () => controller.hasUnsavedChanges || theme.dirty;
   const blocker = useBlocker({
-    shouldBlockFn: () => controller.hasUnsavedChanges,
-    enableBeforeUnload: () => controller.hasUnsavedChanges,
+    shouldBlockFn: hasUnsaved,
+    enableBeforeUnload: hasUnsaved,
     withResolver: true,
   });
 
@@ -129,6 +144,12 @@ function EditorSession({
       <ValidationBanner state={autosave} />
       <ConflictDialog state={autosave} controller={controller} />
       {blocker.status === 'blocked' && <LeavePrompt onStay={blocker.reset} onLeave={blocker.proceed} />}
+      {leaveThemeTo && (
+        <LeaveThemeTabPrompt
+          onStay={() => { setLeaveThemeTo(null); }}
+          onLeave={() => { setTab(leaveThemeTo); setLeaveThemeTo(null); }}
+        />
+      )}
       <EditorDnd store={store}>
         <div className="grid min-h-0 flex-1 grid-cols-[14rem_1fr_20rem]">
           <nav aria-label="Bảng khối" className="overflow-y-auto border-r border-border p-3">
@@ -138,17 +159,55 @@ function EditorSession({
             <EditorCanvas store={store} mediaMap={mediaMap} invalidNodeIds={invalidNodeIds} />
           </div>
           <aside aria-label="Thuộc tính khối" className="overflow-y-auto p-4">
-            <InspectorPanel
-              store={store}
-              shopId={shopId}
-              mediaMap={mediaMap}
-              onAssetResolved={addAsset}
-              nodeErrors={nodeErrors}
-            />
+            <div role="tablist" aria-label="Bảng bên phải" className="mb-3 flex gap-1 border-b border-border">
+              <SideTabButton selected={tab === 'props'} onClick={() => { requestTab('props'); }}>
+                Thuộc tính
+              </SideTabButton>
+              <SideTabButton selected={tab === 'theme'} onClick={() => { requestTab('theme'); }}>
+                Giao diện{theme.dirty ? ' •' : ''}
+              </SideTabButton>
+            </div>
+            {tab === 'props' ? (
+              <InspectorPanel
+                store={store}
+                shopId={shopId}
+                mediaMap={mediaMap}
+                onAssetResolved={addAsset}
+                nodeErrors={nodeErrors}
+              />
+            ) : (
+              <ThemePanel theme={theme} />
+            )}
           </aside>
         </div>
       </EditorDnd>
     </div>
+  );
+}
+
+type SideTab = 'props' | 'theme';
+
+function SideTabButton({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={selected}
+      onClick={onClick}
+      className={`-mb-px border-b-2 px-3 py-1.5 text-sm ${
+        selected ? 'border-primary font-medium text-foreground' : 'border-transparent text-muted-foreground'
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
