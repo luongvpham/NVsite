@@ -1,7 +1,9 @@
-import type { ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { themeColorKeys } from '@vsite/theme-engine';
 import { setAtPath, type PathSegment } from './path-utils';
 import type { PropertyPanelField } from './types';
+
+const RichTextEditor = lazy(() => import('../rich-text-editor/RichTextEditor'));
 
 /**
  * Bước 2 (§10): chứng minh property-panel.ts đủ metadata để sinh form dùng được. Control cho
@@ -81,6 +83,7 @@ export function Inspector({
                       onChange([...pathPrefix, field.name], v);
                     }}
                     renderMediaPicker={renderMediaPicker}
+                    disabled={isFieldDisabled?.(field) ?? false}
                   />
                 </fieldset>
               ))}
@@ -108,11 +111,14 @@ function FieldControl({
   value,
   onChange,
   renderMediaPicker,
+  disabled,
 }: {
   field: PropertyPanelField;
   value: unknown;
   onChange: (value: unknown) => void;
   renderMediaPicker?: RenderMediaPicker;
+  /** `<fieldset disabled>` khoá được input/button nhưng KHÔNG khoá `contenteditable` — control Lexical phải tự tắt. */
+  disabled?: boolean;
 }) {
   const label = (
     <label className="block text-sm font-medium">
@@ -151,18 +157,20 @@ function FieldControl({
       );
 
     case 'lexical':
-      // STUB — Lexical editor thật là việc của Bước 5+. Textarea đủ để chứng minh pipeline metadata.
+      // Lexical tải lười: không vào bundle chính, càng không vào `apps/web` (renderer không import Inspector).
       return (
         <div>
           {label}
-          <textarea
-            className="mt-1 w-full rounded border border-border px-2 py-1 font-mono text-xs"
-            value={stringValue}
-            maxLength={field.maxLength}
-            onChange={(e) => {
-              onChange(e.target.value);
-            }}
-          />
+          <Suspense fallback={<p className="mt-1 text-xs text-muted-foreground">Đang tải trình soạn thảo...</p>}>
+            <RichTextEditor
+              value={stringValue}
+              onChange={onChange}
+              profile={field.profile ?? 'inline'}
+              label={field.label}
+              maxLength={field.maxLength}
+              disabled={disabled}
+            />
+          </Suspense>
         </div>
       );
 

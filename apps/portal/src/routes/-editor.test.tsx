@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { $getSelection, $isRangeSelection, $selectAll, type LexicalEditor } from 'lexical';
 import { delay, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
 import { useSessionStore } from '../stores/session-store';
@@ -11,6 +12,23 @@ import {
   validHome,
   validSystemContact,
 } from '../test/editor-helpers';
+
+/** Thay toàn bộ chữ trong một editor Lexical (jsdom không có thao tác gõ thật) — đi qua đúng đường onChange của control. */
+async function typeInto(editable: HTMLElement, text: string) {
+  const editor = (editable as HTMLElement & { __lexicalEditor?: LexicalEditor }).__lexicalEditor;
+  if (!editor) throw new Error('Không phải editor Lexical');
+  await act(async () => {
+    editor.update(
+      () => {
+        $selectAll();
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) selection.insertText(text);
+      },
+      { discrete: true },
+    );
+    await Promise.resolve();
+  });
+}
 
 afterEach(() => {
   useSessionStore.getState().clearSession();
@@ -186,21 +204,23 @@ describe('Editor — trang System (R3)', () => {
 
     const panel = screen.getByRole('complementary', { name: 'Thuộc tính khối' });
     expect(within(panel).getByText(/chỉ sửa được phần nội dung/)).toBeInTheDocument();
-    expect(within(panel).getByDisplayValue('<p>Liên hệ với chúng tôi</p>')).toBeEnabled();
+    // `content` là control Lexical (tải lười): contenteditable bật, hiện đúng chữ đã lưu.
+    const content = await within(panel).findByRole('textbox', { name: 'Nội dung' });
+    expect(content).toHaveAttribute('contenteditable', 'true');
+    expect(content).toHaveTextContent('Liên hệ với chúng tôi');
     // `align` (Căn lề) không thuộc editableInSystemPageProps → khoá.
     const alignField = within(panel).getByText('Căn lề').closest('fieldset');
     expect(alignField).toBeDisabled();
   });
 
-  it('sửa content trên System page được', async () => {
+  it('sửa content trên System page được (qua Lexical → op update → canvas đổi)', async () => {
     openFixture(contact);
     await screen.findByText('Liên hệ với chúng tôi');
     fireEvent.click(nodeEl('c_cont1'));
 
-    fireEvent.change(screen.getByDisplayValue('<p>Liên hệ với chúng tôi</p>'), {
-      target: { value: '<p>Địa chỉ mới</p>' },
-    });
+    const editable = await screen.findByRole('textbox', { name: 'Nội dung' });
+    await typeInto(editable, 'Địa chỉ mới');
 
-    expect(await screen.findByText('Địa chỉ mới')).toBeInTheDocument();
+    expect(await within(screen.getByTestId('editor-canvas')).findByText('Địa chỉ mới')).toBeInTheDocument();
   });
 });

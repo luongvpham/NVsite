@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { heroPropertyPanel, sectionPropertyPanel } from '../../generated/property-panel';
 import { Inspector } from './Inspector';
@@ -26,7 +26,7 @@ describe('Inspector (§10 — property-panel.ts đủ metadata để sinh form d
     expect(onChange).toHaveBeenCalledWith(['background'], 'surface');
   });
 
-  it('isFieldDisabled khoá đúng field được chỉ định, field khác vẫn sửa được', () => {
+  it('isFieldDisabled khoá đúng field được chỉ định, field khác vẫn sửa được', async () => {
     render(
       <Inspector
         fields={heroPropertyPanel}
@@ -37,7 +37,30 @@ describe('Inspector (§10 — property-panel.ts đủ metadata để sinh form d
     );
 
     expect(screen.getByDisplayValue('khoá')).toBeDisabled();
-    expect(screen.getByDisplayValue('mở')).toBeEnabled();
+    // `subtitle` là control Lexical (tải lười): contenteditable còn sửa được.
+    expect(await screen.findByRole('textbox', { name: 'Mô tả ngắn' })).toHaveAttribute('contenteditable', 'true');
+  });
+
+  it('field Lexical bị khoá → contenteditable tắt (fieldset disabled không khoá được nó)', async () => {
+    render(
+      <Inspector
+        fields={heroPropertyPanel}
+        values={{ title: 't', subtitle: 'đang khoá' }}
+        onChange={vi.fn()}
+        isFieldDisabled={(field) => field.name === 'subtitle'}
+      />,
+    );
+    const editable = await screen.findByRole('textbox', { name: 'Mô tả ngắn' });
+    await waitFor(() => { expect(editable).toHaveAttribute('contenteditable', 'false'); });
+    expect(editable).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByDisplayValue('t')).toBeEnabled();
+  });
+
+  it('field Lexical hiện editor thật theo profile của field (subtitle = inline: không có chọn khối)', async () => {
+    render(<Inspector fields={heroPropertyPanel} values={{ subtitle: 'xin chào' }} onChange={vi.fn()} />);
+    expect(await screen.findByRole('textbox', { name: 'Mô tả ngắn' })).toHaveTextContent('xin chào');
+    expect(screen.getByRole('button', { name: 'In đậm' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Kiểu khối' })).not.toBeInTheDocument();
   });
 
   it('calls onChange with the correct path when editing the title field', () => {
@@ -59,7 +82,7 @@ describe('Inspector (§10 — property-panel.ts đủ metadata để sinh form d
     // của chính nó — path không lồng sâu hơn, tránh Inspector cha phải biết cấu trúc con.
     expect(onChange).toHaveBeenCalledWith(['cta'], { label: 'Liên hệ ngay' });
   });
-  it('invalidPaths tô đỏ đúng field (cả khi đường dẫn đi sâu hơn field), field khác không bị tô', () => {
+  it('invalidPaths tô đỏ đúng field (cả khi đường dẫn đi sâu hơn field), field khác không bị tô', async () => {
     render(
       <Inspector
         fields={heroPropertyPanel}
@@ -68,9 +91,10 @@ describe('Inspector (§10 — property-panel.ts đủ metadata để sinh form d
         invalidPaths={[['title'], ['cta', 'label']]}
       />,
     );
-    const wrapperOf = (value: string) => screen.getByDisplayValue(value).closest('fieldset[data-invalid], fieldset');
     expect(screen.getByDisplayValue('a').closest('fieldset[disabled], fieldset')?.getAttribute('data-invalid')).toBe('true');
-    expect(wrapperOf('b')?.getAttribute('data-invalid')).toBeNull();
+    // `subtitle` (Lexical) không nằm trong invalidPaths → wrapper của nó không bị tô.
+    const subtitle = await screen.findByRole('textbox', { name: 'Mô tả ngắn' });
+    expect(subtitle.closest('fieldset')?.getAttribute('data-invalid')).toBeNull();
     // `cta.label` nằm trong field `cta` → field `cta` bị tô.
     expect(document.querySelectorAll('[data-invalid="true"]').length).toBe(2);
   });

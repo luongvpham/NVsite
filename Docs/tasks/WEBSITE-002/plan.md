@@ -377,10 +377,10 @@ Cài `lexical` + `@lexical/react` + `@lexical/html` (vào `builder-components` v
 để không vào bundle renderer của `apps/web`). Control `lexical` theo `profile` của prop
 (`inline`/`basic`): toolbar chỉ bật thẻ profile cho phép; xuất HTML → `sanitizeRichText(html, profile)` →
 op `update`. Kiểm nội dung trước đó: HTML cũ nạp vào Lexical không mất định dạng cho phép.
-- [ ] Test trước: các vector `xss-richtext.json` dán vào → HTML ra không chứa `mustNotContain`; profile
+- [x] Test trước: các vector `xss-richtext.json` dán vào → HTML ra không chứa `mustNotContain`; profile
   `inline` không có heading/list; round-trip HTML hợp lệ
-- [ ] Kiểm `apps/web` build không kéo lexical (`pnpm --filter @vsite/web build` + tìm trong bundle)
-- [ ] FAIL → PASS · Commit `feat(builder-components): control Lexical cho RichText (WEBSITE-002 F10)`
+- [x] Kiểm `apps/web` build không kéo lexical (`pnpm --filter @vsite/web build` + tìm trong bundle)
+- [x] FAIL → PASS · Commit `feat(builder-components): control Lexical cho RichText (WEBSITE-002 F10)`
 
 ### F11: Khung crop theo tỉ lệ preset (MEDIA-001 #6)
 Trong `UploadSlotDialog` / bước clone của picker: khung crop tỉ lệ của preset (bảng từ
