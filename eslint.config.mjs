@@ -2,6 +2,13 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
+const APPS_IMPORT_PATTERNS = [
+  {
+    group: ['@vsite/portal', '@vsite/portal/*', '@vsite/web', '@vsite/web/*', 'apps/**', '**/apps/**'],
+    message: 'packages/ không import từ apps/ — chiều phụ thuộc một hướng (CLAUDE.md root).',
+  },
+];
+
 export default tseslint.config(
   {
     ignores: [
@@ -65,9 +72,19 @@ export default tseslint.config(
               group: ['@vsite/builder-core', '@vsite/builder-core/*'],
               message: 'builder-core chỉ dùng bởi apps/portal — renderer/components/apps/web không được import (CLAUDE.md root, builder-renderer/CLAUDE.md).',
             },
+            ...APPS_IMPORT_PATTERNS,
           ],
         },
       ],
+    },
+  },
+  {
+    // `packages/` không import từ `apps/` (CLAUDE.md root) — chiều phụ thuộc một hướng (WEBSITE-003 T3, nợ TOOLING-001).
+    // Renderer/components đã có block riêng ở trên (kèm luật builder-core) nên loại ra để rule không bị ghi đè.
+    files: ['packages/**/*.{ts,tsx}'],
+    ignores: ['packages/builder-renderer/**', 'packages/builder-components/**'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: APPS_IMPORT_PATTERNS }],
     },
   },
 );
