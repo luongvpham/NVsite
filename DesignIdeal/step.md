@@ -68,7 +68,7 @@ khác, `binding.source = "Review"` hoặc richText có `<script>` đều bị BE
 
 ## 5b. Operations Engine + editor — FE (Lane C)
 
-> **Trạng thái:** ⏳ FE xong F1–F11 và đã nghiệm thu tay với BE thật (WEBSITE-002, 2026-11-11); còn review + Gate 2. Xem `Docs/tasks/WEBSITE-002/changelog.md`.
+> **Trạng thái:** ✅ WEBSITE-002 — nghiệm thu tay với BE thật, Gate 2 và review (2026-11-11). Xem `Docs/tasks/WEBSITE-002/changelog.md`.
 
 **Gồm**
 - Operations Engine phía client: immer + zundo (#42), 5 op, bảng phép/cấm `05` §11, dùng `op-rules.ts`.

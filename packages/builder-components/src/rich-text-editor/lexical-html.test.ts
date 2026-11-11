@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { classifyDangerous } from '../../tests/helpers/richtext-danger';
 import { sanitizeRichText } from '../sanitize-html';
 import { $importHtml, exportHtml, nodesForProfile } from './lexical-html';
+import { normalizeEditorHtml } from './profile';
 
 function makeEditor(profile: string): LexicalEditor {
   return createEditor({
@@ -74,7 +75,8 @@ describe('xss-richtext.json qua Lexical (cả hai profile, cả hai đường v�
   it.each(cases)('%s → HTML ra sạch', (_name, vector, profile, run) => {
     const out = run(vector.input, profile);
     expect(classifyDangerous(out)).toBe('safe');
-    expect(out).toBe(sanitizeRichText(out, profile)); // đã sạch: sanitize thêm lần nữa không đổi gì
+    // đã sạch: sanitize thêm lần nữa không đổi chữ/thẻ (so sau khi chuẩn hoá cách viết `<br>`/`&nbsp;` theo BE)
+    expect(normalizeEditorHtml(sanitizeRichText(out, profile), profile)).toBe(out);
     for (const bad of vector.mustNotContain ?? []) expect(out.toLowerCase()).not.toContain(bad.toLowerCase());
     expect(out).not.toMatch(/<(script|iframe|object|embed|style|img|svg)\b/i);
     expect(out).not.toMatch(/\son\w+\s*=/i);
@@ -94,7 +96,7 @@ describe('round-trip HTML hợp lệ (không mất định dạng cho phép)', (
     '<ol><li>một</li><li>hai</li></ol>',
     '<blockquote>trích dẫn</blockquote>',
     '<p>a &amp; b &lt; c</p>',
-    '<p>dòng 1<br />dòng 2</p>',
+    '<p>dòng 1<br>dòng 2</p>',
   ];
 
   it.each(valid)('basic: %s', (html) => {
@@ -102,7 +104,7 @@ describe('round-trip HTML hợp lệ (không mất định dạng cho phép)', (
   });
 
   it('inline: định dạng chữ, link và xuống dòng còn nguyên', () => {
-    const html = 'Xin <strong>chào</strong> <em>bạn</em><br />xem <a href="https://x.vn">đây</a>';
+    const html = 'Xin <strong>chào</strong> <em>bạn</em><br>xem <a href="https://x.vn">đây</a>';
     expect(roundTrip(html, 'inline')).toBe(html);
   });
 

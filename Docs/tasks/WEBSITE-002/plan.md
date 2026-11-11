@@ -394,7 +394,7 @@ point — **không** có tham số crop; nếu cần crop thật → dừng, vò
 - [x] Integration tắt MSW, API thật: chạy lại Flow 1–7 bằng tay (2 tab cùng trang → tab cũ 409)
 - [x] `changelog.md` (lệch thiết kế: invert → zundo, canvas decorator, mã `TARGET_NOT_FOUND` chỉ-FE…) +
   cập nhật `00-INDEX` §3 (5b), §4 (trả TOOLING-001 #1 phần CSS vars, MEDIA-001 #6), banner `05`/`step.md`
-- [ ] `change-reviewer` → `review.md` (kèm "Ma sát quy trình" sau Gate 2)
+- [x] `change-reviewer` → `review.md` (kèm "Ma sát quy trình" sau Gate 2)
 - [x] `pnpm check:docs` PASS
 
 ## 12. Giả định tôi đã tự đặt (chưa hỏi, cần duyệt)

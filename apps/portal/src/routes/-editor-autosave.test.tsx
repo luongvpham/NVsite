@@ -116,6 +116,9 @@ describe('Autosave trong editor (F8)', () => {
 
     await screen.findByText('Đã làm sạch');
     expect(statusText()).toBe('Đã lưu');
+    // Review M1: nạp lại do `sanitized` không bỏ chọn khối → Inspector không đóng giữa lúc soạn.
+    expect(nodeEl('c_hero1')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByDisplayValue('Đã làm sạch')).toBeInTheDocument();
   });
 
   describe('409 DRAFT_CONFLICT', () => {

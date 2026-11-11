@@ -43,7 +43,18 @@ const hasVisibleContent = (html: string): boolean => /\S/.test(html.replace(/<(?
  * Chỉ động tới `<br>` nằm cuối chuỗi (inline) hoặc ngay trước `</p>` cuối cùng; `<p><br /></p>` giữa nội dung (dòng trống) giữ nguyên.
  */
 function trimTrailingBreaks(html: string): string {
-  return html.replace(/(^|[^>]|<\/\w+>)(?:<br \/>)+$/, '$1').replace(/([^>]|<\/\w+>)(?:<br \/>)+(?=<\/p>$)/, '$1');
+  return html.replace(/(^|[^>]|<\/\w+>)(?:<br>)+$/, '$1').replace(/([^>]|<\/\w+>)(?:<br>)+(?=<\/p>$)/, '$1');
+}
+
+/**
+ * Viết HTML theo đúng dạng serializer của BE (Ganss HtmlSanitizer/AngleSharp): `<br>` thay `<br />`, U+00A0 thành `&nbsp;`.
+ * BE so chuỗi sau sanitize với chuỗi gửi lên — khác cách viết là bật `sanitized: true` → editor nạp lại sau MỖI lần lưu.
+ * Đã đối chiếu bằng chính `RichTextSanitizer` của BE (WEBSITE-002 review M1); `tests/fixtures/richtext/be-canonical.json` chốt các mẫu.
+ */
+const NBSP = new RegExp(String.fromCharCode(0xa0), 'g');
+
+function toBackendSerialization(html: string): string {
+  return html.replace(/<br\s*\/?>/gi, '<br>').replace(NBSP, '&nbsp;');
 }
 
 /**
@@ -54,6 +65,6 @@ function trimTrailingBreaks(html: string): string {
 export function normalizeEditorHtml(html: string, profile: string): string {
   const caps = toolbarCapabilities(profile);
   const prepared = caps.enterInsertsLineBreak ? html.replace(/<\/p>\s*<p\b[^>]*>/gi, '<br>') : html;
-  const clean = trimTrailingBreaks(sanitizeRichText(prepared, profile).trim());
+  const clean = trimTrailingBreaks(toBackendSerialization(sanitizeRichText(prepared, profile).trim()));
   return hasVisibleContent(clean) ? clean : '';
 }

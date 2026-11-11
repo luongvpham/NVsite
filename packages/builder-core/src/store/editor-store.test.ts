@@ -45,6 +45,21 @@ describe('loadDraft', () => {
     expect(history(store).pastStates).toHaveLength(0);
     expect(history(store).futureStates).toHaveLength(0);
   });
+
+  it('keepSelection (nạp lại sau sanitized): giữ node đang chọn nếu còn trong cây, vẫn xoá lịch sử', () => {
+    const store = createEditorStore();
+    store.getState().loadDraft(envelope([hero(), richText('c_rt001')]), PageKind.Composable);
+    store.getState().dispatch(addRichText('c_new01'));
+    store.getState().select('c_rt001');
+
+    store.getState().loadDraft(envelope([hero(), richText('c_rt001')]), PageKind.Composable, { keepSelection: true });
+    expect(store.getState().selectedId).toBe('c_rt001');
+    expect(history(store).pastStates).toHaveLength(0);
+
+    // Node đang chọn không còn trong bản nạp lại → bỏ chọn.
+    store.getState().loadDraft(envelope([hero()]), PageKind.Composable, { keepSelection: true });
+    expect(store.getState().selectedId).toBeNull();
+  });
 });
 
 describe('dispatch', () => {

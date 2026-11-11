@@ -163,7 +163,7 @@ describe('RichTextEditor — profile inline', () => {
 
     await typeAtEnd('x');
     await waitFor(() => { expect(onChange).toHaveBeenCalled(); });
-    expect(lastHtml(onChange)).toBe('Dòng một<br />x');
+    expect(lastHtml(onChange)).toBe('Dòng một<br>x');
   });
 });
 

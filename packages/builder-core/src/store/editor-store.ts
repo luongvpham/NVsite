@@ -35,8 +35,11 @@ export interface EditorState {
   /** Theme đang sửa (preview sống trên canvas); ngoài lịch sử undo của cây. `null` = chưa nạp. */
   themeDraft: unknown;
 
-  /** Nạp bản nháp vừa tải: đặt cây + loại trang, bỏ chọn, **xoá lịch sử** (undo không lùi về trước bản đã tải). */
-  loadDraft: (tree: TreeEnvelope, pageKind: PageKind) => void;
+  /**
+   * Nạp bản nháp vừa tải: đặt cây + loại trang, **xoá lịch sử** (undo không lùi về trước bản đã tải). Mặc định bỏ chọn;
+   * `keepSelection` (nạp lại sau `sanitized: true` — cùng trang, cùng id node) giữ node đang chọn nếu nó còn trong cây.
+   */
+  loadDraft: (tree: TreeEnvelope, pageKind: PageKind, options?: { keepSelection?: boolean }) => void;
   /** Đặt bản gốc của theme (từ `GET /theme`) — không vào lịch sử. */
   loadTheme: (tokens: unknown) => void;
   /** Cửa DUY NHẤT thay đổi cây/theme: parse → validate → apply. Không ném lỗi; op bị từ chối không đổi gì. */
@@ -74,9 +77,10 @@ export function createEditorStore(options: EditorStoreOptions = {}): EditorStore
         selectedId: null,
         themeDraft: null,
 
-        loadDraft: (tree, pageKind) => {
+        loadDraft: (tree, pageKind, options) => {
           lastUpdate = null;
-          set({ tree, pageKind, selectedId: null });
+          const selectedId = options?.keepSelection ? reconcileSelection(tree, get().selectedId) : null;
+          set({ tree, pageKind, selectedId });
           store.temporal.getState().clear();
         },
 

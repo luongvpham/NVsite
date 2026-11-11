@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import canonical from '../../tests/fixtures/richtext/be-canonical.json';
 import { normalizeEditorHtml, toolbarCapabilities } from './profile';
 
 describe('toolbarCapabilities — suy ra từ config/sanitize-profiles.json', () => {
@@ -33,7 +34,7 @@ describe('normalizeEditorHtml', () => {
   });
 
   it('inline: nhiều đoạn nối bằng <br>, không dính liền, không còn <p>', () => {
-    expect(normalizeEditorHtml('<p>dòng 1</p><p>dòng 2</p>', 'inline')).toBe('dòng 1<br />dòng 2');
+    expect(normalizeEditorHtml('<p>dòng 1</p><p>dòng 2</p>', 'inline')).toBe('dòng 1<br>dòng 2');
   });
 
   it('không còn chữ nào → chuỗi rỗng', () => {
@@ -44,12 +45,23 @@ describe('normalizeEditorHtml', () => {
 
   it('<br> giữ chỗ cuối nội dung bị bỏ; dòng trống ở giữa và xuống dòng giữa chữ giữ nguyên', () => {
     expect(normalizeEditorHtml('<p>a<br><br></p>', 'inline')).toBe('a');
-    expect(normalizeEditorHtml('a<br>b<br><br>', 'inline')).toBe('a<br />b');
-    expect(normalizeEditorHtml('<p>a<br>b<br></p>', 'basic')).toBe('<p>a<br />b</p>');
-    expect(normalizeEditorHtml('<p>a</p><p><br></p><p>b</p>', 'basic')).toBe('<p>a</p><p><br /></p><p>b</p>');
+    expect(normalizeEditorHtml('a<br>b<br><br>', 'inline')).toBe('a<br>b');
+    expect(normalizeEditorHtml('<p>a<br>b<br></p>', 'basic')).toBe('<p>a<br>b</p>');
+    expect(normalizeEditorHtml('<p>a</p><p><br></p><p>b</p>', 'basic')).toBe('<p>a</p><p><br></p><p>b</p>');
   });
 
   it('chữ không bao giờ bị mất khi thẻ bị loại (h1 ngoài whitelist)', () => {
     expect(normalizeEditorHtml('<h1>Tiêu đề</h1>', 'basic')).toBe('Tiêu đề');
+  });
+});
+
+describe('dạng chuẩn trùng serializer BE (review M1 — lệch là BE bật `sanitized` sau mỗi lần lưu)', () => {
+  it('viết `<br>` (không `<br />`) và U+00A0 thành `&nbsp;`', () => {
+    expect(normalizeEditorHtml('<p>a<br/>b</p>', 'basic')).toBe('<p>a<br>b</p>');
+    expect(normalizeEditorHtml('a  b', 'inline')).toBe('a&nbsp;&nbsp;b');
+  });
+
+  it.each(canonical.cases)('$profile: $html là điểm bất động', ({ profile, html }) => {
+    expect(normalizeEditorHtml(html, profile)).toBe(html);
   });
 });

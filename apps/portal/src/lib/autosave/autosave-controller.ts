@@ -244,7 +244,8 @@ export class AutosaveController {
       if (this.deps.store.getState().tree !== sentTree) return;
       this.version = latest.version;
       this.savedTree = latest.tree;
-      this.deps.store.getState().loadDraft(latest.tree, this.deps.store.getState().pageKind);
+      // Cùng trang, chỉ prop được làm sạch → giữ khối đang chọn (Inspector không đóng giữa lúc gõ).
+      this.deps.store.getState().loadDraft(latest.tree, this.deps.store.getState().pageKind, { keepSelection: true });
       this.setState({ status: 'saved' });
     } catch {
       // Không GET được thì giữ cây local; bản trên server đã sạch, lần lưu kế tiếp sẽ thử nạp lại.

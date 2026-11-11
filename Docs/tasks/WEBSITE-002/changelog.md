@@ -1,6 +1,6 @@
 # WEBSITE-002 — Changelog (Bước 5b, FE)
 
-> **Code xong, đã nghiệm thu tay (2026-11-11, người duyệt); còn `review.md` và Gate 2** — plan đã chốt 2026-10-21 ([`plan.md`](plan.md)). Ghi lệch so với thiết kế/plan theo từng
+> **Đã đóng 2026-11-11** — nghiệm thu tay với BE thật, Gate 2 (người duyệt), [`review.md`](review.md) (đã sửa M1). — plan đã chốt 2026-10-21 ([`plan.md`](plan.md)). Ghi lệch so với thiết kế/plan theo từng
 > task F1…F11 khi code.
 
 ## Đã làm
@@ -228,6 +228,13 @@
 - `src/test/setup.ts`: polyfill `PointerEvent` (jsdom không có; mất `clientX/Y`).
 - Test: `crop-frame.test.ts` 8 (tỉ lệ, kích thước khung, kẹp), `crop-frame.test.tsx` 4 (khung đúng tỉ lệ, `inside` không khung, kéo → focal = tâm kẹp, thả rồi không kéo nữa, focal mép bị kéo vào), `upload-slot-dialog.test.tsx` +1 (multipart gửi đúng `focalX=0.35,focalY=0.5`; `inside` không có `focalX`), `media-library-picker.test.tsx` +1 (clone gửi `focalX=0.75`). portal 273 test, `tsc`/`eslint` sạch. Đột biến 3 chỗ (đảo tỉ lệ khung, bỏ kẹp, nhận cả `inside`) đều bị bắt.
 - **Chưa kiểm được:** kéo bằng chuột/cảm ứng thật, kích thước khung trên ảnh thật với `max-h`/responsive (jsdom không có layout).
+
+### Sau review (change-reviewer, 2026-11-11)
+- **M1 — đã sửa.** FE xuất `<br />` và ký tự U+00A0, trong khi `RichTextSanitizer` của BE (Ganss/AngleSharp) xuất `<br>` và `&nbsp;`. BE so chuỗi Ordinal nên mọi RichText có xuống dòng đều làm PUT trả `sanitized: true`, editor nạp lại → mất khối đang chọn và lịch sử undo sau mỗi đợt gõ. **Đã xác nhận bằng chính `RichTextSanitizer` của BE** (dotnet fsi trên DLL build, profile thật từ `config/sanitize-profiles.json`): chỉ hai chỗ lệch đó, các mẫu khác (link `&amp;`, escape, h2/ul/ol/blockquote, mailto/tel) đã trùng.
+  - `normalizeEditorHtml` viết theo dạng BE (`toBackendSerialization`). Fixture mới `packages/builder-components/tests/fixtures/richtext/be-canonical.json` (10 mẫu): FE test là điểm bất động; 10/10 cũng giữ nguyên qua BE (đối chiếu tay, BE chưa có test tự động đọc file — việc theo dõi).
+  - Phòng thủ: `loadDraft(tree, kind, { keepSelection: true })` khi nạp lại do `sanitized` — giữ khối đang chọn nếu còn trong cây (lịch sử vẫn xoá như R2).
+  - Test: profile +12, builder-core +1, autosave +2 assert. Đột biến (bỏ chuẩn hoá → 10 ca fail; bỏ `keepSelection` → 1 ca fail).
+- m1–m6, nit và các mục tài liệu: xem `review.md`; tài liệu đã sửa (banner 07/05, `00-INDEX`, `DECISIONS` #42, `step.md`, ghi chú Phần 5 của `MEDIA-001/acceptance.md`), còn lại đưa vào `00-INDEX` §4.
 
 ## Lệch so với thiết kế / plan
 - F10: cài thêm `@lexical/rich-text`, `@lexical/list`, `@lexical/link`, `@lexical/selection`, `@lexical/utils` (plan chỉ nêu `lexical` + `@lexical/react` + `@lexical/html`) — `HeadingNode/QuoteNode/ListNode/LinkNode`, `$setBlocksType`, `$getNearestNodeOfType` nằm ở các gói này và pnpm không cho import gói chỉ có transitive. Tất cả pin `0.53.0`. Portal có thêm `lexical` làm **devDependency** (chỉ test portal gõ chữ vào editor).
