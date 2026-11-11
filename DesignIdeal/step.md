@@ -83,6 +83,8 @@ khác, `binding.source = "Review"` hoặc richText có `<script>` đều bị BE
 
 ## 6. `builder-renderer` hoàn thiện + preview toàn trang
 
+> 🟡 Code xong (WEBSITE-003 T1–T4): `createResolveUrl`/`matchSiteUrl` (#103), `SiteLayout`, snapshot SSR↔CSR, lint `apps/**`, preview trong editor. Chờ nghiệm thu tay + Gate 2.
+
 Renderer đã có từ Bước 2. Bước này **chốt API của nó** trước khi `apps/web` dùng thật ở 8b.
 
 **Gồm**

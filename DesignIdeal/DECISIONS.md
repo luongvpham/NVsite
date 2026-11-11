@@ -50,7 +50,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#8** | Reserved slug list là bắt buộc | `02 §Quyết định #8` | ✅ enforce — `ReservedRoutesTests.cs` |
 | **#9** | Caddy On-Demand TLS cho custom domain | `02 §Quyết định #9` | 📐 |
 | **#10** | SEO: 1 primary domain + 301 + canonical | `02 §Quyết định #10` | 📐 |
-| **#11** | `builder-renderer` phải nhận `basePath`, không tự dựng URL | `02 §Quyết định #11` | 📐 ⚠️ **Chưa có cách enforce** — xem `BOOTSTRAP-002/changelog.md` mục lệch #3 |
+| **#11** | `builder-renderer` phải nhận `basePath`, không tự dựng URL | `02 §Quyết định #11` | 📐 ⚠️ `RenderTree` nhận `basePath`/`locale`/`defaultLocale`/`pages` và dựng URL qua `createResolveUrl` (#103, WEBSITE-003 T1); **vẫn chưa có cách enforce** việc component không hardcode `href` — xem `BOOTSTRAP-002/changelog.md` mục lệch #3 |
 | **#12** | Component Tree lưu JSON, không lưu HTML | `02 §Quyết định #12` | 📐 Shape đã chốt ở `05` §6; lưu trữ chờ Bước 5 |
 | **#13** | Tách biệt Business Data / Presentation / Editor | `02 §Quyết định #13` | 📐 Bước 5 |
 | **#14** | AI sinh Operations, không sinh HTML/Tree | `02 §Quyết định #14` | ⏳ Phase 3 |
@@ -62,7 +62,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#20** | State ownership: TanStack Query vs Zustand | `02 §Quyết định #20` | 📐 |
 | **#21** | **Tenant security invariants** — 5 mục, xem #21.1–#21.5 dưới bảng | `02 §Quyết định #21` | ✅ enforce — `TenantIsolationTests` + `MediaTenantIsolationTests` (Postgres thật, Testcontainers) · `IgnoreQueryFiltersAllowlistTests` (#90) · nguồn `ShopId` cho handler: #99 |
 | **#22** | FE 2 app (`web`, `portal`) thay vì 3, chia theo rendering strategy | `02 §Quyết định #22` | ✅ đã code |
-| **#23** | SSR cho `apps/web` (TanStack Start); `apps/portal` giữ CSR; renderer phải isomorphic | `02 §Quyết định #23` | ✅ enforce một phần — ESLint `no-restricted-globals`; **thiếu** snapshot SSR↔CSR |
+| **#23** | SSR cho `apps/web` (TanStack Start); `apps/portal` giữ CSR; renderer phải isomorphic | `02 §Quyết định #23` | ✅ enforce — ESLint `no-restricted-globals` + snapshot SSR↔CSR (`renderToString` Node + hydrate không lệch, WEBSITE-003 T3) |
 | **#24** | Reserved routes: một nguồn JSON duy nhất dùng chung FE + BE | `02 §Quyết định #24` | ✅ enforce — `config/reserved-routes.json` + `ReservedRoutesTests.cs` |
 | **#25** | Portal URL: `admin.vsite.vn/*` | `02 §Quyết định #25` | ✅ đã code |
 | **#26** | Elasticsearch dùng ngay từ MVP (thay phần "sau" của #2) | `02 §Quyết định #26` | 📐 |
@@ -142,7 +142,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#100** | **Website và Media chỉ `Owner`** — mọi endpoint `/api/shops/{shopId}/website…` và `/api/shops/{shopId}/media/**`, đọc lẫn ghi. Lý do: `RequireShopMembership` nhận cả `Customer`, và khách có token global gọi được | `backend/docs/modules/website.md` §Quy ước phân quyền và tenant | ✅ enforce — Website + 10/10 route Media (`ShopScopedRouteFilterTests`, `MediaOwnerOnlyTests`); `GET /api/shops/{shopId}` còn mở cho Customer (nợ) |
 | **#101** | **Refresh token chỉ sống trong cookie `vsite_rt` `HttpOnly; Secure; SameSite=Lax; Path=/api/auth`, host-only** — không bao giờ trong body/response/JS. `Secure = !IsDevelopment` (chưa có `UseForwardedHeaders`). Có `POST /api/auth/logout` (AllowAnonymous, thu hồi token đang dùng, xoá cookie, luôn 204). Nợ có chủ đích: đa tab đua refresh có thể đăng xuất cả hai (không grace window); CSRF chỉ dựa `SameSite=Lax` | `backend/docs/modules/identity.md` · `Docs/tasks/IDENTITY-002/plan.md` | ✅ đã code — IDENTITY-002 (`RefreshTokenCookieTests`); nợ: đa tab, CSRF chỉ Lax |
 | **#102** | **Burn tự duyệt contract trước production** (mở rộng #89): bước burn thiếu field/endpoint → burn tự mở vòng D{n}, tự quyết tên/kiểu/nullable, promote `approvedBy = burn-auto`, ghi từng quyết định vào "Người duyệt đã quyết" của `contract-diff-D{n}.md`; người đọc lại ở Gate 2. Vẫn dừng: `REMOVED` · đổi auth policy endpoint đã có · chạm #21 · quá 2 vòng/task. **Đảo lại** từ lần deploy production đầu tiên (cùng #89, Rule 5) | `ai-agent-development-workflow.md` §6.1 | ✅ quy trình — skill `weekend-burn` (TOOLING-002) |
-| **#103** | **URL của Shop Site:** `basePath` + (`/{locale}` khi khác `Website.DefaultLocale`) + `/{slug}`; trang chủ (`slug ""`) → `…/`; link `systemPage` → slug của trang có `systemType` đó, chưa có trang thì route đầu tiên trong `config/system-pages.json`; `NotFound` không có URL; link tới trang đã xoá → `#`. `basePath = ''` trên `{slug}.vsite.vn` và domain riêng — khác `''` chỉ ở preview Portal. Một hàm `resolveUrl` dùng cho preview (Bước 6) và render công khai (8b) | `Docs/tasks/WEBSITE-003/plan.md` §4 | 📐 Bước 6 (WEBSITE-003) — chốt 2026-11-11, chưa code |
+| **#103** | **URL của Shop Site:** `basePath` + (`/{locale}` khi khác `Website.DefaultLocale`) + `/{slug}`; trang chủ (`slug ""`) → `…/`; link `systemPage` → slug của trang có `systemType` đó, chưa có trang thì route đầu tiên trong `config/system-pages.json`; `NotFound` không có URL; link tới trang đã xoá → `#`. `basePath = ''` trên `{slug}.vsite.vn` và domain riêng — khác `''` chỉ ở preview Portal. Một hàm `resolveUrl` dùng cho preview (Bước 6) và render công khai (8b) | `Docs/tasks/WEBSITE-003/plan.md` §4 | ✅ code Bước 6 (WEBSITE-003 T1–T4) — `site-url.ts`; chờ nghiệm thu tay + Gate 2 |
 
 ---
 
