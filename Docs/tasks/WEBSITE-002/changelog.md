@@ -1,6 +1,6 @@
 # WEBSITE-002 — Changelog (Bước 5b, FE)
 
-> **Đang làm** — plan đã chốt 2026-10-21 ([`plan.md`](plan.md)). Ghi lệch so với thiết kế/plan theo từng
+> **Code xong, đã nghiệm thu tay (2026-11-11, người duyệt); còn `review.md` và Gate 2** — plan đã chốt 2026-10-21 ([`plan.md`](plan.md)). Ghi lệch so với thiết kế/plan theo từng
 > task F1…F11 khi code.
 
 ## Đã làm

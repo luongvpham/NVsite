@@ -68,6 +68,8 @@ khác, `binding.source = "Review"` hoặc richText có `<script>` đều bị BE
 
 ## 5b. Operations Engine + editor — FE (Lane C)
 
+> **Trạng thái:** ⏳ FE xong F1–F11 và đã nghiệm thu tay với BE thật (WEBSITE-002, 2026-11-11); còn review + Gate 2. Xem `Docs/tasks/WEBSITE-002/changelog.md`.
+
 **Gồm**
 - Operations Engine phía client: immer + zundo (#42), 5 op, bảng phép/cấm `05` §11, dùng `op-rules.ts`.
 - Editor ở Portal: canvas (dùng `builder-renderer` hiện có, đọc draft), Inspector (có từ Bước 2), autosave
@@ -75,8 +77,7 @@ khác, `binding.source = "Review"` hoặc richText có `<script>` đều bị BE
 - Theme editor (`changeTheme`), theme đi qua **CSS variables** (TOOLING-001 #1).
 - Khung crop theo tỉ lệ preset ở dialog ảnh (MEDIA-001 #6).
 
-**Chốt trước:** refresh token chuyển sang cookie httpOnly (REFACTOR-API-001 #2). Editor có autosave mà F5
-mất phiên là mất việc, nên làm trước hoặc ngay đầu bước.
+**Chốt trước:** ✅ refresh token đã chuyển sang cookie httpOnly (IDENTITY-002, #101).
 
 **Xong khi:** dựng được một trang từ đầu bằng kéo-thả, reload thì còn nguyên, undo/redo chạy trong phiên.
 
