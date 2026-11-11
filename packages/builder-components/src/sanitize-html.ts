@@ -11,6 +11,18 @@ const NON_PROFILE_KEYS = new Set(['dangerous']);
 const profiles = sanitizeProfilesJson as unknown as Record<string, SanitizeProfile>;
 
 /**
+ * Thẻ mà một profile cho phép (cùng nguồn `config/sanitize-profiles.json` với `sanitizeRichText` và BE) — control Lexical
+ * bật/tắt nút toolbar theo đây, không viết tay danh sách thứ hai. Profile lạ → ném lỗi như `sanitizeRichText`.
+ */
+export function getProfileTags(profileName: string): readonly string[] {
+  const profile = NON_PROFILE_KEYS.has(profileName) ? undefined : profiles[profileName];
+  if (!profile) {
+    throw new Error(`getProfileTags: profile '${profileName}' không có trong config/sanitize-profiles.json`);
+  }
+  return profile.tags;
+}
+
+/**
  * Sanitize HTML từ Lexical theo profile whitelist (07 §7.2). Dùng ở FE (UX, lúc nhập/preview)
  * VÀ ở BE (bảo mật, lúc ghi) — đây là bản FE/Node; BE .NET có bản tương đương (2.8).
  *

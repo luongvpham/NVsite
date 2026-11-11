@@ -69,13 +69,26 @@ describe('MediaLibraryPicker (F3)', () => {
     expect(screen.queryByRole('button', { name: 'Xoá' })).not.toBeInTheDocument();
   });
 
+  it('ẩn nút Tải ảnh lên thư viện khi không phải Owner (#100 — mọi route media chỉ Owner)', async () => {
+    server.use(
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([asset('a1')]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+    );
+    renderWithQuery(
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
+    );
+
+    await screen.findAllByRole('img');
+    expect(screen.queryByText('Tải ảnh lên thư viện')).not.toBeInTheDocument();
+  });
+
   it('báo lỗi client khi upload thẳng vào thư viện với file vượt quá 10MB, không gọi API', async () => {
     server.use(
       http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([]))),
       http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
     );
     renderWithQuery(
-      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" isOwner open onClose={vi.fn()} onSelect={vi.fn()} />,
     );
 
     const bigFile = makeFile('big.jpg', 11 * 1024 * 1024, 'image/jpeg');
@@ -92,7 +105,7 @@ describe('MediaLibraryPicker (F3)', () => {
       http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
     );
     renderWithQuery(
-      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" isOwner open onClose={vi.fn()} onSelect={vi.fn()} />,
     );
 
     fireEvent.change(screen.getByLabelText('Tải ảnh lên thư viện', { selector: 'input' }), {
@@ -153,6 +166,104 @@ describe('MediaLibraryPicker (F3)', () => {
     await waitFor(() => {
       expect(onSelect).toHaveBeenCalledWith(cloned);
     });
+  });
+
+  it('F11: bước clone có khung crop theo preset, kéo khung → focal gửi lên đúng tâm', async () => {
+    const source = asset('a1');
+    let cloneBody: { focalX?: number; focalY?: number } = {};
+    server.use(
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([source]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.post('*/api/shops/:shopId/media/library/:assetId/clones', async ({ request }) => {
+        cloneBody = (await request.json()) as typeof cloneBody;
+        return HttpResponse.json(asset('clone-1'));
+      }),
+    );
+    renderWithQuery(
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
+    );
+    const thumbnails = await screen.findAllByRole('img');
+    fireEvent.click(thumbnails[0]?.closest('button') as HTMLButtonElement);
+
+    const img = await screen.findByAltText('Xem trước');
+    Object.defineProperty(img, 'naturalWidth', { value: 2000 });
+    Object.defineProperty(img, 'naturalHeight', { value: 1000 });
+    fireEvent.load(img);
+    expect(screen.getByTestId('crop-frame').style.width).toBe('50%');
+    const area = screen.getByTestId('crop-area');
+    area.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 100, right: 200, bottom: 100 }) as DOMRect;
+    fireEvent.pointerDown(area, { clientX: 150, clientY: 40, pointerId: 1 });
+    fireEvent.pointerUp(area, { pointerId: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Dùng ảnh này' }));
+
+    await waitFor(() => { expect(cloneBody.focalX).toBeCloseTo(0.75); });
+    expect(cloneBody.focalY).toBeCloseTo(0.5);
+  });
+
+  it('mode="library": chọn ảnh trả thẳng bản Library, không bước xác nhận, không gọi clone (ogImageId của Page)', async () => {
+    const source = asset('a1');
+    let cloneCalled = false;
+    server.use(
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([source]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.post('*/api/shops/:shopId/media/library/:assetId/clones', () => {
+        cloneCalled = true;
+        return HttpResponse.json(asset('clone-1'));
+      }),
+    );
+    const onSelect = vi.fn();
+    renderWithQuery(<MediaLibraryPicker shopId="shop-1" mode="library" open onClose={vi.fn()} onSelect={onSelect} />);
+
+    const thumbnails = await screen.findAllByRole('img');
+    fireEvent.click(thumbnails[0]?.closest('button') as HTMLButtonElement);
+
+    expect(onSelect).toHaveBeenCalledWith(source);
+    expect(screen.queryByText('Xác nhận chọn ảnh')).not.toBeInTheDocument();
+    expect(cloneCalled).toBe(false);
+  });
+
+  it('xoá: liệt kê từng nơi đang dùng — Logo shop, Trang {pageTitle} (Flow 7)', async () => {
+    server.use(
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([asset('a1')]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.get('*/api/shops/:shopId/media/library/:assetId/references', () =>
+        HttpResponse.json({
+          references: [
+            { kind: 'ShopLogo' },
+            { kind: 'PageDraft', pageId: 'p-1', pageTitle: 'Dịch vụ' },
+            { kind: 'PageDraft', pageId: 'p-2', pageTitle: 'Giới thiệu' },
+          ],
+        }),
+      ),
+    );
+    renderWithQuery(
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" isOwner open onClose={vi.fn()} onSelect={vi.fn()} />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Xoá' }));
+
+    const confirm = await screen.findByRole('alertdialog');
+    expect(within(confirm).getByText(/đang được dùng ở 3 nơi/)).toBeInTheDocument();
+    const items = within(within(confirm).getByRole('list')).getAllByRole('listitem');
+    expect(items.map((li) => li.textContent)).toEqual(['Logo shop', 'Trang Dịch vụ', 'Trang Giới thiệu']);
+  });
+
+  it('xoá: reference PageDraft thiếu pageTitle → vẫn hiện "Một trang", không in "null"', async () => {
+    server.use(
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([asset('a1')]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.get('*/api/shops/:shopId/media/library/:assetId/references', () =>
+        HttpResponse.json({ references: [{ kind: 'PageDraft', pageId: 'p-1', pageTitle: null }] }),
+      ),
+    );
+    renderWithQuery(
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" isOwner open onClose={vi.fn()} onSelect={vi.fn()} />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Xoá' }));
+
+    const confirm = await screen.findByRole('alertdialog');
+    expect(within(confirm).getByRole('listitem')).toHaveTextContent(/^Một trang$/);
   });
 
   it('xoá: gọi references trước, có tham chiếu thì cảnh báo nhưng không chặn xoá', async () => {

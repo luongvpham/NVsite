@@ -1,6 +1,6 @@
 # vsite — Component Manifest Schema & Codegen
 
-> **STATUS:** `IMPLEMENTED` · **Tasks:** `BOOTSTRAP-002,MEDIA-001,TOOLING-001` · **Changelog:** `Docs/tasks/TOOLING-001/changelog.md` · **Stale:** `Changelog trước TOOLING-001: Docs/tasks/MEDIA-001/changelog.md · Changelog trước MEDIA-001: Docs/tasks/BOOTSTRAP-002/changelog.md (banner chỉ nhận một đường dẫn) · §7.2 nhãn "#67 cần xác nhận" (đã chốt) · §3 vị trí context · §9 route dev harness · §3 và §7.1 config/image-presets.json nay là {presets, surfaces} và resolveImage đã là bản thật, không còn stub · §7.4 binding.imagePresets đã code (xem Docs/tasks/MEDIA-001/changelog.md mục 4, 15)`
+> **STATUS:** `IMPLEMENTED` · **Tasks:** `WEBSITE-002,BOOTSTRAP-002,MEDIA-001,TOOLING-001` · **Changelog:** `Docs/tasks/WEBSITE-002/changelog.md` · **Stale:** `Changelog trước WEBSITE-002: Docs/tasks/TOOLING-001/changelog.md · Changelog trước TOOLING-001: Docs/tasks/MEDIA-001/changelog.md · Changelog trước MEDIA-001: Docs/tasks/BOOTSTRAP-002/changelog.md (banner chỉ nhận một đường dẫn) · §7.2 nhãn "#67 cần xác nhận" (đã chốt) · §3 vị trí context · §9 route dev harness — /dev-registry đã XOÁ ở WEBSITE-002 F6, Inspector giờ chạy trong editor Portal (/shops/{shopId}/website/pages/{pageId}) · Inspector (WEBSITE-002): control lexical là editor Lexical thật tải lười (toolbar suy ra từ sanitize-profiles.json), thêm isFieldDisabled/invalidPaths, field color-token chọn theo themeColorKeys · §3 và §7.1 config/image-presets.json nay là {presets, surfaces} và resolveImage đã là bản thật, không còn stub · §7.4 binding.imagePresets đã code (xem Docs/tasks/MEDIA-001/changelog.md mục 4, 15)`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
 > 📌 **§0 là nơi định nghĩa Quyết định `#59–#67`.** Câu "chép sang `02`" trong §0 đã lỗi thời — cố
@@ -19,7 +19,7 @@
 > - `Docs/tasks/BOOTSTRAP-002/changelog.md` — từng điểm lệch so với đúng tài liệu này, kèm nguyên
 >   nhân; chia rõ "lệch có chủ đích, giữ nguyên" và "chưa làm xong, còn nợ". Quan trọng nhất: vị trí
 >   thật của `RenderContextValue` (§3 vẽ sai so với bản chạy được — xem lệch #1) và route dev harness
->   thật là `/dev-registry`, không phải `/_dev/registry` (lệch #2).
+>   `/dev-registry` (lệch #2) — route này đã bị xoá ở WEBSITE-002, Inspector giờ chạy trong editor Portal.
 > - `Docs/tasks/BOOTSTRAP-002/review.md` — đánh giá Gate 2 độc lập (change-reviewer), Warning/nợ kỹ
 >   thuật chi tiết hơn changelog.
 > - `packages/builder-components/CLAUDE.md` và `packages/builder-renderer/CLAUDE.md` — invariant thật

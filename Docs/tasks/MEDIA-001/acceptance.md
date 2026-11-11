@@ -116,6 +116,8 @@ Cả hai phải trả **404**, không được trả nội dung file:
 
 ## Phần 5 — Hero và Gallery trong dev-registry (F5, tiêu chí dừng `08` §9)
 
+> ⚠️ `/dev-registry` đã bị xoá ở WEBSITE-002 (F6). Chạy lại phần này thì dùng editor Portal: `/shops/{shopId}/website/pages/{pageId}` → chọn khối Hero/Gallery → ô ảnh ở Inspector (cùng `ImagePickerControl`).
+
 - [ ] **5.1** Từ thanh đầu trang (đang đăng nhập), bấm link **`dev-registry`** (chỉ hiện ở chế độ dev, mới thêm).
   **Không gõ URL.** Bấm nút Back của trình duyệt sẽ quay về `/shops` mà không mất phiên.
 - [ ] **5.2** Cột trái, ô **Shop ID**: dán GUID ở bước 2.5. Fixture mặc định là **Hero (đơn)**.

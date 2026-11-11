@@ -26,7 +26,7 @@ Domain: `admin.vsite.vn/*` (Quyết định #25) — origin riêng biệt hoàn 
 
 **Website Builder không phải app riêng** — nó là một route bên trong portal, vì bản chất cũng là công cụ quản trị (Quyết định #22). Phần *output* của builder (website khách xem) nằm ở `apps/web`.
 
-Chưa có task Website Builder thì **đừng scaffold route `/website`**, đừng cài `dnd-kit`/`Lexical`/`zundo`/`immer`. Chúng chỉ vào khi task đó bắt đầu.
+Website Builder đã bắt đầu (WEBSITE-002, Bước 5b): route `/shops/$shopId/website…` có từ F1. Vẫn chỉ cài thư viện đúng lúc task cần (`dnd-kit` ở F7, `Lexical` ở F10); `immer`/`zundo` nằm ở `packages/builder-core`, **không** cài thẳng vào portal.
 
 ---
 
@@ -84,9 +84,10 @@ contracts/openapi/*.json  ──pnpm gen:api (Orval)──→  packages/api-sdk/
 | ✅ Được ghi | `apps/portal/**` · `packages/ui` · `packages/shared` · `packages/theme-engine` |
 | ❌ Cấm ghi | `packages/api-sdk/**` (generated) · `backend/**` · `contracts/**` · `config/**` · `DesignIdeal/**` |
 
-*(Khi Website Builder bắt đầu mở thêm: `packages/builder-core` (state + Operations Engine),
-`packages/builder-components`, `packages/ai-agent` (prompt, tool schema). `builder-core` và `ai-agent`
-**chỉ** dùng bởi portal, không phải `apps/web`; chưa tạo — xem `DesignIdeal/ai-agent-development-workflow.md` §11.)*
+*(Website Builder mở thêm: `packages/builder-core` (state + Operations Engine — **đã tạo**, WEBSITE-002 F4, xem
+`packages/builder-core/CLAUDE.md`), `packages/builder-components`, `packages/ai-agent` (prompt, tool schema — chưa tạo).
+`builder-core` và `ai-agent` **chỉ** dùng bởi portal, không phải `apps/web`; ESLint chặn `builder-renderer`/
+`builder-components`/`apps/web` import `builder-core`. Xem `DesignIdeal/ai-agent-development-workflow.md` §11.)*
 
 ## Reserved routes
 

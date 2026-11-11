@@ -1,7 +1,9 @@
-import type { ReactNode } from 'react';
-import { colorTokens } from '@vsite/theme-engine';
+import { lazy, Suspense, type ReactNode } from 'react';
+import { themeColorKeys } from '@vsite/theme-engine';
 import { setAtPath, type PathSegment } from './path-utils';
 import type { PropertyPanelField } from './types';
+
+const RichTextEditor = lazy(() => import('../rich-text-editor/RichTextEditor'));
 
 /**
  * Bước 2 (§10): chứng minh property-panel.ts đủ metadata để sinh form dùng được. Control cho
@@ -33,9 +35,24 @@ export interface InspectorProps {
   onChange: (path: PathSegment[], value: unknown) => void;
   pathPrefix?: PathSegment[];
   renderMediaPicker?: RenderMediaPicker;
+  /** Khoá field (vd. prop không thuộc `editableInSystemPageProps` ở trang System). Chỉ là UI — Engine vẫn từ chối op. */
+  isFieldDisabled?: (field: PropertyPanelField) => boolean;
+  /**
+   * Các đường dẫn prop (tính từ gốc `props` của node, như `update.path`) mà BE báo sai (422) — field chứa chúng được tô đỏ.
+   * Mức chi tiết là field của Inspector này: `['items', 2, 'label']` tô cả field `items`. Chỉ là UI.
+   */
+  invalidPaths?: readonly (readonly PathSegment[])[];
 }
 
-export function Inspector({ fields, values, onChange, pathPrefix = [], renderMediaPicker }: InspectorProps) {
+export function Inspector({
+  fields,
+  values,
+  onChange,
+  pathPrefix = [],
+  renderMediaPicker,
+  isFieldDisabled,
+  invalidPaths,
+}: InspectorProps) {
   const groups = new Map<string, PropertyPanelField[]>();
   for (const field of fields) {
     const list = groups.get(field.group) ?? [];
@@ -53,15 +70,22 @@ export function Inspector({ fields, values, onChange, pathPrefix = [], renderMed
               .slice()
               .sort((a, b) => a.order - b.order)
               .map((field) => (
-                <FieldControl
+                <fieldset
                   key={field.name}
-                  field={field}
-                  value={values[field.name]}
-                  onChange={(v) => {
-                    onChange([...pathPrefix, field.name], v);
-                  }}
-                  renderMediaPicker={renderMediaPicker}
-                />
+                  disabled={isFieldDisabled?.(field) ?? false}
+                  data-invalid={isFieldInvalid(invalidPaths, pathPrefix, field.name) ? 'true' : undefined}
+                  className="m-0 min-w-0 border-0 p-0 disabled:opacity-60 data-[invalid=true]:rounded data-[invalid=true]:ring-2 data-[invalid=true]:ring-destructive data-[invalid=true]:ring-offset-2"
+                >
+                  <FieldControl
+                    field={field}
+                    value={values[field.name]}
+                    onChange={(v) => {
+                      onChange([...pathPrefix, field.name], v);
+                    }}
+                    renderMediaPicker={renderMediaPicker}
+                    disabled={isFieldDisabled?.(field) ?? false}
+                  />
+                </fieldset>
               ))}
           </div>
         </fieldset>
@@ -70,16 +94,31 @@ export function Inspector({ fields, values, onChange, pathPrefix = [], renderMed
   );
 }
 
+/** Field `name` có nằm trên (hoặc là tổ tiên của) một đường dẫn lỗi không — tính sau `pathPrefix`. */
+function isFieldInvalid(
+  invalidPaths: InspectorProps['invalidPaths'],
+  pathPrefix: readonly PathSegment[],
+  name: string,
+): boolean {
+  if (!invalidPaths) return false;
+  return invalidPaths.some(
+    (path) => path.length > pathPrefix.length && pathPrefix.every((seg, i) => path[i] === seg) && path[pathPrefix.length] === name,
+  );
+}
+
 function FieldControl({
   field,
   value,
   onChange,
   renderMediaPicker,
+  disabled,
 }: {
   field: PropertyPanelField;
   value: unknown;
   onChange: (value: unknown) => void;
   renderMediaPicker?: RenderMediaPicker;
+  /** `<fieldset disabled>` khoá được input/button nhưng KHÔNG khoá `contenteditable` — control Lexical phải tự tắt. */
+  disabled?: boolean;
 }) {
   const label = (
     <label className="block text-sm font-medium">
@@ -118,18 +157,20 @@ function FieldControl({
       );
 
     case 'lexical':
-      // STUB — Lexical editor thật là việc của Bước 5+. Textarea đủ để chứng minh pipeline metadata.
+      // Lexical tải lười: không vào bundle chính, càng không vào `apps/web` (renderer không import Inspector).
       return (
         <div>
           {label}
-          <textarea
-            className="mt-1 w-full rounded border border-border px-2 py-1 font-mono text-xs"
-            value={stringValue}
-            maxLength={field.maxLength}
-            onChange={(e) => {
-              onChange(e.target.value);
-            }}
-          />
+          <Suspense fallback={<p className="mt-1 text-xs text-muted-foreground">Đang tải trình soạn thảo...</p>}>
+            <RichTextEditor
+              value={stringValue}
+              onChange={onChange}
+              profile={field.profile ?? 'inline'}
+              label={field.label}
+              maxLength={field.maxLength}
+              disabled={disabled}
+            />
+          </Suspense>
         </div>
       );
 
@@ -199,7 +240,7 @@ function FieldControl({
               onChange(e.target.value);
             }}
           >
-            {Object.keys(colorTokens).map((token) => (
+            {themeColorKeys.map((token) => (
               <option key={token} value={token}>
                 {token}
               </option>

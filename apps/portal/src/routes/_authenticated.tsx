@@ -31,15 +31,6 @@ function AuthenticatedLayout() {
           <Link to="/shops" className="font-semibold text-foreground">
             vsite portal
           </Link>
-          {/* Chỉ ở dev: /dev-registry nằm NGOÀI layout này và cần token trong bộ nhớ (Quyết định #3) —
-              không có route guard khôi phục phiên, nên gõ URL lên thanh địa chỉ (tải lại trang) vẫn mất
-              token. Link nội bộ này là đường mở nó khi đã đăng nhập (nghiệm thu tay MEDIA-001, 08 §9).
-              Xoá cùng /dev-registry ở Bước 5. */}
-          {import.meta.env.DEV && (
-            <Link to="/dev-registry" className="text-sm text-muted-foreground underline">
-              dev-registry
-            </Link>
-          )}
         </div>
         <Button
           variant="outline"

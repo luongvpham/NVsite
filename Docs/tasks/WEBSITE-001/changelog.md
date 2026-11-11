@@ -18,7 +18,7 @@ và chỗ nào là **việc chưa làm xong** (kèm nơi theo dõi).
 **Đọc kèm (KHÔNG chép lại ở đây):**
 - `Docs/tasks/WEBSITE-001/plan.md` — plan; §4 giữ #99/#100 (chuyển nghĩa sang `backend/docs/modules/website.md`).
 - `Docs/tasks/WEBSITE-001/contract-diff.md` — Gate 1 vòng 1 + 6 câu hỏi (đã trả lời hết).
-- `Docs/tasks/WEBSITE-001/brief.md` — bàn giao BE → FE cho 5b.
+- `Docs/tasks/WEBSITE-002/brief.md` — bàn giao BE → FE cho 5b.
 - `backend/docs/modules/website.md` — quy ước vận hành module.
 - `packages/builder-components/tests/fixtures/tree/README.md` — danh sách mã lỗi chi tiết `params.errors[].code`.
 
@@ -43,7 +43,7 @@ Một lần chạy giữa chừng có 2 test `TenantResolutionTests` đỏ do `D
 - Người duyệt `luongpham` trả lời 6 câu ở `contract-diff.md`: `JsonElement` chấp nhận; trần 64 KB theme / 1 MB + 4096 tree giữ;
   `updatePage` = PUT; Media owner-only xác nhận; body `savePageDraft`/`updateTheme` khai `required`. Contract đã promote
   (`website.v1.json`, `media.v1.json`, `contract.lock`: taskId `WEBSITE-001`, approvedBy `luongpham`).
-- `Docs/tasks/WEBSITE-001/brief.md` viết cho 5b. **`pnpm gen:api` + `website` trong `packages/api-sdk/orval.config.ts` đã làm trong nhánh này**
+- `Docs/tasks/WEBSITE-002/brief.md` viết cho 5b. **`pnpm gen:api` + `website` trong `packages/api-sdk/orval.config.ts` đã làm trong nhánh này**
   (người duyệt cho phép, lệch plan §1 "không Orval gen"): generated `website` mới + generated `media` đổi, export trong `src/index.ts`/`src/mocks.ts`
   (bỏ `ProblemDetails*`/`HttpValidationProblemDetails*` trùng). `pnpm lint`, `pnpm build`, `pnpm test` toàn repo xanh. I2 (OG image) xem "Chưa làm xong" #14.
 - **Task chỉ đóng sau Gate 2.**

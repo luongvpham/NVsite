@@ -1,4 +1,5 @@
-import { type MouseEvent, useState } from 'react';
+import { useState } from 'react';
+import { CropFrame } from './crop-frame';
 import { Button, Dialog } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
 import { useUploadToSlot, type MediaAssetDto } from '@vsite/api-sdk';
@@ -73,15 +74,6 @@ export function UploadSlotDialog({ shopId, preset, open, onClose, onUploaded }: 
     setPreviewUrl(URL.createObjectURL(selected));
   }
 
-  function handlePreviewClick(event: MouseEvent<HTMLDivElement>) {
-    if (!showFocalPicker) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = (event.clientY - rect.top) / rect.height;
-    setFocalX(Math.min(1, Math.max(0, x)));
-    setFocalY(Math.min(1, Math.max(0, y)));
-  }
-
   function handleSubmit() {
     if (!file) {
       setClientError('Vui lòng chọn một ảnh');
@@ -128,20 +120,18 @@ export function UploadSlotDialog({ shopId, preset, open, onClose, onUploaded }: 
 
         {previewUrl && (
           <div>
-            <div
-              className="relative cursor-crosshair overflow-hidden rounded border border-border"
-              onClick={handlePreviewClick}
-            >
-              <img src={previewUrl} alt="Xem trước" className="block max-h-64 w-full object-contain" />
-              {showFocalPicker && (
-                <div
-                  className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary"
-                  style={{ left: `${focalX * 100}%`, top: `${focalY * 100}%` }}
-                />
-              )}
-            </div>
+            <CropFrame
+              src={previewUrl}
+              alt="Xem trước"
+              preset={preset}
+              focal={{ x: focalX, y: focalY }}
+              onFocalChange={(next) => {
+                setFocalX(next.x);
+                setFocalY(next.y);
+              }}
+            />
             {showFocalPicker ? (
-              <p className="mt-1 text-xs text-muted-foreground">Bấm vào ảnh để đặt điểm lấy nét (focal point).</p>
+              <p className="mt-1 text-xs text-muted-foreground">Kéo khung để chọn vùng giữ lại (điểm lấy nét — focal point).</p>
             ) : (
               <p className="mt-1 text-xs text-muted-foreground">Preset này giữ nguyên tỉ lệ ảnh, không cần điểm lấy nét.</p>
             )}

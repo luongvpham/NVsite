@@ -37,6 +37,11 @@
    nối chuỗi URL ảnh hay `href`. (#11, #53)
 9. KHÔNG tạo migration/entity trong package này — package thuần build-time, không đụng database.
 
+10. Lexical (`lexical`, `@lexical/*`) chỉ nằm trong `src/rich-text-editor/` và chỉ vào bundle qua `import()` động của
+    `Inspector` — `apps/web` import package này để render nên một import tĩnh lọt vào là kéo cả Lexical vào bundle khách xem.
+    `tests/lexical-isolation.test.ts` giữ ranh giới; toolbar của editor suy ra từ `config/sanitize-profiles.json`
+    (`toolbarCapabilities`), không viết tay danh sách thẻ. `<fieldset disabled>` không khoá `contenteditable` — control tự tắt qua prop `disabled`.
+
 ## Ranh giới kiến trúc
 
 - `packages/` không import từ `apps/`.

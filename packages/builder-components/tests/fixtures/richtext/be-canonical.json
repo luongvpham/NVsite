@@ -1,0 +1,15 @@
+{
+  "_comment": "Chuỗi richText ở DẠNG CHUẨN: FE `normalizeEditorHtml` phải trả lại y nguyên (điểm bất động), và `RichTextSanitizer` của BE cũng phải trả lại y nguyên (nếu không BE bật `sanitized: true` sau mỗi lần lưu — WEBSITE-002 review M1). Đã đối chiếu với BE bằng dotnet fsi ngày 2026-11-11; BE chưa có test tự động đọc file này (việc theo dõi).",
+  "cases": [
+    { "profile": "inline", "html": "dòng 1<br>dòng 2" },
+    { "profile": "inline", "html": "<strong>đậm</strong> <em>nghiêng</em> <u>gạch</u> <s>xoá</s>" },
+    { "profile": "inline", "html": "<a href=\"https://x.vn/?a=1&amp;b=2\" rel=\"noreferrer\">link</a>" },
+    { "profile": "inline", "html": "a&nbsp;&nbsp;b" },
+    { "profile": "inline", "html": "\"trích\" &amp; &lt;3 &gt; 'nháy'" },
+    { "profile": "basic", "html": "<p>a<br>b</p><p><br></p><p>c</p>" },
+    { "profile": "basic", "html": "<h2>Tiêu đề</h2><ul><li>một</li><li>hai</li></ul><ol><li>x</li></ol><blockquote>q</blockquote>" },
+    { "profile": "basic", "html": "<p><a href=\"mailto:a@b.vn\">mail</a> <a href=\"tel:+84123\">tel</a></p>" },
+    { "profile": "basic", "html": "<p>a &amp; b &lt;script&gt;</p>" },
+    { "profile": "basic", "html": "<p><strong><em>lồng</em></strong></p>" }
+  ]
+}

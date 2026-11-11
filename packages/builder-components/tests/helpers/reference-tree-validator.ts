@@ -4,6 +4,7 @@ import propsSchemasJson from '../../generated/props-schemas.json';
 import treeEnvelopeJsonSchema from '../../generated/tree-envelope.schema.json';
 import treeRulesJson from '../../generated/tree-rules.json';
 import { treeEnvelopeSchema } from '../../meta/envelope-schema';
+import { isSafeLinkUrl } from '../../src/link-url';
 import { sanitizeRichText } from '../../src/sanitize-html';
 import { classifyDangerous } from './richtext-danger';
 
@@ -55,25 +56,6 @@ export interface ValidateResult {
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
-const NAMED_URL_ENTITIES: Record<string, string> = { colon: ':', tab: '\t', newline: '\n', lpar: '(', rpar: ')' };
-
-/**
- * Link external an toàn: scheme ∈ https/http/mailto/tel, hoặc đường dẫn nội bộ '/x' (KHÔNG '//host', không '/\') hoặc '#neo'.
- * Chuẩn hoá trước khi so: giải mã entity, bỏ mọi ký tự điều khiển/khoảng trắng, không phân biệt hoa/thường.
- */
-export function isSafeLinkUrl(url: unknown): boolean {
-  if (typeof url !== 'string') return false;
-  const decoded = url
-    .replace(/&#x([0-9a-f]+);?/gi, (_m, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);?/g, (_m, dec: string) => String.fromCodePoint(parseInt(dec, 10)))
-    .replace(/&([a-z]+);/gi, (m, name: string) => NAMED_URL_ENTITIES[name.toLowerCase()] ?? m);
-  // eslint-disable-next-line no-control-regex
-  const normalized = decoded.replace(/[\x00-\x20\x7f]+/g, '').toLowerCase();
-  const scheme = /^([a-z][a-z0-9+.-]*):/.exec(normalized)?.[1];
-  if (scheme !== undefined) return ['https', 'http', 'mailto', 'tel'].includes(scheme);
-  if (normalized.startsWith('#')) return true;
-  return normalized.startsWith('/') && !normalized.startsWith('//') && !normalized.startsWith('/\\');
-}
 const rules = treeRulesJson as unknown as TreeRules;
 const ajv = new Ajv2020({ strict: false });
 const validateEnvelope = ajv.compile(treeEnvelopeJsonSchema);

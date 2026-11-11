@@ -81,7 +81,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#39** | Chuẩn hoá đánh số Phase + đóng mâu thuẫn liên tài liệu — 5 mục, xem #39.1–#39.5 dưới bảng | `02 §Quyết định #39` | ✅ |
 | **#40** | `Product` là module **riêng**, không gộp với `Service`; không chung enum, không chung bảng | `05` §0 | ⏳ Bước 10 |
 | **#41** | Đơn vị publish là **toàn site** (`SitePublication` bất biến), không publish từng trang | `05` §0 · §7 | 📐 Bước 8 |
-| **#42** | Không persist op-log; undo/redo chỉ client-side (zundo) trong một phiên | `05` §0 | 📐 Bước 5b (client). Phía BE (5a, WEBSITE-001) đã theo đúng: `PUT draft` nhận **cả tree**, không có op-log — chờ Gate 1 |
+| **#42** | Không persist op-log; undo/redo chỉ client-side (zundo) trong một phiên | `05` §0 | ✅ Đã code: client ở 5b (WEBSITE-002 — zundo chụp `tree`, gộp bước `update` 2 s, theme ngoài lịch sử); BE ở 5a (WEBSITE-001 — `PUT draft` nhận **cả tree**, không op-log) |
 | **#43** | Component manifest **additive-only**; breaking → tạo `variant` mới. Hệ quả: node không cần `schemaVersion` | `05` §0 · cơ chế ở `07` §5 | ✅ enforce — `registry.lock.json` + `check-additive.ts` |
 | **#44** | Draft persist **server-side** (`PageDraft`), không chỉ Zustand | `05` §0 · §5 | 📐 Bước 5 |
 | **#45** | Template là **seed copy một lần**, không phải reference | `05` §0 · §10 | 📐 Bước 11 |
