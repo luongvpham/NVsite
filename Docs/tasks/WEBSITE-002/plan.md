@@ -386,8 +386,8 @@ op `update`. Kiểm nội dung trước đó: HTML cũ nạp vào Lexical không
 Trong `UploadSlotDialog` / bước clone của picker: khung crop tỉ lệ của preset (bảng từ
 `generated/derivative-presets.json`), kéo khung → tính focal point (contract upload/clone chỉ nhận focal
 point — **không** có tham số crop; nếu cần crop thật → dừng, vòng D). Preset `fit: inside` → không khung.
-- [ ] Test trước: tỉ lệ khung đúng preset; kéo khung → focal point gửi đi đúng tâm; `inside` không khung
-- [ ] FAIL → PASS · Commit `feat(portal): khung crop theo preset ở dialog ảnh (WEBSITE-002 F11, MEDIA-001 #6)`
+- [x] Test trước: tỉ lệ khung đúng preset; kéo khung → focal point gửi đi đúng tâm; `inside` không khung
+- [x] FAIL → PASS · Commit `feat(portal): khung crop theo preset ở dialog ảnh (WEBSITE-002 F11, MEDIA-001 #6)`
 
 ## 11. Đóng task (trước Gate 2)
 - [ ] `pnpm build && pnpm test` toàn repo; `pnpm gen:api` (lock khớp) + `pnpm gen:registry` không diff

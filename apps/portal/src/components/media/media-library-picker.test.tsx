@@ -168,6 +168,38 @@ describe('MediaLibraryPicker (F3)', () => {
     });
   });
 
+  it('F11: bước clone có khung crop theo preset, kéo khung → focal gửi lên đúng tâm', async () => {
+    const source = asset('a1');
+    let cloneBody: { focalX?: number; focalY?: number } = {};
+    server.use(
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([source]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.post('*/api/shops/:shopId/media/library/:assetId/clones', async ({ request }) => {
+        cloneBody = (await request.json()) as typeof cloneBody;
+        return HttpResponse.json(asset('clone-1'));
+      }),
+    );
+    renderWithQuery(
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onSelect={vi.fn()} />,
+    );
+    const thumbnails = await screen.findAllByRole('img');
+    fireEvent.click(thumbnails[0]?.closest('button') as HTMLButtonElement);
+
+    const img = await screen.findByAltText('Xem trước');
+    Object.defineProperty(img, 'naturalWidth', { value: 2000 });
+    Object.defineProperty(img, 'naturalHeight', { value: 1000 });
+    fireEvent.load(img);
+    expect(screen.getByTestId('crop-frame').style.width).toBe('50%');
+    const area = screen.getByTestId('crop-area');
+    area.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 100, right: 200, bottom: 100 }) as DOMRect;
+    fireEvent.pointerDown(area, { clientX: 150, clientY: 40, pointerId: 1 });
+    fireEvent.pointerUp(area, { pointerId: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Dùng ảnh này' }));
+
+    await waitFor(() => { expect(cloneBody.focalX).toBeCloseTo(0.75); });
+    expect(cloneBody.focalY).toBeCloseTo(0.5);
+  });
+
   it('mode="library": chọn ảnh trả thẳng bản Library, không bước xác nhận, không gọi clone (ogImageId của Page)', async () => {
     const source = asset('a1');
     let cloneCalled = false;

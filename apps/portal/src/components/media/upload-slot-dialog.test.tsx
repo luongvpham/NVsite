@@ -87,6 +87,45 @@ describe('UploadSlotDialog (F2)', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('F11: kéo khung crop → focalX/focalY gửi lên đúng tâm khung; inside không gửi focal', async () => {
+    const bodies: string[] = [];
+    server.use(
+      http.post('*/api/shops/:shopId/media/slot-uploads', async ({ request }) => {
+        bodies.push(await request.text());
+        return HttpResponse.json({ asset: heroAsset, libraryAsset: null });
+      }),
+    );
+    const { unmount } = renderWithQuery(
+      <UploadSlotDialog shopId="shop-1" preset="800x800,cover" open onClose={vi.fn()} onUploaded={vi.fn()} />,
+    );
+    fireEvent.change(screen.getByLabelText('Chọn ảnh'), { target: { files: [makeFile('a.jpg', 1024, 'image/jpeg')] } });
+    const img = screen.getByAltText('Xem trước');
+    Object.defineProperty(img, 'naturalWidth', { value: 2000 });
+    Object.defineProperty(img, 'naturalHeight', { value: 1000 });
+    fireEvent.load(img);
+    expect(screen.getByTestId('crop-frame').style.width).toBe('50%'); // preset vuông trên ảnh 2:1
+    const area = screen.getByTestId('crop-area');
+    area.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 100, right: 200, bottom: 100 }) as DOMRect;
+    fireEvent.pointerDown(area, { clientX: 70, clientY: 80, pointerId: 1 });
+    fireEvent.pointerUp(area, { pointerId: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Tải lên' }));
+
+    await waitFor(() => { expect(bodies).toHaveLength(1); });
+    const field = (body: string | undefined, name: string) =>
+      new RegExp(`name="${name}"\r?\n\r?\n([^\r\n]*)`).exec(body ?? '')?.[1];
+    expect(Number(field(bodies[0], 'focalX'))).toBeCloseTo(0.35);
+    expect(Number(field(bodies[0], 'focalY'))).toBeCloseTo(0.5);
+    unmount();
+
+    renderWithQuery(<UploadSlotDialog shopId="shop-1" preset="1200x1200,inside" open onClose={vi.fn()} onUploaded={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('Chọn ảnh'), { target: { files: [makeFile('b.jpg', 1024, 'image/jpeg')] } });
+    expect(screen.queryByTestId('crop-frame')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tải lên' }));
+    await waitFor(() => { expect(bodies).toHaveLength(2); });
+    expect(bodies[1]).toContain('name="preset"');
+    expect(bodies[1]).not.toContain('name="focalX"');
+  });
+
   it('lỗi MEDIA_HEIC_UNSUPPORTED hiện hướng dẫn chuyển sang JPEG', async () => {
     server.use(
       http.post('*/api/shops/:shopId/media/slot-uploads', () =>

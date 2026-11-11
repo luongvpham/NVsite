@@ -16,6 +16,18 @@ window.scrollTo = () => {};
 URL.createObjectURL = () => 'blob:mock-preview';
 URL.revokeObjectURL = () => {};
 
+// jsdom không có PointerEvent (fireEvent.pointerDown rơi về Event thường, mất clientX/clientY) — khung crop (F11) đọc toạ độ.
+if (typeof window.PointerEvent === 'undefined') {
+  class PointerEventPolyfill extends MouseEvent {
+    pointerId: number;
+    constructor(type: string, init: MouseEventInit & { pointerId?: number } = {}) {
+      super(type, init);
+      this.pointerId = init.pointerId ?? 1;
+    }
+  }
+  window.PointerEvent = PointerEventPolyfill as unknown as typeof PointerEvent;
+}
+
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
 });

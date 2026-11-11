@@ -221,6 +221,14 @@
 - Kiểm đột biến 7 chỗ (nạp không sanitize, xuất không sanitize, không tắt editable khi disabled, sync không so `lastEmitted`, bỏ plugin Enter, toolbar bật mọi khối, import tĩnh Lexical) — mỗi đột biến làm ≥1 ca fail. Đột biến "bỏ plugin Enter" ban đầu **không** bị bắt (HTML xuất giống nhau nhờ normalize) → thêm kiểm DOM một đoạn.
 - **Chưa kiểm được:** gõ/chọn bằng chuột-bàn phím thật, dán từ Word/Google Docs, IME tiếng Việt (Telex/VNI) trên trình duyệt thật — jsdom chỉ phủ logic và nối dây.
 
+### F11 — Khung crop theo tỉ lệ preset (MEDIA-001 #6)
+- `apps/portal/src/lib/crop-frame.ts` (thuần): `presetRatio(preset)` (chỉ `{w}x{h},cover`; `inside`/lạ → `null`), `frameSize(imageAspect, ratio)` (khung lớn nhất đúng tỉ lệ preset nằm gọn trong ảnh), `clampCenter`. `components/media/crop-frame.tsx`: `CropFrame` (ảnh + khung, kéo bằng pointer hoặc bấm → **tâm khung = focal point**, kẹp để khung không tràn ảnh). Dùng ở `UploadSlotDialog` và bước xác nhận clone của `MediaLibraryPicker` (thay chấm bấm cũ).
+- Preset `inside` (hoặc lạ): ảnh thuần, không khung, không gửi focal — như trước. Hợp đồng không đổi: vẫn chỉ gửi `focalX/focalY`, **không** có tham số crop → không cần vòng D.
+- Khi ảnh vừa load mà focal cũ (focal của asset thư viện) nằm sát mép làm khung tràn, `CropFrame` kéo focal vào trong ngay, để giá trị gửi đi trùng khung đang hiện. Hệ quả có chủ đích: chiều mà khung phủ kín ảnh thì focal luôn 0.5 (chiều đó không ảnh hưởng crop).
+- `src/test/setup.ts`: polyfill `PointerEvent` (jsdom không có; mất `clientX/Y`).
+- Test: `crop-frame.test.ts` 8 (tỉ lệ, kích thước khung, kẹp), `crop-frame.test.tsx` 4 (khung đúng tỉ lệ, `inside` không khung, kéo → focal = tâm kẹp, thả rồi không kéo nữa, focal mép bị kéo vào), `upload-slot-dialog.test.tsx` +1 (multipart gửi đúng `focalX=0.35,focalY=0.5`; `inside` không có `focalX`), `media-library-picker.test.tsx` +1 (clone gửi `focalX=0.75`). portal 273 test, `tsc`/`eslint` sạch. Đột biến 3 chỗ (đảo tỉ lệ khung, bỏ kẹp, nhận cả `inside`) đều bị bắt.
+- **Chưa kiểm được:** kéo bằng chuột/cảm ứng thật, kích thước khung trên ảnh thật với `max-h`/responsive (jsdom không có layout).
+
 ## Lệch so với thiết kế / plan
 - F10: cài thêm `@lexical/rich-text`, `@lexical/list`, `@lexical/link`, `@lexical/selection`, `@lexical/utils` (plan chỉ nêu `lexical` + `@lexical/react` + `@lexical/html`) — `HeadingNode/QuoteNode/ListNode/LinkNode`, `$setBlocksType`, `$getNearestNodeOfType` nằm ở các gói này và pnpm không cho import gói chỉ có transitive. Tất cả pin `0.53.0`. Portal có thêm `lexical` làm **devDependency** (chỉ test portal gõ chữ vào editor).
 - F10 **nợ**: dùng `LexicalComposer` — Lexical 0.53 đánh dấu deprecated (thay bằng `LexicalExtensionComposer`, dự kiến gỡ ở major sau); lint `no-deprecated` tắt đúng một dòng có ghi lý do. Chuyển khi nâng major.
@@ -299,3 +307,4 @@
   và "Giữ bản của tôi". Cây quá lớn (nhiều ảnh/khối) → banner, không PUT. Tắt mạng giữa chừng → "Lỗi" + Thử lại. Đóng tab khi "Chưa lưu" → trình duyệt hỏi.
 - F9: smoke với BE thật + trình duyệt: đổi màu thấy canvas đổi; Lưu rồi F5 thấy giữ; gửi theme cố tình sai (sửa tay request) thấy ô đỏ; đổi tab/rời trang khi chưa lưu thì có nhắc. Chưa chạy `GET/PUT /theme` với BE thật ở session này (hình dạng `params.errors[].path` đang dựa vào `ThemeTokensValidator.cs` + fixture, chưa thấy bằng mắt).
 - F10: gõ tay trên trình duyệt thật: chọn chữ → In đậm/Link/H2/danh sách; gõ tiếng Việt có dấu (Telex/VNI) không rớt/đôi chữ; dán từ Word/Google Docs thấy chỉ còn định dạng cho phép; chọn khối khác rồi quay lại thấy nội dung giữ nguyên; trang System: editor `content` sửa được.
+- F11: kéo khung crop trên trình duyệt thật (chuột + cảm ứng): khung đúng tỉ lệ preset, không tràn ảnh; upload xong ảnh crop theo vùng đã chọn; preset `320x96,inside` (logo) không thấy khung.

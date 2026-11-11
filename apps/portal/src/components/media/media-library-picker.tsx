@@ -1,4 +1,5 @@
-import { type MouseEvent, useState } from 'react';
+import { useState } from 'react';
+import { CropFrame } from './crop-frame';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dialog } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
@@ -128,14 +129,6 @@ export function MediaLibraryPicker({ shopId, mode = 'clone', preset = '', isOwne
   function openCloneStep(asset: MediaAssetDto) {
     setSelectedForClone(asset);
     setCloneFocal({ x: asset.focalPointX, y: asset.focalPointY });
-  }
-
-  function handleFocalClick(event: MouseEvent<HTMLDivElement>) {
-    if (!showFocalPicker) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-    const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
-    setCloneFocal({ x, y });
   }
 
   function confirmClone() {
@@ -268,19 +261,17 @@ export function MediaLibraryPicker({ shopId, mode = 'clone', preset = '', isOwne
         {selectedForClone && (
           <div className="space-y-2 rounded border border-border p-3">
             <p className="text-sm font-medium">Xác nhận chọn ảnh</p>
-            <div className="relative cursor-crosshair overflow-hidden rounded border border-border" onClick={handleFocalClick}>
-              <img
-                src={mediaUrl(selectedForClone.storageKey)}
-                alt="Xem trước"
-                className="block max-h-56 w-full object-contain"
-              />
-              {showFocalPicker && (
-                <div
-                  className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary"
-                  style={{ left: `${cloneFocal.x * 100}%`, top: `${cloneFocal.y * 100}%` }}
-                />
-              )}
-            </div>
+            <CropFrame
+              src={mediaUrl(selectedForClone.storageKey)}
+              alt="Xem trước"
+              preset={preset}
+              focal={cloneFocal}
+              onFocalChange={setCloneFocal}
+              imageClassName="block max-h-56 w-auto max-w-full"
+            />
+            {showFocalPicker && (
+              <p className="text-xs text-muted-foreground">Kéo khung để chọn vùng giữ lại.</p>
+            )}
             {cloneMutation.isError && (
               <p role="alert" className="text-sm text-destructive">
                 {getErrorMessage(getErrorCode(cloneMutation.error))}
