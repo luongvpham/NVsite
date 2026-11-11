@@ -17,3 +17,11 @@
 - So HTML sau hydrate qua DOM đã parse và bỏ `<link rel=preload>`: React 19 nhấc preload của `<img>` lên `<head>`, và `&#x27;` ↔ `'` chỉ là khác cách serialize, không phải lệch.
 - Kiểm đột biến bằng `Math.random()` trong Footer thay cho `new Date()` (cùng lớp lỗi, nhưng `Date` có thể trùng ms nên không ổn định) → 5/5 hydrate test FAIL; đã hoàn nguyên.
 - Lint: `packages/**` cấm import `@vsite/portal|web`, `apps/**`, `**/apps/**`. Gộp vào block `no-restricted-imports` sẵn có của renderer/components (rule flat-config ghi đè nhau nên không tách block riêng cho hai package này); các package còn lại một block mới. Xác nhận bằng file tạm import apps → lint FAIL ở cả renderer và theme-engine, rồi xoá.
+
+## T4 — Preview trong editor Portal
+- Test viết ở mức component (`site-preview.test.tsx`, store thật + MSW) cộng 2 test tích hợp ở `routes/-editor-preview.test.tsx` (nút mở/đóng, phím Delete bị tắt khi mở).
+- `useGetShop(shopId)` — dùng `GET /shops/{id}` có sẵn; không endpoint mới.
+- Link `anchor`: mỗi node được bọc `<div id={node.id} style="display:contents">` (qua `decorateNode`) để `#nodeId` cuộn tới được. Wrapper không ảnh hưởng bố cục nhưng có thêm một phần tử DOM so với site thật.
+- "← Trang trước" lưu cả `notice`; quay lại thì dải báo của màn trước được khôi phục. Trang `NotFound` chưa tồn tại (`pageId = null`) → thân trang trống + dải báo.
+- Escape đóng preview bằng listener `document` của lớp phủ; phím tắt soạn trang (`useEditorShortcuts`) nhận cờ `enabled=false` khi preview mở.
+- Trang đích ≠ trang đang sửa dùng `staleTime: 0` + không `gcTime: 0` — chỉ đọc, không có ràng buộc "version" như editor.
