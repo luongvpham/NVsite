@@ -1,5 +1,11 @@
 import type { ComponentNode } from '@vsite/builder-components';
-import { registryMap } from '@vsite/builder-components';
+import {
+  createResolveUrl,
+  registryMap,
+  RenderContextProvider,
+  useRenderContext,
+  type SitePageRef,
+} from '@vsite/builder-components';
 import { Fragment, type ReactNode } from 'react';
 
 /** Gốc của Component Tree trong draft/published: `{ id:'root', type:'Page', children[] }` (05 §6). */
@@ -47,21 +53,38 @@ function isPageRoot(tree: ComponentNode | PageRoot): tree is PageRoot {
   return (tree as { type: string }).type === 'Page';
 }
 
-export function RenderTree({
-  tree,
-  decorateNode,
-}: {
+export interface RenderTreeProps {
   tree: ComponentNode | PageRoot;
   decorateNode?: DecorateNode;
-}) {
-  if (isPageRoot(tree)) {
-    return (
-      <>
-        {tree.children.map((child) => (
-          <Fragment key={child.id}>{renderNode(child, decorateNode)}</Fragment>
-        ))}
-      </>
-    );
-  }
-  return <>{renderNode(tree, decorateNode)}</>;
+  /** #11/#103 — chỉ có tác dụng khi truyền `pages`; không truyền thì giữ context của Provider bên ngoài. */
+  basePath?: string;
+  locale?: string;
+  defaultLocale?: string;
+  /** Danh sách trang của shop — có thì `resolveUrl` dựng URL thật theo #103 (không có → giữ resolveUrl cũ). */
+  pages?: readonly SitePageRef[];
+}
+
+export function RenderTree({ tree, decorateNode, basePath, locale, defaultLocale, pages }: RenderTreeProps) {
+  const parent = useRenderContext();
+  const body = isPageRoot(tree) ? (
+    <>
+      {tree.children.map((child) => (
+        <Fragment key={child.id}>{renderNode(child, decorateNode)}</Fragment>
+      ))}
+    </>
+  ) : (
+    <>{renderNode(tree, decorateNode)}</>
+  );
+  if (!pages) return body;
+
+  const next = {
+    basePath: basePath ?? parent.basePath,
+    locale: locale ?? parent.locale,
+    defaultLocale: defaultLocale ?? parent.defaultLocale,
+  };
+  return (
+    <RenderContextProvider value={{ ...parent, ...next, resolveUrl: createResolveUrl({ ...next, pages }) }}>
+      {body}
+    </RenderContextProvider>
+  );
 }

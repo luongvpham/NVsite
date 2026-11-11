@@ -19,6 +19,9 @@ export interface MediaRef {
 export interface RenderContextValue {
   /** Quyết định #11 — cùng tree render ở vsite.vn/{slug} và ở custom domain phải ra khác href. */
   basePath: string;
+  /** #98 — ngôn ngữ đang render và ngôn ngữ mặc định; chỉ dùng để dựng URL (#103), chưa đọc overlay `i18n`. */
+  locale: string;
+  defaultLocale: string;
   /** Bước 4 — imageId → MediaRef, nạp trước khi render (SSR loader / dev-registry). Mặc định {}. */
   mediaMap: Readonly<Record<string, MediaRef>>;
   resolveImage: (imageId: string, preset: string) => string;
@@ -83,6 +86,8 @@ const defaultResolveUrl: RenderContextValue['resolveUrl'] = (link) => {
 
 const defaultContextValue: RenderContextValue = {
   basePath: '',
+  locale: 'vi',
+  defaultLocale: 'vi',
   mediaMap: EMPTY_MEDIA_MAP,
   resolveImage: defaultResolveImage,
   resolveUrl: defaultResolveUrl,
