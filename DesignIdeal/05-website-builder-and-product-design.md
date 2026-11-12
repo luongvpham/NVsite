@@ -88,7 +88,7 @@ Gốc của module. Một shop `Hosted` có đúng một website.
 | `TrackingSnippets` | jsonb | `{ ga4?: string, metaPixel?: string }` — whitelist ID, **không** cho nhập HTML thô |
 | `CreatedAt` / `UpdatedAt` | timestamptz | |
 
-**Ràng buộc bảo mật:** `TrackingSnippets` chỉ nhận **mã ID** đã validate regex (`^G-[A-Z0-9]{6,}$`), không bao giờ nhận `<script>`. Cho nhập HTML tự do vào site nhiều tenant là mở XSS trên chính domain của vsite ở chế độ path-based (`vsite.vn/{slug}`) — nghĩa là cookie của vsite.vn bị lộ. Đây là ràng buộc cứng.
+**Ràng buộc bảo mật:** `TrackingSnippets` chỉ nhận **mã ID** đã validate regex (`^G-[A-Z0-9]{6,}$`), không bao giờ nhận `<script>`. Cho nhập HTML tự do vào site nhiều tenant là cho script chạy trên `{slug}.vsite.vn` — cùng *site* với `vsite.vn` và `admin.vsite.vn`, nên script đó gửi được request kèm cookie `SameSite=Lax` sang Portal và đặt được cookie cho cả `.vsite.vn`. Đây là ràng buộc cứng.
 
 **Vì sao SEO mặc định nằm ở `Website` chứ không thành bảng `SiteSettings` riêng:** chỉ có 5 trường và luôn 1:1. Bảng riêng chỉ thêm một join mà không thêm khả năng nào.
 

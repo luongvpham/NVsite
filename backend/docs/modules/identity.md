@@ -79,8 +79,8 @@ middleware tiếp tục resolve sai tenant tới khi cache tự hết hạn (t�
 - Ngoại lệ: `verify-email`/`reset-password` LUÔN dùng host cố định `api.vsite.vn` (03 §5) — context
   nằm trong chính token, không phụ thuộc Host header lúc bấm link email.
 - **CHƯA resolve được custom domain thật** (`spa-abc.com` bất kỳ) — chỉ nhãn-đầu-của-host khớp
-  `Shop.Slug` (đúng cho Path `vsite.vn/{slug}` lẫn Subdomain `{slug}.vsite.vn`, và dev qua hosts
-  file `{slug}.vsite.local`). Custom domain cần bảng `ShopDomain` (module Shop đầy đủ) để match
+  `Shop.Slug` (đúng cho Subdomain `{slug}.vsite.vn` và dev qua hosts file `{slug}.vsite.local`;
+  chế độ Path `vsite.vn/{slug}` đã bỏ — #104). Custom domain cần bảng `ShopDomain` (module Shop đầy đủ) để match
   CHÍNH XÁC domain — deferred, xem mục "Lệch có chủ đích" bên dưới.
 - Test dev: thêm entry hosts file Windows (`C:\Windows\System32\drivers\etc\hosts`), vd.
   `127.0.0.1 spa-abc.vsite.local`, gọi thẳng `http://spa-abc.vsite.local:5270/api/auth/login` — Kestrel
@@ -148,7 +148,7 @@ tài khoản dùng được = `User.Status = Active` (`User.CanSignIn`).
 - **Chưa có Social Login thật** (Google/Facebook/Zalo, Quyết định #6) — bảng `ExternalLogin` đã tạo
   đủ schema (rẻ, không cần chờ), nhưng luồng OAuth/callback/handoff-code là task riêng SAU khi
   module `Shop` đầy đủ tồn tại (cần `ShopDomain` để tra callback URL theo slug).
-- **Tenant Resolution Middleware ĐÃ có, nhưng thu hẹp** (Quyết định #7) — chỉ Path/Subdomain qua
+- **Tenant Resolution Middleware ĐÃ có, nhưng thu hẹp** (Quyết định #7) — chỉ Subdomain qua
   `Shop.Slug` (xem mục riêng phía trên). Custom domain (`ShopDomain`, Caddy On-Demand TLS #9) vẫn
   deferred tới khi module Shop đầy đủ tồn tại.
 - **`UserShop` không có navigation `Shop` qua base class** — `TenantAuditableEntity`

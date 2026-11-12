@@ -11,19 +11,19 @@
 |---|---|---|---|
 | **Main** | `vsite.vn` (tìm kiếm, bản đồ, landing SEO) | code thường | — |
 | **Shop Profile** | `vsite.vn/shop/{slug}` | vsite, mẫu thống nhất | ✅ |
-| **Shop Site** | `spa-abc.com`, `{slug}.vsite.vn`, `vsite.vn/{slug}` | `builder-renderer` (Component Tree) | ❌ tuyệt đối không |
+| **Shop Site** | `{slug}.vsite.vn`, `spa-abc.com` | `builder-renderer` (Component Tree) | ❌ tuyệt đối không |
 
 ⚠️ **Shop Profile ≠ Shop Site.** Đây là chỗ dễ nhầm nhất — thấy "trang của shop" là dễ với tay sang `builder-renderer`. Shop Profile **không** dùng `builder-renderer`, nó là code thường như Main.
 
 ## SEO (Quyết định #10)
 
-- Mỗi shop chỉ có **một** primary domain (bảng `ShopDomain`). Hai dạng còn lại phải **301 redirect** về primary.
+- Mỗi shop chỉ có **một** primary domain (bảng `ShopDomain`). Domain còn lại phải **301 redirect** về primary.
 - `<link rel="canonical">` luôn trỏ về primary domain.
 - `robots.txt` + `sitemap.xml` sinh riêng theo tenant, chỉ chứa primary URL.
 
-## Tenant resolution (Quyết định #7)
+## Tenant resolution (Quyết định #7, #104)
 
-Middleware/loader phải resolve `TenantContext { ShopId, DomainKind, BasePath }` theo thứ tự: custom domain → subdomain → path-based → platform route. Không tự đoán tenant bằng cách khác.
+Tenant resolve **chỉ theo Host**, theo thứ tự: custom domain → subdomain `{slug}.vsite.vn` → platform route. Không có chế độ path `vsite.vn/{slug}` — đừng đọc slug shop từ path. Không tự đoán tenant bằng cách khác.
 
 ## SSR
 
@@ -39,7 +39,7 @@ Middleware/loader phải resolve `TenantContext { ShopId, DomainKind, BasePath }
 
 Import trực tiếp từ `config/reserved-routes.json` (Vite hỗ trợ import JSON native). **Không viết tay danh sách thứ hai** — lệch với BE là lỗi routing/bảo mật thật (Quyết định #24).
 
-Tenant resolution theo host/path đọc từ chính file đó.
+Tenant resolution theo host đọc từ chính file đó.
 
 ---
 
@@ -92,6 +92,6 @@ contracts/openapi/*.json  ──pnpm gen:api (Orval)──→  packages/api-sdk/
 
 ---
 
-## Phase 1 — chưa có Shop Site
+## Thứ tự dựng (#96)
 
-Ở Phase 1, `apps/web` chỉ có **Main** và **Shop Profile**. `builder-renderer` và Shop Site là Phase 2. Đừng scaffold sẵn route cho builder.
+Shop Site được code **trước** (Bước 8c ở `DesignIdeal/step.md`), Main và Shop Profile code sau (M3–M4) — dù về đợt ra mắt thì Main/Profile là Phase 1. Đừng scaffold sẵn route của bước chưa tới.

@@ -8,7 +8,7 @@
 `Website` → `Theme` → `Page` → `PageDraft` (backend) đã code: tạo website trắng, API metadata trang, `GET`/`PUT`
 draft có `version`, validate **toàn tree** mỗi lần `PUT`. **Chưa** có publish/rollback (8b), `NavigationConfig` (7),
 bảng `*_translation` (#98), `CurrentPublicationId`/`SeedTemplateId`. Contract `website.v1`/`media.v1` đã qua Gate 1 và promote
-(`contracts/openapi/`, `luongpham`); chờ Gate 2. Brief cho FE: `Docs/tasks/WEBSITE-001/brief.md`. Lệch so với `05` và mục "Chưa làm xong":
+(`contracts/openapi/`, `luongpham`); đã merge `master`, Gate 2 đóng 2026-11-12. Brief cho FE: `Docs/tasks/WEBSITE-001/brief.md`. Lệch so với `05` và mục "Chưa làm xong":
 `Docs/tasks/WEBSITE-001/changelog.md`.
 
 ## Đừng nhầm: Shop Site vs Shop Profile

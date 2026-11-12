@@ -1,4 +1,4 @@
-# WEBSITE-003 — review (change-reviewer, trước Gate 2)
+# WEBSITE-003 — review (change-reviewer; Gate 2 duyệt 2026-11-12)
 
 Range `cf4efbd..76d1020`. Reviewer chỉ đọc, không chạy test.
 
@@ -9,7 +9,7 @@ Range `cf4efbd..76d1020`. Reviewer chỉ đọc, không chạy test.
 | I1 | Important | Preview chung query key draft với editor nhưng không `gcTime: 0` → cache draft cũ sống 5 phút | ✅ `gcTime: 0` + test |
 | I2 | Important | Anchor không cuộn được vì wrapper `display: contents` | ✅ cuộn tới `firstElementChild` + test |
 | M1–M11 | Minor | Xem changelog "Chưa làm xong / theo dõi" mục 5 | hoãn |
-| W1–W3 | Warning | Follow-up chưa ai theo dõi; banner plan; #11 chưa ghi lệch | W1/W2 ✅ ghi changelog + banner plan; W3 còn mở (DECISIONS #11 chưa ghi lệch `{slug}.vsite.vn`) |
+| W1–W3 | Warning | Follow-up chưa ai theo dõi; banner plan; #11 chưa ghi lệch | W1/W2 ✅ ghi changelog + banner plan; W3 ✅ đã giải quyết bằng #104 (người thêm) + DECISIONS #11 |
 
 ## Ma sát quy trình
 | Ma sát | Nguyên cớ gốc | Mức | Bằng chứng | Đề xuất |

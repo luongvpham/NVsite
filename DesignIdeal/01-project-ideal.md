@@ -1,6 +1,6 @@
 # vsite — Ý Tưởng Dự Án
 
-> **STATUS:** `STABLE` · **Tasks:** `—` · **Changelog:** `—` · **Stale:** `—`
+> **STATUS:** `STABLE` · **Tasks:** `DESIGN-ROADMAP-002` · **Changelog:** `—` · **Stale:** `—`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 
 > Nền tảng tìm kiếm dịch vụ địa phương theo vị trí, kèm công cụ giúp chủ shop tự tạo website riêng bằng kéo-thả và AI Chat.
@@ -47,7 +47,7 @@ vsite có hai sản phẩm bán được **độc lập với nhau**. Đây là 
 
 Shop dùng vsite để tạo và vận hành website riêng. Website đó **độc lập hoàn toàn với vsite về mặt nội dung**: khách vào `spa-abc.com` thấy đó là website của tiệm spa, không thấy dấu vết vsite.
 
-Với tên miền dạng đường dẫn (`vsite.vn/spa-abc`) hoặc tên miền phụ (`spa-abc.vsite.vn`) thì địa chỉ vẫn để lộ vsite — đây là đánh đổi của gói rẻ, và cũng là động lực tự nhiên để shop nâng cấp lên tên miền riêng.
+Với tên miền phụ (`spa-abc.vsite.vn`) thì địa chỉ vẫn để lộ vsite — đây là đánh đổi của gói rẻ, và cũng là động lực tự nhiên để shop nâng cấp lên tên miền riêng.
 
 ### Luồng 2 — Phí đăng tin trên vsite.vn
 
@@ -127,7 +127,7 @@ Gồm **ba** loại nội dung khác nhau, cần phân biệt rõ vì rất dễ
 |---|---|---|---|
 | Trang chung vsite | `vsite.vn` — tìm kiếm, bản đồ, landing page khu vực | vsite | — |
 | **Trang hồ sơ shop** | `vsite.vn/shop/{slug}` | **vsite** (mẫu thống nhất, không phải builder) | ✅ |
-| **Website của shop** | `spa-abc.com` · `spa-abc.vsite.vn` · `vsite.vn/{slug}` | **shop** (output của builder) | ❌ |
+| **Website của shop** | `spa-abc.vsite.vn` · `spa-abc.com` | **shop** (output của builder) | ❌ |
 
 Hai dòng cuối là hai thứ hoàn toàn khác nhau. Trang hồ sơ là nơi đánh giá tồn tại và là trang duy nhất mà shop `ExternalOnly` có trên vsite. Website shop là sản phẩm shop trả tiền để sở hữu.
 
@@ -195,46 +195,49 @@ Với shop `ExternalOnly`, Portal ở chế độ **rút gọn**: chỉ tin đă
 | Data Binding | Component tự lấy dữ liệu thật từ shop (danh sách dịch vụ) — **không bao giờ** lấy `Review` của vsite | Phase 2 |
 | Preview & Publish | Xem trước rồi mới xuất bản | Phase 2 |
 | Undo / Redo | Hoàn tác nhiều bước | Phase 2 |
-| Tên miền phụ (`spa-abc.vsite.vn`) | Địa chỉ gọn hơn dạng đường dẫn | Phase 2 |
-| **AI Chat Builder** | Tạo và chỉnh sửa website bằng câu lệnh tiếng Việt | Phase 3 |
+| Tên miền phụ (`spa-abc.vsite.vn`) | Địa chỉ mặc định của mọi website shop | Phase 2 |
+| **AI tạo website** | Shop trả lời một form câu hỏi theo lĩnh vực, AI dựng bản demo từ template: trang, nội dung, dịch vụ / sản phẩm mẫu | Phase 2 |
+| **AI Chat Builder** | Chỉnh sửa website đã có bằng câu lệnh tiếng Việt | Phase 2 |
 | Tên miền riêng | Kết nối domain của shop, tự động cấp SSL | Phase 3 |
 | Marketplace Template | Kho template mở rộng | Phase 4 |
 
-### 5.4 AI Chat Builder — Chi tiết
+### 5.4 AI trong Builder — Chi tiết
 
-Đây là tính năng khác biệt hóa lớn nhất của sản phẩm.
+Đây là tính năng khác biệt hóa lớn nhất của sản phẩm. AI có **hai chế độ**, dùng nối tiếp nhau (Quyết định #105).
 
-**Cách hoạt động dưới góc nhìn người dùng:**
+**Chế độ 1 — Tạo website (một lần, lúc bắt đầu):**
 
 ```
-Chủ shop gõ:  "Tạo website cho tiệm spa của tôi, tông màu tím,
-               có phần khách hàng nói gì về tôi"
+Chủ shop chọn lĩnh vực  →  trả lời form câu hỏi của lĩnh vực đó
         ↓
-AI vừa nói vừa dựng, người dùng thấy website mọc lên từng phần:
-   "Đang thêm phần đầu trang..."      → Hero xuất hiện
-   "Đang thêm danh sách dịch vụ..."   → ServiceGrid xuất hiện
-   "Đang thêm phần đánh giá..."       → Testimonials xuất hiện
+AI lấy template của lĩnh vực + câu trả lời, dựng bản demo:
+   viết lại nội dung, bỏ / đổi thứ tự section, chọn theme,
+   tạo sẵn dịch vụ (hoặc sản phẩm) mẫu
         ↓
-Hiện 2 nút:  [✓ Giữ thay đổi]   [✗ Hoàn tác]
+Chủ shop mở bản nháp trong editor, sửa tiếp bằng kéo-thả hoặc chat
 ```
 
-**Chỉnh sửa từng phần:** Chủ shop click chọn một khối bất kỳ trên bản xem trước, rồi gõ *"đổi ảnh nền tối hơn"* — AI biết chính xác đang sửa khối nào, không cần đoán.
+- **Form câu hỏi là dữ liệu, thay đổi theo lĩnh vực** (Quyết định #107). Lĩnh vực phổ biến có form soạn sẵn (AI sinh, developer duyệt); lĩnh vực lạ thì AI sinh form lúc đó. Kiểu trường là tập đóng.
+- **Template theo lĩnh vực** cũng do AI sinh trước và developer duyệt. AI không dựng từ trang trắng mà biến đổi template.
+- **Shop có hàng hoá** tải lên một file mẫu đã điền (danh mục, thuộc tính và thuộc tính nào dùng để lọc, sản phẩm, biến thể). File đó là đầu vào để AI dựng shop.
+- **Nội dung demo thuộc trách nhiệm của shop** (Quyết định #106): vsite không cảnh báo và không chặn publish. Shop tự rà nội dung trước khi đưa ra công chúng.
+
+**Chế độ 2 — Chat sửa (sau khi đã có website):** Chủ shop click chọn một khối bất kỳ trên bản xem trước, rồi gõ *"đổi ảnh nền tối hơn"* — AI biết chính xác đang sửa khối nào, không cần đoán. Sau mỗi lượt hiện hai nút `[✓ Giữ thay đổi]` `[✗ Hoàn tác]`.
 
 **Nguyên tắc trải nghiệm:**
 - AI chỉ lắp ghép từ thư viện component có sẵn, không tự bịa giao diện lạ
-- Mọi thay đổi đều ở dạng nháp, xem trước rồi mới lưu
+- Mọi thay đổi trên trang đều ở dạng nháp, xem trước rồi mới lưu
 - Khi không chắc chắn, AI hỏi lại thay vì đoán bừa
 - Một câu lệnh = một bước hoàn tác
 
 ### 5.5 Mini-website của shop (đầu ra của Builder)
 
-Website được dựng ra có thể truy cập qua ba dạng địa chỉ:
+Website được dựng ra có thể truy cập qua hai dạng địa chỉ (Quyết định #104 — không có dạng đường dẫn `vsite.vn/spa-abc`):
 
 | Dạng | Ví dụ | Dành cho |
 |---|---|---|
-| Đường dẫn | `vsite.vn/spa-abc` | Mặc định, đã gồm trong gói website (Luồng 1) |
-| Tên miền phụ | `spa-abc.vsite.vn` | Shop muốn địa chỉ gọn hơn |
-| Tên miền riêng | `spa-abc.com` | Shop có thương hiệu riêng |
+| Tên miền phụ | `spa-abc.vsite.vn` | Mặc định, đã gồm trong gói website (Luồng 1) |
+| Tên miền riêng | `spa-abc.com` | Shop có thương hiệu riêng (Phase 3) |
 
 Tính năng trên mini-website: giới thiệu shop, danh sách dịch vụ kèm giá, thư viện ảnh, **lời chứng thực khách hàng (shop tự nhập)**, thông tin liên hệ và bản đồ, form liên hệ / đặt lịch.
 
@@ -260,7 +263,7 @@ Hàng hóa             Theme                 AI Chat
 **Hệ quả thực tế:**
 - Shop thêm dịch vụ mới → website tự cập nhật, không cần sửa giao diện
 - Shop đổi template → toàn bộ dữ liệu giữ nguyên
-- AI chỉ thao tác trên Component Tree, không bao giờ đụng vào dữ liệu kinh doanh
+- AI chat sửa chỉ thao tác trên Component Tree, không đụng vào dữ liệu kinh doanh. Ngoại lệ duy nhất là **lượt tạo website ban đầu**: AI được tạo dịch vụ / sản phẩm mẫu cho bản demo (Quyết định #106)
 
 ### 6.2 Website lưu dưới dạng cấu trúc, không lưu HTML
 
@@ -306,12 +309,12 @@ Tìm kiếm theo vị trí trên bản đồ, **tin đăng (Listing)**, trang h�
 >
 > **Kiểm duyệt là hạng mục vận hành có chi phí người thật**, không phải tính năng làm xong là xong — tin đăng xuất hiện trên landing page SEO của chính vsite, nên nội dung rác làm hỏng uy tín nền tảng chứ không riêng shop.
 
-### Phase 2 — Website Builder (kéo-thả)
-Quản lý dịch vụ & hàng hoá, template theo ngành, kéo-thả, theme, publish, tên miền phụ. Kèm: lưu yêu thích, landing page SEO theo khu vực, ảnh trong đánh giá (khi đủ điều kiện ở `04` §6.7).
+### Phase 2 — Website Builder (kéo-thả + AI)
+Quản lý dịch vụ & hàng hoá, template theo ngành, kéo-thả, theme, publish, tên miền phụ, AI tạo website từ form câu hỏi, AI chat sửa. Kèm: lưu yêu thích, landing page SEO theo khu vực, ảnh trong đánh giá (khi đủ điều kiện ở `04` §6.7).
 **Mục tiêu:** Chứng minh chủ shop tự dựng được website mà không cần hỗ trợ.
 
-### Phase 3 — AI Chat + Tên miền riêng
-AI Chat Builder, custom domain + SSL tự động, đặt lịch/booking.
+### Phase 3 — Tên miền riêng + Đặt lịch
+Custom domain + SSL tự động, đặt lịch/booking.
 **Mục tiêu:** Hạ rào cản xuống mức thấp nhất, mở rộng sang nhóm shop lớn.
 
 ### Phase 4 — Mở rộng

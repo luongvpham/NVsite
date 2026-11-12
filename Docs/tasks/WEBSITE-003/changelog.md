@@ -1,5 +1,7 @@
 # WEBSITE-003 — changelog (lệch so với plan)
 
+> **Đã đóng 2026-11-12** — nghiệm thu tay (trình duyệt, BE thật) + Gate 2 do người duyệt. Review: [`review.md`](review.md).
+
 ## T1 — createResolveUrl / matchSiteUrl / API RenderTree
 - `RenderTree` bọc context mới **gộp với context của Provider bên ngoài** (`{...parent, ...}`), không thay thế — để `mediaMap`/`resolveImage` của canvas không mất. Plan không nói rõ.
 - `locale`/`defaultLocale` mặc định `'vi'`/`'vi'` trong context (không prefix locale khi không truyền).
@@ -31,7 +33,7 @@
 - I1: `gcTime: 0` cho draft trang khác trong preview (test cache). I2: anchor cuộn tới `firstElementChild` của wrapper `display: contents` (test).
 
 ## Chưa làm xong / theo dõi
-1. **Nghiệm thu tay trên trình duyệt với BE thật** (T5): mở preview, bấm link qua lại, trang tắt, theme đang chỉnh, anchor cuộn thật — chưa chạy (cần người + BE + trình duyệt).
+1. ~~Nghiệm thu tay trên trình duyệt với BE thật~~ ✅ người đã chạy 2026-11-12.
 2. Route `san-pham` dùng chung ProductListing/ProductDetail (xem T1) — xem lại khi Phase 2 bật seed.
 3. Anchor `#nodeId` trên site thật (8b): renderer không render `id` cho node; preview tự bọc wrapper. 8b phải quyết định.
 4. 8b: năm © phải do server tính rồi truyền xuống client (tránh lệch hydrate).
