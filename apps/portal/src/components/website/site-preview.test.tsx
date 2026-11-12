@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { treeEnvelopeSchema } from '@vsite/builder-components';
 import { createEditorStore, PageKind, type EditorStore } from '@vsite/builder-core';
+import { getGetPageDraftQueryKey } from '@vsite/api-sdk';
 import { server } from '../../test/msw-server';
 import { renderWithQuery } from '../../test/render-with-query';
 import { SitePreview } from './site-preview';
@@ -120,6 +121,7 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
+  Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
   server.events.removeAllListeners();
   vi.restoreAllMocks();
 });
@@ -226,5 +228,24 @@ describe('SitePreview — xem trước toàn trang (WEBSITE-003 T4)', () => {
     fireEvent.click(await screen.findByRole('link', { name: 'Đi' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Không tìm thấy trang');
     expect(screen.getByRole('dialog').querySelector('header')).toHaveTextContent('Spa ABC');
+  });
+
+  it('draft trang khác không nằm lại cache sau preview (gcTime 0) — không làm hỏng editor mở lại trang đó (review I1)', async () => {
+    const { queryClient } = setup(heroTree('x', { kind: 'page', pageId: 'p-about' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Đi' }));
+    await screen.findByText('Nội dung trang giới thiệu');
+    const query = queryClient.getQueryCache().find({ queryKey: getGetPageDraftQueryKey('shop-1', 'p-about') });
+    expect(query?.gcTime).toBe(0);
+  });
+
+  it('link anchor cuộn tới phần tử có box, không phải wrapper display:contents (review I2)', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    setup(heroTree('x', { kind: 'anchor', nodeId: 'c_hero1' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Đi' }));
+    expect(scroll).toHaveBeenCalledTimes(1);
+    const target = scroll.mock.contexts[0] as HTMLElement;
+    expect(target.id).not.toBe('c_hero1');
+    expect(target.parentElement?.id).toBe('c_hero1');
   });
 });

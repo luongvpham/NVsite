@@ -110,9 +110,14 @@ export function SitePreview({
         window.open(href, '_blank', 'noopener,noreferrer');
         return;
       case 'anchor':
-        // jsdom không có scrollIntoView — kiểm ở runtime.
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        document.getElementById(match.nodeId)?.scrollIntoView?.({ behavior: 'smooth' });
+        {
+          // Wrapper `display: contents` không có box nên scrollIntoView lên nó không làm gì — cuộn tới phần tử con đầu tiên.
+          const wrapper = document.getElementById(match.nodeId);
+          const target = wrapper?.firstElementChild ?? wrapper;
+          // jsdom không có scrollIntoView — kiểm ở runtime.
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          target?.scrollIntoView?.({ behavior: 'smooth' });
+        }
         return;
       case 'page':
         navigate(match.enabled ? { pageId: match.pageId } : { pageId: notFoundId, notice: 'disabled' });

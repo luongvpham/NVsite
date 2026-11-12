@@ -29,7 +29,15 @@ export function usePreviewPage(opts: {
   const isEditing = pageId === editingPageId;
 
   const query = useGetPageDraft(shopId, pageId ?? '', {
-    query: { enabled: pageId !== null && !isEditing, retry: false, staleTime: 0, refetchOnWindowFocus: false },
+    query: {
+      enabled: pageId !== null && !isEditing,
+      retry: false,
+      staleTime: 0,
+      refetchOnWindowFocus: false,
+      // Cùng query key với editor (gcTime: 0 ở EditorShell). TanStack lấy gcTime = max các observer, nên preview mà giữ
+      // mặc định 5 phút sẽ để lại bản draft cũ trong cache → mở lại editor trang đó trong 5 phút ra cây + version cũ (409 giả).
+      gcTime: 0,
+    },
   });
 
   const parsed = useMemo(

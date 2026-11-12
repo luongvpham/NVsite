@@ -24,4 +24,15 @@
 - Link `anchor`: mỗi node được bọc `<div id={node.id} style="display:contents">` (qua `decorateNode`) để `#nodeId` cuộn tới được. Wrapper không ảnh hưởng bố cục nhưng có thêm một phần tử DOM so với site thật.
 - "← Trang trước" lưu cả `notice`; quay lại thì dải báo của màn trước được khôi phục. Trang `NotFound` chưa tồn tại (`pageId = null`) → thân trang trống + dải báo.
 - Escape đóng preview bằng listener `document` của lớp phủ; phím tắt soạn trang (`useEditorShortcuts`) nhận cờ `enabled=false` khi preview mở.
-- Trang đích ≠ trang đang sửa dùng `staleTime: 0` + không `gcTime: 0` — chỉ đọc, không có ràng buộc "version" như editor.
+- Trang đích ≠ trang đang sửa dùng `staleTime: 0` + `gcTime: 0` (sửa sau review I1: ban đầu để mặc định vì "chỉ đọc" — sai, vì chung query key với editor và TanStack lấy gcTime lớn nhất nên cache draft cũ sống 5 phút, mở lại editor ra cây/version cũ).
+
+## Sau review (C1, C2, I1, I2)
+- C1/C2: banner `05`/`07` thêm WEBSITE-003 (Tasks, Changelog, Stale) + `pnpm gen:doc-index`.
+- I1: `gcTime: 0` cho draft trang khác trong preview (test cache). I2: anchor cuộn tới `firstElementChild` của wrapper `display: contents` (test).
+
+## Chưa làm xong / theo dõi
+1. **Nghiệm thu tay trên trình duyệt với BE thật** (T5): mở preview, bấm link qua lại, trang tắt, theme đang chỉnh, anchor cuộn thật — chưa chạy (cần người + BE + trình duyệt).
+2. Route `san-pham` dùng chung ProductListing/ProductDetail (xem T1) — xem lại khi Phase 2 bật seed.
+3. Anchor `#nodeId` trên site thật (8b): renderer không render `id` cho node; preview tự bọc wrapper. 8b phải quyết định.
+4. 8b: năm © phải do server tính rồi truyền xuống client (tránh lệch hydrate).
+5. Minor hoãn của review: M1 (lịch sử lặp khi bấm link về trang đang xem), M2 (`setView` trong updater `setHistory`), M3 (`auxclick`/middle-click), M4 (focus trap lớp phủ), M5 (lọc scheme trước `window.open`), M6 (unmount root hydrate trong test), M7 (fixture liệt kê tay), M8 (thiếu test themeDraft / systemPage có trang nhưng tắt), M9 (comment `context.tsx` còn "vsite.vn/{slug}"), M10 (message lint dùng chung cho apps/web), M11 (RenderTree bỏ qua basePath khi không có `pages`).

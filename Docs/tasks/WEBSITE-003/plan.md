@@ -1,6 +1,6 @@
 # WEBSITE-003 — builder-renderer hoàn thiện + preview toàn trang (Bước 6)
 
-> **Đã chốt 2026-11-11 — chưa code** (người duyệt đồng ý plan + giả định G1–G6)
+> **Đã chốt 2026-11-11 — T1–T4 đã code (2026-11-12), chờ nghiệm thu tay + Gate 2** (người duyệt đồng ý plan + giả định G1–G6)
 >
 > **Lane C** (chỉ FE): màn mới + chạm nhiều package + chốt API renderer cho 8b; không chạm contract/Registry/config
 > → không Gate 1, chỉ Gate 2. Một session S2, T1 → T5.
