@@ -1,6 +1,6 @@
 # vsite — Component Manifest Schema & Codegen
 
-> **STATUS:** `IMPLEMENTED` · **Tasks:** `WEBSITE-002,BOOTSTRAP-002,MEDIA-001,TOOLING-001` · **Changelog:** `Docs/tasks/WEBSITE-002/changelog.md` · **Stale:** `Changelog trước WEBSITE-002: Docs/tasks/TOOLING-001/changelog.md · Changelog trước TOOLING-001: Docs/tasks/MEDIA-001/changelog.md · Changelog trước MEDIA-001: Docs/tasks/BOOTSTRAP-002/changelog.md (banner chỉ nhận một đường dẫn) · §7.2 nhãn "#67 cần xác nhận" (đã chốt) · §3 vị trí context · §9 route dev harness — /dev-registry đã XOÁ ở WEBSITE-002 F6, Inspector giờ chạy trong editor Portal (/shops/{shopId}/website/pages/{pageId}) · Inspector (WEBSITE-002): control lexical là editor Lexical thật tải lười (toolbar suy ra từ sanitize-profiles.json), thêm isFieldDisabled/invalidPaths, field color-token chọn theo themeColorKeys · §3 và §7.1 config/image-presets.json nay là {presets, surfaces} và resolveImage đã là bản thật, không còn stub · §7.4 binding.imagePresets đã code (xem Docs/tasks/MEDIA-001/changelog.md mục 4, 15)`
+> **STATUS:** `IMPLEMENTED` · **Tasks:** `WEBSITE-003,WEBSITE-002,BOOTSTRAP-002,MEDIA-001,TOOLING-001` · **Changelog:** `Docs/tasks/WEBSITE-003/changelog.md` · **Stale:** `Changelog trước WEBSITE-003: Docs/tasks/WEBSITE-002/changelog.md · §3/§7.3 `resolveUrl` không còn là stub (WEBSITE-003, #103): page/systemPage dựng URL qua createResolveUrl ở builder-components/src/site-url.ts · Changelog trước WEBSITE-002: Docs/tasks/TOOLING-001/changelog.md · Changelog trước TOOLING-001: Docs/tasks/MEDIA-001/changelog.md · Changelog trước MEDIA-001: Docs/tasks/BOOTSTRAP-002/changelog.md (banner chỉ nhận một đường dẫn) · §7.2 nhãn "#67 cần xác nhận" (đã chốt) · §3 vị trí context · §9 route dev harness — /dev-registry đã XOÁ ở WEBSITE-002 F6, Inspector giờ chạy trong editor Portal (/shops/{shopId}/website/pages/{pageId}) · Inspector (WEBSITE-002): control lexical là editor Lexical thật tải lười (toolbar suy ra từ sanitize-profiles.json), thêm isFieldDisabled/invalidPaths, field color-token chọn theo themeColorKeys · §3 và §7.1 config/image-presets.json nay là {presets, surfaces} và resolveImage đã là bản thật, không còn stub · §7.4 binding.imagePresets đã code (xem Docs/tasks/MEDIA-001/changelog.md mục 4, 15)`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
 > 📌 **§0 là nơi định nghĩa Quyết định `#59–#67`.** Câu "chép sang `02`" trong §0 đã lỗi thời — cố
@@ -70,7 +70,7 @@ Chép sang `02-tech-stack-and-decision.md` với số hiệu tương ứng.
 | Generator + 6 artifact sinh ra | `PageDraft`, autosave, API |
 | 4 manifest + 4 React component | Operations Engine thật (chỉ sinh `op-rules.ts` để bước 5 dùng) |
 | `builder-renderer` nhận tree JSON → React | Publish, `SitePublication`, cache |
-| `resolveImage()` / `resolveUrl()` **dạng stub** | Pipeline ảnh + `resolveImage()` thật (Bước 4, `08`) |
+| `resolveImage()` / `resolveUrl()` **dạng stub** (⚠️ `resolveUrl` đã thật từ WEBSITE-003, #103) | Pipeline ảnh + `resolveImage()` thật (Bước 4, `08`) |
 | Dev harness đọc fixture (ném đi) | Undo/redo, zundo, Selection Context |
 | Lock file + CI additive check | Binding Resolver thật (Bước 9) |
 
@@ -373,7 +373,7 @@ Ràng buộc chung cho cả hai profile:
 - `a[target="_blank"]` → **ép** thêm `rel="noopener noreferrer"` lúc sanitize
 - Sanitize **hai lần**: FE lúc nhập (UX), **BE lúc ghi** (bảo mật). BE là nơi quyết định — FE chỉ là tiện nghi
 
-**Vì sao whitelist chặt tới mức này:** ở chế độ path-based (`vsite.vn/{slug}`, Quyết định #7), XSS trên site của một shop là XSS trên `vsite.vn` — nghĩa là cookie của chính vsite bị lộ, kéo theo mọi shop khác. Đây cùng một lập luận với ràng buộc `TrackingSnippets` ở `05` §2, và cùng một kết luận: không cho HTML tự do.
+**Vì sao whitelist chặt tới mức này:** site shop ở `{slug}.vsite.vn` cùng *site* với `vsite.vn` và `admin.vsite.vn` (Quyết định #7). XSS trên site của một shop gửi được request kèm cookie `SameSite=Lax` sang Portal và đặt được cookie cho cả `.vsite.vn` — kéo theo mọi shop khác. Đây cùng một lập luận với ràng buộc `TrackingSnippets` ở `05` §2, và cùng một kết luận: không cho HTML tự do.
 
 Profile này dùng chung cho `Product.Description` và `Service.Description` (`06` §10 #4).
 
@@ -389,9 +389,9 @@ Lưu trong tree, discriminated union theo `kind`:
 { "kind": "anchor",          "nodeId": "c_a3f21" }
 ```
 
-**Không lưu URL đã dựng.** Renderer gọi `ctx.resolveUrl(link)`, hàm này biết `basePath` (#11) — cùng một tree render tại `vsite.vn/spa-abc` và tại `spa-abc.com` phải ra hai href khác nhau. Đây là invariant #11 và là lỗi agent vi phạm liên tục nếu không nói trước.
+**Không lưu URL đã dựng.** Renderer gọi `ctx.resolveUrl(link)`, hàm này biết `basePath` (#11) — cùng một tree render trong preview của Portal và tại `spa-abc.vsite.vn` phải ra hai href khác nhau. Đây là invariant #11 và là lỗi agent vi phạm liên tục nếu không nói trước.
 
-Ở Bước 2, `resolveUrl` stub trả `#` cho `page`/`systemPage`/`productCategory` (chưa có DB), trả thẳng `url` cho `external`, trả `#${nodeId}` cho `anchor`.
+Ở Bước 2, `resolveUrl` stub trả `#` (⚠️ đã thay bằng `createResolveUrl` ở WEBSITE-003, #103 — chỉ còn là mặc định khi `RenderTree` không nhận `pages`) cho `page`/`systemPage`/`productCategory` (chưa có DB), trả thẳng `url` cho `external`, trả `#${nodeId}` cho `anchor`.
 
 ### 7.4 `binding` — whitelist tường minh (#65)
 

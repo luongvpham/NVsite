@@ -1,9 +1,9 @@
 # vsite — Tech Stack & Quyết Định Đã Chốt
 
-> **STATUS:** `INCOMPLETE_DOC` · **Tasks:** `REFACTOR-API-001,DESIGN-ROADMAP-001` · **Changelog:** `Docs/tasks/REFACTOR-API-001/changelog.md` · **Stale:** `Không chứa #40–#67, #69–#86 và #88 — xem DECISIONS.md · đường dẫn API (vd. api.vsite.vn/auth/...) thực tế có prefix /api: /api/auth/... (Quyết định #91)`
+> **STATUS:** `INCOMPLETE_DOC` · **Tasks:** `REFACTOR-API-001,DESIGN-ROADMAP-001,DESIGN-ROADMAP-002` · **Changelog:** `Docs/tasks/REFACTOR-API-001/changelog.md` · **Stale:** `Không chứa #40–#67, #69–#86 và #88 — xem DECISIONS.md · đường dẫn API (vd. api.vsite.vn/auth/...) thực tế có prefix /api: /api/auth/... (Quyết định #91)`
 > **Cửa vào:** [`00-INDEX.md`](00-INDEX.md)
 >
-> ⚠️ **File này KHÔNG chứa toàn bộ quyết định.** Ở đây có `#1–#39` và `#68`.
+> ⚠️ **File này KHÔNG chứa toàn bộ quyết định.** Ở đây có `#1–#39`, `#68` và `#104` (viết đè lên #7).
 > `#40–#58` nằm ở `05` §0, `#59–#67` nằm ở `07` §0, `#69–#86` và `#88` nằm ở `08` §0.
 > **Tra quyết định luôn bắt đầu từ [`DECISIONS.md`](DECISIONS.md)**, đừng quét file này.
 
@@ -133,7 +133,7 @@ immer      — immutable update Component Tree
 
 | | Shop Profile | Shop Site |
 |---|---|---|
-| URL | `vsite.vn/shop/{slug}` | `spa-abc.com` · `spa-abc.vsite.vn` · `vsite.vn/{slug}` |
+| URL | `vsite.vn/shop/{slug}` | `spa-abc.vsite.vn` · `spa-abc.com` |
 | Render bởi | vsite (mẫu thống nhất, code thường) | `builder-renderer` (Component Tree) |
 | Ai kiểm soát nội dung | vsite | shop |
 | Hiển thị `Review` | ✅ | ❌ **tuyệt đối không** |
@@ -264,23 +264,27 @@ Việc migrate về sau không quá đau vì user store (ASP.NET Core Identity) 
 
 ---
 
-### Quyết định #7 — Multi-tenancy hỗ trợ cả 3 chế độ domain ⭐
+### Quyết định #7 — Multi-tenancy theo domain: subdomain + custom domain ⭐
 
-**Chốt:** Hỗ trợ đồng thời path-based, subdomain, và custom domain.
+**Chốt (#104):** Shop Site chỉ sống trên **domain của riêng nó**. Không có chế độ path `vsite.vn/{slug}`.
 
 | Dạng | Ví dụ | Đối tượng |
 |---|---|---|
-| Path | `vsite.vn/spa-abc` | Mặc định, mọi shop |
-| Subdomain | `spa-abc.vsite.vn` | Shop muốn địa chỉ gọn |
+| Subdomain | `spa-abc.vsite.vn` | Mặc định, mọi shop `Hosted` |
 | Custom domain | `spa-abc.com` | Shop có thương hiệu riêng |
+
+**Vì sao không có path-mode:** site shop ở `vsite.vn/{slug}` chạy trên chính origin của vsite — một lỗ
+XSS ở site của một shop là XSS trên `vsite.vn`. Tách theo domain thì trình duyệt tự cô lập origin, và
+toàn bộ `vsite.vn/*` thuộc về nền tảng (tìm kiếm, `vsite.vn/shop/{slug}`, landing SEO) mà không tranh
+namespace với slug shop.
 
 **Schema `ShopDomain`:**
 
 ```
 id
 shop_id
-kind          : enum { Path, Subdomain, Custom }
-value         : "spa-abc" | "spa-abc" | "spa-abc.com"
+kind          : enum { Subdomain, Custom }
+value         : "spa-abc" | "spa-abc.com"
 is_primary    : bool   -- chỉ 1 primary per shop
 verification  : enum { Pending, Verified, Failed }
 verify_token  : TXT record value (cho Custom)
@@ -293,11 +297,10 @@ created_at
 ```
 [1] Host KHÔNG thuộc *.vsite.vn     → tra ShopDomain (kind=Custom, Host)
 [2] Host = {slug}.vsite.vn          → tra ShopDomain (kind=Subdomain, slug)
-[3] Host = vsite.vn, path đầu={slug}→ tra ShopDomain (kind=Path, slug)
-[4] Không match                     → route của platform
+[3] Không match                     → route của platform
 
-→ TenantContext { ShopId, DomainKind, BasePath }
-→ Cache Redis: host+path → shop_id, invalidate khi đổi domain
+→ TenantContext { ShopId, DomainKind }
+→ Cache Redis: host → shop_id, invalidate khi đổi domain
 ```
 
 **Database:** Shared schema + `tenant_id`. Không dùng schema-per-tenant (nhiều shop nhỏ, chi phí vận hành sẽ quá cao).
@@ -349,7 +352,7 @@ Khi có TLS handshake tới domain lạ → Caddy gọi `/internal/tls-check?dom
 
 **Chốt:** `builder-renderer` nhận `basePath` từ context. Mọi component sinh link **phải** đi qua helper `resolveUrl()`.
 
-**Lý do:** Cùng một Component Tree, khi render tại `vsite.vn/spa-abc` thì mọi link nội bộ phải prefix `/spa-abc`; khi render tại `spa-abc.com` thì prefix rỗng.
+**Lý do:** Cùng một Component Tree được render ở hai nơi. Trên site thật (`spa-abc.vsite.vn`, `spa-abc.com`) prefix rỗng; trong preview của Portal (`/shops/{id}/website/preview`) mọi link nội bộ phải mang prefix của route preview. Quy tắc ghép URL: #103.
 
 **⚠️ Đây là invariant phải ghi rõ trong CLAUDE.md của `builder-renderer`** — loại lỗi mà AI agent sẽ vi phạm liên tục nếu không được nói trước. **Tuyệt đối không hardcode `href` trực tiếp trong component.**
 
@@ -606,7 +609,7 @@ Năm invariant dưới đây được trích dẫn ở nơi khác bằng ký hi�
 
 ⚠️ **`shop` là bắt buộc** (mới thêm): trang hồ sơ shop nằm tại `vsite.vn/shop/{slug}`. Nếu không reserve, một shop có thể đăng ký slug `shop` và chiếm mất toàn bộ nhánh URL này.
 
-**Vì sao trang hồ sơ không nằm ở `vsite.vn/{slug}`:** chỗ đó đã bị chiếm bởi website shop dùng `ShopDomain(kind = Path)` (Quyết định #7). Xung đột thật, phải tách nhánh. Website shop thắng vì đó là thứ shop trả tiền để sở hữu.
+**Vì sao trang hồ sơ không nằm ở `vsite.vn/{slug}`:** gốc `vsite.vn/*` dành cho route của nền tảng (tìm kiếm, landing SEO khu vực). Đặt slug shop ngay ở gốc thì mỗi route mới của nền tảng đều có thể đụng một slug đã cấp. Gom mọi trang hồ sơ dưới `/shop/` thì chỉ cần reserve một nhánh.
 
 ---
 
@@ -753,7 +756,7 @@ Lỗ hổng cũ không nằm ở *chỗ chứa credential*, mà ở chỗ **cred
 | Domain | `ShopId` resolve từ | Audience | Role authorize |
 |---|---|---|---|
 | `vsite.vn` | — (platform) | `vsite-main` | `User.RoleId` (Scope=Platform) |
-| `{slug}.vsite.vn` · custom domain · `vsite.vn/{slug}` | Host / path (Quyết định #7) | `shop:{shopId}` | `UserShop(userId, shopId).RoleId` |
+| `{slug}.vsite.vn` · custom domain | Host (Quyết định #7) | `shop:{shopId}` | `UserShop(userId, shopId).RoleId` |
 | `admin.vsite.vn` | **Route param** `/shops/{shopId}/...` | `vsite-portal` | `UserShop(userId, shopId).RoleId` |
 
 **Vì sao Portal khác:** Portal là platform domain phục vụ nhiều shop qua shop switcher → `TenantContext` **không** resolve được từ host. Đây là trường hợp duy nhất `ShopId` không đến từ host, phải ghi rõ để không ai suy diễn nhầm là "lấy từ body cũng được".
@@ -950,7 +953,7 @@ Năm mục dưới đây được trích dẫn ở nơi khác bằng ký hiệu 
 
 **#39.2 — Tên app cũ bị xoá hẳn.** `customer-web` / `shop-admin` / `website-builder` chỉ được nhắc tới như *lịch sử* trong Quyết định #22. Mọi chỗ khác dùng `apps/web` và `apps/portal`.
 
-**#39.3 — URL trang hồ sơ shop là `vsite.vn/shop/{slug}`**, không phải `vsite.vn/{slug}` — chỗ đó thuộc về website shop (`ShopDomain.kind = Path`). Áp dụng cho cả `04-listing-and-review-design.md` §2.1 và §5.
+**#39.3 — URL trang hồ sơ shop là `vsite.vn/shop/{slug}`**, không phải `vsite.vn/{slug}` — gốc `vsite.vn/*` dành cho route của nền tảng (website shop nằm ở domain riêng của nó, #104). Áp dụng cho cả `04-listing-and-review-design.md` §2.1 và §5.
 
 **#39.4 — Quyền ghi `Review`:**
 

@@ -318,7 +318,7 @@ https://spa-abc.com/media/shops/77/products/9c1e…/thumb_5b7d….webp
 
 | Nguyên tắc | Lý do |
 |---|---|
-| **`media` là reserved route** trong `config/reserved-routes.json` (#8, #24) | Chế độ path-based `vsite.vn/{slug}`: không shop nào được lấy slug `media`, và route trang không bao giờ đè lên ảnh |
+| **`media` là reserved route** trong `config/reserved-routes.json` (#8, #24) | Không trang nào của Shop Site được lấy slug `media` (key `reservedShopSitePaths`), nên route trang không bao giờ đè lên ảnh |
 | Tầng phía trước (.NET / Caddy) chuyển `/media/*` thẳng về object storage, **không** qua xử lý ảnh | Không có image proxy runtime (#53) — chỉ phục vụ file tĩnh. Đặt CDN phía trước sau này không đổi URL |
 | DB lưu **đường dẫn tương đối**, **không** lưu URL có domain | Cùng một ảnh dùng được trên mọi domain của shop; đổi hạ tầng không phải rewrite `SitePublication.Snapshot` (#41) |
 | Tree lưu `imageId`, **không** lưu `StorageKey` | Một lớp gián tiếp: đổi được cấu trúc thư mục của ảnh website |

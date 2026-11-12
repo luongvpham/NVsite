@@ -321,11 +321,11 @@ Trang hồ sơ **gộp hiển thị** đánh giá của tất cả `Listing` đa
 
 | | Trang hồ sơ vsite | Website shop |
 |---|---|---|
-| URL | `vsite.vn/shop/{slug}` | `spa-abc.com` · `spa-abc.vsite.vn` · `vsite.vn/{slug}` (nếu domain kind = Path) |
+| URL | `vsite.vn/shop/{slug}` | `spa-abc.vsite.vn` · `spa-abc.com` |
 | Ai kiểm soát nội dung | vsite | shop (builder) |
 | Có đánh giá | ✅ | ❌ |
 
-⚠️ **Xung đột URL — đã chốt:** shop `Hosted` dùng `ShopDomain(kind = Path)` có website tại đúng `vsite.vn/{slug}`. Website shop thắng (đó là thứ shop trả tiền để sở hữu); **trang hồ sơ nằm ở `vsite.vn/shop/{slug}`**, và `shop` đã được đưa vào `reservedPaths` của `config/reserved-routes.json` (Quyết định #24 — là nguồn duy nhất, Quyết định #8 không còn giữ danh sách riêng).
+⚠️ **URL — đã chốt:** website shop nằm ở domain riêng của nó (#104), còn gốc `vsite.vn/*` dành cho route của nền tảng. **Trang hồ sơ nằm ở `vsite.vn/shop/{slug}`**, và `shop` đã được đưa vào `reservedPaths` của `config/reserved-routes.json` (Quyết định #24 — là nguồn duy nhất, Quyết định #8 không còn giữ danh sách riêng).
 
 ---
 

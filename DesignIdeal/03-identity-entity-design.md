@@ -511,7 +511,7 @@ User **Zalo-only không có mật khẩu** ở bất kỳ scope nào → recover
 | Domain | `ShopId` resolve từ | Token audience | Role dùng để authorize |
 |---|---|---|---|
 | `vsite.vn` | — (platform, không có tenant) | `vsite-main` | `User.RoleId` (Platform) |
-| `spa-abc.vsite.vn`<br>`spa-abc.com`<br>`vsite.vn/spa-abc` | Host / path — Quyết định #7 | `shop:{shopId}` | `UserShop(userId, shopId).RoleId` |
+| `spa-abc.vsite.vn`<br>`spa-abc.com` | Host — Quyết định #7 | `shop:{shopId}` | `UserShop(userId, shopId).RoleId` |
 | `admin.vsite.vn` | **Route param** `/shops/{shopId}/...` | `vsite-portal` | `UserShop(userId, shopId).RoleId` |
 
 **Vì sao Portal phải resolve `ShopId` từ route:** Portal là platform domain phục vụ nhiều shop qua shop switcher — `TenantContext` **không** resolve được từ host. Đây là trường hợp duy nhất `ShopId` không đến từ host, nên phải ghi rõ để không ai suy diễn nhầm là "lấy từ body cũng được".
