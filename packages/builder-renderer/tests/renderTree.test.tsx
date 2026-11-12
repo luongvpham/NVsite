@@ -111,4 +111,47 @@ describe('RenderTree — render fixture ra HTML (§9, §14 2.6/2.7)', () => {
     const heroSection = screen.getByText('Chào mừng đến Spa ABC').closest('section');
     expect(heroSection?.style.backgroundImage).toContain('/_dev/placeholder/1600x900,cover.svg');
   });
+
+  describe('API site: basePath/locale/pages (WEBSITE-003 T1, #103)', () => {
+    const heroWithPageCta = JSON.parse(JSON.stringify(homeTree)) as ComponentNode;
+    const findCta = (n: ComponentNode): Record<string, unknown> | null => {
+      const cta = (n.props as { cta?: Record<string, unknown> } | undefined)?.cta;
+      if (cta) return cta;
+      for (const c of n.children ?? []) {
+        const r = findCta(c);
+        if (r) return r;
+      }
+      return null;
+    };
+    const cta = findCta(heroWithPageCta);
+    if (!cta) throw new Error('fixture thiếu cta');
+    cta.target = { kind: 'page', pageId: 'p-about' };
+    const pages = [{ id: 'p-about', slug: 'gioi-thieu', systemType: null, isEnabled: true }];
+
+    it('truyền pages → CTA page ra href theo #103 (basePath + locale)', () => {
+      render(
+        <RenderTree tree={heroWithPageCta} basePath="/x" locale="en" defaultLocale="vi" pages={pages} />,
+      );
+      expect(screen.getByText('Đặt lịch ngay').closest('a')).toHaveAttribute('href', '/x/en/gioi-thieu');
+    });
+
+    it('không truyền pages → "#" như cũ', () => {
+      render(
+        <RenderContextProvider>
+          <RenderTree tree={heroWithPageCta} />
+        </RenderContextProvider>,
+      );
+      expect(screen.getByText('Đặt lịch ngay').closest('a')).toHaveAttribute('href', '#');
+    });
+
+    it('giữ mediaMap/resolveImage của Provider bên ngoài khi RenderTree bọc thêm context', () => {
+      render(
+        <RenderContextProvider value={{ resolveImage: () => '/outer.svg' }}>
+          <RenderTree tree={heroWithPageCta} pages={pages} />
+        </RenderContextProvider>,
+      );
+      const heroSection = screen.getByText('Chào mừng đến Spa ABC').closest('section');
+      expect(heroSection?.style.backgroundImage).toContain('/outer.svg');
+    });
+  });
 });

@@ -74,7 +74,7 @@ lệch có chủ đích.**
 | 4.x | Dọn nền: nghiệm thu tay `08` §9 (phần ImageSharp CVE đã xong — SEC-IMAGESHARP-001) | ✅ MEDIA-001-ACCEPT (2026-10-13) — còn L2/L3 chờ quyết định, xem `Docs/tasks/MEDIA-001-ACCEPT/changelog.md` |
 | 5a | `Website` → `Theme` → `Page` → `PageDraft` — BE, validate toàn tree khi `PUT` | ✅ WEBSITE-001 — đã merge `master`; 5b nghiệm thu tay trên chính BE này. Gate 2 đóng 2026-11-12 khi rà roadmap. Quy ước `ShopId`: #99 |
 | 5b | Operations Engine + editor Portal | ✅ WEBSITE-002 (2026-11-11: nghiệm thu tay với BE thật + Gate 2 + `review.md`) — Operations Engine (`builder-core`), editor, autosave/409, Theme panel (CSS vars), Lexical RichText, khung crop preset. Việc theo dõi sau review: §4 dòng WEBSITE-002 |
-| 6 | `builder-renderer` hoàn thiện (`basePath`, `locale`, SSR↔CSR) + preview toàn trang | 🟡 WEBSITE-003 — code xong T1–T4, chờ nghiệm thu tay + Gate 2 |
+| 6 | `builder-renderer` hoàn thiện (`basePath`, `locale`, SSR↔CSR) + preview toàn trang | ✅ WEBSITE-003 (đã đóng 2026-11-12) |
 | 8b | `SitePublication` + publish/rollback + endpoint đọc công khai (BE) | ⬜ ⚠️ chốt trước: mô hình đọc công khai theo Host; cache/TTL (`05` §25 #4) tính cả dữ liệu bind |
 | 8c | `apps/web` render công khai + cache (FE) | ⬜ — sau bước này là **mốc review #96–#98** |
 | 7 | `NavigationConfig` | ⬜ |

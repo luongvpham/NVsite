@@ -32,6 +32,7 @@ import { EditorCanvas } from './editor-canvas';
 import { EditorDnd } from './editor-dnd';
 import { useThemeDraft } from '../../hooks/use-theme-draft';
 import { AutosaveStatus, ConflictDialog, LeavePrompt, LeaveThemeTabPrompt, ValidationBanner } from './autosave-ui';
+import { SitePreview } from './site-preview';
 import { ThemePanel } from './theme-panel';
 
 /**
@@ -106,7 +107,9 @@ function EditorSession({
   const workingTree = useStore(store, (s) => s.tree);
   const { mediaMap, addAsset } = useMediaMap(shopId, workingTree);
 
-  useEditorShortcuts(store);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  // Đang xem trước thì phím tắt soạn trang (Delete/Ctrl+Z) không được tác động lên cây phía sau lớp phủ.
+  useEditorShortcuts(store, !previewOpen);
 
   const { controller, state: autosave } = useAutosave({
     store,
@@ -140,7 +143,10 @@ function EditorSession({
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
-      <Toolbar store={store} autosave={autosave} controller={controller} />
+      <Toolbar store={store} autosave={autosave} controller={controller} onPreview={() => { setPreviewOpen(true); }} />
+      {previewOpen && (
+        <SitePreview shopId={shopId} pageId={pageId} store={store} onClose={() => { setPreviewOpen(false); }} />
+      )}
       <ValidationBanner state={autosave} />
       <ConflictDialog state={autosave} controller={controller} />
       {blocker.status === 'blocked' && <LeavePrompt onStay={blocker.reset} onLeave={blocker.proceed} />}
@@ -215,10 +221,12 @@ function Toolbar({
   store,
   autosave,
   controller,
+  onPreview,
 }: {
   store: EditorStore;
   autosave: AutosaveState;
   controller: AutosaveController;
+  onPreview: () => void;
 }) {
   const canUndo = useStore(store.temporal, (s) => s.pastStates.length > 0);
   const canRedo = useStore(store.temporal, (s) => s.futureStates.length > 0);
@@ -253,6 +261,9 @@ function Toolbar({
       >
         Làm lại
       </Button>
+      <Button type="button" variant="outline" size="sm" onClick={onPreview}>
+        Xem trước
+      </Button>
       <AutosaveStatus state={autosave} controller={controller} />
     </div>
   );
@@ -267,8 +278,9 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 /** Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y (undo/redo) và Delete (xoá khối đang chọn) — bỏ qua khi đang gõ trong ô nhập. */
-function useEditorShortcuts(store: EditorStore) {
+function useEditorShortcuts(store: EditorStore, enabled: boolean) {
   useEffect(() => {
+    if (!enabled) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
 
@@ -295,7 +307,7 @@ function useEditorShortcuts(store: EditorStore) {
     return () => {
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [store]);
+  }, [store, enabled]);
 }
 
 const propertyPanels = propertyPanel as Record<string, PropertyPanelField[]>;
