@@ -3,9 +3,11 @@ import localesJson from '../../../config/locales.json';
 import themeTokensJson from '../../../config/theme-tokens.json';
 
 /**
- * Shape VỎ của hai document JSONB (WEBSITE-001 S0-T2, #94, #97):
- *   - Tree:   `{ schemaVersion, id:"root", type:"Page", children[] }`, node `{ id, type, variant?, props?, children?, i18n? }`
- *   - Tokens: `{ schemaVersion, colors, typography, shape, spacing }` (05 §3)
+ * Shape VỎ của ba document JSONB (WEBSITE-001 S0-T2, WEBSITE-004 S0-T2, #94, #97):
+ *   - Tree:     `{ schemaVersion, id:"root", type:"Page", children[] }`, node `{ id, type, variant?, props?, children?, i18n? }`
+ *   - Tokens:   `{ schemaVersion, colors, typography, shape, spacing }` (05 §3)
+ *   - Snapshot: document bất biến publish sinh ra (plan §4 WEBSITE-004) — tái dùng vỏ Tree + Tokens,
+ *               thêm `version`, `locales`, `navigation`, `seo`, `tracking`, `media`, `pages[]`.
  *
  * Vỏ chỉ kiểm CẤU TRÚC. `type`/`variant`/`props` của node KHÔNG kiểm ở đây (đó là việc của
  * `generated/tree-rules.json` + `props-schemas.json`, #60); `schemaVersion` chỉ kiểm là số nguyên >= 1

@@ -35,7 +35,9 @@ Vỏ `SiteSnapshot` v1 bằng Zod + JSON Schema (Bước 8b, S0, codegen, #94, #
   `media[*]` = `{ storageKey, preset|null }`. Thêm instance `siteSnapshotSchema` + type `SiteSnapshot`.
 - `packages/builder-components/scripts/gen-registry.ts` — ghi thêm artifact
   `generated/site-snapshot.schema.json` (cạnh `tree-envelope`/`theme-tokens`); log "12 artifact".
-- `packages/builder-components/src/index.ts` — export `siteSnapshotSchema` + type `SiteSnapshot`.
+- `packages/builder-components/src/index.ts` — export công khai `siteSnapshotSchema` (value) + type
+  `SiteSnapshot` (dòng 13–14) để Bước 8c (SSR `apps/web` parse `GET /api/site`) import được từ
+  `@vsite/builder-components`. (Bổ sung sau review Critical — commit gốc thiếu bước này.)
 - `packages/builder-components/tests/site-snapshot-schema.test.ts` (mới) — 31 ca khẳng định Zod ↔ JSON
   Schema đồng ý: ví dụ §4 parse được; thiếu `pages[].id` → lỗi; `slug:null` hợp lệ; key lạ ở gốc/các cấp
   → lỗi; `navigation.items` rỗng hợp lệ; `theme.tokens` sai → lỗi; `defaultLocale`/`locales` ngoài config
@@ -44,10 +46,11 @@ Vỏ `SiteSnapshot` v1 bằng Zod + JSON Schema (Bước 8b, S0, codegen, #94, #
   `GENERATED_FILES` (kiểm determinism giữa hai lần chạy).
 
 **Kiểm chứng**
-- `pnpm --filter @vsite/builder-components test` → 535/535 passed (TDD: FAIL trước khi `gen:registry`, PASS sau).
+- `pnpm --filter @vsite/builder-components test` → 535/535 passed.
 - `pnpm gen:registry` → OK, 12 artifact, check-additive xanh, `registry.lock.json` không đổi.
-- `pnpm --filter @vsite/builder-components typecheck` sạch · `pnpm build` → 4/4 tasks OK (gồm `@vsite/web`
-  dùng index export mới).
+- `pnpm --filter @vsite/builder-components typecheck` sạch · `pnpm build` → 4/4 tasks OK. Chưa có app nào
+  import `SiteSnapshot`/`siteSnapshotSchema` (việc tiêu thụ là Bước 8c SSR `apps/web`); export chỉ mở sẵn
+  bề mặt API gói — build xanh xác nhận export biên dịch được, KHÔNG phải xác nhận `@vsite/web` đang dùng.
 - `generated/` gitignored nên `site-snapshot.schema.json` không vào commit — dựng lại bằng `pnpm gen:registry`.
 
 **Giả định**: `defaultLocale`/`locales` ràng buộc bằng enum từ `config/locales.json` (một nguồn, #17), đồng
