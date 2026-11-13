@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Vsite.Infrastructure.Website;
 
 namespace Vsite.IntegrationTests.Website;
@@ -90,6 +91,31 @@ public sealed class WebsiteConfigCatalogTests
         Assert.Equal(["Service", "ServiceGroup"], catalog.Types["ServiceGrid"].Props["source"].Sources);
         Assert.Equal("image", catalog.Types["Gallery"].Props["items"].ItemProps!["image"].Kind);
         Assert.Equal(1, catalog.Types["Hero"].MaxPerPage);
+        Assert.Equal(["image", "title"], catalog.Types["Hero"].RequiresProps["Hero01"]);
+        Assert.Equal(["title"], catalog.Types["Hero"].RequiresProps["Hero02"]);
+    }
+
+    [Fact]
+    public void TreeRules_missing_requiresProps_throws_naming_the_file()
+    {
+        var merged = JsonNode.Parse(File.ReadAllText(Generated("tree-rules.json")))!.AsObject();
+        foreach (var (_, type) in merged["types"]!.AsObject())
+        {
+            type!.AsObject().Remove("requiresProps");
+        }
+
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}-tree-rules.json");
+        File.WriteAllText(path, merged.ToJsonString());
+        try
+        {
+            var ex = Assert.Throws<InvalidOperationException>(() => new TreeRulesCatalog(path));
+            Assert.Contains("tree-rules.json", ex.Message);
+            Assert.Contains("requiresProps", ex.Message);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]

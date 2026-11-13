@@ -426,12 +426,12 @@ public sealed class RequiredPropsChecker(ITreeRulesCatalog rules)
 Định nghĩa "thiếu": §4. Thêm hằng `TreeErrorCodes.RequiredPropMissing`. **Không** gọi checker trong `PUT draft`
 (draft dở dang là hợp lệ).
 
-- [ ] Test trước: `RequiredPropsCheckerTests.cs` — Hero01 thiếu `image` → 1 lỗi path `/children/0/props/image`;
+- [x] Test trước: `RequiredPropsCheckerTests.cs` — Hero01 thiếu `image` → 1 lỗi path `/children/0/props/image`;
   Hero02 không cần `image`; `title` chỉ có khoảng trắng → lỗi; richText `<p></p>` → lỗi; Gallery `items: []` → lỗi;
   node lồng trong Section báo đúng path; tree rỗng → không lỗi; cả 3 tree seed của `WebsiteSeeder` → không lỗi (R8);
   `SavePageDraftHandlerTests`: lưu draft thiếu prop bắt buộc **vẫn 200**.
   `WebsiteConfigCatalogTests.cs`: file thiếu `requiresProps` → ném lỗi nêu tên file.
-- [ ] FAIL → hiện thực → PASS · Commit `feat(website): kiểm requiresProps cho publish (WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS · Commit `feat(website): kiểm requiresProps cho publish (WEBSITE-004)`
 
 ### T4: Lệnh publish + endpoint
 

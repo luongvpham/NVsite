@@ -91,6 +91,21 @@ public sealed class SavePageDraftHandlerTests(PostgresFixture postgres) : IAsync
     }
 
     [Fact]
+    public async Task Save_draft_missing_a_required_prop_still_succeeds()
+    {
+        // RequiredPropsChecker (T3, WEBSITE-004) chỉ chạy khi publish; PUT draft dở dang vẫn hợp lệ.
+        // RichText01 với content rỗng = "thiếu content" khi publish, nhưng lưu draft phải trả 200.
+        var seeded = await AddWebsiteAsync(Cs);
+        await using var request = new Request(Cs, seeded.ShopId);
+        var before = await request.GetDraft(seeded.Home.Id);
+
+        var result = await request.SaveDraft(seeded.Home.Id, TreeWith(RichText("c_abc12", "<p></p>")), before.Version);
+
+        Assert.NotEqual(before.Version, result.Version);
+        Assert.True(result.IsDirty);
+    }
+
+    [Fact]
     public async Task Save_with_the_version_just_returned_works_again()
     {
         var seeded = await AddWebsiteAsync(Cs);

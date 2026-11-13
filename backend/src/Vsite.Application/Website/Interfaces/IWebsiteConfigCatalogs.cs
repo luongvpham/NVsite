@@ -72,6 +72,10 @@ public sealed record TreePropRule(
     IReadOnlyDictionary<string, TreePropRule>? ItemProps);
 
 /// <param name="AllowedChildTypes">null = không giới hạn (khi <paramref name="AcceptsChildren"/>).</param>
+/// <param name="RequiresProps">
+/// Tên các prop bắt buộc theo từng variant (8b, WEBSITE-004) — khoá = variant, giá trị = danh sách tên prop (đã sort).
+/// Chỉ dùng khi publish (<c>RequiredPropsChecker</c>), KHÔNG kiểm ở PUT draft. Mọi khoá là một variant trong <paramref name="Variants"/>.
+/// </param>
 public sealed record TreeTypeRule(
     bool AcceptsChildren,
     IReadOnlyList<string>? AllowedChildTypes,
@@ -79,7 +83,8 @@ public sealed record TreeTypeRule(
     int? MaxPerPage,
     IReadOnlyList<string> EditableInSystemPageProps,
     IReadOnlyList<string> Variants,
-    IReadOnlyDictionary<string, TreePropRule> Props);
+    IReadOnlyDictionary<string, TreePropRule> Props,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> RequiresProps);
 
 /// <summary>generated/tree-rules.json — luật op + bản đồ prop sinh từ manifest (#60).</summary>
 public interface ITreeRulesCatalog

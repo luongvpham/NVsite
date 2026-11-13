@@ -146,3 +146,38 @@ phát hiện 1 ở plan). `ValidateSiteSnapshot` chỉ dùng trong test/khởi �
 
 **Chưa làm (các task sau)**: RequiredPropsChecker (T3), lệnh/endpoint publish (T4), list/rollback (T5),
 `GET /api/site` + cache (T6), references (T8), docs module (T9).
+
+## T3
+
+`RequiredPropsChecker` — kiểm prop bắt buộc theo variant khi publish (Bước 8b, S1). Thuần, không chạm DB.
+Không có endpoint/DTO công khai mới → **không chạm contract**, không chạy contract-sync ở bước này.
+
+**Thay đổi**
+- `Vsite.Application/Website/Validation/TreeValidationResult.cs` (sửa) — thêm hằng
+  `TreeErrorCodes.RequiredPropMissing = "REQUIRED_PROP_MISSING"`.
+- `Vsite.Application/Website/Interfaces/IWebsiteConfigCatalogs.cs` (sửa) — `TreeTypeRule` thêm
+  `IReadOnlyDictionary<string, IReadOnlyList<string>> RequiresProps` (khoá = variant, giá trị = tên prop bắt buộc).
+  Nguồn: field `requiresProps` sinh ở S0-T1 trong `generated/tree-rules.json`.
+- `Vsite.Infrastructure/Website/ConfigCatalogs.cs` (sửa) — `TreeRulesCatalog` đọc `requiresProps`; `RawType` thêm field;
+  thiếu field trong file → `InvalidOperationException` nêu tên file (fail-fast như các catalog khác).
+- `Vsite.Application/Website/Publishing/RequiredPropsChecker.cs` (mới) — `Check(cleanTreeJson)` → danh sách
+  `TreeValidationError` mã `REQUIRED_PROP_MISSING`, `path = /…/props/{tên}`. Walker lặp (stack tường minh), chạy trên
+  `CleanTree` do validator trả (không lặp lại kiểm vỏ/cú pháp). Định nghĩa "thiếu" theo plan §4: key vắng/`null`;
+  `text` rỗng sau trim; `richText` không còn ký tự sau khi bỏ thẻ; `image` không có `imageId` chuỗi khác rỗng;
+  `list` 0 phần tử; `binding` không có `source`; kind khác chỉ tính vắng/`null`. **Không** gọi trong `PUT draft`.
+
+**Lệch có chủ đích**: không có (field `requiresProps` là additive từ S0-T1; checker thuần nội bộ).
+
+**Kiểm chứng** (Docker CÓ trên máy — chạy thật, không nợ test)
+- `dotnet test backend/tests/IntegrationTests --filter RequiredPropsCheckerTests|WebsiteConfigCatalogTests` → 33/33
+  passed (TDD: test trước). `RequiredPropsCheckerTests` thuần, **không cần Docker** (đọc artifact/config thật):
+  Hero01 thiếu image → 1 lỗi đúng path; Hero02 không cần image; text whitespace / richText `<p></p>` / list rỗng /
+  binding thiếu source → thiếu; props vắng hẳn → báo từng prop; node lồng báo đúng path; tree rỗng → không lỗi;
+  3 tree seed của `WebsiteSeeder` → không lỗi (R8). `WebsiteConfigCatalogTests`: `requiresProps` đọc đúng + thiếu
+  field → lỗi nêu tên file.
+- `dotnet test backend/tests/IntegrationTests --filter SavePageDraftHandlerTests` → 30/30 passed (Postgres thật):
+  thêm case lưu draft thiếu prop bắt buộc vẫn 200 (checker không chạy ở PUT draft).
+- `dotnet test backend/tests/ArchitectureTests` → 12/12 passed. `dotnet build backend/vsite.sln` → 0 error.
+
+**Chưa làm (các task sau)**: lệnh/endpoint publish (T4), list/rollback (T5), `GET /api/site` + cache (T6),
+references (T8), docs module (T9).
