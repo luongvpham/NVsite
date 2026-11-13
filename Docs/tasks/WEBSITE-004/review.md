@@ -42,3 +42,9 @@ _(để trống — chép từ "Ma sát — nháp từ burn" của batch file nh
 - **Warning 2:** banner `DesignIdeal/05` còn ghi `SitePublication` "chưa code" → phải sửa trước Gate 2 (ghi Nợ kỹ thuật).
 - **Ghi chú (vô hại):** `Website.Id` mất `.ValueGeneratedOnAdd()` trong snapshot do tham gia FK ghép — id luôn sinh ở domain (`Website.Create`), không phụ thuộc store.
 - **Vòng D:** không.
+
+## Burn 2026-11-13 — T2
+- **STATUS:** PASS
+- **change-reviewer:** Không có Critical, không có Warning. `SnapshotBuilder.Build` thuần (không chạm DB) — tenant lấy đúng shop là việc T4. Shape khớp đủ `generated/site-snapshot.schema.json` (field/nullable/required/additionalProperties). Enum serialize string (#19). `ValidateSiteSnapshot` + provider eager fail-fast ở Program.cs. `DocumentSchemaVersions.Snapshot=1`, `Current(kind)` switch, test phủ version/newer/current. Ranh giới module #1 OK.
+- **Suggestion (tuỳ chọn, cho T4):** thêm tiebreak `.ThenBy(p => p.Page.Id)` sau `SortOrder`/`Title` nếu muốn thứ tự xác định tuyệt đối khi trùng khoá — chốt cùng thứ tự query ở T4.
+- **Vòng D:** không.
