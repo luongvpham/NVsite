@@ -15,12 +15,16 @@ public sealed class WebsiteSchemaProvider : IWebsiteSchemaProvider
 
     private readonly JsonSchema _treeEnvelope;
     private readonly JsonSchema _themeTokens;
+    private readonly JsonSchema? _siteSnapshot;
     private readonly Dictionary<string, JsonSchema> _props;
 
-    public WebsiteSchemaProvider(string treeEnvelopePath, string themeTokensPath, string propsSchemasPath)
+    public WebsiteSchemaProvider(
+        string treeEnvelopePath, string themeTokensPath, string propsSchemasPath, string? siteSnapshotPath = null)
     {
         _treeEnvelope = Load(treeEnvelopePath);
         _themeTokens = Load(themeTokensPath);
+        // Vỏ SiteSnapshot tuỳ chọn: Program.cs nạp eager (fail-fast lúc startup); test cấu hình nhẹ bỏ qua được.
+        _siteSnapshot = siteSnapshotPath is null ? null : Load(siteSnapshotPath);
 
         var propsText = WebsiteConfigFile.ReadText(propsSchemasPath);
         JsonObject? root;
@@ -62,6 +66,12 @@ public sealed class WebsiteSchemaProvider : IWebsiteSchemaProvider
     public IReadOnlyList<SchemaViolation> ValidateTreeEnvelope(string json) => Evaluate(_treeEnvelope, json);
 
     public IReadOnlyList<SchemaViolation> ValidateThemeTokens(string json) => Evaluate(_themeTokens, json);
+
+    public IReadOnlyList<SchemaViolation> ValidateSiteSnapshot(string json) =>
+        Evaluate(
+            _siteSnapshot ?? throw new InvalidOperationException(
+                "WebsiteSchemaProvider được dựng không có site-snapshot.schema.json (siteSnapshotPath null)."),
+            json);
 
     public bool HasPropsSchema(string componentType) => _props.ContainsKey(componentType);
 

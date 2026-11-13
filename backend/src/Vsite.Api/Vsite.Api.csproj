@@ -57,12 +57,13 @@
     <None Include="..\..\..\packages\builder-components\generated\tree-envelope.schema.json" Link="generated\tree-envelope.schema.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\..\packages\builder-components\generated\theme-tokens.schema.json" Link="generated\theme-tokens.schema.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\..\packages\builder-components\generated\props-schemas.json" Link="generated\props-schemas.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\packages\builder-components\generated\site-snapshot.schema.json" Link="generated\site-snapshot.schema.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Artifact codegen của module Website — thiếu thì build dừng với thông báo rõ, thay vì MSB3030. -->
   <Target Name="EnsureWebsiteArtifacts" BeforeTargets="BeforeBuild;AssignTargetPaths">
     <ItemGroup>
-      <_WebsiteArtifact Include="tree-rules.json;tree-envelope.schema.json;theme-tokens.schema.json;props-schemas.json" />
+      <_WebsiteArtifact Include="tree-rules.json;tree-envelope.schema.json;theme-tokens.schema.json;props-schemas.json;site-snapshot.schema.json" />
       <_WebsiteArtifactMissing Include="@(_WebsiteArtifact)"
                                Condition="!Exists('$(MSBuildProjectDirectory)\..\..\..\packages\builder-components\generated\%(Identity)')" />
     </ItemGroup>

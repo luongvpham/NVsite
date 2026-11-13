@@ -105,3 +105,44 @@ Không chạm contract (chưa có endpoint/DTO công khai — đó là T4–T6) 
 
 **Chưa làm (các task sau trong WEBSITE-004)**: SnapshotBuilder (T2), RequiredPropsChecker (T3), lệnh/endpoint
 publish (T4), list/rollback (T5), `GET /api/site` + cache (T6), references (T8), docs module (T9).
+
+## T2
+
+`SnapshotBuilder` + `DocumentKind.Snapshot` (Bước 8b, S1, #94, #97). Thuần, không chạm DB. Không có endpoint/DTO
+công khai mới → **không chạm contract**, không chạy contract-sync ở bước này.
+
+**Thay đổi**
+- `Vsite.Application/Website/Publishing/SnapshotBuilder.cs` (mới) — `SnapshotPage(Page, string CleanTree)`,
+  `SnapshotMedia(Guid Id, string StorageKey, string? Preset)`, và `static string Build(website, theme, version,
+  pages, media)` dựng JSON vỏ `SiteSnapshot` v1 đúng shape plan §4. Pages xếp `SortOrder` rồi `Title`
+  (`StringComparer.Ordinal`); `pages[].id`/`ogImageId`/media key = GUID dạng `D` chữ thường (`Guid.ToString()`);
+  `tree` nhúng `CleanTree` nguyên văn (đã upcast/sạch do validator); `theme.tokens` + `tracking` nhúng nguyên văn
+  JSON đã lưu; `navigation.items = []` (NavigationConfig thật là Bước 7).
+- `Vsite.Application/Website/Versioning/DocumentVersioning.cs` (sửa) — `DocumentKind.Snapshot`,
+  `DocumentSchemaVersions.Snapshot = 1`, tham số ctor `snapshotCurrent`, `Current(kind)` đổi sang `switch` (ném
+  `ArgumentOutOfRangeException` cho kind lạ). `StoredDocuments.ReadCurrent` dùng chung khung — tự đọc được Snapshot,
+  không cần sửa (chưa có upcaster nào).
+- `Vsite.Application/Website/Interfaces/IWebsiteConfigCatalogs.cs` + `Vsite.Infrastructure/Website/WebsiteSchemaProvider.cs`
+  (sửa) — thêm `ValidateSiteSnapshot(json)`. Ctor của provider thêm tham số **tuỳ chọn** `siteSnapshotPath = null`
+  (nạp eager nếu có; gọi `ValidateSiteSnapshot` khi provider dựng không có schema → `InvalidOperationException`).
+  Tuỳ chọn để không vỡ 3 call-site test cấu hình nhẹ (TreeFixtures, PageTreeHardeningTests, WebsiteConfigCatalogTests).
+- `Vsite.Api/Program.cs` (sửa) — truyền path `site-snapshot.schema.json` (eager resolve lúc startup, fail-fast).
+- `Vsite.Api/Vsite.Api.csproj` (sửa) — link `site-snapshot.schema.json` ra `generated/` + thêm vào
+  `EnsureWebsiteArtifacts` (thiếu artifact → build dừng với thông báo rõ).
+- `backend/tests/.../WebsiteHandlerKit.cs` (sửa) — `S.Schemas` nay dựng kèm snapshot path (dùng cho T2 và sẵn cho
+  T4/T6).
+
+**Lệch có chủ đích**: không có (vỏ snapshot là additive, `05` §7 shape đã thay ở S0-T2; `pages[].id` đã ghi
+phát hiện 1 ở plan). `ValidateSiteSnapshot` chỉ dùng trong test/khởi động, KHÔNG nằm trên đường phục vụ `GET /api/site`
+(FE parse bằng Zod — plan §4).
+
+**Kiểm chứng**
+- `dotnet test backend/tests/IntegrationTests` lọc `SnapshotBuilderTests|SchemaVersioningTests` → 31/31 passed
+  (TDD: test trước). `SnapshotBuilderTests` thuần, **không cần Docker** (dựng entity trong bộ nhớ qua seeder thật,
+  validate bằng `site-snapshot.schema.json` thật). Phủ: hợp lệ theo schema (cả khi có media); shape cấp gốc; tokens
+  nhúng nguyên văn; pages có id + marker home/NotFound; thứ tự SortOrder→Title; bảng media key GUID thường + preset
+  null cho Library.
+- `dotnet build backend/src/Vsite.Api` → 0 error. `dotnet test backend/tests/ArchitectureTests` → 12/12 passed.
+
+**Chưa làm (các task sau)**: RequiredPropsChecker (T3), lệnh/endpoint publish (T4), list/rollback (T5),
+`GET /api/site` + cache (T6), references (T8), docs module (T9).

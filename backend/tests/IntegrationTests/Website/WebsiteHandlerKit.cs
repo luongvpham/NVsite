@@ -51,7 +51,8 @@ internal static class WebsiteHandlerKit
             Schemas = new WebsiteSchemaProvider(
                 TreeFixtures.Generated("tree-envelope.schema.json"),
                 TreeFixtures.Generated("theme-tokens.schema.json"),
-                TreeFixtures.Generated("props-schemas.json"));
+                TreeFixtures.Generated("props-schemas.json"),
+                TreeFixtures.Generated("site-snapshot.schema.json"));
             Versioning = new DocumentVersioning([]);
             Validator = TreeFixtures.CreateValidator(versioning: Versioning);
             ThemeValidator = new ThemeTokensValidator(Schemas, Versioning);

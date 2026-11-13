@@ -401,13 +401,13 @@ snapshot (chưa có upcaster nào). `WebsiteSchemaProvider` nạp `site-snapshot
 khác — [Program.cs:147-150](../../../backend/src/Vsite.Api/Program.cs#L147-L150)); `Vsite.Api.csproj` thêm file vào
 `EnsureWebsiteArtifacts` và link ra thư mục `generated`.
 
-- [ ] Test trước: `SnapshotBuilderTests.cs`
+- [x] Test trước: `SnapshotBuilderTests.cs`
   - snapshot dựng từ website seed hợp lệ theo `site-snapshot.schema.json`
   - `pages` có `id`, xếp theo `SortOrder` rồi `Title`; `NotFound` có `slug: null`; trang chủ `slug: ""`
   - `navigation.items` rỗng; `version` đúng tham số; `theme.tokens` nguyên văn tokens đã lưu
   - `media` đúng tập truyền vào, key là GUID dạng `D` chữ thường
   - `SchemaVersioningTests.cs`: snapshot `schemaVersion` lớn hơn hiện hành → `Unsupported`
-- [ ] FAIL → hiện thực → PASS · Commit `feat(website): SnapshotBuilder + schemaVersion cho Snapshot (#94, WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS · Commit `feat(website): SnapshotBuilder + schemaVersion cho Snapshot (#94, WEBSITE-004)`
 
 ### T3: `RequiredPropsChecker`
 

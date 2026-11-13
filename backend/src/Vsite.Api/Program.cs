@@ -90,7 +90,8 @@ builder.Services.AddSingleton<ITreeRulesCatalog>(_ => new TreeRulesCatalog(Path.
 builder.Services.AddSingleton<IWebsiteSchemaProvider>(_ => new WebsiteSchemaProvider(
     Path.Combine(websiteArtifactDir, "tree-envelope.schema.json"),
     Path.Combine(websiteArtifactDir, "theme-tokens.schema.json"),
-    Path.Combine(websiteArtifactDir, "props-schemas.json")));
+    Path.Combine(websiteArtifactDir, "props-schemas.json"),
+    Path.Combine(websiteArtifactDir, "site-snapshot.schema.json")));
 
 // Validate cây (T4/T5, WEBSITE-001): giới hạn cứng từ appsettings (G6), sanitizer richText, khung upcaster (#94).
 // Chưa có IDocumentUpcaster nào (phiên bản hiện hành = 1) — thêm bước nâng = AddSingleton<IDocumentUpcaster, ...>.

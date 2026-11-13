@@ -90,11 +90,15 @@ public interface ITreeRulesCatalog
 
 public sealed record SchemaViolation(string Path, string Message);
 
-/// <summary>JSON Schema sinh từ Zod/manifest (#60, #97): vỏ Tree, vỏ Tokens, props từng component.</summary>
+/// <summary>JSON Schema sinh từ Zod/manifest (#60, #97): vỏ Tree, vỏ Tokens, vỏ SiteSnapshot, props từng component.</summary>
 public interface IWebsiteSchemaProvider
 {
     IReadOnlyList<SchemaViolation> ValidateTreeEnvelope(string json);
     IReadOnlyList<SchemaViolation> ValidateThemeTokens(string json);
+
+    /// <summary>Vỏ <c>SiteSnapshot</c> v1 (8b). Chỉ dùng trong test/khởi động để khẳng định snapshot dựng ra hợp lệ —
+    /// không nằm trên đường phục vụ request công khai (FE parse bằng Zod). Ném nếu provider dựng không có schema này.</summary>
+    IReadOnlyList<SchemaViolation> ValidateSiteSnapshot(string json);
 
     bool HasPropsSchema(string componentType);
     IReadOnlyList<SchemaViolation> ValidateProps(string componentType, string propsJson);
