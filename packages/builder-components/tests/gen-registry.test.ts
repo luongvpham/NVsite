@@ -18,6 +18,7 @@ const GENERATED_FILES = [
   'derivative-presets.json',
   'tree-envelope.schema.json',
   'theme-tokens.schema.json',
+  'site-snapshot.schema.json',
   'tree-rules.json',
 ];
 

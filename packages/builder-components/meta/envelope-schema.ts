@@ -163,8 +163,136 @@ export function buildThemeTokensJsonSchema(config: ThemeTokensConfig): JsonSchem
 }
 
 // ---------------------------------------------------------------------------
+// Site Snapshot v1 (WEBSITE-004 S0-T2, #94, #97)
+// ---------------------------------------------------------------------------
+//
+// Vỏ của document JSONB bất biến mà publish sinh ra (plan §4). Chỉ kiểm CẤU TRÚC:
+//   - `tree` của từng trang tham chiếu vỏ Tree sẵn có; `theme.tokens` tham chiếu vỏ Tokens sẵn có.
+//   - `media` là map `imageId → { storageKey, preset }`; `preset = null` cho bản Library gốc.
+//   - `navigation.items` để rỗng ở 8b (NavigationConfig thật là Bước 7) nên items chỉ kiểm là mảng.
+//   - `tracking` là map mở (như `props` của node) — không ép khoá.
+// `additionalProperties: false` ở mọi cấp vỏ; `schemaVersion` chỉ kiểm là số nguyên >= 1 (so phiên bản
+// hiện hành là việc của upcaster BE, #94). Zod (FE) và JSON Schema (BE) dựng ĐỘC LẬP từ cùng config (#60).
+
+export function buildSiteSnapshotZod(locales: readonly string[], themeConfig: ThemeTokensConfig) {
+  const tree = buildTreeEnvelopeZod(locales);
+  const tokens = buildThemeTokensZod(themeConfig);
+  const localeEnum = z.enum(enumOf(locales, 'locales'));
+  const nullableString = z.string().nullable();
+
+  const mediaEntry = z.object({ storageKey: z.string(), preset: z.string().nullable() }).strict();
+  const pageSeo = z
+    .object({ title: nullableString, description: nullableString, ogImageId: nullableString, noIndex: z.boolean() })
+    .strict();
+  const page = z
+    .object({
+      id: z.string().min(1),
+      slug: z.string().nullable(),
+      kind: z.string().min(1),
+      systemType: z.string().nullable(),
+      title: z.string(),
+      seo: pageSeo,
+      tree,
+    })
+    .strict();
+
+  return z
+    .object({
+      schemaVersion: z.number().int().min(1),
+      version: z.number().int().min(1),
+      defaultLocale: localeEnum,
+      locales: z.array(localeEnum),
+      theme: z.object({ presetKey: nullableString, tokens }).strict(),
+      navigation: z.object({ items: z.array(z.unknown()) }).strict(),
+      seo: z
+        .object({
+          defaultTitle: nullableString,
+          defaultDescription: nullableString,
+          ogImageId: nullableString,
+          faviconAssetId: nullableString,
+        })
+        .strict(),
+      tracking: z.record(z.string(), z.unknown()),
+      media: z.record(z.string(), mediaEntry),
+      pages: z.array(page),
+    })
+    .strict();
+}
+
+export function buildSiteSnapshotJsonSchema(
+  locales: readonly string[],
+  themeConfig: ThemeTokensConfig,
+): JsonSchemaObject {
+  const treeSchema = buildTreeEnvelopeJsonSchema(locales);
+  const tokensSchema = buildThemeTokensJsonSchema(themeConfig);
+  // Nâng `node` của vỏ Tree lên `$defs` gốc; `treeEnvelope` giữ nguyên thân (children vẫn `$ref #/$defs/node`).
+  const { $defs: treeDefs = {}, $schema: _ts, $id: _ti, title: _tt, ...treeEnvelopeBody } = treeSchema;
+  const { $schema: _ks, $id: _ki, title: _kt, ...themeTokensBody } = tokensSchema;
+  const node = (treeDefs as JsonSchemaObject).node;
+
+  const nullableString = { type: ['string', 'null'] };
+  const strictObject = (properties: Record<string, unknown>): JsonSchemaObject => ({
+    type: 'object',
+    properties,
+    required: Object.keys(properties),
+    additionalProperties: false,
+  });
+
+  const localeEnum = { type: 'string', enum: [...locales] };
+
+  return {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $id: 'https://vsite.vn/schemas/site-snapshot.schema.json',
+    title: 'Site Snapshot v1 envelope (#94, #97)',
+    ...strictObject({
+      schemaVersion: { type: 'integer', minimum: 1 },
+      version: { type: 'integer', minimum: 1 },
+      defaultLocale: localeEnum,
+      locales: { type: 'array', items: localeEnum },
+      theme: strictObject({ presetKey: nullableString, tokens: { $ref: '#/$defs/themeTokens' } }),
+      navigation: strictObject({ items: { type: 'array' } }),
+      seo: strictObject({
+        defaultTitle: nullableString,
+        defaultDescription: nullableString,
+        ogImageId: nullableString,
+        faviconAssetId: nullableString,
+      }),
+      tracking: { type: 'object' },
+      media: {
+        type: 'object',
+        additionalProperties: strictObject({ storageKey: { type: 'string' }, preset: nullableString }),
+      },
+      pages: { type: 'array', items: { $ref: '#/$defs/page' } },
+    }),
+    $defs: {
+      node,
+      treeEnvelope: treeEnvelopeBody,
+      themeTokens: themeTokensBody,
+      page: strictObject({
+        id: { type: 'string', minLength: 1 },
+        slug: nullableString,
+        kind: { type: 'string', minLength: 1 },
+        systemType: nullableString,
+        title: { type: 'string' },
+        seo: strictObject({
+          title: nullableString,
+          description: nullableString,
+          ogImageId: nullableString,
+          noIndex: { type: 'boolean' },
+        }),
+        tree: { $ref: '#/$defs/treeEnvelope' },
+      }),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Instance dựng từ config thật của repo
 // ---------------------------------------------------------------------------
 
 export const treeEnvelopeSchema = buildTreeEnvelopeZod(localesJson);
 export const themeTokensSchema = buildThemeTokensZod(themeTokensJson);
+export const siteSnapshotSchema = buildSiteSnapshotZod(localesJson, themeTokensJson);
+
+/** Shape của document Snapshot bất biến (plan §4, WEBSITE-004). FE dùng để parse response `GET /api/site`. */
+export type SiteSnapshot = z.infer<typeof siteSnapshotSchema>;

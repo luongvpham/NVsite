@@ -334,10 +334,10 @@ tokens. `additionalProperties: false` ở mọi cấp vỏ. Export schema + type
 `gen-registry.ts` ghi `generated/site-snapshot.schema.json` (cạnh dòng ghi `tree-envelope.schema.json`,
 [gen-registry.ts:647](../../../packages/builder-components/scripts/gen-registry.ts#L647)).
 
-- [ ] Test trước: `packages/builder-components/tests/site-snapshot-schema.test.ts` — ví dụ ở §4 parse được;
+- [x] Test trước: `packages/builder-components/tests/site-snapshot-schema.test.ts` — ví dụ ở §4 parse được;
   thiếu `pages[].id` → lỗi; `slug: null` hợp lệ; key lạ ở gốc → lỗi; `navigation.items` rỗng hợp lệ.
-- [ ] FAIL → hiện thực → PASS · `pnpm gen:registry` · `pnpm build`
-- [ ] Commit `feat(builder-components): vỏ SiteSnapshot v1 bằng Zod + JSON Schema (#94, #97, WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS · `pnpm gen:registry` · `pnpm build`
+- [x] Commit `feat(builder-components): vỏ SiteSnapshot v1 bằng Zod + JSON Schema (#94, #97, WEBSITE-004)`
 
 ## 10. Session S1: Backend
 

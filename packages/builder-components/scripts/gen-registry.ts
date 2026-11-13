@@ -4,13 +4,14 @@
  *
  * Sinh artifact: component-types.ts, props-schemas.ts (Zod), props-schemas.json (JSON Schema, #60),
  * property-panel.ts, op-rules.ts, ai-tool-schema.json, registry-map.ts, derivative-presets.json (#86),
- * tree-envelope.schema.json + theme-tokens.schema.json (vỏ Tree/Tokens, #97), tree-rules.json (luật cây cho BE, #60).
+ * tree-envelope.schema.json + theme-tokens.schema.json + site-snapshot.schema.json (vỏ Tree/Tokens/Snapshot, #97),
+ * tree-rules.json (luật cây cho BE, #60).
  * check-additive vs registry.lock.json chạy trước khi ghi artifact. KHÔNG tự tạo/cập nhật lock —
  * việc đó là lệnh tường minh `pnpm registry:lock` (TOOLING-001).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { buildThemeTokensJsonSchema, buildTreeEnvelopeJsonSchema } from '../meta/envelope-schema';
+import { buildSiteSnapshotJsonSchema, buildThemeTokensJsonSchema, buildTreeEnvelopeJsonSchema } from '../meta/envelope-schema';
 import type { ComponentManifest } from '../meta/manifest-schema';
 import type { PropDef } from '../meta/prop-kinds';
 import { runCheckAdditive } from './check-additive';
@@ -616,6 +617,10 @@ function generateThemeTokensSchemaJson(): string {
   return JSON.stringify(buildThemeTokensJsonSchema(themeTokensConfig), null, 2) + '\n';
 }
 
+function generateSiteSnapshotSchemaJson(): string {
+  return JSON.stringify(buildSiteSnapshotJsonSchema(localesConfig, themeTokensConfig), null, 2) + '\n';
+}
+
 // ---------------------------------------------------------------------------
 
 async function main() {
@@ -647,8 +652,9 @@ async function main() {
   writeFileSync(path.join(GENERATED_DIR, 'derivative-presets.json'), generateDerivativePresets(manifests));
   writeFileSync(path.join(GENERATED_DIR, 'tree-envelope.schema.json'), generateTreeEnvelopeSchemaJson());
   writeFileSync(path.join(GENERATED_DIR, 'theme-tokens.schema.json'), generateThemeTokensSchemaJson());
+  writeFileSync(path.join(GENERATED_DIR, 'site-snapshot.schema.json'), generateSiteSnapshotSchemaJson());
 
-  console.log(`[gen-registry] OK — ${manifests.length} manifest, 11 artifact sinh ra tại generated/`);
+  console.log(`[gen-registry] OK — ${manifests.length} manifest, 12 artifact sinh ra tại generated/`);
 }
 
 main().catch((error: unknown) => {
