@@ -48,3 +48,9 @@ _(để trống — chép từ "Ma sát — nháp từ burn" của batch file nh
 - **change-reviewer:** Không có Critical, không có Warning. `SnapshotBuilder.Build` thuần (không chạm DB) — tenant lấy đúng shop là việc T4. Shape khớp đủ `generated/site-snapshot.schema.json` (field/nullable/required/additionalProperties). Enum serialize string (#19). `ValidateSiteSnapshot` + provider eager fail-fast ở Program.cs. `DocumentSchemaVersions.Snapshot=1`, `Current(kind)` switch, test phủ version/newer/current. Ranh giới module #1 OK.
 - **Suggestion (tuỳ chọn, cho T4):** thêm tiebreak `.ThenBy(p => p.Page.Id)` sau `SortOrder`/`Title` nếu muốn thứ tự xác định tuyệt đối khi trùng khoá — chốt cùng thứ tự query ở T4.
 - **Vòng D:** không.
+
+## Burn 2026-11-13 — T3
+- **STATUS:** PASS
+- **change-reviewer:** Không có Critical, không có Warning. `RequiredPropsChecker.IsMissing` khớp §4 từng kind (text whitespace, richText strip-tag, image imageId, list count>0, binding source). Đọc `requiresProps`/`kind` từ `generated/tree-rules.json` (một nguồn #17), không hardcode. Walk tree bằng stack, JSON-pointer có escape `~0/~1`, root Page không check. Ranh giới module #1 OK. Test phủ đủ nhánh + 3 seed tree (R8); SavePageDraft thiếu prop vẫn 200 (checker không chạy ở draft).
+- **Ghi chú (đúng spec):** `richText` không decode entity — `<p>&nbsp;</p>` tính là còn ký tự (hợp lệ), khớp nguyên văn §4.
+- **Vòng D:** không.
