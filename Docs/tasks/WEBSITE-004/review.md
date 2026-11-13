@@ -8,6 +8,9 @@ _(tổng hợp Critical/Warning còn mở sau burn — anh rà lại ở Gate 2)
 
 ## Nợ kỹ thuật
 - [S0-T1] `packages/builder-components/CLAUDE.md:58-59` vẫn ghi `requiresProps` "để dành cho Bước 5"; thực tế tiêu thụ ở Bước 8b. Reviewer đề xuất rà cùng T9 (tài liệu `backend/docs/modules/website.md`). Không chặn.
+- [S0-T2] Cập nhật DesignIdeal `05` §7 (shape snapshot "thay shape 05 §7") + banner STATUS — phạm vi đóng task (§11).
+- [T1] Comment XML doc đầu class `Vsite.Domain/Website/Entities/Website.cs` còn liệt kê `CurrentPublicationId (8b)` ở mục "chưa có" — nay đã thêm; cần bỏ dòng đó.
+- [T1] **Trước Gate 2:** banner `DesignIdeal/05-website-builder-and-product-design.md` còn ghi `SitePublication` ở mục "Chưa code (vẫn là spec)" — nay đã tạo entity + bảng. Phải bỏ khỏi "chưa code" + trỏ changelog trước Gate 2, nếu không thành Critical lúc nghiệm thu. (Thường gộp vào T9.)
 
 ## Điểm cần anh quyết
 _(để trống — anh điền ở Gate 2)_
@@ -30,4 +33,12 @@ _(để trống — chép từ "Ma sát — nháp từ burn" của batch file nh
 - **Sửa:** commit 3b9f7c7 — export schema (value) + `SiteSnapshot` (type) từ `src/index.ts`; sửa comment "hai vỏ → ba vỏ"; chỉnh changelog cho khớp sự thật. Test 535/535, build 4/4.
 - **change-reviewer lần 2:** Không có Critical, không có Warning. JSON Schema `$ref` resolve đúng (`node` nâng lên `$defs` gốc); Zod↔JSON Schema đồng ý; không chạm manifest/registry.lock/file generated.
 - **Lưu ý (không chặn):** cập nhật DesignIdeal `05` §7 (shape snapshot "thay shape 05 §7") + banner STATUS thuộc phạm vi đóng task (§11), không phải nợ của S0-T2.
+- **Vòng D:** không.
+
+## Burn 2026-11-13 — T1
+- **STATUS:** PASS-WITH-DEBT
+- **change-reviewer:** Không có Critical. Tenant #21 đúng (`SitePublication : TenantEntity`, Global Query Filter fail-closed, `Create()` nhận `shopId` qua tham số không từ body; test cross-tenant + tenant null phủ đủ). FK ghép `(website_id, shop_id)` và `(current_publication_id, id)` Restrict chặn cross-tenant + chặn xoá bản current ở tầng DB. Migration khớp entity/snapshot; FK vòng xử lý bằng hai SaveChanges. Mã lỗi domain có test. Ranh giới module #1 OK (`PublishedByUserId` là Guid thuần, không navigation sang Identity).
+- **Warning 1:** comment XML doc `Website.cs` còn ghi `CurrentPublicationId (8b)` ở "chưa có" → đã thêm, cần bỏ (ghi Nợ kỹ thuật).
+- **Warning 2:** banner `DesignIdeal/05` còn ghi `SitePublication` "chưa code" → phải sửa trước Gate 2 (ghi Nợ kỹ thuật).
+- **Ghi chú (vô hại):** `Website.Id` mất `.ValueGeneratedOnAdd()` trong snapshot do tham gia FK ghép — id luôn sinh ở domain (`Website.Create`), không phụ thuộc store.
 - **Vòng D:** không.
