@@ -1,4 +1,4 @@
-# vsite — Registry Quyết Định (#1–#107)
+# vsite — Registry Quyết Định (#1–#109)
 
 > **File này là CHỈ MỤC, không phải nội dung.** Mỗi dòng cho bạn biết quyết định đó nói gì trong một
 > câu, nó được **định nghĩa đầy đủ ở đâu**, và nó **đã thành code chưa**. Đọc dòng ở đây trước, rồi
@@ -12,7 +12,7 @@
 ## ⚠️ Đọc trước khi tra
 
 **Không phải quyết định nào cũng nằm trong `02`.** `02` định nghĩa **#1–#39** và **#68**.
-**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** và **#88** định nghĩa tại `08` §0, **#87** tại `backend/CLAUDE.md` §OpenAPI, **#89** tại `ai-agent-development-workflow.md` §6, **#102** tại `ai-agent-development-workflow.md` §6.1, **#90** tại `backend/docs/modules/identity.md` §Quyết định #90, **#91** tại `backend/CLAUDE.md` §OpenAPI, **#92**, **#94**, **#95**, **#97**, **#98** tại `05` §0, **#93** tại `04` §4.5, **#96** tại `step.md`, **#99**, **#100** tại `backend/docs/modules/website.md`, **#103** tại `Docs/tasks/WEBSITE-003/plan.md` §4, **#104** tại `02 §Quyết định #7` (viết đè lên #7), **#105**–**#107** tại `01` §5.4.
+**#40–#58** định nghĩa tại `05` §0, **#59–#67** định nghĩa tại `07` §0, **#69–#86** và **#88** định nghĩa tại `08` §0, **#87** tại `backend/CLAUDE.md` §OpenAPI, **#89** tại `ai-agent-development-workflow.md` §6, **#102** tại `ai-agent-development-workflow.md` §6.1, **#90** tại `backend/docs/modules/identity.md` §Quyết định #90, **#91** tại `backend/CLAUDE.md` §OpenAPI, **#92**, **#94**, **#95**, **#97**, **#98** tại `05` §0, **#93** tại `04` §4.5, **#96** tại `step.md`, **#99**, **#100** tại `backend/docs/modules/website.md`, **#103** tại `Docs/tasks/WEBSITE-003/plan.md` §4, **#104** tại `02 §Quyết định #7` (viết đè lên #7), **#105**–**#107** tại `01` §5.4, **#108**, **#109** tại `Docs/tasks/WEBSITE-004/plan.md` §4.
 Không chép các quyết định đó sang `02` — cố tình không làm. Chép sang `02` sẽ tạo bản
 sao thứ hai để lệch nhau; thay vào đó registry này trỏ thẳng tới nơi định nghĩa duy nhất.
 
@@ -147,6 +147,8 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#105** | **AI thuộc Phase 2, hai chế độ nối tiếp:** (1) *tạo website* — form câu hỏi + template của lĩnh vực → AI dựng bản demo; (2) *chat sửa* (#14–#16) dùng sau khi đã có website. AI luôn biến đổi một template đã duyệt, không dựng từ trang trắng. Shop dịch vụ trước (A0–A3), shop có sản phẩm sau `Product` (A4) | `01` §5.4 · bước ở `step.md` | 📐 bước A0–A4 |
 | **#106** | **Lượt tạo website ban đầu được ghi dữ liệu kinh doanh demo** (`Service`, `Product`, danh mục, thuộc tính) qua đúng handler mà Portal dùng; chat sửa thì **chỉ** sinh thao tác trên cây trang. Bản ghi do AI tạo mang dấu nội bộ (không hiện cho người dùng) để tạo lại / xoá dữ liệu mẫu; tạo lại chỉ khi shop chưa sửa tay và chưa publish. **Không cảnh báo, không chặn publish** nội dung demo — shop tự chịu trách nhiệm. Thay câu "AI không bao giờ đụng dữ liệu kinh doanh" ở `01` §6.1 | `01` §5.4 · §6.1 | 📐 bước A2, A4 |
 | **#107** | **Form câu hỏi và template là dữ liệu do AI sinh, developer duyệt.** Form có schema với tập kiểu trường đóng; lĩnh vực phổ biến dùng bộ soạn sẵn trong repo, lĩnh vực lạ thì AI sinh lúc chạy theo cùng schema. Template: AI sinh cây trang → developer sửa và duyệt bằng builder trên shop nội bộ → xuất. Shop có sản phẩm nộp thêm file mẫu (danh mục, thuộc tính có lọc hay không, sản phẩm, biến thể) | `01` §5.4 | 📐 bước 11, A1, A4 |
+| **#108** | **Mô hình đọc công khai của Shop Site.** Endpoint công khai nằm trên Host của shop, không có `shopId`/`host` ở path, query hay body. SSR `apps/web` lấy host từ URL gốc (subdomain hoặc domain riêng) rồi gọi BE với header `Host` bằng host đó; `TenantResolutionMiddleware` suy `ShopId`, handler chỉ chạy khi audience là `Shop` và đọc qua Global Query Filter — không `IgnoreQueryFilters()`, không helper xuyên shop. Một endpoint `GET /api/site` trả status + thông tin shop + toàn bộ snapshot đang publish, `ETag` + `If-None-Match` → 304. Không có endpoint công khai đọc theo số version (bản đã rollback không đọc được) | `Docs/tasks/WEBSITE-004/plan.md` §4 | 📐 Bước 8b (WEBSITE-004) |
+| **#109** | **Cache của Shop Site: cache dữ liệu, không cache HTML** (đóng `05` §25 mục 4). Con trỏ "shop → bản đang publish + status" ở Redis, xoá ngay khi publish/rollback, TTL chỉ là lưới an toàn. Snapshot bất biến, SSR giữ theo `ETag`. Dữ liệu bind sống (`Service`/`Product`, Bước 9) **không** nằm trong snapshot, đi endpoint riêng với TTL ngắn riêng. HTML không cache ở CDN | `Docs/tasks/WEBSITE-004/plan.md` §4 | 📐 Bước 8b (WEBSITE-004); phần bind ở Bước 9 |
 
 ---
 
