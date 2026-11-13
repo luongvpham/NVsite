@@ -494,6 +494,7 @@ function generateTreeRules(manifests: ComponentManifest[]): string {
       maxPerPage: m.maxPerPage,
       editableInSystemPageProps: collectEditableInSystemPagePaths(m.props),
       variants: m.variants.map((v) => v.key),
+      requiresProps: Object.fromEntries(m.variants.map((v) => [v.key, [...v.requiresProps].sort()])),
       props: propsToTreeRuleProps(m.props),
     };
   }

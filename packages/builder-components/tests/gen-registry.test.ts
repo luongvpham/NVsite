@@ -255,6 +255,7 @@ describe('tree-rules.json (WEBSITE-001 S0-T3, #60) — luật cây cho BE, sinh 
     maxPerPage: number | null;
     editableInSystemPageProps: string[];
     variants: string[];
+    requiresProps: Record<string, string[]>;
     props: Record<string, PropRule>;
   };
   type TreeRules = { schemaVersion: number; types: Record<string, TypeRule> };
@@ -286,6 +287,18 @@ describe('tree-rules.json (WEBSITE-001 S0-T3, #60) — luật cây cho BE, sinh 
     expect(rules.types.Gallery?.variants).toEqual(['Gallery01', 'Gallery02']);
     for (const [type, rule] of Object.entries(rules.types)) {
       expect(Object.keys(rule.props).sort(), `${type}.props`).toEqual(Object.keys(propsSchemas[type]?.properties ?? {}).sort());
+    }
+  }, 60_000);
+
+  it('requiresProps (WEBSITE-004 S0-T1): map variant → prop bắt buộc, mảng đã sort, key khớp variants', () => {
+    const rules = readTreeRules();
+    expect(rules.types.Hero?.requiresProps.Hero01).toEqual(['image', 'title']);
+    expect(rules.types.Hero?.requiresProps.Hero02).toEqual(['title']);
+    for (const [type, rule] of Object.entries(rules.types)) {
+      expect(Object.keys(rule.requiresProps).sort(), `${type}.requiresProps keys`).toEqual([...rule.variants].sort());
+      for (const [variant, required] of Object.entries(rule.requiresProps)) {
+        expect([...required].sort(), `${type}.${variant} sorted`).toEqual(required);
+      }
     }
   }, 60_000);
 

@@ -320,11 +320,11 @@ backend/tests/IntegrationTests/Website/
 `generateTreeRules` ([gen-registry.ts:490-499](../../../packages/builder-components/scripts/gen-registry.ts#L490-L499)) thêm, **bên cạnh** `variants` (giữ nguyên để không vỡ BE cũ):
 `requiresProps: { [variantKey]: string[] }` (mảng đã sort). `schemaVersion` của file giữ 1 (thêm field, additive).
 
-- [ ] Test trước: `packages/builder-components/tests/gen-registry.test.ts` — `tree-rules.json` sinh ra có
+- [x] Test trước: `packages/builder-components/tests/gen-registry.test.ts` — `tree-rules.json` sinh ra có
   `types.Hero.requiresProps.Hero01` chứa `title` và `image`, `Hero02` chỉ `title`; mọi key của `requiresProps` khớp `variants`.
-- [ ] FAIL → hiện thực → PASS (`pnpm --filter @vsite/builder-components test`)
-- [ ] `pnpm gen:registry` (check-additive phải xanh, `registry.lock.json` không đổi — `git status` xác nhận)
-- [ ] Commit `feat(builder-components): xuất requiresProps vào tree-rules.json (WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS (`pnpm --filter @vsite/builder-components test`)
+- [x] `pnpm gen:registry` (check-additive phải xanh, `registry.lock.json` không đổi — `git status` xác nhận)
+- [x] Commit `feat(builder-components): xuất requiresProps vào tree-rules.json (WEBSITE-004)`
 
 ### S0-T2: Zod vỏ snapshot + `site-snapshot.schema.json`
 
