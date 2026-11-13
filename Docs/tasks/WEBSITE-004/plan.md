@@ -373,17 +373,17 @@ Bảng `site_publication`: `id` PK · `website_id` · `shop_id` · `version int`
 `ck_site_publication_version_positive`. Trên `website`: cột `current_publication_id uuid NULL` + FK
 `fk_website_current_publication (current_publication_id, id) → site_publication (id, website_id)` `Restrict`.
 
-- [ ] Test trước: `backend/tests/IntegrationTests/Website/SitePublicationDbConstraintTests.cs`
+- [x] Test trước: `backend/tests/IntegrationTests/Website/SitePublicationDbConstraintTests.cs`
   - trùng `(website_id, version)` → `23505`
   - `current_publication_id` trỏ bản của **website khác** → `23503` (R4)
   - `site_publication.shop_id` lệch `shop_id` của website → `23503`
   - xoá bản đang là current → bị chặn; bản không current → xoá được
   - Global Query Filter: tenant A không thấy `SitePublications` của B; tenant null → rỗng (thêm vào `WebsiteTenantIsolationTests.cs`)
   - `WebsiteEntityTests.cs`: `Publish` Draft→Published, Suspended giữ nguyên; `Publish`/`PointTo` với bản của website khác ném `DomainException`
-- [ ] FAIL → hiện thực (entity, configuration, `DbSet` ở `AppDbContext` + `IAppDbContext`) → migration:
+- [x] FAIL → hiện thực (entity, configuration, `DbSet` ở `AppDbContext` + `IAppDbContext`) → migration:
   `dotnet ef migrations add AddSitePublication --project backend/src/Vsite.Infrastructure --startup-project backend/src/Vsite.Api`
-- [ ] `dotnet ef migrations has-pending-model-changes --project backend/src/Vsite.Infrastructure --startup-project backend/src/Vsite.Api` → "No changes"
-- [ ] PASS · Commit `feat(website): entity SitePublication + CurrentPublicationId (#41, #92, WEBSITE-004)`
+- [x] `dotnet ef migrations has-pending-model-changes --project backend/src/Vsite.Infrastructure --startup-project backend/src/Vsite.Api` → "No changes"
+- [x] PASS · Commit `feat(website): entity SitePublication + CurrentPublicationId (#41, #92, WEBSITE-004)`
 
 ### T2: `SnapshotBuilder` + `DocumentKind.Snapshot`
 

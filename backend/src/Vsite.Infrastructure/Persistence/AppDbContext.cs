@@ -52,6 +52,7 @@ public sealed class AppDbContext(
     public DbSet<Theme> Themes => Set<Theme>();
     public DbSet<Page> Pages => Set<Page>();
     public DbSet<PageDraft> PageDrafts => Set<PageDraft>();
+    public DbSet<SitePublication> SitePublications => Set<SitePublication>();
 
     /// <summary>
     /// snake_case cho MỌI tên bảng/cột/khoá/index (REFACTOR-DB-001) — bật Ở ĐÂY chứ không ở

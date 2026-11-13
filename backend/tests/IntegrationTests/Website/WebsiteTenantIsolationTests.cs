@@ -22,6 +22,8 @@ public sealed class WebsiteTenantIsolationTests : IAsyncLifetime
     private WebsiteEntity _websiteB = null!;
     private Page _pageA = null!;
     private Page _pageB = null!;
+    private SitePublication _pubA = null!;
+    private SitePublication _pubB = null!;
 
     public WebsiteTenantIsolationTests(PostgresFixture postgres)
     {
@@ -53,6 +55,12 @@ public sealed class WebsiteTenantIsolationTests : IAsyncLifetime
             PageDraft.Create(_shopAId, _pageA.Id, """{"schemaVersion":1,"id":"root","type":"Page","children":[]}"""),
             PageDraft.Create(_shopBId, _pageB.Id, """{"schemaVersion":1,"id":"root","type":"Page","children":[]}"""));
         await db.SaveChangesAsync();
+
+        const string snapshot = """{"schemaVersion":1,"version":1,"pages":[]}""";
+        _pubA = SitePublication.Create(_shopAId, _websiteA.Id, 1, snapshot, null, null, DateTimeOffset.UtcNow);
+        _pubB = SitePublication.Create(_shopBId, _websiteB.Id, 1, snapshot, null, null, DateTimeOffset.UtcNow);
+        db.SitePublications.AddRange(_pubA, _pubB);
+        await db.SaveChangesAsync();
     }
 
     public Task DisposeAsync() => Task.CompletedTask; // mọi id đều là GUID mới — không chạm dữ liệu test khác
@@ -66,11 +74,13 @@ public sealed class WebsiteTenantIsolationTests : IAsyncLifetime
         var themes = await db.Themes.Where(t => t.Id == _websiteA.Id || t.Id == _websiteB.Id).ToListAsync();
         var pages = await db.Pages.Where(p => p.Id == _pageA.Id || p.Id == _pageB.Id).ToListAsync();
         var drafts = await db.PageDrafts.Where(d => d.Id == _pageA.Id || d.Id == _pageB.Id).ToListAsync();
+        var pubs = await db.SitePublications.Where(p => p.Id == _pubA.Id || p.Id == _pubB.Id).ToListAsync();
 
         Assert.Equal(_shopAId, Assert.Single(websites).ShopId);
         Assert.Equal(_shopAId, Assert.Single(themes).ShopId);
         Assert.Equal(_shopAId, Assert.Single(pages).ShopId);
         Assert.Equal(_shopAId, Assert.Single(drafts).ShopId);
+        Assert.Equal(_shopAId, Assert.Single(pubs).ShopId);
     }
 
     [Fact]
@@ -91,6 +101,7 @@ public sealed class WebsiteTenantIsolationTests : IAsyncLifetime
         Assert.Empty(await db.Themes.Where(t => t.Id == _websiteA.Id || t.Id == _websiteB.Id).ToListAsync());
         Assert.Empty(await db.Pages.Where(p => p.Id == _pageA.Id || p.Id == _pageB.Id).ToListAsync());
         Assert.Empty(await db.PageDrafts.Where(d => d.Id == _pageA.Id || d.Id == _pageB.Id).ToListAsync());
+        Assert.Empty(await db.SitePublications.Where(p => p.Id == _pubA.Id || p.Id == _pubB.Id).ToListAsync());
     }
 
     [Fact]

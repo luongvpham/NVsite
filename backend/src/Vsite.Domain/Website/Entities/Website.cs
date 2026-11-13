@@ -49,6 +49,11 @@ public sealed class Website : TenantAuditableEntity
 
     public WebsiteStatus Status { get; private set; } = WebsiteStatus.Draft;
 
+    /// <summary>Con trỏ tới bản <see cref="SitePublication"/> đang phục vụ công khai (8b). NULL = chưa publish lần nào.
+    /// FK ghép <c>(current_publication_id, id) → site_publication (id, website_id)</c> <c>Restrict</c> (#92) là lớp
+    /// chặn thứ hai: không trỏ được sang bản của website khác, và xoá bản đang là current bị DB từ chối.</summary>
+    public Guid? CurrentPublicationId { get; private set; }
+
     public string DefaultLocale { get; private set; }
 
     /// <summary>Ngôn ngữ đang bật (không rỗng, không trùng, chứa <see cref="DefaultLocale"/>).</summary>
@@ -118,5 +123,44 @@ public sealed class Website : TenantAuditableEntity
         }
 
         TrackingSnippets = json;
+    }
+
+    /// <summary>Publish (8b): trỏ <see cref="CurrentPublicationId"/> tới bản mới; <c>Draft → Published</c>;
+    /// <c>Suspended</c> giữ nguyên (G6). Bản không thuộc website này → <see cref="DomainException"/>.</summary>
+    public void Publish(SitePublication publication)
+    {
+        EnsureBelongsToThisWebsite(publication);
+
+        CurrentPublicationId = publication.Id;
+        if (Status == WebsiteStatus.Draft)
+        {
+            Status = WebsiteStatus.Published;
+        }
+    }
+
+    /// <summary>Rollback (8b): chỉ đổi con trỏ sang bản cũ, KHÔNG đổi <see cref="Status"/> (G7).
+    /// Bản không thuộc website này → <see cref="DomainException"/>.</summary>
+    public void PointTo(SitePublication publication)
+    {
+        EnsureBelongsToThisWebsite(publication);
+
+        CurrentPublicationId = publication.Id;
+    }
+
+    /// <summary>Đình chỉ website (chưa có endpoint — admin/test sau này). Con trỏ publish giữ nguyên.</summary>
+    public void Suspend() => Status = WebsiteStatus.Suspended;
+
+    /// <summary>Gỡ đình chỉ: về <c>Published</c> nếu đã có bản publish, ngược lại <c>Draft</c>.</summary>
+    public void Reinstate() =>
+        Status = CurrentPublicationId is null ? WebsiteStatus.Draft : WebsiteStatus.Published;
+
+    private void EnsureBelongsToThisWebsite(SitePublication publication)
+    {
+        if (publication.WebsiteId != Id)
+        {
+            throw new DomainException(
+                "SITE_PUBLICATION_WEBSITE_MISMATCH",
+                "Bản publish không thuộc website này.");
+        }
     }
 }

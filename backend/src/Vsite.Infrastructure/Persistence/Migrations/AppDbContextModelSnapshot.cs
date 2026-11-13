@@ -973,6 +973,65 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                     b.ToTable("page_draft", (string)null);
                 });
 
+            modelBuilder.Entity("Vsite.Domain.Website.Entities.SitePublication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("note");
+
+                    b.Property<DateTimeOffset>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<Guid?>("PublishedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("published_by_user_id");
+
+                    b.Property<Guid>("ShopId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shop_id");
+
+                    b.Property<string>("Snapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("snapshot");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.Property<Guid>("WebsiteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("website_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_site_publication");
+
+                    b.HasAlternateKey("Id", "WebsiteId")
+                        .HasName("ak_site_publication_id_website_id");
+
+                    b.HasIndex("PublishedByUserId")
+                        .HasDatabaseName("ix_site_publication_published_by_user_id");
+
+                    b.HasIndex("WebsiteId", "ShopId")
+                        .HasDatabaseName("ix_site_publication_website_id_shop_id");
+
+                    b.HasIndex("WebsiteId", "Version")
+                        .IsUnique()
+                        .HasDatabaseName("ux_site_publication_website_version");
+
+                    b.ToTable("site_publication", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_site_publication_version_positive", "version > 0");
+                        });
+                });
+
             modelBuilder.Entity("Vsite.Domain.Website.Entities.Theme", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1029,7 +1088,6 @@ namespace Vsite.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Vsite.Domain.Website.Entities.Website", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -1040,6 +1098,10 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_user_id");
+
+                    b.Property<Guid?>("CurrentPublicationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("current_publication_id");
 
                     b.Property<string>("DefaultLocale")
                         .IsRequired()
@@ -1110,6 +1172,9 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                     b.HasIndex("ShopId")
                         .IsUnique()
                         .HasDatabaseName("ux_website_shop");
+
+                    b.HasIndex("CurrentPublicationId", "Id")
+                        .HasDatabaseName("ix_website_current_publication_id_id");
 
                     b.HasIndex("DefaultOgImageId", "ShopId")
                         .HasDatabaseName("ix_website_default_og_image_id_shop_id");
@@ -1248,6 +1313,23 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_page_draft_page");
                 });
 
+            modelBuilder.Entity("Vsite.Domain.Website.Entities.SitePublication", b =>
+                {
+                    b.HasOne("Vsite.Domain.Identity.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("PublishedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_site_publication_app_user_published_by_user_id");
+
+                    b.HasOne("Vsite.Domain.Website.Entities.Website", null)
+                        .WithMany()
+                        .HasForeignKey("WebsiteId", "ShopId")
+                        .HasPrincipalKey("Id", "ShopId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_publication_website");
+                });
+
             modelBuilder.Entity("Vsite.Domain.Website.Entities.Theme", b =>
                 {
                     b.HasOne("Vsite.Domain.Website.Entities.Website", null)
@@ -1267,6 +1349,13 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_website_shop");
+
+                    b.HasOne("Vsite.Domain.Website.Entities.SitePublication", null)
+                        .WithMany()
+                        .HasForeignKey("CurrentPublicationId", "Id")
+                        .HasPrincipalKey("Id", "WebsiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_website_current_publication");
 
                     b.HasOne("Vsite.Domain.Media.Entities.MediaAsset", null)
                         .WithMany()
