@@ -5,11 +5,14 @@ using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Website.Commands.CreatePage;
 using Vsite.Application.Website.Commands.CreateWebsite;
 using Vsite.Application.Website.Commands.DeletePage;
+using Vsite.Application.Website.Commands.PublishWebsite;
 using Vsite.Application.Website.Commands.SavePageDraft;
 using Vsite.Application.Website.Commands.UpdatePage;
 using Vsite.Application.Website.Commands.UpdateTheme;
 using Vsite.Application.Website.Dtos;
+using Vsite.Application.Website.Interfaces;
 using Vsite.Application.Website.Options;
+using Vsite.Application.Website.Publishing;
 using Vsite.Application.Website.Queries.GetPageDraft;
 using Vsite.Application.Website.Queries.GetTheme;
 using Vsite.Application.Website.Queries.GetWebsite;
@@ -21,6 +24,8 @@ using Vsite.Domain.Media.Entities;
 using Vsite.Domain.ReservedRoutes;
 using Vsite.Domain.Shop.Entities;
 using Vsite.Domain.Shop.Enums;
+using Vsite.Domain.Website.Entities;
+using Microsoft.Extensions.Logging.Abstractions;
 using Vsite.Infrastructure.Media;
 using Vsite.Infrastructure.Persistence;
 using Vsite.Infrastructure.Website;
@@ -58,6 +63,7 @@ internal static class WebsiteHandlerKit
             ThemeValidator = new ThemeTokensValidator(Schemas, Versioning);
             Seeder = new WebsiteSeeder(SystemPages, Validator);
             Slugs = new SlugRules(Locales, SystemPages, new FixedReservedRoutes(ShopSiteReserved));
+            RequiredProps = new RequiredPropsChecker(Rules);
         }
 
         public LocaleCatalog Locales { get; }
@@ -70,6 +76,19 @@ internal static class WebsiteHandlerKit
         public ThemeTokensValidator ThemeValidator { get; }
         public WebsiteSeeder Seeder { get; }
         public SlugRules Slugs { get; }
+        public RequiredPropsChecker RequiredProps { get; }
+    }
+
+    /// <summary>Ghi lại shop nào bị xoá con trỏ cache (T4 chỉ cần biết handler GỌI; bản Redis thật ở T6).</summary>
+    public sealed class RecordingSitePointerCache : ISitePointerCache
+    {
+        public List<Guid> Invalidated { get; } = [];
+
+        public Task InvalidateAsync(Guid shopId, CancellationToken cancellationToken)
+        {
+            Invalidated.Add(shopId);
+            return Task.CompletedTask;
+        }
     }
 
     public sealed class FixedReservedRoutes(ReservedRoutes routes) : IReservedRoutesProvider
@@ -99,17 +118,20 @@ internal static class WebsiteHandlerKit
         public Request(string connectionString, Guid? shopId, Guid? actor = null, params IInterceptor[] interceptors)
         {
             Tenant = new TestTenantContext(shopId);
+            Actor = new FixedActor(actor);
             var builder = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connectionString);
             if (interceptors.Length > 0)
             {
                 builder.AddInterceptors(interceptors);
             }
 
-            Db = new AppDbContext(builder.Options, Tenant, publisher: null, auditActor: new FixedActor(actor));
+            Db = new AppDbContext(builder.Options, Tenant, publisher: null, auditActor: Actor);
             Media = new MediaReferenceValidator(Db, Tenant);
         }
 
         public TestTenantContext Tenant { get; }
+        public FixedActor Actor { get; }
+        public RecordingSitePointerCache PointerCache { get; } = new();
         public AppDbContext Db { get; }
         public MediaReferenceValidator Media { get; }
 
@@ -140,6 +162,11 @@ internal static class WebsiteHandlerKit
 
         public Task<ThemeDto> UpdateTheme(string tokensJson, string? presetKey = null) =>
             new UpdateThemeHandler(Db, Tenant, S.ThemeValidator).Handle(new UpdateThemeCommand(presetKey, tokensJson), default);
+
+        public Task<PublicationDto> Publish(string? note = null) =>
+            new PublishWebsiteHandler(
+                    Db, Tenant, S.Validator, S.RequiredProps, Media, Actor, PointerCache, NullLogger<PublishWebsiteHandler>.Instance)
+                .Handle(new PublishWebsiteCommand(note), default);
 
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }
@@ -224,6 +251,26 @@ internal static class WebsiteHandlerKit
         {
             await using var other = NewDb(connectionString, null);
             await other.Database.ExecuteSqlInterpolatedAsync($"UPDATE page_draft SET is_dirty = is_dirty WHERE page_id = {pageId}", cancellationToken);
+            return result;
+        }
+    }
+
+    /// <summary>Mô phỏng tab khác publish xong ngay TRƯỚC khi handler ghi: chèn sẵn bản cùng <paramref name="version"/> (một lần).</summary>
+    public sealed class InsertPublicationInterceptor(string connectionString, Guid shopId, Guid websiteId, int version) : SaveChangesInterceptor
+    {
+        private bool _done;
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (!_done)
+            {
+                _done = true;
+                await using var other = NewDb(connectionString, shopId);
+                other.SitePublications.Add(SitePublication.Create(shopId, websiteId, version, "{}", null, null, DateTimeOffset.UtcNow));
+                await other.SaveChangesAsync(cancellationToken);
+            }
+
             return result;
         }
     }

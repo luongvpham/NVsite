@@ -33,5 +33,14 @@ internal static class Mappings
         website.DefaultOgImageId,
         website.FaviconAssetId,
         website.TrackingSnippets.ToJsonElement(),
-        homePageId);
+        homePageId,
+        website.CurrentPublicationId);
+
+    public static PublicationDto ToDto(SitePublication publication, Guid? currentPublicationId) => new(
+        publication.Id,
+        publication.Version,
+        publication.PublishedAt,
+        publication.PublishedByUserId,
+        publication.Note,
+        publication.Id == currentPublicationId);
 }

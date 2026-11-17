@@ -13,6 +13,7 @@ using Vsite.Application.Identity.Options;
 using Vsite.Application.Media;
 using Vsite.Application.Media.Interfaces;
 using Vsite.Application.Shop.Interfaces;
+using Vsite.Application.Website.Interfaces;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Infrastructure.Identity;
 using Vsite.Infrastructure.Imaging;
@@ -50,6 +51,7 @@ public static class DependencyInjection
         services.AddShopModule();
         services.AddImagingModule(configuration);
         services.AddMediaModule();
+        services.AddWebsiteModule();
 
         return services;
     }
@@ -101,6 +103,15 @@ public static class DependencyInjection
         {
             services.AddSingleton<IObjectStorage, LocalDiskObjectStorage>();
         }
+
+        return services;
+    }
+
+    // ---- Website (catalog/validator là singleton ở Program.cs vì cần đường dẫn artifact) ----
+    private static IServiceCollection AddWebsiteModule(this IServiceCollection services)
+    {
+        // WEBSITE-004 T4: bản no-op tạm; T6 thay bằng con trỏ Redis thật (#109).
+        services.AddSingleton<ISitePointerCache, Vsite.Infrastructure.Website.NoOpSitePointerCache>();
 
         return services;
     }

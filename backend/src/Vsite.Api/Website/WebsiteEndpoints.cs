@@ -9,6 +9,7 @@ using Vsite.Api.Tenancy;
 using Vsite.Application.Website.Commands.CreatePage;
 using Vsite.Application.Website.Commands.CreateWebsite;
 using Vsite.Application.Website.Commands.DeletePage;
+using Vsite.Application.Website.Commands.PublishWebsite;
 using Vsite.Application.Website.Commands.SavePageDraft;
 using Vsite.Application.Website.Commands.UpdatePage;
 using Vsite.Application.Website.Commands.UpdateTheme;
@@ -181,6 +182,22 @@ public static class WebsiteEndpoints
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
+        // WEBSITE-004 T4 — xuất bản toàn site. Body tuỳ chọn ({ note? }). Location trỏ tài nguyên của bản vừa tạo.
+        website.MapPost("/publications", async (Guid shopId, PublishWebsiteRequest? body, ISender sender, CancellationToken ct) =>
+        {
+            var publication = await sender.Send(new PublishWebsiteCommand(body?.Note), ct);
+            return Results.Created($"/api/shops/{shopId}/website/publications/{publication.Id}", publication);
+        })
+            .WithName("publishWebsite")
+            .RequireAuthorization(AuthPolicies.RequireGlobalScope)
+            .RequireOwner()
+            .Produces<PublicationDto>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
+
         return app;
     }
 
@@ -302,6 +319,9 @@ public sealed record UpdatePageRequest(
     Guid? OgImageId,
     bool NoIndex,
     bool IsEnabled);
+
+/// <summary>Body <c>POST …/website/publications</c> — tuỳ chọn. <c>Note</c> ≤ 200 ký tự (validator).</summary>
+public sealed record PublishWebsiteRequest(string? Note);
 
 /// <summary>Shape OpenAPI của body <c>savePageDraft</c> (<c>Accepts&lt;T&gt;</c>) — KHÔNG dùng để bind thật. <c>Version</c> là token
 /// opaque (xmin) client nhận từ <c>getPageDraft</c>/lần lưu trước.</summary>

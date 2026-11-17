@@ -13,6 +13,7 @@ using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Website.Interfaces;
 using Vsite.Application.Website.Options;
 using Vsite.Application.Website.Seeding;
+using Vsite.Application.Website.Publishing;
 using Vsite.Application.Website.Validation;
 using Vsite.Application.Website.Versioning;
 using Vsite.Domain.Abstractions;
@@ -99,6 +100,8 @@ builder.Services.AddSingleton(builder.Configuration.GetSection(PageTreeLimits.Se
 builder.Services.AddSingleton<IRichTextSanitizer, RichTextSanitizer>();
 builder.Services.AddSingleton(sp => new DocumentVersioning(sp.GetServices<IDocumentUpcaster>()));
 builder.Services.AddSingleton<PageTreeValidator>();
+// Kiểm prop bắt buộc theo variant — CHỈ khi publish (WEBSITE-004), không ở PUT draft.
+builder.Services.AddSingleton<RequiredPropsChecker>();
 
 // Handler Website (T6/T8): seed trang, luật slug, validator tokens — singleton vì chỉ giữ catalog/validator bất biến.
 builder.Services.AddSingleton<ThemeTokensValidator>();
