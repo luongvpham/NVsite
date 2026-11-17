@@ -259,6 +259,7 @@ Trần 50 bản mới nhất (job prune 20 bản là 8d). Chưa có website → 
 | R10 | Draft được lưu giữa lúc publish đọc và ghi | `409 PUBLISH_CONFLICT`, không có bản publish nửa vời, cờ `IsDirty` của draft đó vẫn `true` | T4 |
 | R11 | Xoá mềm ảnh sau khi publish | `GET /api/site` vẫn trả `snapshot.media` có ảnh đó (file sống tới 8d); `references` trước khi xoá đã cảnh báo | T7, T8 |
 | R12 | Đổi tên shop sau publish | `ETag` đổi, response mang tên mới, `snapshot` không đổi | T6 |
+| R14 | Tree lưu `imageId` chữ hoa (BE chấp nhận ở `PUT draft`) | Publish chuẩn hoá về chữ thường; renderer tra `snapshot.media[imageId]` luôn trúng, không ra placeholder | T4 |
 | R13 | Snapshot vượt kích thước hợp lý | Không đặt trần mới: mỗi tree đã bị trần 1 MB ở `PUT draft`; ghi kích thước snapshot vào log publish | T4 (log) |
 
 ## 8. Sơ đồ file
@@ -341,8 +342,9 @@ tokens. `additionalProperties: false` ở mọi cấp vỏ. Export schema + type
 
 ## 10. Session S1: Backend
 
-Lệnh test chung: `dotnet test backend/vsite.sln --filter "FullyQualifiedName~{TênLớpTest}"`; cuối mỗi task chạy
-thêm `dotnet test backend/tests/ArchitectureTests`.
+Lệnh test chung: `dotnet test backend/vsite.sln --filter "FullyQualifiedName~{TênLớpTest}"` trong lúc làm.
+**Trước khi commit mỗi task: chạy `dotnet test backend/vsite.sln` ĐẦY ĐỦ (không lọc)** — burn T3 chỉ chạy test đã lọc
+nên làm hỏng 4 test cũ mà không biết (sửa ở `TreeFixtures.MergeRulesOverride`, 2026-11-17).
 
 ### T1: Entity `SitePublication` + `Website.CurrentPublicationId` + migration
 
@@ -446,6 +448,12 @@ Handler (một `SaveChanges`):
    Ảnh OG mặc định + favicon của website: một lời gọi `EnsureValidAsync([], ids)`; lỗi gắn `pageId = null`.
 3. Có lỗi → `PublishBlockedException` (`422 PUBLISH_BLOCKED`, `params: { errors[], truncated }`).
 4. Nạp `storageKey`/`preset` của mọi id ảnh: `db.MediaAssets.Where(a => a.ShopId == shopId && ids.Contains(a.Id))`.
+   **Khoá của `snapshot.media` phải khớp đúng chuỗi `imageId` mà renderer sẽ tra** (R14): `SnapshotBuilder` ghi khoá
+   bằng `Guid.ToString()` (chữ thường, [SnapshotBuilder.cs:34](../../../backend/src/Vsite.Application/Website/Publishing/SnapshotBuilder.cs#L34)),
+   còn `PUT draft` nhận cả GUID chữ hoa ([SavePageDraftHandler.cs:101](../../../backend/src/Vsite.Application/Website/Commands/SavePageDraft/SavePageDraftHandler.cs#L101)).
+   Chọn cách: lúc publish, **chuẩn hoá mọi `imageId` trong `CleanTree` về GUID dạng `D` chữ thường** trước khi đưa vào
+   `SnapshotBuilder` (một lượt walk, dùng lại `ImageIds` của validator để biết chuỗi nào cần thay). Không đổi khoá `media`
+   sang chuỗi thô — `ogImageId`/`faviconAssetId` cũng đi qua `Guid.ToString()` nên một quy ước chữ thường là đủ.
 5. `version = (max Version của website ?? 0) + 1` → `SnapshotBuilder.Build` → `SitePublication.Create` (người publish từ `IAuditActor.UserId`) → `website.Publish(p)` → `draft.MarkPublished()` **chỉ** cho draft đang `IsDirty`.
 6. `SaveChanges`: `23505` trên `ux_site_publication_website_version` hoặc `DbUpdateConcurrencyException` → `ConflictException("PUBLISH_CONFLICT")`.
 7. Sau khi lưu: `ISitePointerCache.InvalidateAsync(shopId)` (interface tạo ở task này, bản thật ở T6; T4 dùng bản no-op tạm đăng ký trong DI và được T6 thay). Log `snapshotBytes`.
@@ -465,6 +473,8 @@ Route `POST /shops/{shopId}/website/publications` · `publishWebsite` · body `{
   - draft bị đổi giữa đọc và ghi (dùng `BumpXminInterceptor` sẵn có ở `backend/tests/IntegrationTests/Website/WebsiteHandlerKit.cs:219`) → `PUBLISH_CONFLICT`, không có bản mới (R10)
   - tenant null → `TENANT_REQUIRED`; tenant shop B không publish được website shop A (`WEBSITE_NOT_FOUND`)
   - `snapshot.media` chứa đủ id ảnh của tree + OG
+  - draft có `imageId` viết **chữ hoa** → publish được; trong snapshot, `imageId` ở tree và khoá `media` đều là chữ
+    thường và khớp nhau (R14)
 - [ ] Test trước: `PublicationEndpointTests.cs` (HTTP, `ShopApiHarness`) — 201 + `Location`; không token 401; `Customer`/Owner shop khác 403; `note` 201 ký tự → 422; `GET website` trả `currentPublicationId`; `GET pages` trả `isDirty = false`
 - [ ] FAIL → hiện thực → PASS · `ShopScopedRouteFilterTests` xanh
 - [ ] Commit `feat(website): publish toàn site thành SitePublication (#41, WEBSITE-004)`

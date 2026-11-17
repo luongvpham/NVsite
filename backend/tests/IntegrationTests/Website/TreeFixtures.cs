@@ -60,7 +60,12 @@ internal static class TreeFixtures
         var types = merged["types"]!.AsObject();
         foreach (var (name, rule) in overrideTypes)
         {
-            types[name] = rule!.DeepClone();
+            var clone = rule!.DeepClone().AsObject();
+            // gen:registry luôn sinh `requiresProps` (WEBSITE-004 S0-T1) và TreeRulesCatalog bắt buộc có nó. Luật viết tay
+            // trong test/fixture dùng chung với FE (packages/builder-components/tests/fixtures/tree) không khai — bổ sung
+            // bản rỗng ở đây thay vì sửa fixture dùng chung. Override có khai thì giữ nguyên.
+            clone["requiresProps"] ??= new JsonObject();
+            types[name] = clone;
         }
 
         var path = Path.Combine(Path.GetTempPath(), $"tree-rules-{Guid.NewGuid():N}.json");

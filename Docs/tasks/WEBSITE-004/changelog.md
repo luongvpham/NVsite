@@ -181,3 +181,14 @@ Không có endpoint/DTO công khai mới → **không chạm contract**, không 
 
 **Chưa làm (các task sau)**: lệnh/endpoint publish (T4), list/rollback (T5), `GET /api/site` + cache (T6),
 references (T8), docs module (T9).
+
+## Sửa sau review giữa chừng (2026-11-17, trước T4)
+
+- **4 test cũ đỏ do T3:** `TreeRulesCatalog` bắt buộc `requiresProps` (đúng plan), nhưng luật viết tay trong
+  `PageTreeHardeningTests` (2), `PageTreeValidatorTests` (1) và fixture dùng chung FE+BE
+  `invalid-binding-review-in-list.json` (1) không khai field này. Burn chỉ chạy test đã lọc nên không thấy.
+  Sửa ở `backend/tests/IntegrationTests/Website/TreeFixtures.cs` (`MergeRulesOverride` bổ sung `requiresProps: {}`
+  khi override không khai) — không sửa fixture dùng chung. Code sản phẩm không đổi.
+- **Plan T4 thêm R14:** khoá `snapshot.media` (GUID chữ thường) phải khớp `imageId` trong tree; `PUT draft` chấp nhận
+  GUID chữ hoa → T4 chuẩn hoá `imageId` trong tree về chữ thường lúc publish.
+- **Plan §10:** mỗi task chạy `dotnet test backend/vsite.sln` đầy đủ trước khi commit.
