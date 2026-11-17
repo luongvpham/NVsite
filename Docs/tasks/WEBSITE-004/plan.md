@@ -461,7 +461,7 @@ Handler (một `SaveChanges`):
 Route `POST /shops/{shopId}/website/publications` · `publishWebsite` · body `{ note? }` (tuỳ chọn) · `201` + `Location` ·
 `401 403 404 409 422`.
 
-- [ ] Test trước: `PublishWebsiteHandlerTests.cs` (handler, Postgres thật qua `WebsiteHandlerKit`)
+- [x] Test trước: `PublishWebsiteHandlerTests.cs` (handler, Postgres thật qua `WebsiteHandlerKit`)
   - website trắng publish được ngay: version 1, `Status = Published`, `CurrentPublicationId` trỏ đúng (R8)
   - publish lần hai → version 2; bản 1 còn nguyên, `Snapshot` không đổi
   - sau publish mọi draft `IsDirty = false`; draft vốn sạch giữ nguyên `Version` (R9)
@@ -475,9 +475,9 @@ Route `POST /shops/{shopId}/website/publications` · `publishWebsite` · body `{
   - `snapshot.media` chứa đủ id ảnh của tree + OG
   - draft có `imageId` viết **chữ hoa** → publish được; trong snapshot, `imageId` ở tree và khoá `media` đều là chữ
     thường và khớp nhau (R14)
-- [ ] Test trước: `PublicationEndpointTests.cs` (HTTP, `ShopApiHarness`) — 201 + `Location`; không token 401; `Customer`/Owner shop khác 403; `note` 201 ký tự → 422; `GET website` trả `currentPublicationId`; `GET pages` trả `isDirty = false`
-- [ ] FAIL → hiện thực → PASS · `ShopScopedRouteFilterTests` xanh
-- [ ] Commit `feat(website): publish toàn site thành SitePublication (#41, WEBSITE-004)`
+- [x] Test trước: `PublicationEndpointTests.cs` (HTTP, `ShopApiHarness`) — 201 + `Location`; không token 401; `Customer`/Owner shop khác 403; `note` 201 ký tự → 422; `GET website` trả `currentPublicationId`; `GET pages` trả `isDirty = false`
+- [x] FAIL → hiện thực → PASS · `ShopScopedRouteFilterTests` xanh
+- [x] Commit `feat(website): publish toàn site thành SitePublication (#41, WEBSITE-004)`
 
 ### T5: Danh sách bản + rollback
 

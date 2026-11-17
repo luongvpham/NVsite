@@ -192,3 +192,72 @@ references (T8), docs module (T9).
 - **Plan T4 thêm R14:** khoá `snapshot.media` (GUID chữ thường) phải khớp `imageId` trong tree; `PUT draft` chấp nhận
   GUID chữ hoa → T4 chuẩn hoá `imageId` trong tree về chữ thường lúc publish.
 - **Plan §10:** mỗi task chạy `dotnet test backend/vsite.sln` đầy đủ trước khi commit.
+
+## T4
+
+Lệnh publish + endpoint `POST /api/shops/{shopId}/website/publications` (`publishWebsite`) (Bước 8b, S1, #41).
+**Chạm contract** (route mới + `PublicationDto` + `WebsiteDto.currentPublicationId`) — contract-sync gộp ở cuối S1 (T9,
+plan §5), không chạy ở bước này.
+
+**Thay đổi**
+- `Vsite.Application/Website/Commands/PublishWebsite/` (mới) — `PublishWebsiteCommand(string? Note)`, validator
+  (`Note` ≤ `SitePublication.MaxNoteLength` = 200), `PublishWebsiteHandler` theo plan T4 bước 1–7: nạp website (tracking),
+  theme, trang **đang bật** + draft (tracking), mọi predicate có `ShopId` tường minh; mỗi trang `PageTreeValidator` →
+  `RequiredPropsChecker` → `IMediaReferenceValidator` (ảnh tree + OG trang); OG mặc định + favicon kiểm một lần
+  (`pageId = null`); có lỗi → `422 PUBLISH_BLOCKED`, không ghi gì; chuẩn hoá `imageId` trong `CleanTree` về GUID chữ
+  thường (R14, chỉ thay chuỗi validator đã nhận là id ảnh, cây đã chuẩn thì giữ nguyên văn); nạp `storageKey`/`preset`;
+  `Version = max + 1`; `SnapshotBuilder.Build` → `SitePublication.Create` (người publish = `IAuditActor.UserId`) →
+  `website.Publish` → `MarkPublished` chỉ cho draft bẩn; một `SaveChanges`; 23505 / `xmin` lệch → `409 PUBLISH_CONFLICT`;
+  log `snapshotBytes` (R13); sau commit gọi `ISitePointerCache.InvalidateAsync`.
+- `Vsite.Application/Website/Publishing/PublishErrors.cs` (mới) — `PublishPageError(pageId?, pageTitle?, path, code,
+  message)`, `PublishBlockedParams(errors, truncated)`, `PublishBlockedException` (trần 100 mục).
+- `Vsite.Application/Website/Interfaces/ISitePointerCache.cs` (mới) + `Vsite.Infrastructure/Website/NoOpSitePointerCache.cs`
+  (mới, **tạm** — T6 thay bằng bản Redis thật). Đăng ký ở section mới `AddWebsiteModule` trong `DependencyInjection.cs`.
+- `Vsite.Application/Website/Dtos/WebsiteDtos.cs` + `Mappings.cs` — `PublicationDto(id, version, publishedAt,
+  publishedByUserId?, note?, isCurrent)`; `WebsiteDto` thêm `CurrentPublicationId` (cuối record, additive).
+- `Vsite.Api/Website/WebsiteEndpoints.cs` — route `POST /publications`, body tuỳ chọn `PublishWebsiteRequest(note?)`,
+  `RequireGlobalScope` + `RequireOwner` (#100), `201` + `Location`, `401 403 404 409 422`.
+- `Vsite.Api/Program.cs` — `RequiredPropsChecker` singleton (cạnh `PageTreeValidator`).
+- Test: `PublishWebsiteHandlerTests.cs` (mới, 17 ca — gồm 3 ca sau review), `PublicationEndpointTests.cs` (mới, 8 ca), `WebsiteHandlerKit.cs`
+  (thêm `Publish`, `RecordingSitePointerCache`, `InsertPublicationInterceptor` mô phỏng tab khác publish cùng version,
+  `SoftDeleteAfterCheckMediaValidator` mô phỏng ảnh bị xoá giữa lúc kiểm và lúc nạp).
+
+**Lệch có chủ đích / giả định tự đặt** (người rà ở pha 6)
+- `Location` trỏ `/api/shops/{shopId}/website/publications/{id}` dù chưa có endpoint GET một bản (plan không có) — FE dùng body.
+- `note` được trim; chỉ khoảng trắng → `null`.
+- Xoá con trỏ cache thất bại **sau** khi đã commit chỉ log warning, không trả lỗi (tránh người dùng bấm lại sinh bản thừa;
+  con trỏ cũ hết hạn theo TTL 5' — T6 phải giữ TTL này).
+- Mọi 23505 / `DbUpdateConcurrencyException` lúc lưu publish → `PUBLISH_CONFLICT` (Application không đọc được tên
+  constraint; lần ghi này không chạm unique nào khác).
+- Trang có tree sai cấu trúc thì không kiểm tiếp `requiresProps`/ảnh của trang đó (không có `CleanTree`).
+- Draft đang **sạch** lúc publish đọc rồi bị lưu trước lúc ghi: không có UPDATE nên không kiểm `xmin`; bản publish mang nội
+  dung lúc đọc, draft giữ `IsDirty = true` — nhất quán (draft khác bản đang chạy), không mất dữ liệu. Chủ đích.
+- Thêm ngoài checklist: test publish đồng thời trùng version → 409; test HTTP shape `params.errors[]` của `PUBLISH_BLOCKED`;
+  body rỗng → 201; chưa có website → 404.
+
+**Kiểm chứng** (Docker CÓ — chạy thật, không nợ test)
+- TDD: test viết trước, đỏ vì thiếu kiểu (biên dịch) → hiện thực → `PublishWebsiteHandlerTests|PublicationEndpointTests|
+  ShopScopedRouteFilterTests|ApiRoutePrefixTests` 30/30 passed. Kiểm đột biến: bỏ chuẩn hoá `imageId` → test R14 đỏ.
+- `dotnet test backend/vsite.sln` **đầy đủ** (sau sửa review) → ComponentSchemaTests 12/12, ArchitectureTests 12/12,
+  IntegrationTests 839 passed / 1 skipped (skip có sẵn: `ShopEndpointTests` chờ module Listing).
+
+**Sửa sau `change-reviewer`** (0 Critical, 2 Important — mỗi sửa có test đỏ trước)
+- I1: `params.truncated` bỏ qua cờ `ErrorsTruncated` của validator (tự dừng 50 lỗi/trang) → nay OR vào; lỗi cấp website
+  (favicon/OG mặc định) đưa lên **đầu** danh sách để trần 100 không cắt mất. Test `Truncated_is_true_when_a_page_validator_stopped_early_I1`,
+  `Website_level_image_error_has_null_page_and_comes_first_I1`.
+- I2: ảnh bị xoá mềm giữa lúc kiểm (`EnsureValidAsync`) và lúc nạp bảng `media` làm snapshot bất biến có `imageId` không có
+  khoá trong `media` → nay số dòng nạp lệch số id thì `409 PUBLISH_CONFLICT`, không ghi. Test
+  `Image_soft_deleted_between_check_and_load_is_409_and_nothing_is_written_I2`.
+
+**Theo dõi (Minor từ review, chưa làm)**
+- Test R14 chưa có ca `imageId` chữ hoa nằm trong list (`Gallery.items[]`) — walker đã phủ, thiếu test khoá hành vi.
+- `Tenant_of_shop_B_cannot_publish_website_of_shop_A` yếu (B không có website nên luôn 404); nên thêm ca B có website riêng.
+- OpenAPI: 422 không mô tả `params.errors[]`/`truncated` (tiền lệ `TREE_INVALID`), header `Location` không khai; `pageId`/
+  `pageTitle` nullable — nêu ở `contract-diff.md`/`brief.md` (T9). `Location` trỏ tài nguyên không GET được → câu hỏi Gate 1.
+- Thiếu theme/draft (dữ liệu lệch invariant seed) → 500 thay vì lỗi có mã.
+- `note` kiểm độ dài trước khi trim (200 ký tự + khoảng trắng đầu → 422). Vô hại.
+- **T6 phải giữ TTL con trỏ 5'** (vì lỗi xoá cache sau commit chỉ log).
+- `brief.md`: lỗi publish có thể đến hai đợt (cây sai cấu trúc trước, rồi prop/ảnh).
+
+**Chưa làm (các task sau)**: list/rollback (T5), `GET /api/site` + con trỏ Redis thật thay no-op (T6), isolation/bất biến
+(T7), references (T8), docs module + contract-sync (T9). `brief.md`: FE nạp lại version draft sau publish (R9) — viết sau Gate 1.

@@ -59,6 +59,16 @@ public sealed class PublishWebsiteHandler(
             .ToDictionaryAsync(d => d.Id, cancellationToken);
 
         var errors = new List<PublishPageError>();
+        var truncated = false;
+
+        // Lỗi cấp website (OG mặc định / favicon) đứng ĐẦU danh sách để trần MaxErrors không cắt mất nó.
+        Guid[] websiteImages = [.. new[] { website.DefaultOgImageId, website.FaviconAssetId }.OfType<Guid>()];
+        var websiteMediaError = await CheckMediaAsync([], websiteImages, cancellationToken);
+        if (websiteMediaError is not null)
+        {
+            errors.Add(new PublishPageError(null, null, "", MediaInvalidCode, websiteMediaError));
+        }
+
         var snapshotPages = new List<SnapshotPage>(pages.Count);
         var imageIds = new HashSet<Guid>();
 
@@ -71,6 +81,7 @@ public sealed class PublishWebsiteHandler(
             var result = validator.Validate(draft.Tree, page.Kind);
             if (!result.IsValid)
             {
+                truncated |= result.ErrorsTruncated; // validator tự dừng ở PageTreeLimits.MaxErrors mỗi trang
                 foreach (var e in result.Errors)
                 {
                     Add(e.Path, e.Code, e.Message);
@@ -114,17 +125,11 @@ public sealed class PublishWebsiteHandler(
             snapshotPages.Add(new SnapshotPage(page, NormalizeImageIds(result.CleanTree!, result.ImageIds)));
         }
 
-        Guid[] websiteImages = [.. new[] { website.DefaultOgImageId, website.FaviconAssetId }.OfType<Guid>()];
-        var websiteMediaError = await CheckMediaAsync([], websiteImages, cancellationToken);
-        if (websiteMediaError is not null)
-        {
-            errors.Add(new PublishPageError(null, null, "", MediaInvalidCode, websiteMediaError));
-        }
-
         if (errors.Count > 0)
         {
             throw new PublishBlockedException(
-                errors.Take(PublishBlockedException.MaxErrors).ToList(), errors.Count > PublishBlockedException.MaxErrors);
+                errors.Take(PublishBlockedException.MaxErrors).ToList(),
+                truncated || errors.Count > PublishBlockedException.MaxErrors);
         }
 
         imageIds.UnionWith(websiteImages);
@@ -133,6 +138,11 @@ public sealed class PublishWebsiteHandler(
             .Where(a => a.ShopId == shopId && allImageIds.Contains(a.Id))
             .Select(a => new SnapshotMedia(a.Id, a.StorageKey, a.Preset))
             .ToListAsync(cancellationToken);
+        if (mediaRows.Count != allImageIds.Length)
+        {
+            // Ảnh bị xoá mềm giữa lúc kiểm và lúc nạp: snapshot bất biến sẽ có imageId không có khoá trong media (R14) → không ghi.
+            throw PublishConflict();
+        }
 
         var version = (await db.SitePublications
             .Where(p => p.ShopId == shopId && p.WebsiteId == website.Id)
@@ -159,8 +169,7 @@ public sealed class PublishWebsiteHandler(
         }
         catch (DbUpdateException ex) when (UniqueViolation.IsUniqueViolation(ex) || UniqueViolation.IsConcurrencyConflict(ex))
         {
-            throw new ConflictException(
-                "PUBLISH_CONFLICT", "Website vừa được xuất bản hoặc chỉnh sửa ở nơi khác. Hãy tải lại rồi thử lại.");
+            throw PublishConflict();
         }
 
         logger.LogInformation(
@@ -179,6 +188,9 @@ public sealed class PublishWebsiteHandler(
 
         return Mappings.ToDto(publication, website.CurrentPublicationId);
     }
+
+    private static ConflictException PublishConflict() =>
+        new("PUBLISH_CONFLICT", "Website vừa được xuất bản hoặc chỉnh sửa ở nơi khác. Hãy tải lại rồi thử lại.");
 
     /// <summary>Trả thông điệp lỗi Media (không ném) để gom theo trang; <c>null</c> = hợp lệ.</summary>
     private async Task<string?> CheckMediaAsync(IReadOnlyCollection<Guid> tree, IReadOnlyCollection<Guid> business, CancellationToken ct)

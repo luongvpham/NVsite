@@ -232,6 +232,66 @@ public sealed class PublishWebsiteHandlerTests(PostgresFixture postgres) : IAsyn
         Assert.True((await DraftsAsync(seeded.ShopId))[hiddenId].IsDirty); // trang tắt không bị đụng cờ
     }
 
+    [Fact]
+    public async Task Truncated_is_true_when_a_page_validator_stopped_early_I1()
+    {
+        var seeded = await AddWebsiteAsync(Cs);
+        // PUT draft không cho lưu cây hỏng → ghi thẳng: 60 node type lạ (catalog đổi luật sau khi lưu). Validator dừng ở MaxErrors.
+        var tree = TreeWith(Enumerable.Range(0, 60)
+            .Select(i => "{\"id\":\"c_x" + i.ToString("D4") + "\",\"type\":\"NoSuchType\",\"variant\":\"X\",\"props\":{}}")
+            .ToArray());
+        await using (var db = NewDb(Cs, null))
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE page_draft SET tree = {tree}::jsonb WHERE page_id = {seeded.Home.Id}");
+        }
+
+        await using var request = new Request(Cs, seeded.ShopId);
+        var info = Blocked(await Assert.ThrowsAsync<PublishBlockedException>(() => request.Publish()));
+
+        Assert.True(info.Errors.Count < 60);
+        Assert.True(info.Truncated);
+    }
+
+    [Fact]
+    public async Task Website_level_image_error_has_null_page_and_comes_first_I1()
+    {
+        var seeded = await AddWebsiteAsync(Cs);
+        var favicon = await AddAssetAsync(Cs, seeded.ShopId, "Library");
+        await using (var db = NewDb(Cs, seeded.ShopId))
+        {
+            var website = await db.Websites.SingleAsync();
+            website.SetFavicon(favicon);
+            await db.SaveChangesAsync();
+            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE media_asset SET is_deleted = true WHERE id = {favicon}");
+        }
+
+        await SaveTreeAsync(seeded.ShopId, seeded.Home.Id, TreeWith(HeroWithoutImage("c_hero1")));
+        await using var request = new Request(Cs, seeded.ShopId);
+
+        var info = Blocked(await Assert.ThrowsAsync<PublishBlockedException>(() => request.Publish()));
+
+        Assert.Equal(2, info.Errors.Count);
+        Assert.Null(info.Errors[0].PageId);
+        Assert.Null(info.Errors[0].PageTitle);
+        Assert.Equal("MEDIA_INVALID_IMAGE_REFERENCE", info.Errors[0].Code);
+        Assert.Equal(seeded.Home.Id, info.Errors[1].PageId);
+    }
+
+    [Fact]
+    public async Task Image_soft_deleted_between_check_and_load_is_409_and_nothing_is_written_I2()
+    {
+        var seeded = await AddWebsiteAsync(Cs);
+        var clone = await AddAssetAsync(Cs, seeded.ShopId, "Clone");
+        await SaveTreeAsync(seeded.ShopId, seeded.Home.Id, TreeWith(Hero("c_hero1", clone.ToString())));
+        await using var request = new Request(Cs, seeded.ShopId);
+        var racingMedia = new SoftDeleteAfterCheckMediaValidator(request.Media, Cs, clone);
+
+        var ex = await Assert.ThrowsAsync<ConflictException>(() => request.Publish(media: racingMedia));
+
+        Assert.Equal("PUBLISH_CONFLICT", ex.ErrorCode);
+        Assert.Empty(await PublicationsAsync(seeded.ShopId));
+    }
+
     // ---- trạng thái / race / tenant ----
 
     [Fact]

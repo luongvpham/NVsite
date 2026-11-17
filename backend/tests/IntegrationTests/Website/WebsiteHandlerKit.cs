@@ -163,9 +163,9 @@ internal static class WebsiteHandlerKit
         public Task<ThemeDto> UpdateTheme(string tokensJson, string? presetKey = null) =>
             new UpdateThemeHandler(Db, Tenant, S.ThemeValidator).Handle(new UpdateThemeCommand(presetKey, tokensJson), default);
 
-        public Task<PublicationDto> Publish(string? note = null) =>
+        public Task<PublicationDto> Publish(string? note = null, Vsite.Application.Media.Interfaces.IMediaReferenceValidator? media = null) =>
             new PublishWebsiteHandler(
-                    Db, Tenant, S.Validator, S.RequiredProps, Media, Actor, PointerCache, NullLogger<PublishWebsiteHandler>.Instance)
+                    Db, Tenant, S.Validator, S.RequiredProps, media ?? Media, Actor, PointerCache, NullLogger<PublishWebsiteHandler>.Instance)
                 .Handle(new PublishWebsiteCommand(note), default);
 
         public ValueTask DisposeAsync() => Db.DisposeAsync();
@@ -272,6 +272,22 @@ internal static class WebsiteHandlerKit
             }
 
             return result;
+        }
+    }
+
+    /// <summary>Mô phỏng tab khác xoá mềm ảnh NGAY SAU khi handler kiểm ảnh hợp lệ (trước lúc nạp bảng media cho snapshot).</summary>
+    public sealed class SoftDeleteAfterCheckMediaValidator(
+        Vsite.Application.Media.Interfaces.IMediaReferenceValidator inner, string connectionString, Guid assetId)
+        : Vsite.Application.Media.Interfaces.IMediaReferenceValidator
+    {
+        public async Task EnsureValidAsync(IReadOnlyCollection<Guid> treeImageIds, IReadOnlyCollection<Guid> businessImageIds, CancellationToken ct)
+        {
+            await inner.EnsureValidAsync(treeImageIds, businessImageIds, ct);
+            if (treeImageIds.Contains(assetId) || businessImageIds.Contains(assetId))
+            {
+                await using var other = NewDb(connectionString, null);
+                await other.Database.ExecuteSqlInterpolatedAsync($"UPDATE media_asset SET is_deleted = true WHERE id = {assetId}", ct);
+            }
         }
     }
 }
