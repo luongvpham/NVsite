@@ -276,7 +276,7 @@ Không phải bảng, nhưng là cấu trúc dữ liệu quan trọng nhất mod
 
 **Vòng FK `website` ↔ `site_publication`:** insert không vướng (website tạo với `CurrentPublicationId = NULL`, FK ghép bỏ qua NULL). Xoá website (hiếm, chỉ admin) thì đặt `current_publication_id = NULL` trước rồi mới xoá publication và website, trong cùng transaction — không dùng `DEFERRABLE` cho một thao tác hiếm.
 
-**`schemaVersion` ≠ `version`** (#94): `version` là số thứ tự bản publish của website (= cột `Version`); `schemaVersion` là phiên bản **shape** của document. Snapshot 20 bản gần nhất + template có thể mang `schemaVersion` cũ — `apps/web` đọc qua upcaster, không giả định shape mới nhất.
+**`schemaVersion` ≠ `version`** (#94): `version` là số thứ tự bản publish của website (= cột `Version`); `schemaVersion` là phiên bản **shape** của document. Snapshot 20 bản gần nhất + template có thể mang `schemaVersion` cũ — `apps/web` (WEBSITE-005) hiện chỉ chấp nhận `schemaVersion` 1 — khác thì `SiteDataError`; upcaster viết khi có v2, không giả định shape mới nhất.
 
 **Runtime đọc gì:** `apps/web` chỉ đọc snapshot đã publish qua `GET /api/site` theo header Host (#108) — cache là LRU trong process theo host, revalidate bằng ETag/304 (#109); HTML trả `Cache-Control: private, no-cache`, không cache HTML. **Không bao giờ** đọc `page_draft` hay API draft (lint `no-restricted-imports` chặn trong `apps/web`). Preview trong portal thì ngược lại. Đây là ranh giới cứng — vi phạm nghĩa là bản nháp rò ra công chúng.
 

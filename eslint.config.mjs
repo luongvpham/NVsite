@@ -28,7 +28,7 @@ const WEBSITE_DRAFT_SDK_NAMES = [
   'getRollbackPublicationMutationOptions',
   // website.zod.ts — schema của các endpoint draft
   'createWebsiteParams', 'getWebsiteParams', 'getWebsiteResponse', 'listPagesParams', 'listPagesResponseItem',
-  'listPagesResponse', 'createPageParams', 'createPageBodyNoIndexDefault', 'createPageBody', 'updatePageParams',
+  'listPagesResponse', 'createPageParams', 'createPageBodyNoIndexDefault', 'createPageBodyIsEnabledDefault', 'createPageBody', 'updatePageParams',
   'updatePageBody', 'updatePageResponse', 'deletePageParams', 'getPageDraftParams', 'getPageDraftResponse',
   'savePageDraftParams', 'savePageDraftBody', 'savePageDraftResponse', 'getThemeParams', 'getThemeResponse',
   'updateThemeParams', 'updateThemeBody', 'updateThemeResponse', 'publishWebsiteParams', 'publishWebsiteBody',
