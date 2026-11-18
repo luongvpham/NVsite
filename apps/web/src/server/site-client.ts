@@ -64,12 +64,16 @@ export class SiteDataError extends Error {
 export const SITE_NOT_FOUND = 'SITE_NOT_FOUND';
 export const SUPPORTED_SNAPSHOT_SCHEMA_VERSION = 1;
 export const SITE_CACHE_MAX_ENTRIES = 200;
+/** Timeout mỗi request `GET /api/site` (review I1): BE treo → `SiteFetchError` → 502, không treo SSR. */
+export const SITE_FETCH_TIMEOUT_MS = 5000;
 
 export interface SiteClientDeps {
   /** Origin BE tuyệt đối (vd `http://localhost:5270`). */
   readonly apiOrigin: string;
   /** LRU theo host chuẩn hoá. */
   readonly cache: LruCache<string, CachedSite>;
+  /** Mặc định {@link SITE_FETCH_TIMEOUT_MS}; test truyền nhỏ hơn. */
+  readonly timeoutMs?: number;
 }
 
 export interface SiteClient {
@@ -110,7 +114,7 @@ function parseSnapshot(raw: unknown): SiteSnapshot {
 }
 
 export function createSiteClient(deps: SiteClientDeps): SiteClient {
-  const { apiOrigin, cache } = deps;
+  const { apiOrigin, cache, timeoutMs = SITE_FETCH_TIMEOUT_MS } = deps;
 
   async function fetchSite(host: string): Promise<SiteResult> {
     if (host === '') throw new TypeError('site-client: host rỗng.');
@@ -123,6 +127,10 @@ export function createSiteClient(deps: SiteClientDeps): SiteClient {
     try {
       response = await client.get<unknown>('/api/site', {
         validateStatus: (s) => s === 200 || s === 304 || s === 404,
+        // I1/m3: không treo vô hạn; không theo redirect (3xx → lỗi → 502); bỏ qua HTTP(S)_PROXY của env.
+        timeout: timeoutMs,
+        maxRedirects: 0,
+        proxy: false,
         headers: cached ? { 'If-None-Match': cached.etag } : undefined,
       });
     } catch (cause) {

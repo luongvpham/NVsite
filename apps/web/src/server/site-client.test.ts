@@ -1,12 +1,19 @@
 // @vitest-environment node
 import http, { type IncomingHttpHeaders, type IncomingMessage, type ServerResponse } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import type { AddressInfo, Socket } from 'node:net';
 import { siteSnapshotSchema } from '@vsite/builder-components';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import themeTokensConfig from '../../../../config/theme-tokens.json';
 import { server as mswServer } from '../test/msw-server';
 import { LruCache } from './lru';
-import { createSiteClient, SiteDataError, SiteFetchError, type CachedSite, type SiteResult } from './site-client';
+import {
+  createSiteClient,
+  SITE_FETCH_TIMEOUT_MS,
+  SiteDataError,
+  SiteFetchError,
+  type CachedSite,
+  type SiteResult,
+} from './site-client';
 
 /**
  * T3 (WEBSITE-005): site-client gọi `GET /api/site` với Host tự đặt. Dùng Node http server THẬT
@@ -53,7 +60,7 @@ const published = (name = 'Spa ABC', snap: unknown = snapshot(), publishedAt = P
 const suspended = { status: 'Suspended', shop: { name: 'Spa ABC', logoUrl: null }, publication: null };
 const notFoundBody = { type: 'about:blank', title: 'Not Found', status: 404, error_code: 'SITE_NOT_FOUND' };
 
-type Reply = { status: number; body?: unknown; etag?: string };
+type Reply = { status: number; body?: unknown; etag?: string; headers?: Record<string, string> };
 type Responder = (req: IncomingMessage) => Reply;
 
 let srv: http.Server;
@@ -65,7 +72,7 @@ beforeAll(async () => {
   srv = http.createServer((req: IncomingMessage, res: ServerResponse) => {
     seen.push(req.headers);
     const r = responder(req);
-    const headers: Record<string, string> = { 'Cache-Control': 'no-cache' };
+    const headers: Record<string, string> = { 'Cache-Control': 'no-cache', ...r.headers };
     if (r.etag) headers.ETag = r.etag;
     if (r.body !== undefined) headers['Content-Type'] = 'application/json';
     res.writeHead(r.status, headers);
@@ -276,6 +283,59 @@ describe('site-client — invalid data and failures (R5)', () => {
     expect((err as Error).message).not.toContain(origin);
     expect((err as Error).cause).toBeDefined();
     expect(cache.get('spa-abc.vsite.local')?.etag).toBe('"e1"');
+  });
+
+  it('BE never answers → SiteFetchError once the timeout elapses (review I1)', async () => {
+    const sockets = new Set<Socket>();
+    const hang = http.createServer(() => {
+      /* không bao giờ trả lời */
+    });
+    hang.on('connection', (s) => sockets.add(s));
+    await new Promise<void>((resolve) => hang.listen(0, '127.0.0.1', resolve));
+    try {
+      const slow = createSiteClient({
+        apiOrigin: `http://127.0.0.1:${(hang.address() as AddressInfo).port}`,
+        cache,
+        timeoutMs: 200,
+      }).fetchSite;
+      const started = Date.now();
+      const err = await slow('spa-abc.vsite.local').catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(SiteFetchError);
+      expect(Date.now() - started).toBeLessThan(2000);
+    } finally {
+      for (const s of sockets) s.destroy();
+      await new Promise<void>((resolve) => hang.close(() => { resolve(); }));
+    }
+  });
+
+  it('default timeout is a finite named constant', () => {
+    expect(SITE_FETCH_TIMEOUT_MS).toBe(5000);
+  });
+
+  it('302 from BE → SiteFetchError, redirect NOT followed (review m3)', async () => {
+    responder = (req) =>
+      req.url === '/api/site'
+        ? { status: 302, headers: { Location: `${origin}/elsewhere` } }
+        : { status: 200, body: published(), etag: '"e1"' };
+    await expect(fetchSite('spa-abc.vsite.local')).rejects.toBeInstanceOf(SiteFetchError);
+    expect(seen).toHaveLength(1);
+  });
+
+  it('ignores HTTP_PROXY env (review m3)', async () => {
+    const saved = { HTTP_PROXY: process.env.HTTP_PROXY, http_proxy: process.env.http_proxy, NO_PROXY: process.env.NO_PROXY, no_proxy: process.env.no_proxy };
+    process.env.HTTP_PROXY = 'http://127.0.0.1:1';
+    process.env.http_proxy = 'http://127.0.0.1:1';
+    delete process.env.NO_PROXY;
+    delete process.env.no_proxy;
+    try {
+      expect((await fetchSite('spa-abc.vsite.local')).kind).toBe('site');
+      expect(seen).toHaveLength(1);
+    } finally {
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) Reflect.deleteProperty(process.env, k);
+        else process.env[k] = v;
+      }
+    }
   });
 
   it('network error → SiteFetchError', async () => {
