@@ -42,6 +42,7 @@ export * from './generated/media/media.zod';
 // website: cùng lý do tránh TS2308 — bỏ ProblemDetails/HttpValidationProblemDetails(+Errors) (đã export từ identity).
 // `JsonElement` là interface rỗng (tree/tokens): FE kiểu hoá bằng Zod của packages/builder-components.
 export * from './generated/website/website/website';
+export * from './generated/website/site/site';
 export * from './generated/website/model/createPageRequest';
 export * from './generated/website/model/jsonElement';
 export * from './generated/website/model/nullableOfSystemType';
@@ -49,6 +50,13 @@ export * from './generated/website/model/pageDraftDto';
 export * from './generated/website/model/pageDraftPageDto';
 export * from './generated/website/model/pageDto';
 export * from './generated/website/model/pageKind';
+export * from './generated/website/model/publicationDto';
+export * from './generated/website/model/publishWebsiteBody';
+export * from './generated/website/model/publishWebsiteRequest';
+export * from './generated/website/model/publishedPublicationDto';
+export * from './generated/website/model/publishedShopDto';
+export * from './generated/website/model/publishedSiteDto';
+export * from './generated/website/model/publishedSiteDtoPublication';
 export * from './generated/website/model/savePageDraftRequest';
 export * from './generated/website/model/savePageDraftResultDto';
 export * from './generated/website/model/themeDto';

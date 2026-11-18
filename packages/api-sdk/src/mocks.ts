@@ -4,3 +4,4 @@ export * from './generated/identity/identity/identity.msw';
 export * from './generated/shop/shop/shop.msw';
 export * from './generated/media/media/media.msw';
 export * from './generated/website/website/website.msw';
+export * from './generated/website/site/site.msw';

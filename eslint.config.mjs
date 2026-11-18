@@ -2,6 +2,52 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
+const BUILDER_CORE_IMPORT_PATTERN = {
+  group: ['@vsite/builder-core', '@vsite/builder-core/*'],
+  message: 'builder-core chỉ dùng bởi apps/portal — renderer/components/apps/web không được import (CLAUDE.md root, builder-renderer/CLAUDE.md).',
+};
+
+// apps/web chỉ đọc site ĐÃ publish (`GET /api/site`, 05 §7, #108) — không bao giờ đọc/ghi draft (website, trang,
+// theme, publication) của module website. Danh sách = mọi export runtime của generated/website/website/website.ts
+// + schema Zod của các endpoint đó trong website.zod.ts + mock MSW của website.msw.ts (review I2, WEBSITE-005).
+// Được phép: createApiClient, getPublishedSite*, getPublishedSiteResponse, type PublishedSite*/PublishedShopDto, site.msw.
+// Orval sinh endpoint website mới → thêm tên vào đây.
+const WEBSITE_DRAFT_SDK_NAMES = [
+  // website.ts — hàm gọi API
+  'createWebsite', 'getWebsite', 'listPages', 'createPage', 'updatePage', 'deletePage', 'getPageDraft', 'savePageDraft',
+  'getTheme', 'updateTheme', 'publishWebsite', 'listPublications', 'rollbackPublication',
+  // website.ts — hook React Query
+  'useCreateWebsite', 'useGetWebsite', 'useListPages', 'useCreatePage', 'useUpdatePage', 'useDeletePage', 'useGetPageDraft',
+  'useSavePageDraft', 'useGetTheme', 'useUpdateTheme', 'usePublishWebsite', 'useListPublications', 'useRollbackPublication',
+  // website.ts — query key/options, mutation options
+  'getGetWebsiteQueryKey', 'getGetWebsiteQueryOptions', 'getListPagesQueryKey', 'getListPagesQueryOptions',
+  'getGetPageDraftQueryKey', 'getGetPageDraftQueryOptions', 'getGetThemeQueryKey', 'getGetThemeQueryOptions',
+  'getListPublicationsQueryKey', 'getListPublicationsQueryOptions', 'getCreateWebsiteMutationOptions',
+  'getCreatePageMutationOptions', 'getUpdatePageMutationOptions', 'getDeletePageMutationOptions',
+  'getSavePageDraftMutationOptions', 'getUpdateThemeMutationOptions', 'getPublishWebsiteMutationOptions',
+  'getRollbackPublicationMutationOptions',
+  // website.zod.ts — schema của các endpoint draft
+  'createWebsiteParams', 'getWebsiteParams', 'getWebsiteResponse', 'listPagesParams', 'listPagesResponseItem',
+  'listPagesResponse', 'createPageParams', 'createPageBodyNoIndexDefault', 'createPageBodyIsEnabledDefault', 'createPageBody', 'updatePageParams',
+  'updatePageBody', 'updatePageResponse', 'deletePageParams', 'getPageDraftParams', 'getPageDraftResponse',
+  'savePageDraftParams', 'savePageDraftBody', 'savePageDraftResponse', 'getThemeParams', 'getThemeResponse',
+  'updateThemeParams', 'updateThemeBody', 'updateThemeResponse', 'publishWebsiteParams', 'publishWebsiteBody',
+  'listPublicationsParams', 'listPublicationsResponseItem', 'listPublicationsResponse', 'rollbackPublicationParams',
+  'rollbackPublicationResponse',
+];
+const WEBSITE_DRAFT_MSW_NAMES = [
+  'getWebsiteMock', 'getCreateWebsiteResponseMock', 'getGetWebsiteResponseMock', 'getListPagesResponseMock',
+  'getCreatePageResponseMock', 'getUpdatePageResponseMock', 'getGetPageDraftResponseMock', 'getSavePageDraftResponseMock',
+  'getGetThemeResponseMock', 'getUpdateThemeResponseMock', 'getPublishWebsiteResponseMock',
+  'getListPublicationsResponseMock', 'getRollbackPublicationResponseMock', 'getCreateWebsiteMockHandler',
+  'getGetWebsiteMockHandler', 'getListPagesMockHandler', 'getCreatePageMockHandler', 'getUpdatePageMockHandler',
+  'getDeletePageMockHandler', 'getGetPageDraftMockHandler', 'getSavePageDraftMockHandler', 'getGetThemeMockHandler',
+  'getUpdateThemeMockHandler', 'getPublishWebsiteMockHandler', 'getListPublicationsMockHandler',
+  'getRollbackPublicationMockHandler',
+];
+const NO_DRAFT_MESSAGE =
+  'apps/web chỉ đọc site đã publish (GET /api/site, 05 §7, #108) — không import API draft/website editing (review I2, WEBSITE-005).';
+
 const APPS_IMPORT_PATTERNS = [
   {
     group: ['@vsite/portal', '@vsite/portal/*', '@vsite/web', '@vsite/web/*', 'apps/**', '**/apps/**'],
@@ -58,21 +104,27 @@ export default tseslint.config(
   {
     // Ranh giới kiến trúc: `builder-core` (Operations Engine + store) CHỈ dùng bởi apps/portal. builder-renderer phải chạy
     // ở apps/web (chỉ render), builder-components là model mà chính builder-core import (import ngược = vòng phụ thuộc).
-    files: [
-      'packages/builder-renderer/**/*.{ts,tsx}',
-      'packages/builder-components/**/*.{ts,tsx}',
-      'apps/web/**/*.{ts,tsx}',
-    ],
+    // apps/web có block riêng ngay dưới (thêm luật cấm draft) — flat config ghi đè chứ không gộp rule cùng tên.
+    files: ['packages/builder-renderer/**/*.{ts,tsx}', 'packages/builder-components/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [BUILDER_CORE_IMPORT_PATTERN, ...APPS_IMPORT_PATTERNS] }],
+    },
+  },
+  {
+    // apps/web: cấm builder-core (như trên) + cấm API draft của module website (review I2, WEBSITE-005).
+    files: ['apps/web/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
+          paths: [
+            { name: '@vsite/api-sdk', importNames: WEBSITE_DRAFT_SDK_NAMES, message: NO_DRAFT_MESSAGE },
+            { name: '@vsite/api-sdk/mocks', importNames: WEBSITE_DRAFT_MSW_NAMES, message: NO_DRAFT_MESSAGE },
+          ],
           patterns: [
-            {
-              group: ['@vsite/builder-core', '@vsite/builder-core/*'],
-              message: 'builder-core chỉ dùng bởi apps/portal — renderer/components/apps/web không được import (CLAUDE.md root, builder-renderer/CLAUDE.md).',
-            },
+            BUILDER_CORE_IMPORT_PATTERN,
             ...APPS_IMPORT_PATTERNS,
+            { group: ['**/api-sdk/src/**'], message: 'Chỉ import @vsite/api-sdk qua barrel (index/mocks), không đi tắt vào src/generated.' },
           ],
         },
       ],

@@ -11,6 +11,8 @@ export function getRouter() {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
+    // A10: "/lien-he/" không bị 307 — loader nhận path nguyên và `selectPage` bỏ một "/" cuối.
+    trailingSlash: 'preserve',
     defaultPreloadStaleTime: 0,
   });
 
