@@ -586,23 +586,23 @@ Chỉ thêm test (code đã có từ T1–T6); test đỏ thì quay lại sửa 
 
 ### T9: Kết thúc S1
 
-- [ ] `dotnet test backend/vsite.sln` xanh toàn bộ (Docker thật); `pnpm build && pnpm test` xanh
-- [ ] `pnpm contract:export website media` → skill `contract-sync` → `Docs/tasks/WEBSITE-004/contract-diff.md` → **Gate 1** (#89).
+- [x] `dotnet test backend/vsite.sln` xanh toàn bộ (Docker thật); `pnpm build && pnpm test` xanh
+- [x] `pnpm contract:export website media` → skill `contract-sync` → `Docs/tasks/WEBSITE-004/contract-diff.md` → **Gate 1** (#89).
   Dự kiến chỉ thêm: 4 operation + 3 schema ở `website`; 4 giá trị enum + 1 field ở `media`; `WebsiteDto.currentPublicationId`.
   Lưu ý nợ classifier (TOOLING-001): thêm field vào DTO response có thể bị báo BREAKING nhầm — nêu rõ trong `contract-diff.md`.
-- [ ] Sau promote: `pnpm gen:api` · viết `Docs/tasks/WEBSITE-004/brief.md` cho 8c + màn publish Portal, bắt buộc ghi:
+- [x] Sau promote: `pnpm gen:api` · viết `Docs/tasks/WEBSITE-004/brief.md` cho 8c + màn publish Portal, bắt buộc ghi:
   header `Host` (#108), `ETag`/304, `Suspended` → `publication: null`, một mã 404, `snapshot` là `unknown` → parse bằng
   Zod `siteSnapshotSchema`, `snapshot.media` thay cho `mediaMap`, version draft đổi sau publish (R9), shape `PUBLISH_BLOCKED`.
-- [ ] `Docs/tasks/WEBSITE-004/changelog.md`: lệch có chủ đích (shape snapshot khác `05` §7: `id`, `media`, `tracking`,
+- [x] `Docs/tasks/WEBSITE-004/changelog.md`: lệch có chủ đích (shape snapshot khác `05` §7: `id`, `media`, `tracking`,
   `theme.presetKey`, `seo.faviconAssetId`; shop `Draft` không chặn site) + "Chưa làm xong / theo dõi" (phát hiện 4;
   anchor `#nodeId` + năm © → 8c; prune → 8d; custom domain; kiểm `Host` tự đặt từ Node → 8c)
-- [ ] Banner `STATUS` của `05` (Tasks + Changelog + Stale: §7 shape snapshot, §25 mục 4 đã chốt #109) và `08` (references
+- [x] Banner `STATUS` của `05` (Tasks + Changelog + Stale: §7 shape snapshot, §25 mục 4 đã chốt #109) và `08` (references
   đã quét snapshot) → `pnpm gen:doc-index`
-- [ ] `DesignIdeal/00-INDEX.md`: §1 dòng "Quyết định #N nằm ở đâu" thêm #108, #109; §3 dòng 8b; §4 gỡ hai dòng "Cần bạn chốt"
+- [x] `DesignIdeal/00-INDEX.md`: §1 dòng "Quyết định #N nằm ở đâu" thêm #108, #109; §3 dòng 8b; §4 gỡ hai dòng "Cần bạn chốt"
   của 8b, gỡ nợ `MEDIA-001` #2, `WEBSITE-001` #3 và #14, cập nhật dòng "Review kiến trúc P1"
-- [ ] `DesignIdeal/DECISIONS.md`: #108, #109 đổi trạng thái sang ✅ kèm tên test; #94 ghi `Snapshot` đã code
-- [ ] `backend/docs/modules/website.md`: entity, 4 route, quy ước đọc công khai, con trỏ Redis, sửa dòng 83
-- [ ] `pnpm check:docs` xanh
+- [x] `DesignIdeal/DECISIONS.md`: #108, #109 đổi trạng thái sang ✅ kèm tên test; #94 ghi `Snapshot` đã code
+- [x] `backend/docs/modules/website.md`: entity, 4 route, quy ước đọc công khai, con trỏ Redis, sửa dòng 83
+- [x] `pnpm check:docs` xanh
 
 ## 11. Đóng task (trước Gate 2)
 

@@ -442,3 +442,51 @@ lúc viết là lỗi test (xem dưới).
   (nguồn snapshot + OG/favicon, 4 kind, `isCurrent`); đánh dấu xong mục "chưa làm" #2 của MEDIA-001 và #14 của WEBSITE-001. Quyết định cặp OG/favicon báo hai mục → `DECISIONS.md` sau Gate 1.
 
 **Chưa làm (task sau)**: docs module + contract-sync (T9).
+
+## T9
+
+Kết thúc S1: contract-sync → Gate 1 → promote + SDK, `brief.md`, tài liệu. **Không có code sản phẩm mới.**
+
+**Thay đổi**
+- `pnpm contract:export website media` → `tools/contract-sync` → [`contract-diff.md`](contract-diff.md). Gate 1 gọn (#89): chỉ thêm (đối chiếu tay bằng diff JSON), không `REMOVED`,
+  không câu hỏi chặn ⇒ **promote ngay** bằng `tools/contract-sync/promote.mjs` (`contract.lock` cập nhật), `pnpm gen:api`. Thêm: 4 operation + 5 schema ở `website`
+  (kế hoạch ghi "3 schema" — thực tế 5: `PublicationDto`, `PublishWebsiteRequest`, `PublishedSiteDto`, `PublishedShopDto`, `PublishedPublicationDto`), `WebsiteDto.currentPublicationId`,
+  4 giá trị `MediaReferenceKind` + `MediaReferenceDto.isCurrent`. Nhãn BREAKING ×3 của tool là nợ classifier TOOLING-001 (field/enum thêm ở response) — nêu ở `contract-diff.md`.
+- `brief.md` cho 8c + màn publish Portal.
+- Tài liệu: banner `05`/`08`, `00-INDEX.md`, `DECISIONS.md` (#94, #108, #109, quyết định #110), `backend/docs/modules/website.md` (+ `media.md`).
+
+**Lệch có chủ đích (so với `DesignIdeal/05` — đã ghi banner)**
+- **Shape snapshot khác `05` §7:** `pages[].id` (link nội bộ trong tree trỏ theo id trang), `media` (`imageId → { storageKey, preset }` thay cho `mediaMap` đọc sống),
+  `tracking`, `theme.presetKey` (+ `theme.tokens` nguyên văn), `seo.faviconAssetId`; `navigation.items` rỗng tới Bước 7.
+- **Shop `Draft` không chặn site** — chỉ `Suspended` (→ như website `Suspended`) và `Closed` (→ 404) ảnh hưởng. Shop mới tạo mặc định `Draft` và chưa có luồng kích hoạt (plan phát hiện 3).
+- `ETag` gồm cả `Shop.UpdatedAt` (đổi tên/logo shop làm ETag đổi); con trỏ Redis chỉ giữ dữ liệu của Website (`site:pointer:{shopId:N}`, TTL 5'/1').
+- Ngoại lệ `ShopScopedRouteFilterTests` cho đúng `GET /api/site` có `AllowAnonymous` (T6). `409 ROLLBACK_CONFLICT` thêm ngoài plan (T5).
+
+**Kiểm chứng** (Docker CÓ — không nợ test, `DOCKER-TEST-DEBT.md` rỗng)
+- `dotnet test backend/vsite.sln` đầy đủ: ComponentSchemaTests 12/12, ArchitectureTests 22/22, IntegrationTests 897 passed / 1 skipped (skip có sẵn: `ShopEndpointTests` chờ module Listing).
+- `pnpm build` 4/4 · `pnpm test` 10/10. Lần chạy đầu `@vsite/builder-components` có 3 test `gen-registry` **timeout 5s** vì chạy song song với `dotnet test` (tranh CPU);
+  chạy lại riêng → xanh. Không phải lỗi code. (`@vsite/web:test` in `ReferenceError: module is not defined` nhưng exit 0 — có sẵn từ trước, không thuộc task này.)
+- `check-no-drift` OK sau promote; thử Orval trên file staging: không có type `…Dto2`.
+
+## Chưa làm xong / theo dõi (gộp mọi mục mở của T4–T8)
+
+**Chuyển task khác**
+- **8c:** anchor `#nodeId` + năm © (G3; WEBSITE-003 changelog #3, #4) · **kiểm gửi `Host` tự đặt từ Node** (plan §2) · parse `siteSnapshotSchema` · màn publish Portal · nạp lại version draft sau publish/rollback (R9).
+- **8d:** prune 20 bản (hiện `references` tải mọi snapshot của shop — đo lại khi bật prune; prefilter `snapshot->'media' ?| keys` nếu chậm) · file ảnh của bản cũ sống tới khi prune.
+- **Custom domain (G2):** bảng `ShopDomain`; middleware mới chỉ tra `Shop.Slug`.
+- **Phát hiện 4 (nợ SHOP-001, không sửa ở 8b):** Owner tự đặt được `ShopStatus` bất kỳ qua `UpdateShopRequest` (`ShopEndpoints.cs:76`), kể cả tự gỡ `Suspended`.
+- **Hạ tầng:** khi Caddy bật `ForwardedHeaders` phải thêm test `X-Forwarded-Host` với `KnownProxies` thật (T7 I2); cấu hình Caddy/CDN chưa kiểm (plan phát hiện 8).
+- **Khi có endpoint đình chỉ/gỡ:** `Website.Suspend()/Reinstate()` phải gọi `ISitePointerCache.InvalidateAsync` (con trỏ giữ `WebsiteStatus`) (T6 M4).
+
+**Mở ở BE (chấp nhận / chưa làm)**
+- T6 I1/I2: race đọc↔publish làm con trỏ cũ sống tới 5' (có test `…known_limit_I1`); sửa chắc cần token phiên bản trong con trỏ. I3: chưa test giá trị lạ trong Redis (`"null"`, enum lạ). M3: `ETag` dựa `Shop.UpdatedAt` —
+  chưa xác minh luồng upload/xoá logo có lưu `Shop` ở trạng thái Modified không. M6: `GetAsync`/`SetAsync` Redis lỗi ⇒ `GET /api/site` 500 (không fallback DB).
+- T7: test kiến trúc quét văn bản (service ngoài thư mục `GetPublishedSite/`, `partial`, `//` trong chuỗi không bị bắt); regex `\bPages\b` có thể đỏ giả; R11 chứng minh "snapshot độc lập bảng media", không kiểm domain;
+  chưa có ca Host viết hoa/port/dấu chấm cuối (M4); "giống từng byte" ở R3 là trên response, không phải chuỗi jsonb (M7).
+- T8: `references` 500 nếu snapshot hỏng/version lạ (M1); không tách được predicate `ShopId` tường minh khỏi Global Query Filter bằng test (#21.2 giữ theo quy ước).
+- T5: `ROLLBACK_CONFLICT` chưa có test race; thiếu test rollback trộn draft sạch/bẩn và trang xoá mềm; publish ∥ rollback là last-write-wins (nhất quán, chấp nhận); rollback nạp cả entity bản đích.
+- T4: thiếu ca R14 `imageId` chữ hoa trong list (`Gallery.items[]`); `Tenant_of_shop_B_cannot_publish…` yếu (B không có website); thiếu theme/draft ⇒ 500; `note` kiểm độ dài trước trim;
+  OpenAPI không mô tả `params.errors[]`/`Location` (đã ghi `contract-diff.md` + `brief.md`).
+- Đã ghi ở `review.md`: `packages/builder-components/CLAUDE.md:58-59` còn ghi `requiresProps` "để dành cho Bước 5"; comment XML đầu class `Website.cs` còn liệt kê `CurrentPublicationId` ở mục "chưa có".
+
+**Chưa làm — thuộc §11 (đóng task, bước sau):** `change-reviewer` toàn diff, `review.md`, nghiệm thu tay bằng `curl`.
