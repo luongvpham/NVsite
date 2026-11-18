@@ -4,7 +4,7 @@ import { reservedRoutes } from '../lib/reserved-routes';
  * Nhận diện host Shop Site (WEBSITE-005, chặn M4 ở FE): BE chọn tenant theo nhãn đầu
  * của Host, nên `evil.com` sẽ thành slug `evil`. Chỉ `{label}.{ROOT_DOMAIN}` mới được qua.
  * Hàm thuần — không đọc env/request. `host` trả về đã chuẩn hoá (lowercase, không cổng,
- * không dấu chấm cuối): cùng giá trị dùng làm Host forward và key LRU (A11).
+ * không dấu chấm cuối — chỉ bỏ MỘT dấu, giống `buildOrigin`): cùng giá trị dùng làm Host forward và key LRU (A11).
  */
 export type SiteHostResult =
   | { readonly kind: 'shop'; readonly host: string; readonly slug: string }
@@ -14,11 +14,7 @@ const PLATFORM: SiteHostResult = { kind: 'platform' };
 const SLUG_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const PORT = /^:\d{1,5}$/;
 
-function stripTrailingDots(s: string): string {
-  let end = s.length;
-  while (end > 0 && s[end - 1] === '.') end--;
-  return s.slice(0, end);
-}
+const stripOneTrailingDot = (s: string): string => (s.endsWith('.') ? s.slice(0, -1) : s);
 
 function normalizeHost(raw: string): string | null {
   let h = raw.trim().toLowerCase();
@@ -28,12 +24,12 @@ function normalizeHost(raw: string): string | null {
     if (!PORT.test(h.slice(colon))) return null;
     h = h.slice(0, colon);
   }
-  h = stripTrailingDots(h);
+  h = stripOneTrailingDot(h);
   return h === '' ? null : h;
 }
 
 export function resolveSiteHost(rawHost: string, rootDomain: string): SiteHostResult {
-  const root = stripTrailingDots(rootDomain.trim().toLowerCase().replace(/^\.+/, ''));
+  const root = stripOneTrailingDot(rootDomain.trim().toLowerCase().replace(/^\.+/, ''));
   if (root === '') return PLATFORM;
   const host = normalizeHost(rawHost);
   if (host === null) return PLATFORM;

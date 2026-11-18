@@ -2,7 +2,7 @@ import '@tanstack/react-start/server-only';
 import { createApiClient, getPublishedSiteResponse, type PublishedShopDto } from '@vsite/api-sdk';
 import { siteSnapshotSchema, type SiteSnapshot } from '@vsite/builder-components';
 import { z } from 'zod';
-import { readServerEnv } from './env';
+import { readApiOrigin } from './env';
 import { LruCache } from './lru';
 
 /**
@@ -189,5 +189,5 @@ export const siteCache = new LruCache<string, CachedSite>(SITE_CACHE_MAX_ENTRIES
 
 /** Bản production: đọc `API_ORIGIN` lười (ném nếu thiếu) và dùng {@link siteCache}. */
 export function fetchPublishedSite(host: string): Promise<SiteResult> {
-  return createSiteClient({ apiOrigin: readServerEnv().apiOrigin, cache: siteCache }).fetchSite(host);
+  return createSiteClient({ apiOrigin: readApiOrigin(), cache: siteCache }).fetchSite(host);
 }

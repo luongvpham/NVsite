@@ -12,8 +12,8 @@ export const decorateWithAnchor: DecorateNode = (node, rendered) => (
   </div>
 );
 
-/* eslint-disable no-restricted-globals -- chỉ chạy trong effect sau hydrate (#23), không phải logic render */
 function scrollToHash(): void {
+  // eslint-disable-next-line no-restricted-globals -- chỉ trong effect sau hydrate (#23), không phải logic render
   const raw = window.location.hash.slice(1);
   if (!raw) return;
   let id = raw;
@@ -22,6 +22,7 @@ function scrollToHash(): void {
   } catch {
     // Hash mã hoá hỏng: dùng nguyên văn.
   }
+  // eslint-disable-next-line no-restricted-globals -- chỉ trong effect sau hydrate (#23), không phải logic render
   const wrapper = document.getElementById(id);
   if (!wrapper) return;
   // Wrapper `display: contents` không cuộn được → cuộn phần tử con đầu; không có con thì không làm gì.
@@ -35,10 +36,11 @@ function scrollToHash(): void {
 export function useAnchorScroll(): void {
   useEffect(() => {
     scrollToHash();
+    // eslint-disable-next-line no-restricted-globals -- chỉ trong effect sau hydrate (#23), không phải logic render
     window.addEventListener('hashchange', scrollToHash);
     return () => {
+      // eslint-disable-next-line no-restricted-globals -- chỉ trong effect sau hydrate (#23), không phải logic render
       window.removeEventListener('hashchange', scrollToHash);
     };
   }, []);
 }
-/* eslint-enable no-restricted-globals */

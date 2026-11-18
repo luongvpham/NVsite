@@ -6,8 +6,10 @@
  *   (không che 404/500 của router).
  * - Request RPC server fn: middleware không thấy Response → bỏ qua (đã kiểm ở build).
  * - h3 chỉ ghép header event vào response ok; response không ok thì ghép lại ở đây. Bỏ qua
- *   `set-cookie` (h3 đã tự ghép, `set` sẽ gộp mất nhiều cookie).
+ *   `set-cookie` (h3 đã tự ghép, `set` sẽ gộp mất nhiều cookie) và `content-type`/`content-length` (thuộc về body của router).
  */
+const SKIP_EVENT_HEADERS: ReadonlySet<string> = new Set(['set-cookie', 'content-type', 'content-length']);
+
 export function applyEventResponse(response: Response, eventStatus: number, eventHeaders: Headers): Response;
 export function applyEventResponse(
   response: Response | undefined,
@@ -26,7 +28,7 @@ export function applyEventResponse(
   if (status === 200) return response;
   const headers = new Headers(response.headers);
   eventHeaders.forEach((value, key) => {
-    if (key.toLowerCase() !== 'set-cookie') headers.set(key, value);
+    if (!SKIP_EVENT_HEADERS.has(key.toLowerCase())) headers.set(key, value);
   });
   return new Response(response.body, { status, statusText: '', headers });
 }

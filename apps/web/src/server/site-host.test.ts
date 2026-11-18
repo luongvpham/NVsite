@@ -18,6 +18,11 @@ describe.each(['vsite.vn', 'vsite.local'])('resolveSiteHost (root %s)', (root) =
     expect(resolveSiteHost(`spa-abc.${root}.:8080`, root)).toEqual(shop('spa-abc'));
   });
 
+  it('strips exactly one trailing dot: ".." → platform', () => {
+    expect(resolveSiteHost(`spa-abc.${root}..`, root)).toEqual(PLATFORM);
+    expect(resolveSiteHost(`spa-abc.${root}..:8080`, root)).toEqual(PLATFORM);
+  });
+
   it('normalizes rootDomain too', () => {
     expect(resolveSiteHost(`spa-abc.${root}`, `.${root.toUpperCase()}.`)).toEqual(shop('spa-abc'));
   });

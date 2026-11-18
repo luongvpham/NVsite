@@ -7,7 +7,7 @@ import { loadSite } from '../server/load-site';
 export const Route = createFileRoute('/$')({
   // Chỉ gửi path; shop chọn theo Host ở server (R13). Khớp slug → trang là việc của T5.
   loader: ({ location }) => loadSite({ data: { path: location.pathname } }),
-  head: ({ loaderData }) => buildSiteHead(loaderData),
+  head: ({ loaderData }) => buildSiteHead(loaderData, { platformNotFound: true }),
   errorComponent: RouteErrorPage,
   component: SplatPage,
 });

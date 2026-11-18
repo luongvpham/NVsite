@@ -9,6 +9,16 @@ const NF = pg('p-nf', null, 'NotFound');
 const snap = (...pages: ReturnType<typeof pg>[]) => ({ pages });
 const full = snap(HOME, CONTACT, NF);
 
+describe('selectPage — path lạ (T5)', () => {
+  const sneaky = snap(HOME, pg('p-m', 'media'), pg('p-M', 'Media'), pg('p-pct', '50%'), NF);
+  it.each(['/%256dedia/x', '/%2Fmedia', '/%252Fmedia', '/Media/x', '/MEDIA', '/Media', '/50%'])(
+    '%s → notFound',
+    (p) => {
+      expect(selectPage(sneaky, p)).toEqual({ kind: 'notFound', page: NF });
+    },
+  );
+});
+
 describe('selectPage (A10, R6, R7)', () => {
   it('"/" → trang chủ slug ""', () => {
     expect(selectPage(full, '/')).toEqual({ kind: 'page', page: HOME });

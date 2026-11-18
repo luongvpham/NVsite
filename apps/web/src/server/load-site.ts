@@ -1,8 +1,8 @@
 import { createServerFn } from '@tanstack/react-start';
 import { getRequestHost, getRequestUrl, setResponseHeader, setResponseStatus } from '@tanstack/react-start/server';
-import { readServerEnv } from './env';
+import { readRootDomain } from './env';
 import { buildOrigin } from './origin';
-import { loadSiteForHost, SiteLoaderKind, type SiteLoaderData } from './load-site-core';
+import { loadSiteForHost, SITE_HTML_CACHE_CONTROL, SiteLoaderKind, type SiteLoaderData } from './load-site-core';
 import { parseLoadSiteInput } from './load-site-input';
 import { fetchPublishedSite } from './site-client';
 
@@ -20,10 +20,11 @@ export const loadSite = createServerFn({ method: 'GET' })
     const origin = buildOrigin(getRequestUrl({ xForwardedHost: false, xForwardedProto: false }).protocol, host);
     let rootDomain: string;
     try {
-      rootDomain = readServerEnv().rootDomain;
+      rootDomain = readRootDomain();
     } catch (error) {
       console.error('[loadSite] thiếu cấu hình server', error);
       setResponseStatus(500);
+      setResponseHeader('Cache-Control', SITE_HTML_CACHE_CONTROL);
       return { kind: SiteLoaderKind.Error };
     }
     const outcome = await loadSiteForHost(host, data.path, {

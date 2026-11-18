@@ -58,11 +58,12 @@ function siteHead(data: SiteData): SiteHead {
   return { meta, links };
 }
 
-export function buildSiteHead(data: SiteLoaderData | undefined): SiteHead {
+/** `platformNotFound`: route splat trả 404 cho host platform → noindex (T8). Platform `/` (200) giữ nguyên. */
+export function buildSiteHead(data: SiteLoaderData | undefined, opts: { platformNotFound?: boolean } = {}): SiteHead {
   if (data === undefined) return {};
   switch (data.kind) {
     case 'platform':
-      return {};
+      return opts.platformNotFound === true ? { meta: [{ ...NOINDEX }] } : {};
     case 'site':
       return siteHead(data);
     case 'suspended':

@@ -41,4 +41,12 @@ describe('applyEventResponse', () => {
     const out = applyEventResponse(res, 503, ev({ 'set-cookie': 'b=2' }));
     expect(out.headers.getSetCookie()).toEqual(['a=1']);
   });
+
+  it('header event không ghi đè content-type/content-length của router', () => {
+    const res = new Response('<html></html>', { status: 200, headers: { 'content-type': 'text/html', 'content-length': '13' } });
+    const out = applyEventResponse(res, 503, ev({ 'content-type': 'application/json', 'content-length': '999', 'cache-control': 'x' }));
+    expect(out.headers.get('content-type')).toBe('text/html');
+    expect(out.headers.get('content-length')).toBe('13');
+    expect(out.headers.get('cache-control')).toBe('x');
+  });
 });

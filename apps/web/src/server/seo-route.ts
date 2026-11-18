@@ -1,5 +1,5 @@
 import { getRequestHost, getRequestUrl } from '@tanstack/react-start/server';
-import { readServerEnv } from './env';
+import { readRootDomain } from './env';
 import { fetchPublishedSite } from './site-client';
 import { handleSeoFile, type SeoFileKind } from './site-seo-files';
 
@@ -12,7 +12,7 @@ export async function serveSeoFile(kind: SeoFileKind): Promise<Response> {
   const protocol = getRequestUrl({ xForwardedHost: false, xForwardedProto: false }).protocol;
   let rootDomain: string;
   try {
-    rootDomain = readServerEnv().rootDomain;
+    rootDomain = readRootDomain();
   } catch (error) {
     console.error('[seo-files] thiếu cấu hình server', error);
     return new Response('Internal server error\n', {

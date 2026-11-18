@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it } from 'vitest';
-import { readServerEnv } from './env';
+import { readApiOrigin, readRootDomain, readServerEnv } from './env';
 
 const saved = { a: process.env.API_ORIGIN, r: process.env.ROOT_DOMAIN };
 afterEach(() => {
@@ -26,5 +26,21 @@ describe('readServerEnv', () => {
     process.env.API_ORIGIN = '  ';
     process.env.ROOT_DOMAIN = 'vsite.local';
     expect(() => readServerEnv()).toThrow(/API_ORIGIN/);
+  });
+});
+
+describe('readRootDomain / readApiOrigin (độc lập nhau)', () => {
+  it('readRootDomain không cần API_ORIGIN', () => {
+    delete process.env.API_ORIGIN;
+    process.env.ROOT_DOMAIN = 'vsite.local';
+    expect(readRootDomain()).toBe('vsite.local');
+  });
+  it('readApiOrigin không cần ROOT_DOMAIN; thiếu thì báo rõ', () => {
+    delete process.env.ROOT_DOMAIN;
+    process.env.API_ORIGIN = 'http://x';
+    expect(readApiOrigin()).toBe('http://x');
+    delete process.env.API_ORIGIN;
+    expect(() => readApiOrigin()).toThrow(/API_ORIGIN/);
+    expect(() => readRootDomain()).toThrow(/ROOT_DOMAIN/);
   });
 });

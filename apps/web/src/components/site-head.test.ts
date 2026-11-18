@@ -157,6 +157,10 @@ describe('buildSiteHead — kind khác', () => {
   it('platform → rỗng', () => {
     expect(buildSiteHead({ kind: SiteLoaderKind.Platform })).toEqual({});
   });
+  it('platform 404 → noindex', () => {
+    const h = buildSiteHead({ kind: SiteLoaderKind.Platform }, { platformNotFound: true });
+    expect(meta(h, 'name', 'robots')).toBe('noindex');
+  });
   it('suspended → noindex + title shop; error/notFound → noindex', () => {
     const s = buildSiteHead({ kind: SiteLoaderKind.Suspended, shop: { name: 'Spa ABC', logoUrl: null } });
     expect(meta(s, 'name', 'robots')).toBe('noindex');
