@@ -1,5 +1,5 @@
 import { RenderContextProvider } from '@vsite/builder-components';
-import { RenderTree, SiteLayout, type PageRoot } from '@vsite/builder-renderer';
+import { decorateWithAnchor, RenderTree, SiteLayout, useAnchorScroll, type PageRoot } from '@vsite/builder-renderer';
 import { themeStyle } from '@vsite/theme-engine';
 import { selectPage } from '../lib/select-page';
 import type { SiteLoaderData } from '../server/load-site-core';
@@ -12,6 +12,7 @@ import type { SiteLoaderData } from '../server/load-site-core';
 export type SiteViewData = Extract<SiteLoaderData, { kind: 'site' }>;
 
 export function SiteView({ data }: Readonly<{ data: SiteViewData }>) {
+  useAnchorScroll(); // anchor #nodeId: cuộn tới wrapper `display: contents` sau hydrate / hashchange
   const { snapshot, shop, year, path } = data;
   const selection = selectPage(snapshot, path);
 
@@ -35,6 +36,7 @@ export function SiteView({ data }: Readonly<{ data: SiteViewData }>) {
             locale={snapshot.defaultLocale}
             defaultLocale={snapshot.defaultLocale}
             pages={pages}
+            decorateNode={decorateWithAnchor}
           />
         </RenderContextProvider>
       </SiteLayout>
