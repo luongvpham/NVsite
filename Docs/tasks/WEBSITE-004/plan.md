@@ -108,10 +108,10 @@ Nhánh lỗi:
 ### Flow 2: Chủ shop rollback
 
 ```text
-1. POST /api/shops/{shopId}/website/publications/{publicationId}/rollback   ❌ T5
-2. Tìm bản theo id + ShopId + WebsiteId trong MỘT câu query                  ❌ T5
-3. Website.CurrentPublicationId = bản đó; mọi draft IsDirty = true           ❌ T5
-4. Xoá con trỏ Redis; trả 200 thông tin bản đang chạy                        ❌ T5
+1. POST /api/shops/{shopId}/website/publications/{publicationId}/rollback   ✅ T5
+2. Tìm bản theo id + ShopId + WebsiteId trong MỘT câu query                  ✅ T5
+3. Website.CurrentPublicationId = bản đó; mọi draft IsDirty = true           ✅ T5
+4. Xoá con trỏ Redis; trả 200 thông tin bản đang chạy                        ✅ T5
 ```
 
 - **Không đụng nội dung draft.** Chỉ dựng cờ `IsDirty` (bản nháp giờ khác bản đang chạy — G7).
@@ -123,7 +123,7 @@ Nhánh lỗi:
 ### Flow 3: Chủ shop xem danh sách bản đã xuất bản
 
 ```text
-1. GET /api/shops/{shopId}/website/publications   ❌ T5
+1. GET /api/shops/{shopId}/website/publications   ✅ T5
    → [{ id, version, publishedAt, publishedByUserId, note, isCurrent }], version giảm dần, KHÔNG kèm snapshot
 ```
 

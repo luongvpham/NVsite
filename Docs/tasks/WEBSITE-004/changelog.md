@@ -293,3 +293,9 @@ Danh sách bản + rollback: `GET /api/shops/{shopId}/website/publications` (`li
 
 **Chưa làm (các task sau)**: `GET /api/site` + con trỏ Redis thật (T6), isolation/bất biến (T7), references (T8), docs module +
 contract-sync (T9). Theo dõi T4 vẫn còn nguyên (đặc biệt: T6 giữ TTL con trỏ 5').
+
+**Theo dõi (từ `change-reviewer` T5: 0 Critical, 2 Important xử lý bằng tài liệu, 4 Minor — chưa làm)**
+- `409 ROLLBACK_CONFLICT` chưa có test race (cần interceptor bump `xmin` của draft như `BumpXminInterceptor`) và là thay đổi contract — nêu ở `contract-diff.md` T9 để Gate 1 chốt; plan §T5 vốn chỉ ghi 200/401/403/404.
+- Thiếu test rollback với draft trộn sạch/bẩn và với trang đã xoá mềm (hành vi đã có, chưa có test khoá).
+- Publish và rollback chạy song song: `Website` không có concurrency token → last-write-wins, cache xoá sau cả hai, trạng thái vẫn nhất quán. Chấp nhận.
+- Có thể thay nạp entity bản đích bằng `Select` cột + `PointTo(Guid)` nếu snapshot lớn gây chậm; test cache-failure nên dùng `using` thay tên đầy đủ (style).
