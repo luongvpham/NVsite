@@ -401,3 +401,44 @@ lúc viết là lỗi test (xem dưới).
 - `dotnet test backend/vsite.sln` đầy đủ: ComponentSchemaTests 12/12, ArchitectureTests 22/22, IntegrationTests 883 passed / 1 skipped (skip có sẵn: `ShopEndpointTests` chờ module Listing).
 
 **Chưa làm (các task sau)**: references (T8), docs module + contract-sync (T9). Theo dõi T6 còn mở: I1/I2 (race đọc↔publish), I3 (giá trị lạ trong con trỏ), M3, M4, M6.
+
+## T8
+
+`references` quét snapshot publish + ảnh OG/favicon (Bước 8b, S1). **Chạm contract (additive, media)**: `MediaReferenceKind` +4 giá trị
+(`SitePublication`, `PageOgImage`, `WebsiteOgImage`, `WebsiteFavicon`), `MediaReferenceDto` +1 field `isCurrent` (`bool?`, chỉ có với `SitePublication`).
+**Chưa chạy contract-sync/promote — gộp ở T9** (nhớ: 4 giá trị enum + 1 field ở `media`, đúng như dự kiến trong plan T9). Không ghi file contract nào.
+
+**Thay đổi**
+- `Vsite.Infrastructure/Website/SitePublicationReferenceSource.cs` (mới): tập id = clone có `SourceAssetId == assetId` ∪ `{assetId}` → duyệt bản publish của shop
+  (`ShopId` tường minh), đọc snapshot qua `StoredDocuments.ReadCurrent`, so key `media` bằng `Guid.TryParse` (không phân biệt hoa/thường, R14) → MỘT mục;
+  `IsCurrent` = bản `Website.CurrentPublicationId` có chứa.
+- `Vsite.Infrastructure/Website/SeoImageReferenceSource.cs` (mới): `PageOgImage` mỗi trang một mục (`pageId`/`pageTitle`), `WebsiteOgImage`/`WebsiteFavicon`.
+- `DependencyInjection.cs` đăng ký hai nguồn; xoá 2 dòng TODO (`MediaReferencesDto.cs`, `GetReferencesHandler.cs`).
+- Test: `PublicationReferenceSourceTests` (12 ca: đang chạy → current · chỉ bản cũ → false · 3 bản → 1 mục · rollback lật `isCurrent` · OG trang/website qua id Library ·
+  R14 key viết hoa · shop B không thấy của A (cả hai nguồn) · tenant null · không dùng → rỗng · OG trang mỗi trang một mục · OG website/favicon · cùng ảnh làm cả hai),
+  `SiteReferencesEndpointTests` (2 ca HTTP: R11 vế "references cảnh báo" — sau publish và sau khi xoá bản Library vẫn `SitePublication`/`isCurrent=true`; owner shop khác nhận rỗng).
+- `WebsiteHandlerKit` thêm `AddLibraryWithClonesAsync`, `SaveTreeAsync` (chuyển từ `PageDraftReferenceSourceTests`, không đổi hành vi).
+
+**Lệch có chủ đích / giả định tự đặt** (người rà ở pha 6)
+- **Đọc snapshot trong memory, không SQL jsonb.** Tải cột `snapshot` của mọi bản của shop rồi đọc key `media` — đi qua `ReadCurrent`/versioning như `GetPublishedSite`.
+  Chưa có prune (8d) nên shop publish nhiều lần tải nhiều bản; khi chậm thì prefilter `snapshot->'media' ?| keys` (ghi ở comment trong source). Chấp nhận vì `references` chỉ gọi khi
+  người dùng mở màn xoá ảnh.
+- Cùng ảnh làm cả OG lẫn favicon của website ⇒ báo HAI mục (`WebsiteOgImage` + `WebsiteFavicon`); plan không nói, báo đủ để FE liệt kê đúng chỗ dùng.
+- Ảnh OG/favicon là bản Library nên được bắt cả ở `SitePublication` (qua `assetId` chính nó) và `*OgImage`/`WebsiteFavicon` — hai mục khác loại là có chủ đích (một cho site đang chạy, một cho cấu hình hiện hành).
+- `isCurrent` là `bool?` ⇒ có thể bị classifier TOOLING-001 báo nhầm khi export (nêu ở `contract-diff.md` T9).
+
+**Kiểm chứng** (Docker CÓ)
+- TDD: test viết trước, RED = lỗi biên dịch (thiếu 2 kiểu nguồn, 4 enum, `IsCurrent`) → hiện thực → 32/32 (nhóm liên quan). Ca R14 ban đầu rỗng nghĩa (`jsonb::text` có khoảng trắng nên `replace` không khớp) —
+  sửa test sang `jsonb_set` và khẳng định key thật sự đổi.
+- Không test nào đỏ vì code T1–T7.
+- `dotnet test backend/vsite.sln` đầy đủ: ComponentSchemaTests 12/12, ArchitectureTests 22/22, IntegrationTests 897 passed / 1 skipped (skip có sẵn: `ShopEndpointTests` chờ module Listing).
+
+**Theo dõi từ `change-reviewer` T8 (0 Critical, 1 Important, 4 Minor)**
+- I1 (đã xử lý một phần): ca "shop B không thấy của A" ở nguồn publication hỏi bằng id Library không có trong snapshot của B nên yếu → thêm hỏi bằng id clone có thật trong snapshot B.
+  **Không tách được predicate `ShopId` tường minh khỏi Global Query Filter bằng test** (cả hai cùng che; tắt filter = `IgnoreQueryFilters` bị cấm) — test bảo vệ tầng "kết quả cuối không lộ"; predicate tường minh giữ theo #21.2.
+- M1: snapshot hỏng/version lạ làm `references` 500 (cùng đường `GetPublishedSite`, liên quan I3 của T6) — theo dõi. M2: tải mọi snapshot, đo lại khi bật prune 8d.
+- M4 đã sửa (so tập không phụ thuộc thứ tự enum).
+- **Docs cho T9:** banner STATUS của `08` và dòng 54/129/144 của `00-INDEX.md` còn ghi references chỉ có `Shop.LogoId`/PageDraft; cập nhật cùng bước banner `08` ở T9
+  (nguồn snapshot + OG/favicon, 4 kind, `isCurrent`); đánh dấu xong mục "chưa làm" #2 của MEDIA-001 và #14 của WEBSITE-001. Quyết định cặp OG/favicon báo hai mục → `DECISIONS.md` sau Gate 1.
+
+**Chưa làm (task sau)**: docs module + contract-sync (T9).

@@ -242,6 +242,32 @@ internal static class WebsiteHandlerKit
         return clone.Id;
     }
 
+    /// <summary>Một ảnh Library và <paramref name="clones"/> clone của nó trong shop (tree chỉ chứa id clone, `05`/MEDIA-001 #76).</summary>
+    public static async Task<(Guid LibraryId, IReadOnlyList<Guid> CloneIds)> AddLibraryWithClonesAsync(string connectionString, Guid shopId, int clones)
+    {
+        await using var db = NewDb(connectionString, shopId);
+        var library = MediaAsset.NewLibrary(shopId, $"shops/{shopId}/library/{Guid.NewGuid():N}.webp", 100, 100, 10, 0.5f, 0.5f, null, null);
+        db.MediaAssets.Add(library);
+        await db.SaveChangesAsync();
+        var ids = new List<Guid>();
+        for (var i = 0; i < clones; i++)
+        {
+            var clone = MediaAsset.NewClone(library, $"shops/{shopId}/clone/{Guid.NewGuid():N}.webp", 100, 100, 10, "p,cover", 0.5f, 0.5f);
+            db.MediaAssets.Add(clone);
+            await db.SaveChangesAsync();
+            ids.Add(clone.Id);
+        }
+
+        return (library.Id, ids);
+    }
+
+    /// <summary>Lưu cây vào draft của trang qua handler thật (đọc version hiện tại rồi ghi).</summary>
+    public static async Task SaveTreeAsync(Request request, Guid pageId, string tree)
+    {
+        var draft = await request.GetDraft(pageId);
+        await request.SaveDraft(pageId, tree, draft.Version);
+    }
+
     public static string TreeWith(params string[] nodes) =>
         "{\"schemaVersion\":1,\"id\":\"root\",\"type\":\"Page\",\"children\":[" + string.Join(",", nodes) + "]}";
 

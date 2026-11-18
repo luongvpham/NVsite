@@ -132,6 +132,10 @@ public static class DependencyInjection
         // T11 WEBSITE-001 (MEDIA-001 #2) — nguồn tham chiếu PageDraft do Website cài; đăng ký ở đây để Media không tham chiếu Website.
         services.AddScoped<IMediaReferenceSource, Vsite.Infrastructure.Website.PageDraftReferenceSource>();
 
+        // T8 WEBSITE-004 — snapshot publish (08 §4) và ảnh OG/favicon của Page/Website.
+        services.AddScoped<IMediaReferenceSource, Vsite.Infrastructure.Website.SitePublicationReferenceSource>();
+        services.AddScoped<IMediaReferenceSource, Vsite.Infrastructure.Website.SeoImageReferenceSource>();
+
         return services;
     }
 }

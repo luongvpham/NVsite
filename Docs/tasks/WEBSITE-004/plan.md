@@ -152,8 +152,8 @@ Trần 50 bản mới nhất (job prune 20 bản là 8d). Chưa có website → 
 ```text
 1. GET …/media/library/{assetId}/references     ✅ GetReferencesHandler.cs:27-30
 2. Nguồn PageDraft                               ✅ PageDraftReferenceSource.cs:18
-3. Nguồn snapshot (bản đang chạy + bản còn giữ)  ❌ T8 — đọc bảng snapshot.media, không validate lại tree
-4. Nguồn ảnh OG của Page / Website, favicon      ❌ T8
+3. Nguồn snapshot (bản đang chạy + bản còn giữ)  ✅ T8 — đọc bảng snapshot.media, không validate lại tree
+4. Nguồn ảnh OG của Page / Website, favicon      ✅ T8
 ```
 
 ## 4. Đã chốt trong session lập plan
@@ -575,14 +575,14 @@ Chỉ thêm test (code đã có từ T1–T6); test đỏ thì quay lại sửa 
 - Đăng ký cả hai cạnh [DependencyInjection.cs:122](../../../backend/src/Vsite.Infrastructure/DependencyInjection.cs#L122). Xoá hai dòng TODO ở
   `MediaReferencesDto.cs:8-9` và `GetReferencesHandler.cs:12`.
 
-- [ ] Test trước: `PublicationReferenceSourceTests.cs`
+- [x] Test trước: `PublicationReferenceSourceTests.cs`
   - ảnh dùng trong bản đang chạy → một mục `SitePublication`, `isCurrent = true`
   - ảnh chỉ còn ở bản cũ (đã gỡ khỏi draft, publish lại) → `isCurrent = false`
   - ảnh ở 3 bản → vẫn một mục
   - ảnh OG của trang → `PageOgImage` + `pageId`/`pageTitle`; OG website / favicon → đúng kind
   - shop B không thấy tham chiếu của shop A; tenant null → rỗng
   - ảnh không dùng ở đâu → rỗng
-- [ ] FAIL → hiện thực → PASS · Commit `feat(media): references quét snapshot và ảnh OG/favicon (WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS · Commit `feat(media): references quét snapshot và ảnh OG/favicon (WEBSITE-004)`
 
 ### T9: Kết thúc S1
 

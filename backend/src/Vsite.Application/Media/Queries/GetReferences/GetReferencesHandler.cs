@@ -7,9 +7,8 @@ using Vsite.Application.Media.Interfaces;
 namespace Vsite.Application.Media.Queries.GetReferences;
 
 /// <summary>Gom tham chiếu từ `Shop.LogoId` (Media dependsOn Shop, đọc thẳng `db.Shops`) và mọi <see cref="IMediaReferenceSource"/>
-/// đã đăng ký (T11: PageDraft của Website). Không require asset phải tồn tại/còn trong library — hỏi tham chiếu của một id bất kỳ
-/// (kể cả đã soft delete) vẫn hợp lệ, trả rỗng nếu không có tham chiếu nào.
-/// TODO(Bước 8, `08` §4): SitePublication — thêm một <see cref="IMediaReferenceSource"/> khi entity tồn tại.</summary>
+/// đã đăng ký (Website: PageDraft, SitePublication, ảnh OG/favicon). Không require asset phải tồn tại/còn trong library — hỏi tham chiếu
+/// của một id bất kỳ (kể cả đã soft delete) vẫn hợp lệ, trả rỗng nếu không có tham chiếu nào.</summary>
 public sealed class GetReferencesHandler(IAppDbContext db, IEnumerable<IMediaReferenceSource> sources)
     : IRequestHandler<GetReferencesQuery, MediaReferencesDto>
 {
