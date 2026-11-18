@@ -1,6 +1,6 @@
 import type { SiteSnapshot } from '@vsite/builder-components';
 import { SiteDataError, SiteFetchError, SiteResultKind, type SiteResult, type SiteShop } from './site-client';
-import { selectPage } from '../lib/select-page';
+import { isReservedShopSitePath, selectPage } from '../lib/select-page';
 import { resolveSiteHost } from './site-host';
 
 /**
@@ -86,6 +86,10 @@ export async function loadSiteForHost(rawHost: string, path: string, deps: LoadS
     // M4: host ngoài `{label}.{ROOT_DOMAIN}` → không gọi BE. Platform mới có trang chủ (#96).
     return { status: path === '/' ? 200 : 404, headers: {}, data: { kind: SiteLoaderKind.Platform } };
   }
+
+  // Plan §2 Phát hiện 2: /media|/api|/assets|/static là tài nguyên (prod: Caddy route sang BE), không phải trang site →
+  // 404 chung, KHÔNG gọi BE (không tốn request, không render NotFound của shop cho URL ảnh vỡ).
+  if (isReservedShopSitePath(path)) return shop(404, { kind: SiteLoaderKind.NotFound });
 
   let result: SiteResult;
   try {

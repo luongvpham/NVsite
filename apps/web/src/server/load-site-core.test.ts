@@ -182,3 +182,28 @@ describe('loadSiteForHost — chọn trang (T5, A10, R6, R7)', () => {
     }
   });
 });
+
+describe('loadSiteForHost — path reserved (plan §2 Phát hiện 2): 404 chung, 0 request tới BE', () => {
+  it.each(['/media/x', '/api/x', '/assets/a.js', '/static/x', '/Media/x', '/MEDIA', '/media', '/api/', '/%6dedia/x'])(
+    '%s trên host shop → notFound 404 + Cache-Control, fetchSite không được gọi',
+    async (path) => {
+      const { d, fetchSite } = deps(siteResult);
+      const out = await loadSiteForHost('spa-abc.vsite.vn', path, d);
+      expect(fetchSite).not.toHaveBeenCalled();
+      expect(out).toEqual({
+        status: 404,
+        headers: { 'Cache-Control': SITE_HTML_CACHE_CONTROL },
+        data: { kind: SiteLoaderKind.NotFound },
+      });
+    },
+  );
+  it.each(['/lien-he', '/', '/mediathek', '/media-kit'])('%s không bị coi là reserved → gọi fetchSite', async (path) => {
+    const { d, fetchSite } = deps(siteResult);
+    await loadSiteForHost('spa-abc.vsite.vn', path, d);
+    expect(fetchSite).toHaveBeenCalledTimes(1);
+  });
+  it('/lien-he vẫn 200 như cũ', async () => {
+    const { d } = deps(siteResult);
+    expect((await loadSiteForHost('spa-abc.vsite.vn', '/lien-he', d)).status).toBe(200);
+  });
+});

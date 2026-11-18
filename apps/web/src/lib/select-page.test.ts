@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { selectPage } from './select-page';
+import { isReservedShopSitePath, selectPage } from './select-page';
 
 const pg = (id: string, slug: string | null, systemType: string | null = null) => ({ id, slug, systemType });
 const HOME = pg('p-home', '');
@@ -59,5 +59,17 @@ describe('selectPage (A10, R6, R7)', () => {
   });
   it('trang slug null (NotFound) không bao giờ khớp path', () => {
     expect(selectPage(full, '/null').kind).toBe('notFound');
+  });
+});
+
+describe('isReservedShopSitePath (plan §2 Phát hiện 2)', () => {
+  it.each(['/media/x', '/media', '/media/', '/api/x', '/assets/a.js', '/static/x', '/Media/x', '/MEDIA', '/%6dedia/x', '/%6Dedia'])(
+    '%s → true',
+    (p) => {
+      expect(isReservedShopSitePath(p)).toBe(true);
+    },
+  );
+  it.each(['/', '/lien-he', '/mediathek', '/media-kit', '/x/media', '//', '/%E0%A4%A', '', '/%2Fmedia'])('%s → false, không ném', (p) => {
+    expect(isReservedShopSitePath(p)).toBe(false);
   });
 });
