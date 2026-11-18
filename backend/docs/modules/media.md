@@ -142,6 +142,9 @@ Xoá bản Library đang là `Shop.LogoId` **được phép** (A11, `Docs/tasks/
 trỏ vào row soft-delete vẫn hợp lệ (`ON DELETE` không cascade xoá vật lý ngay), logo vẫn hiện; chỉ
 cảnh báo qua `GET .../references`, không chặn.
 
+`references` (`MediaReferenceKind`): `ShopLogo`, `PageDraft`, và từ WEBSITE-004 (8b) `SitePublication` (một mục gộp mọi bản publish có ảnh, kèm `isCurrent`), `PageOgImage` (`pageId`/`pageTitle`), `WebsiteOgImage`, `WebsiteFavicon` (#110).
+Nguồn Website cài ở `Vsite.Infrastructure/Website`, đăng ký ở `AddMediaModule` (Media không tham chiếu Website, #1) — chi tiết `website.md` mục "Media liên quan".
+
 ## 5. ⚠️ Cảnh báo — xoá node không xoá ảnh (`08` §4)
 
 Bước 4 (module này) **không xoá file nào**, ngoại trừ thao tác shop chủ động xoá khỏi Library (và đó

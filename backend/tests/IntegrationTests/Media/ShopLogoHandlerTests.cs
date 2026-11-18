@@ -345,6 +345,7 @@ public sealed class ShopLogoHandlerTests : IDisposable
         public DbSet<Vsite.Domain.Website.Entities.Theme> Themes => inner.Themes;
         public DbSet<Vsite.Domain.Website.Entities.Page> Pages => inner.Pages;
         public DbSet<Vsite.Domain.Website.Entities.PageDraft> PageDrafts => inner.PageDrafts;
+        public DbSet<Vsite.Domain.Website.Entities.SitePublication> SitePublications => inner.SitePublications;
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Simulated DB failure (R4 test).");
@@ -371,6 +372,7 @@ public sealed class ShopLogoHandlerTests : IDisposable
         public DbSet<Vsite.Domain.Website.Entities.Theme> Themes => inner.Themes;
         public DbSet<Vsite.Domain.Website.Entities.Page> Pages => inner.Pages;
         public DbSet<Vsite.Domain.Website.Entities.PageDraft> PageDrafts => inner.PageDrafts;
+        public DbSet<Vsite.Domain.Website.Entities.SitePublication> SitePublications => inner.SitePublications;
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
         {

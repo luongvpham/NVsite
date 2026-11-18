@@ -54,4 +54,10 @@ public sealed class PageDraft : TenantAuditableEntity
         Tree = treeJson;
         IsDirty = true;
     }
+
+    /// <summary>Publish (8b): draft giờ khớp bản đang chạy → <c>IsDirty = false</c>. Không đụng <see cref="Tree"/>.</summary>
+    public void MarkPublished() => IsDirty = false;
+
+    /// <summary>Rollback (8b): draft giờ khác bản đang chạy → <c>IsDirty = true</c> (G7). Không đụng <see cref="Tree"/>.</summary>
+    public void MarkDirty() => IsDirty = true;
 }

@@ -13,6 +13,7 @@ using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Website.Interfaces;
 using Vsite.Application.Website.Options;
 using Vsite.Application.Website.Seeding;
+using Vsite.Application.Website.Publishing;
 using Vsite.Application.Website.Validation;
 using Vsite.Application.Website.Versioning;
 using Vsite.Domain.Abstractions;
@@ -90,7 +91,8 @@ builder.Services.AddSingleton<ITreeRulesCatalog>(_ => new TreeRulesCatalog(Path.
 builder.Services.AddSingleton<IWebsiteSchemaProvider>(_ => new WebsiteSchemaProvider(
     Path.Combine(websiteArtifactDir, "tree-envelope.schema.json"),
     Path.Combine(websiteArtifactDir, "theme-tokens.schema.json"),
-    Path.Combine(websiteArtifactDir, "props-schemas.json")));
+    Path.Combine(websiteArtifactDir, "props-schemas.json"),
+    Path.Combine(websiteArtifactDir, "site-snapshot.schema.json")));
 
 // Validate cây (T4/T5, WEBSITE-001): giới hạn cứng từ appsettings (G6), sanitizer richText, khung upcaster (#94).
 // Chưa có IDocumentUpcaster nào (phiên bản hiện hành = 1) — thêm bước nâng = AddSingleton<IDocumentUpcaster, ...>.
@@ -98,6 +100,8 @@ builder.Services.AddSingleton(builder.Configuration.GetSection(PageTreeLimits.Se
 builder.Services.AddSingleton<IRichTextSanitizer, RichTextSanitizer>();
 builder.Services.AddSingleton(sp => new DocumentVersioning(sp.GetServices<IDocumentUpcaster>()));
 builder.Services.AddSingleton<PageTreeValidator>();
+// Kiểm prop bắt buộc theo variant — CHỈ khi publish (WEBSITE-004), không ở PUT draft.
+builder.Services.AddSingleton<RequiredPropsChecker>();
 
 // Handler Website (T6/T8): seed trang, luật slug, validator tokens — singleton vì chỉ giữ catalog/validator bất biến.
 builder.Services.AddSingleton<ThemeTokensValidator>();
@@ -196,6 +200,7 @@ api.MapIdentityEndpoints();
 api.MapShopEndpoints();
 api.MapMediaEndpoints();
 api.MapWebsiteEndpoints();
+api.MapSiteEndpoints();
 
 app.Run();
 

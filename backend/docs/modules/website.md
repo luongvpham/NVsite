@@ -3,11 +3,11 @@
 > 📌 **Mọi đường dẫn endpoint trong tài liệu này tương đối với prefix `/api`** (Quyết định #91) — vd.
 > `/shops/{shopId}/website` nghĩa là `/api/shops/{shopId}/website`.
 
-## Trạng thái (WEBSITE-001, Bước 5a)
+## Trạng thái (WEBSITE-001, Bước 5a; WEBSITE-004, Bước 8b)
 
 `Website` → `Theme` → `Page` → `PageDraft` (backend) đã code: tạo website trắng, API metadata trang, `GET`/`PUT`
-draft có `version`, validate **toàn tree** mỗi lần `PUT`. **Chưa** có publish/rollback (8b), `NavigationConfig` (7),
-bảng `*_translation` (#98), `CurrentPublicationId`/`SeedTemplateId`. Contract `website.v1`/`media.v1` đã qua Gate 1 và promote
+draft có `version`, validate **toàn tree** mỗi lần `PUT`. **8b (WEBSITE-004) đã code:** `SitePublication` + publish/rollback + endpoint đọc công khai `GET /api/site` (xem các mục bên dưới; brief FE: `Docs/tasks/WEBSITE-004/brief.md`, lệch: `Docs/tasks/WEBSITE-004/changelog.md`). **Chưa** có `NavigationConfig` (7),
+bảng `*_translation` (#98), `SeedTemplateId`, prune bản publish (8d), custom domain (`ShopDomain`). Contract `website.v1`/`media.v1` đã qua Gate 1 và promote
 (`contracts/openapi/`, `luongpham`); đã merge `master`, Gate 2 đóng 2026-11-12. Brief cho FE: `Docs/tasks/WEBSITE-001/brief.md`. Lệch so với `05` và mục "Chưa làm xong":
 `Docs/tasks/WEBSITE-001/changelog.md`.
 
@@ -16,7 +16,7 @@ bảng `*_translation` (#98), `CurrentPublicationId`/`SeedTemplateId`. Contract 
 | | Shop Site (module này) | Shop Profile |
 |---|---|---|
 | URL | `{slug}.vsite.vn`, domain riêng | `vsite.vn/shop/{slug}` |
-| Render | `builder-renderer` từ tree trong `PageDraft` (sau 8b: snapshot) | Mẫu thống nhất của vsite, không đụng module này |
+| Render | `builder-renderer` từ snapshot của bản đang publish (draft chỉ dùng trong editor) | Mẫu thống nhất của vsite, không đụng module này |
 | `Review` | **Tuyệt đối không có** (BE từ chối `binding.source = "Review"`) | Có |
 
 ## Entity (`Vsite.Domain/Website`)
@@ -27,6 +27,7 @@ bảng `*_translation` (#98), `CurrentPublicationId`/`SeedTemplateId`. Contract 
 | `Theme` | 1:1 với `Website`. `PresetKey?`, `Tokens` (jsonb, có `schemaVersion`). **Không** concurrency (last-write-wins) |
 | `Page` | `Kind` (`Composable` / `System`), `SystemType?`, `Slug?` (`""` = trang chủ; **NULL chỉ cho `NotFound`**), SEO, `OgImageId`, `NoIndex`, `IsEnabled`, `SortOrder`. `Page.SoftDelete()`; `CanBeDeleted` (System page và trang chủ không xoá được) |
 | `PageDraft` | 1:1 với `Page`. `Tree` (jsonb, `schemaVersion` ở gốc, #94), `Version` (= cột hệ thống `xmin`), `IsDirty` |
+| `SitePublication` | **Bất biến** (`TenantEntity`, không audit/soft delete, không setter). Một bản = snapshot toàn site (`Snapshot` jsonb, `schemaVersion` ở gốc), `Version` tăng dần theo website (`ux_site_publication_website_version`, không tái dùng số sau rollback), `Note ≤ 200`, `PublishedAt`, `PublishedByUserId`. Khoá phụ `(id, website_id)`; FK ghép `(website_id, shop_id) → website`. `Website.CurrentPublicationId` trỏ bản đang chạy qua FK ghép `(current_publication_id, id) → site_publication (id, website_id)` — không trỏ chéo website được (R4) |
 
 Mọi bảng có `shop_id`, mọi FK tới entity thuộc shop là **FK ghép** `(X, shop_id) → (id, shop_id)` (#92).
 Tên bảng/cột snake_case số ít (`website`, `theme`, `page`, `page_draft`). `Theme` và `PageDraft` có PK là `Id` của base
@@ -35,7 +36,7 @@ Ràng buộc DB đáng biết: `ck_page_kind_system_type`, `ck_page_slug_not_fou
 
 ## Route (document OpenAPI `website`, tag `Website`)
 
-Mọi route: `RequireAuthorization(RequireGlobalScope)` + `RequireShopOwner("WEBSITE_OWNER_REQUIRED")` (#100) — đọc lẫn ghi.
+Mọi route **trừ `getPublishedSite`**: `RequireAuthorization(RequireGlobalScope)` + `RequireShopOwner("WEBSITE_OWNER_REQUIRED")` (#100) — đọc lẫn ghi.
 
 | operationId | Method + path | OK | Lỗi khai thêm |
 |---|---|---|---|
@@ -49,6 +50,10 @@ Mọi route: `RequireAuthorization(RequireGlobalScope)` + `RequireShopOwner("WEB
 | `savePageDraft` | `PUT /shops/{shopId}/website/pages/{pageId}/draft` | 200 `{version,isDirty,sanitized}` | 401 403 404 409 413 422 |
 | `getTheme` | `GET /shops/{shopId}/website/theme` | 200 | 401 403 404 |
 | `updateTheme` | `PUT /shops/{shopId}/website/theme` | 200 | 401 403 404 413 422 |
+| `publishWebsite` | `POST /shops/{shopId}/website/publications` | 201 + `Location` | 401 403 404 409 `PUBLISH_CONFLICT` · 422 `PUBLISH_BLOCKED` |
+| `listPublications` | `GET /shops/{shopId}/website/publications` | 200 **mảng** (≤ 50, version giảm dần, không kèm snapshot) — ngoại lệ có chủ đích của "một shape pagination" (#19): danh sách có trần cứng, không phân trang; trần thành 20 khi có prune (8d). Như `listPages` | 401 403 404 |
+| `rollbackPublication` | `POST /shops/{shopId}/website/publications/{publicationId}/rollback` | 200 | 401 403 404 `PUBLICATION_NOT_FOUND` · 409 `ROLLBACK_CONFLICT` |
+| `getPublishedSite` | **`GET /api/site`** (tag `Site`, cùng document `website`) | 200 · 304 | 404 `SITE_NOT_FOUND` — **`AllowAnonymous`**, xem mục "Đọc công khai" |
 
 Lỗi có cấu trúc nằm ở ProblemDetails **`params.errors[]`** (`{path, code, message}`, + `params.truncated`), không phải `errors`.
 Danh sách mã lỗi: `Docs/tasks/WEBSITE-001/changelog.md` mục 11; mã con của tree: `packages/builder-components/tests/fixtures/tree/README.md`.
@@ -80,17 +85,38 @@ Danh sách mã lỗi: `Docs/tasks/WEBSITE-001/changelog.md` mục 11; mã con c�
 8. System page: `SystemPageGuard.Compare(stored, incoming)` — chỉ sửa được props trong `editableProps`; đổi cấu trúc → `SYSTEM_PAGE_STRUCTURE_CHANGED`, đổi prop không cho sửa → `SYSTEM_PAGE_PROP_NOT_EDITABLE`.
 9. Lưu; `version` mới lấy từ `xmin` sau `SaveChanges`.
 
-`requiresProps` của manifest **chưa được enforce** (chờ 5b).
+`requiresProps` của manifest **không** enforce ở `PUT draft` (draft dở dang là hợp lệ); nó được kiểm lúc **publish** (`RequiredPropsChecker`, mã `REQUIRED_PROP_MISSING`, nguồn `tree-rules.json` → `requiresProps`).
 
 ## Config và artifact nạp lúc khởi động
 
 Singleton, resolve **eager** ở `Program.cs` — thiếu/hỏng file làm host dừng ngay với thông báo nêu tên file:
 
 - `config/`: `locales.json`, `theme-tokens.json` (+`defaults`), `system-pages.json`, `sanitize-profiles.json` (+`dangerous`), `binding-sources.json`, `reserved-routes.json`.
-- Artifact `packages/builder-components/generated/` (gitignored): `props-schemas.json`, `tree-rules.json`, `tree-envelope.schema.json`, `theme-tokens.schema.json`.
+- Artifact `packages/builder-components/generated/` (gitignored): `props-schemas.json`, `tree-rules.json`, `tree-envelope.schema.json`, `theme-tokens.schema.json`, `site-snapshot.schema.json` (vỏ snapshot; chỉ dùng ở test/khởi động, không nằm trên đường phục vụ `GET /api/site`).
   Fresh clone/CI chạy `pnpm install && pnpm --filter @vsite/builder-components run gen:registry` trước `dotnet build` (target `EnsureWebsiteArtifacts`).
 - `WebsiteSchemaProvider` dựng mỗi schema với `SchemaRegistry` **riêng** (nếu không, host thứ hai trong cùng process — `WebApplicationFactory` — ném "Overwriting registered schemas").
 - `reservedShopSitePaths` trong `reserved-routes.json` là key **bắt buộc**: thiếu → `ReservedRoutesProvider` ném lỗi lúc khởi động (fail-fast), như các catalog khác.
+
+## Publish / rollback (8b)
+
+- **Publish** (một `SaveChanges`): gom website + theme + mọi trang **đang bật** và draft; mỗi trang `PageTreeValidator` → `RequiredPropsChecker` → `IMediaReferenceValidator` (ảnh tree + OG trang);
+  OG mặc định + favicon kiểm một lần (`pageId = null`). Bất kỳ lỗi nào → `422 PUBLISH_BLOCKED` (`params.errors[] { pageId, pageTitle, path, code, message }`, ≤ 100, `params.truncated`), không ghi gì.
+  Rồi chuẩn hoá `imageId` về GUID chữ thường (R14), nạp bảng `media`, `Version = max + 1`, `SnapshotBuilder.Build`, `Website.Publish` (Draft → Published; **Suspended giữ nguyên**), hạ `IsDirty` **chỉ** draft đang bẩn
+  (⇒ `version` draft đó đổi — FE nạp lại). 23505 / `xmin` lệch → `409 PUBLISH_CONFLICT`. Sau commit: `ISitePointerCache.InvalidateAsync` (lỗi chỉ log; TTL 5 phút là lưới an toàn).
+- **Snapshot v1** (khác `05` §7): `schemaVersion, version, defaultLocale, locales, theme{presetKey,tokens}, navigation{items:[]}, seo{…faviconAssetId}, tracking, media{imageId→{storageKey,preset}}, pages[]` (mỗi trang có `id`; `slug: null` chỉ ở `NotFound`).
+- **Rollback** chỉ đổi con trỏ (`Website.PointTo`), không sinh bản mới, không đổi `Status`, không đụng nội dung draft; draft đang sạch → `IsDirty = true` (G7). Tìm bản bằng `Id + ShopId + WebsiteId` trong một query.
+
+## Đọc công khai: `GET /api/site` (#108, #109)
+
+- **Tenant suy từ header `Host`** (`TenantResolutionMiddleware`), không có `shopId`/`host` ở path/query/body; `AllowAnonymous`. Handler chỉ chạy khi `AudienceKind == Shop`, nếu không → `404 SITE_NOT_FOUND`.
+  Đọc qua Global Query Filter, **không** `IgnoreQueryFilters()`.
+- **Ranh giới cứng:** handler `GetPublishedSite` **không chạm `db.PageDrafts`, `db.Pages`, `db.Themes`** (`PublishedSiteBoundaryTests` quét nguồn). Chỉ đọc `Shop` (name, status, logo, updatedAt), `Website` (status, `CurrentPublicationId`) và `SitePublication`.
+- Một mã `404 SITE_NOT_FOUND` cho mọi "không có site": host không phải shop, shop `Closed`, chưa có website, website `Draft`/chưa publish (quyết định theo cả `Status` và `CurrentPublicationId`, R6). Shop `Draft` **không** chặn.
+- Website hoặc shop `Suspended` → `200 { status: "Suspended", shop, publication: null }`, không ETag.
+- `ETag` strong `"{publicationId:N}-{shop.UpdatedAt unix ms}"` + `Cache-Control: no-cache`; `If-None-Match` (kể cả `W/`, danh sách, `*`) khớp → 304 không đọc snapshot. Header **không** khai trong OpenAPI.
+- **Con trỏ Redis** `site:pointer:{shopId:N}` → `{ websiteStatus, publicationId? }` (`SitePointerCache` trên `IDistributedCache`): **TTL 5 phút** khi có website, **1 phút** khi chưa có website. Xoá ngay khi publish/rollback; `Shop` đọc sống mỗi request (đình chỉ shop có hiệu lực tức thì).
+  Race đọc↔publish có thể giữ con trỏ cũ tới 5 phút (chấp nhận). Khi có endpoint đình chỉ/gỡ `Website` phải gọi `InvalidateAsync`.
+- `snapshot` ra OpenAPI là schema rỗng (`JsonElement`); FE parse bằng Zod `siteSnapshotSchema`.
 
 ## Concurrency
 
@@ -99,6 +125,7 @@ Singleton, resolve **eager** ở `Program.cs` — thiếu/hỏng file làm host 
   handler cụ thể bắt `23505` trước để trả `WEBSITE_ALREADY_EXISTS`/`PAGE_SLUG_TAKEN`.
 - Cây y hệt bản đã lưu → EF không UPDATE → `version` giữ nguyên.
 - `Theme` **không** có concurrency.
+- `Website` có concurrency token = cột hệ thống `xmin` (shadow property `RowVersion`, không lộ ra Domain/DTO; migration `WebsiteRowVersion` không sinh SQL). Publish và rollback đều ghi dòng này ⇒ chạy song song thì bên sau nhận `409 PUBLISH_CONFLICT` / `ROLLBACK_CONFLICT`, không còn last-write-wins (review I1, #112).
 
 ## Thêm một System page mới
 
@@ -130,11 +157,19 @@ ALTER TABLE page    ADD CONSTRAINT fk_page_media_asset_og_image
 Model/snapshot vẫn ghi `DeleteBehavior.Restrict` — **đúng chủ đích**. **Đừng sinh lại migration** (sẽ mất đoạn sửa tay); đổi schema thì thêm migration mới và
 kiểm `dotnet ef migrations has-pending-model-changes` ra "No changes". Mẫu cùng loại: `shop(logo_id, id) → media_asset(id, shop_id)` (#92).
 
+## Quyết định #111, #112
+
+- **#111 — Trạng thái `Shop` đối với Shop Site.** Chỉ `Suspended` (→ `200 { status: "Suspended", publication: null }`, không ETag) và `Closed` (→ `404 SITE_NOT_FOUND`) ảnh hưởng site.
+  Shop `Draft` **không** chặn: shop mới tạo mặc định `Draft` và chưa có luồng kích hoạt riêng. Ai được chuyển `ShopStatus` nào thuộc module Shop — hiện Owner tự đặt được bất kỳ (nợ trước production, `00-INDEX` §4).
+- **#112 — Quy tắc publish/rollback.** Một trang **đang bật** lỗi ⇒ chặn cả lần publish (`422 PUBLISH_BLOCKED`, lỗi theo trang, không ghi gì); trang đang tắt không bị kiểm, không vào snapshot;
+  trang chủ tắt vẫn publish được (site không có trang chủ — 8c hiện `NotFound`). Rollback chỉ đổi con trỏ: không sinh bản mới, không đổi `Status`, không đụng nội dung draft (draft sạch → `IsDirty = true`).
+  Publish ∥ rollback bị chặn bằng concurrency token của `Website`. 8b không có endpoint gỡ xuất bản / đình chỉ.
+
 ## Media liên quan
 
 - `SavePageDraft` gọi `IMediaReferenceValidator`; ảnh OG của Page/Website kiểm khi **thay đổi** (ảnh đang gắn bị xoá mềm không chặn sửa tiêu đề).
-- Endpoint `references` của Media gom `IMediaReferenceSource`; `PageDraftReferenceSource` (Infrastructure) trả `Kind = PageDraft` + `pageId`/`pageTitle`.
-  Đăng ký ở `AddMediaModule` vì Media không được tham chiếu Website (#1). Mỗi lần gọi validate lại draft của các trang liên quan (đủ cho shop nhỏ).
+- Endpoint `references` của Media gom `IMediaReferenceSource`; nguồn của Website (Infrastructure, đăng ký ở `AddMediaModule` vì Media không được tham chiếu Website — #1): `PageDraftReferenceSource` (`PageDraft` + `pageId`/`pageTitle`; validate lại draft của các trang liên quan),
+  `SitePublicationReferenceSource` (`SitePublication`: đọc key `snapshot.media` của mọi bản, gộp một mục, `isCurrent`), `SeoImageReferenceSource` (`PageOgImage`, `WebsiteOgImage`, `WebsiteFavicon`; #110). Xoá ảnh Library không kéo theo clone nên site đã publish không mất ảnh (R11).
 - Media: cả 10 route Owner-only (`MEDIA_OWNER_REQUIRED`).
 
 ## Build/test: khi `Vsite.Api.exe` khoá DLL

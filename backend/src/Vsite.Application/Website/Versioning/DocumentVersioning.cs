@@ -9,6 +9,7 @@ public enum DocumentKind
 {
     Tree,
     Tokens,
+    Snapshot,
 }
 
 /// <summary>Phiên bản schema hiện hành của tài liệu JSON (#94). Đổi khi thêm upcaster tương ứng.</summary>
@@ -16,6 +17,9 @@ public static class DocumentSchemaVersions
 {
     public const int Tree = 1;
     public const int Tokens = 1;
+
+    /// <summary>Vỏ <c>SiteSnapshot</c> (8b). Chưa có upcaster nào — bản publish luôn ghi/đọc ở version này.</summary>
+    public const int Snapshot = 1;
 }
 
 /// <summary>
@@ -60,14 +64,17 @@ public sealed class DocumentVersioning
     private readonly Dictionary<(DocumentKind Kind, int From), IDocumentUpcaster> _upcasters = [];
     private readonly int _treeCurrent;
     private readonly int _tokensCurrent;
+    private readonly int _snapshotCurrent;
 
     public DocumentVersioning(
         IEnumerable<IDocumentUpcaster> upcasters,
         int treeCurrent = DocumentSchemaVersions.Tree,
-        int tokensCurrent = DocumentSchemaVersions.Tokens)
+        int tokensCurrent = DocumentSchemaVersions.Tokens,
+        int snapshotCurrent = DocumentSchemaVersions.Snapshot)
     {
         _treeCurrent = treeCurrent;
         _tokensCurrent = tokensCurrent;
+        _snapshotCurrent = snapshotCurrent;
         foreach (var upcaster in upcasters)
         {
             if (!_upcasters.TryAdd((upcaster.Kind, upcaster.FromVersion), upcaster))
@@ -78,7 +85,13 @@ public sealed class DocumentVersioning
         }
     }
 
-    public int Current(DocumentKind kind) => kind == DocumentKind.Tree ? _treeCurrent : _tokensCurrent;
+    public int Current(DocumentKind kind) => kind switch
+    {
+        DocumentKind.Tree => _treeCurrent,
+        DocumentKind.Tokens => _tokensCurrent,
+        DocumentKind.Snapshot => _snapshotCurrent,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+    };
 
     public UpcastResult Upcast(DocumentKind kind, JsonNode? document)
     {

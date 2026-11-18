@@ -1,6 +1,5 @@
 using Vsite.Application.Media.Dtos;
 using Vsite.Application.Website.Commands.CreatePage;
-using Vsite.Domain.Media.Entities;
 using Vsite.Infrastructure.Website;
 using static Vsite.IntegrationTests.Website.WebsiteHandlerKit;
 
@@ -19,30 +18,8 @@ public sealed class PageDraftReferenceSourceTests(PostgresFixture postgres) : IA
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    /// <summary>Một ảnh Library và các clone của nó trong shop.</summary>
-    private async Task<(Guid LibraryId, IReadOnlyList<Guid> CloneIds)> AddLibraryWithClonesAsync(Guid shopId, int clones)
-    {
-        await using var db = NewDb(Cs, shopId);
-        var library = MediaAsset.NewLibrary(shopId, $"shops/{shopId}/library/{Guid.NewGuid():N}.webp", 100, 100, 10, 0.5f, 0.5f, null, null);
-        db.MediaAssets.Add(library);
-        await db.SaveChangesAsync();
-        var ids = new List<Guid>();
-        for (var i = 0; i < clones; i++)
-        {
-            var clone = MediaAsset.NewClone(library, $"shops/{shopId}/clone/{Guid.NewGuid():N}.webp", 100, 100, 10, "p,cover", 0.5f, 0.5f);
-            db.MediaAssets.Add(clone);
-            await db.SaveChangesAsync();
-            ids.Add(clone.Id);
-        }
-
-        return (library.Id, ids);
-    }
-
-    private static async Task SaveTreeAsync(Request request, Guid pageId, string tree)
-    {
-        var draft = await request.GetDraft(pageId);
-        await request.SaveDraft(pageId, tree, draft.Version);
-    }
+    private Task<(Guid LibraryId, IReadOnlyList<Guid> CloneIds)> AddLibraryWithClonesAsync(Guid shopId, int clones) =>
+        WebsiteHandlerKit.AddLibraryWithClonesAsync(Cs, shopId, clones);
 
     private static Task<IReadOnlyList<MediaReferenceDto>> FindAsync(Request request, Guid assetId) =>
         new PageDraftReferenceSource(request.Db, request.Tenant, S.Validator).FindAsync(assetId, default);

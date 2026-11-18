@@ -124,4 +124,107 @@ public sealed class WebsiteEntityTests
 
         Assert.Equal("PAGE_DRAFT_TREE_REQUIRED", Assert.Throws<DomainException>(() => draft.Replace(" ")).ErrorCode);
     }
+
+    [Fact]
+    public void PageDraft_mark_published_clears_dirty_and_mark_dirty_sets_it_without_touching_tree()
+    {
+        var draft = PageDraft.Create(ShopId, Guid.NewGuid(), """{"schemaVersion":1,"id":"root","type":"Page","children":[]}""");
+        var tree = draft.Tree;
+
+        draft.MarkPublished();
+        Assert.False(draft.IsDirty);
+        Assert.Equal(tree, draft.Tree);
+
+        draft.MarkDirty();
+        Assert.True(draft.IsDirty);
+        Assert.Equal(tree, draft.Tree);
+    }
+
+    // ---------------------------------------------------------------- SitePublication / publish
+
+    private const string Snapshot = """{"schemaVersion":1,"version":1,"pages":[]}""";
+
+    [Fact]
+    public void SitePublication_create_sets_fields_and_rejects_bad_input()
+    {
+        var websiteId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var at = DateTimeOffset.UtcNow;
+
+        var pub = SitePublication.Create(ShopId, websiteId, 3, Snapshot, "ghi chú", userId, at);
+
+        Assert.Equal(ShopId, pub.ShopId);
+        Assert.Equal(websiteId, pub.WebsiteId);
+        Assert.Equal(3, pub.Version);
+        Assert.Equal(Snapshot, pub.Snapshot);
+        Assert.Equal("ghi chú", pub.Note);
+        Assert.Equal(userId, pub.PublishedByUserId);
+        Assert.Equal(at, pub.PublishedAt);
+
+        Assert.Equal("SITE_PUBLICATION_VERSION_INVALID",
+            Assert.Throws<DomainException>(() => SitePublication.Create(ShopId, websiteId, 0, Snapshot, null, null, at)).ErrorCode);
+        Assert.Equal("SITE_PUBLICATION_SNAPSHOT_REQUIRED",
+            Assert.Throws<DomainException>(() => SitePublication.Create(ShopId, websiteId, 1, " ", null, null, at)).ErrorCode);
+        Assert.Equal("SITE_PUBLICATION_NOTE_TOO_LONG",
+            Assert.Throws<DomainException>(() => SitePublication.Create(ShopId, websiteId, 1, Snapshot, new string('n', 201), null, at)).ErrorCode);
+    }
+
+    [Fact]
+    public void Publish_points_current_and_moves_draft_to_published_but_keeps_suspended()
+    {
+        var website = WebsiteEntity.Create(ShopId);
+        var pub = SitePublication.Create(ShopId, website.Id, 1, Snapshot, null, null, DateTimeOffset.UtcNow);
+
+        website.Publish(pub);
+        Assert.Equal(pub.Id, website.CurrentPublicationId);
+        Assert.Equal(WebsiteStatus.Published, website.Status);
+
+        // Suspended giữ nguyên khi publish (G6).
+        website.Suspend();
+        var pub2 = SitePublication.Create(ShopId, website.Id, 2, Snapshot, null, null, DateTimeOffset.UtcNow);
+        website.Publish(pub2);
+        Assert.Equal(pub2.Id, website.CurrentPublicationId);
+        Assert.Equal(WebsiteStatus.Suspended, website.Status);
+    }
+
+    [Fact]
+    public void PointTo_changes_only_the_pointer_not_the_status()
+    {
+        var website = WebsiteEntity.Create(ShopId);
+        var pub1 = SitePublication.Create(ShopId, website.Id, 1, Snapshot, null, null, DateTimeOffset.UtcNow);
+        var pub2 = SitePublication.Create(ShopId, website.Id, 2, Snapshot, null, null, DateTimeOffset.UtcNow);
+        website.Publish(pub2);
+
+        website.PointTo(pub1);
+        Assert.Equal(pub1.Id, website.CurrentPublicationId);
+        Assert.Equal(WebsiteStatus.Published, website.Status);
+    }
+
+    [Fact]
+    public void Publish_and_point_to_reject_publication_of_another_website()
+    {
+        var website = WebsiteEntity.Create(ShopId);
+        var foreign = SitePublication.Create(ShopId, Guid.NewGuid(), 1, Snapshot, null, null, DateTimeOffset.UtcNow);
+
+        Assert.Equal("SITE_PUBLICATION_WEBSITE_MISMATCH",
+            Assert.Throws<DomainException>(() => website.Publish(foreign)).ErrorCode);
+        Assert.Equal("SITE_PUBLICATION_WEBSITE_MISMATCH",
+            Assert.Throws<DomainException>(() => website.PointTo(foreign)).ErrorCode);
+        Assert.Null(website.CurrentPublicationId);
+    }
+
+    [Fact]
+    public void Reinstate_returns_to_published_when_a_publication_exists_otherwise_draft()
+    {
+        var withoutPub = WebsiteEntity.Create(ShopId);
+        withoutPub.Suspend();
+        withoutPub.Reinstate();
+        Assert.Equal(WebsiteStatus.Draft, withoutPub.Status);
+
+        var withPub = WebsiteEntity.Create(ShopId);
+        withPub.Publish(SitePublication.Create(ShopId, withPub.Id, 1, Snapshot, null, null, DateTimeOffset.UtcNow));
+        withPub.Suspend();
+        withPub.Reinstate();
+        Assert.Equal(WebsiteStatus.Published, withPub.Status);
+    }
 }

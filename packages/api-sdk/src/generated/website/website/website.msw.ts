@@ -21,15 +21,16 @@ import {
 import type {
   PageDraftDto,
   PageDto,
+  PublicationDto,
   SavePageDraftResultDto,
   ThemeDto,
   WebsiteDto
 } from '.././model';
 
 
-export const getCreateWebsiteResponseMock = (overrideResponse: Partial< WebsiteDto > = {}): WebsiteDto => ({id: faker.string.uuid(), status: faker.helpers.arrayElement(Object.values(WebsiteStatus)), defaultLocale: faker.string.alpha({length: {min: 10, max: 20}}), locales: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), defaultSeoTitle: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), defaultSeoDescription: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), defaultOgImageId: faker.helpers.arrayElement([faker.string.uuid(), null]), faviconAssetId: faker.helpers.arrayElement([faker.string.uuid(), null]), trackingSnippets: {}, homePageId: faker.string.uuid(), ...overrideResponse})
+export const getCreateWebsiteResponseMock = (overrideResponse: Partial< WebsiteDto > = {}): WebsiteDto => ({id: faker.string.uuid(), status: faker.helpers.arrayElement(Object.values(WebsiteStatus)), defaultLocale: faker.string.alpha({length: {min: 10, max: 20}}), locales: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), defaultSeoTitle: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), defaultSeoDescription: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), defaultOgImageId: faker.helpers.arrayElement([faker.string.uuid(), null]), faviconAssetId: faker.helpers.arrayElement([faker.string.uuid(), null]), trackingSnippets: {}, homePageId: faker.string.uuid(), currentPublicationId: faker.helpers.arrayElement([faker.string.uuid(), null]), ...overrideResponse})
 
-export const getGetWebsiteResponseMock = (overrideResponse: Partial< WebsiteDto > = {}): WebsiteDto => ({id: faker.string.uuid(), status: faker.helpers.arrayElement(Object.values(WebsiteStatus)), defaultLocale: faker.string.alpha({length: {min: 10, max: 20}}), locales: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), defaultSeoTitle: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), defaultSeoDescription: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), defaultOgImageId: faker.helpers.arrayElement([faker.string.uuid(), null]), faviconAssetId: faker.helpers.arrayElement([faker.string.uuid(), null]), trackingSnippets: {}, homePageId: faker.string.uuid(), ...overrideResponse})
+export const getGetWebsiteResponseMock = (overrideResponse: Partial< WebsiteDto > = {}): WebsiteDto => ({id: faker.string.uuid(), status: faker.helpers.arrayElement(Object.values(WebsiteStatus)), defaultLocale: faker.string.alpha({length: {min: 10, max: 20}}), locales: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), defaultSeoTitle: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), defaultSeoDescription: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), defaultOgImageId: faker.helpers.arrayElement([faker.string.uuid(), null]), faviconAssetId: faker.helpers.arrayElement([faker.string.uuid(), null]), trackingSnippets: {}, homePageId: faker.string.uuid(), currentPublicationId: faker.helpers.arrayElement([faker.string.uuid(), null]), ...overrideResponse})
 
 export const getListPagesResponseMock = (): PageDto[] => (Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({id: faker.string.uuid(), kind: faker.helpers.arrayElement(Object.values(PageKind)), systemType: faker.helpers.arrayElement(['Contact','NotFound','ProductListing','ProductDetail','ProductSearch','Booking'] as const), slug: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), title: faker.string.alpha({length: {min: 10, max: 20}}), seoTitle: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), seoDescription: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), ogImageId: faker.helpers.arrayElement([faker.string.uuid(), null]), noIndex: faker.datatype.boolean(), isEnabled: faker.datatype.boolean(), sortOrder: faker.number.int({min: undefined, max: undefined}), isHomePage: faker.datatype.boolean(), isDirty: faker.datatype.boolean(), deletable: faker.datatype.boolean(), updatedAt: `${faker.date.past().toISOString().split('.')[0]}Z`})))
 
@@ -44,6 +45,12 @@ export const getSavePageDraftResponseMock = (overrideResponse: Partial< SavePage
 export const getGetThemeResponseMock = (overrideResponse: Partial< ThemeDto > = {}): ThemeDto => ({presetKey: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), tokens: {}, updatedAt: `${faker.date.past().toISOString().split('.')[0]}Z`, ...overrideResponse})
 
 export const getUpdateThemeResponseMock = (overrideResponse: Partial< ThemeDto > = {}): ThemeDto => ({presetKey: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), tokens: {}, updatedAt: `${faker.date.past().toISOString().split('.')[0]}Z`, ...overrideResponse})
+
+export const getPublishWebsiteResponseMock = (overrideResponse: Partial< PublicationDto > = {}): PublicationDto => ({id: faker.string.uuid(), version: faker.number.int({min: undefined, max: undefined}), publishedAt: `${faker.date.past().toISOString().split('.')[0]}Z`, publishedByUserId: faker.helpers.arrayElement([faker.string.uuid(), null]), note: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), isCurrent: faker.datatype.boolean(), ...overrideResponse})
+
+export const getListPublicationsResponseMock = (): PublicationDto[] => (Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({id: faker.string.uuid(), version: faker.number.int({min: undefined, max: undefined}), publishedAt: `${faker.date.past().toISOString().split('.')[0]}Z`, publishedByUserId: faker.helpers.arrayElement([faker.string.uuid(), null]), note: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), isCurrent: faker.datatype.boolean()})))
+
+export const getRollbackPublicationResponseMock = (overrideResponse: Partial< PublicationDto > = {}): PublicationDto => ({id: faker.string.uuid(), version: faker.number.int({min: undefined, max: undefined}), publishedAt: `${faker.date.past().toISOString().split('.')[0]}Z`, publishedByUserId: faker.helpers.arrayElement([faker.string.uuid(), null]), note: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), isCurrent: faker.datatype.boolean(), ...overrideResponse})
 
 
 export const getCreateWebsiteMockHandler = (overrideResponse?: WebsiteDto | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<WebsiteDto> | WebsiteDto), options?: RequestHandlerOptions) => {
@@ -163,6 +170,42 @@ export const getUpdateThemeMockHandler = (overrideResponse?: ThemeDto | ((info: 
       })
   }, options)
 }
+
+export const getPublishWebsiteMockHandler = (overrideResponse?: PublicationDto | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<PublicationDto> | PublicationDto), options?: RequestHandlerOptions) => {
+  return http.post('*/api/shops/:shopId/website/publications', async (info) => {await delay(1000);
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPublishWebsiteResponseMock()),
+      { status: 201,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getListPublicationsMockHandler = (overrideResponse?: PublicationDto[] | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<PublicationDto[]> | PublicationDto[]), options?: RequestHandlerOptions) => {
+  return http.get('*/api/shops/:shopId/website/publications', async (info) => {await delay(1000);
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListPublicationsResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getRollbackPublicationMockHandler = (overrideResponse?: PublicationDto | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<PublicationDto> | PublicationDto), options?: RequestHandlerOptions) => {
+  return http.post('*/api/shops/:shopId/website/publications/:publicationId/rollback', async (info) => {await delay(1000);
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getRollbackPublicationResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
 export const getWebsiteMock = () => [
   getCreateWebsiteMockHandler(),
   getGetWebsiteMockHandler(),
@@ -173,5 +216,8 @@ export const getWebsiteMock = () => [
   getGetPageDraftMockHandler(),
   getSavePageDraftMockHandler(),
   getGetThemeMockHandler(),
-  getUpdateThemeMockHandler()
+  getUpdateThemeMockHandler(),
+  getPublishWebsiteMockHandler(),
+  getListPublicationsMockHandler(),
+  getRollbackPublicationMockHandler()
 ]

@@ -108,10 +108,10 @@ Nhánh lỗi:
 ### Flow 2: Chủ shop rollback
 
 ```text
-1. POST /api/shops/{shopId}/website/publications/{publicationId}/rollback   ❌ T5
-2. Tìm bản theo id + ShopId + WebsiteId trong MỘT câu query                  ❌ T5
-3. Website.CurrentPublicationId = bản đó; mọi draft IsDirty = true           ❌ T5
-4. Xoá con trỏ Redis; trả 200 thông tin bản đang chạy                        ❌ T5
+1. POST /api/shops/{shopId}/website/publications/{publicationId}/rollback   ✅ T5
+2. Tìm bản theo id + ShopId + WebsiteId trong MỘT câu query                  ✅ T5
+3. Website.CurrentPublicationId = bản đó; mọi draft IsDirty = true           ✅ T5
+4. Xoá con trỏ Redis; trả 200 thông tin bản đang chạy                        ✅ T5
 ```
 
 - **Không đụng nội dung draft.** Chỉ dựng cờ `IsDirty` (bản nháp giờ khác bản đang chạy — G7).
@@ -123,7 +123,7 @@ Nhánh lỗi:
 ### Flow 3: Chủ shop xem danh sách bản đã xuất bản
 
 ```text
-1. GET /api/shops/{shopId}/website/publications   ❌ T5
+1. GET /api/shops/{shopId}/website/publications   ✅ T5
    → [{ id, version, publishedAt, publishedByUserId, note, isCurrent }], version giảm dần, KHÔNG kèm snapshot
 ```
 
@@ -133,12 +133,12 @@ Trần 50 bản mới nhất (job prune 20 bản là 8d). Chưa có website → 
 
 ```text
 1. Trình duyệt mở {slug}.vsite.vn → SSR apps/web lấy host từ URL        ❌ 8c
-2. SSR gọi GET /api/site, header Host = host gốc, If-None-Match?         ❌ T6
+2. SSR gọi GET /api/site, header Host = host gốc, If-None-Match?         ✅ T6
 3. Middleware suy ShopId + AudienceKind = Shop                           ✅ TenantResolutionMiddleware.cs:42-47
-4. Handler: audience phải là Shop, nếu không → 404                       ❌ T6
-5. Đọc Shop (name, status, logo, updatedAt) — một query theo khoá chính  ❌ T6
-6. Đọc con trỏ { websiteStatus, publicationId } từ Redis, hụt thì DB     ❌ T6
-7. So ETag → 304; không khớp thì đọc snapshot (Global Filter) → 200      ❌ T6
+4. Handler: audience phải là Shop, nếu không → 404                       ✅ T6
+5. Đọc Shop (name, status, logo, updatedAt) — một query theo khoá chính  ✅ T6
+6. Đọc con trỏ { websiteStatus, publicationId } từ Redis, hụt thì DB     ✅ T6
+7. So ETag → 304; không khớp thì đọc snapshot (Global Filter) → 200      ✅ T6
 ```
 
 - `404 SITE_NOT_FOUND` cho mọi trường hợp "không có site": host không phải shop, host `admin`/host chính, shop
@@ -152,8 +152,8 @@ Trần 50 bản mới nhất (job prune 20 bản là 8d). Chưa có website → 
 ```text
 1. GET …/media/library/{assetId}/references     ✅ GetReferencesHandler.cs:27-30
 2. Nguồn PageDraft                               ✅ PageDraftReferenceSource.cs:18
-3. Nguồn snapshot (bản đang chạy + bản còn giữ)  ❌ T8 — đọc bảng snapshot.media, không validate lại tree
-4. Nguồn ảnh OG của Page / Website, favicon      ❌ T8
+3. Nguồn snapshot (bản đang chạy + bản còn giữ)  ✅ T8 — đọc bảng snapshot.media, không validate lại tree
+4. Nguồn ảnh OG của Page / Website, favicon      ✅ T8
 ```
 
 ## 4. Đã chốt trong session lập plan
@@ -259,6 +259,7 @@ Trần 50 bản mới nhất (job prune 20 bản là 8d). Chưa có website → 
 | R10 | Draft được lưu giữa lúc publish đọc và ghi | `409 PUBLISH_CONFLICT`, không có bản publish nửa vời, cờ `IsDirty` của draft đó vẫn `true` | T4 |
 | R11 | Xoá mềm ảnh sau khi publish | `GET /api/site` vẫn trả `snapshot.media` có ảnh đó (file sống tới 8d); `references` trước khi xoá đã cảnh báo | T7, T8 |
 | R12 | Đổi tên shop sau publish | `ETag` đổi, response mang tên mới, `snapshot` không đổi | T6 |
+| R14 | Tree lưu `imageId` chữ hoa (BE chấp nhận ở `PUT draft`) | Publish chuẩn hoá về chữ thường; renderer tra `snapshot.media[imageId]` luôn trúng, không ra placeholder | T4 |
 | R13 | Snapshot vượt kích thước hợp lý | Không đặt trần mới: mỗi tree đã bị trần 1 MB ở `PUT draft`; ghi kích thước snapshot vào log publish | T4 (log) |
 
 ## 8. Sơ đồ file
@@ -320,11 +321,11 @@ backend/tests/IntegrationTests/Website/
 `generateTreeRules` ([gen-registry.ts:490-499](../../../packages/builder-components/scripts/gen-registry.ts#L490-L499)) thêm, **bên cạnh** `variants` (giữ nguyên để không vỡ BE cũ):
 `requiresProps: { [variantKey]: string[] }` (mảng đã sort). `schemaVersion` của file giữ 1 (thêm field, additive).
 
-- [ ] Test trước: `packages/builder-components/tests/gen-registry.test.ts` — `tree-rules.json` sinh ra có
+- [x] Test trước: `packages/builder-components/tests/gen-registry.test.ts` — `tree-rules.json` sinh ra có
   `types.Hero.requiresProps.Hero01` chứa `title` và `image`, `Hero02` chỉ `title`; mọi key của `requiresProps` khớp `variants`.
-- [ ] FAIL → hiện thực → PASS (`pnpm --filter @vsite/builder-components test`)
-- [ ] `pnpm gen:registry` (check-additive phải xanh, `registry.lock.json` không đổi — `git status` xác nhận)
-- [ ] Commit `feat(builder-components): xuất requiresProps vào tree-rules.json (WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS (`pnpm --filter @vsite/builder-components test`)
+- [x] `pnpm gen:registry` (check-additive phải xanh, `registry.lock.json` không đổi — `git status` xác nhận)
+- [x] Commit `feat(builder-components): xuất requiresProps vào tree-rules.json (WEBSITE-004)`
 
 ### S0-T2: Zod vỏ snapshot + `site-snapshot.schema.json`
 
@@ -334,15 +335,16 @@ tokens. `additionalProperties: false` ở mọi cấp vỏ. Export schema + type
 `gen-registry.ts` ghi `generated/site-snapshot.schema.json` (cạnh dòng ghi `tree-envelope.schema.json`,
 [gen-registry.ts:647](../../../packages/builder-components/scripts/gen-registry.ts#L647)).
 
-- [ ] Test trước: `packages/builder-components/tests/site-snapshot-schema.test.ts` — ví dụ ở §4 parse được;
+- [x] Test trước: `packages/builder-components/tests/site-snapshot-schema.test.ts` — ví dụ ở §4 parse được;
   thiếu `pages[].id` → lỗi; `slug: null` hợp lệ; key lạ ở gốc → lỗi; `navigation.items` rỗng hợp lệ.
-- [ ] FAIL → hiện thực → PASS · `pnpm gen:registry` · `pnpm build`
-- [ ] Commit `feat(builder-components): vỏ SiteSnapshot v1 bằng Zod + JSON Schema (#94, #97, WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS · `pnpm gen:registry` · `pnpm build`
+- [x] Commit `feat(builder-components): vỏ SiteSnapshot v1 bằng Zod + JSON Schema (#94, #97, WEBSITE-004)`
 
 ## 10. Session S1: Backend
 
-Lệnh test chung: `dotnet test backend/vsite.sln --filter "FullyQualifiedName~{TênLớpTest}"`; cuối mỗi task chạy
-thêm `dotnet test backend/tests/ArchitectureTests`.
+Lệnh test chung: `dotnet test backend/vsite.sln --filter "FullyQualifiedName~{TênLớpTest}"` trong lúc làm.
+**Trước khi commit mỗi task: chạy `dotnet test backend/vsite.sln` ĐẦY ĐỦ (không lọc)** — burn T3 chỉ chạy test đã lọc
+nên làm hỏng 4 test cũ mà không biết (sửa ở `TreeFixtures.MergeRulesOverride`, 2026-11-17).
 
 ### T1: Entity `SitePublication` + `Website.CurrentPublicationId` + migration
 
@@ -373,17 +375,17 @@ Bảng `site_publication`: `id` PK · `website_id` · `shop_id` · `version int`
 `ck_site_publication_version_positive`. Trên `website`: cột `current_publication_id uuid NULL` + FK
 `fk_website_current_publication (current_publication_id, id) → site_publication (id, website_id)` `Restrict`.
 
-- [ ] Test trước: `backend/tests/IntegrationTests/Website/SitePublicationDbConstraintTests.cs`
+- [x] Test trước: `backend/tests/IntegrationTests/Website/SitePublicationDbConstraintTests.cs`
   - trùng `(website_id, version)` → `23505`
   - `current_publication_id` trỏ bản của **website khác** → `23503` (R4)
   - `site_publication.shop_id` lệch `shop_id` của website → `23503`
   - xoá bản đang là current → bị chặn; bản không current → xoá được
   - Global Query Filter: tenant A không thấy `SitePublications` của B; tenant null → rỗng (thêm vào `WebsiteTenantIsolationTests.cs`)
   - `WebsiteEntityTests.cs`: `Publish` Draft→Published, Suspended giữ nguyên; `Publish`/`PointTo` với bản của website khác ném `DomainException`
-- [ ] FAIL → hiện thực (entity, configuration, `DbSet` ở `AppDbContext` + `IAppDbContext`) → migration:
+- [x] FAIL → hiện thực (entity, configuration, `DbSet` ở `AppDbContext` + `IAppDbContext`) → migration:
   `dotnet ef migrations add AddSitePublication --project backend/src/Vsite.Infrastructure --startup-project backend/src/Vsite.Api`
-- [ ] `dotnet ef migrations has-pending-model-changes --project backend/src/Vsite.Infrastructure --startup-project backend/src/Vsite.Api` → "No changes"
-- [ ] PASS · Commit `feat(website): entity SitePublication + CurrentPublicationId (#41, #92, WEBSITE-004)`
+- [x] `dotnet ef migrations has-pending-model-changes --project backend/src/Vsite.Infrastructure --startup-project backend/src/Vsite.Api` → "No changes"
+- [x] PASS · Commit `feat(website): entity SitePublication + CurrentPublicationId (#41, #92, WEBSITE-004)`
 
 ### T2: `SnapshotBuilder` + `DocumentKind.Snapshot`
 
@@ -401,13 +403,13 @@ snapshot (chưa có upcaster nào). `WebsiteSchemaProvider` nạp `site-snapshot
 khác — [Program.cs:147-150](../../../backend/src/Vsite.Api/Program.cs#L147-L150)); `Vsite.Api.csproj` thêm file vào
 `EnsureWebsiteArtifacts` và link ra thư mục `generated`.
 
-- [ ] Test trước: `SnapshotBuilderTests.cs`
+- [x] Test trước: `SnapshotBuilderTests.cs`
   - snapshot dựng từ website seed hợp lệ theo `site-snapshot.schema.json`
   - `pages` có `id`, xếp theo `SortOrder` rồi `Title`; `NotFound` có `slug: null`; trang chủ `slug: ""`
   - `navigation.items` rỗng; `version` đúng tham số; `theme.tokens` nguyên văn tokens đã lưu
   - `media` đúng tập truyền vào, key là GUID dạng `D` chữ thường
   - `SchemaVersioningTests.cs`: snapshot `schemaVersion` lớn hơn hiện hành → `Unsupported`
-- [ ] FAIL → hiện thực → PASS · Commit `feat(website): SnapshotBuilder + schemaVersion cho Snapshot (#94, WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS · Commit `feat(website): SnapshotBuilder + schemaVersion cho Snapshot (#94, WEBSITE-004)`
 
 ### T3: `RequiredPropsChecker`
 
@@ -426,12 +428,12 @@ public sealed class RequiredPropsChecker(ITreeRulesCatalog rules)
 Định nghĩa "thiếu": §4. Thêm hằng `TreeErrorCodes.RequiredPropMissing`. **Không** gọi checker trong `PUT draft`
 (draft dở dang là hợp lệ).
 
-- [ ] Test trước: `RequiredPropsCheckerTests.cs` — Hero01 thiếu `image` → 1 lỗi path `/children/0/props/image`;
+- [x] Test trước: `RequiredPropsCheckerTests.cs` — Hero01 thiếu `image` → 1 lỗi path `/children/0/props/image`;
   Hero02 không cần `image`; `title` chỉ có khoảng trắng → lỗi; richText `<p></p>` → lỗi; Gallery `items: []` → lỗi;
   node lồng trong Section báo đúng path; tree rỗng → không lỗi; cả 3 tree seed của `WebsiteSeeder` → không lỗi (R8);
   `SavePageDraftHandlerTests`: lưu draft thiếu prop bắt buộc **vẫn 200**.
   `WebsiteConfigCatalogTests.cs`: file thiếu `requiresProps` → ném lỗi nêu tên file.
-- [ ] FAIL → hiện thực → PASS · Commit `feat(website): kiểm requiresProps cho publish (WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS · Commit `feat(website): kiểm requiresProps cho publish (WEBSITE-004)`
 
 ### T4: Lệnh publish + endpoint
 
@@ -446,6 +448,12 @@ Handler (một `SaveChanges`):
    Ảnh OG mặc định + favicon của website: một lời gọi `EnsureValidAsync([], ids)`; lỗi gắn `pageId = null`.
 3. Có lỗi → `PublishBlockedException` (`422 PUBLISH_BLOCKED`, `params: { errors[], truncated }`).
 4. Nạp `storageKey`/`preset` của mọi id ảnh: `db.MediaAssets.Where(a => a.ShopId == shopId && ids.Contains(a.Id))`.
+   **Khoá của `snapshot.media` phải khớp đúng chuỗi `imageId` mà renderer sẽ tra** (R14): `SnapshotBuilder` ghi khoá
+   bằng `Guid.ToString()` (chữ thường, [SnapshotBuilder.cs:34](../../../backend/src/Vsite.Application/Website/Publishing/SnapshotBuilder.cs#L34)),
+   còn `PUT draft` nhận cả GUID chữ hoa ([SavePageDraftHandler.cs:101](../../../backend/src/Vsite.Application/Website/Commands/SavePageDraft/SavePageDraftHandler.cs#L101)).
+   Chọn cách: lúc publish, **chuẩn hoá mọi `imageId` trong `CleanTree` về GUID dạng `D` chữ thường** trước khi đưa vào
+   `SnapshotBuilder` (một lượt walk, dùng lại `ImageIds` của validator để biết chuỗi nào cần thay). Không đổi khoá `media`
+   sang chuỗi thô — `ogImageId`/`faviconAssetId` cũng đi qua `Guid.ToString()` nên một quy ước chữ thường là đủ.
 5. `version = (max Version của website ?? 0) + 1` → `SnapshotBuilder.Build` → `SitePublication.Create` (người publish từ `IAuditActor.UserId`) → `website.Publish(p)` → `draft.MarkPublished()` **chỉ** cho draft đang `IsDirty`.
 6. `SaveChanges`: `23505` trên `ux_site_publication_website_version` hoặc `DbUpdateConcurrencyException` → `ConflictException("PUBLISH_CONFLICT")`.
 7. Sau khi lưu: `ISitePointerCache.InvalidateAsync(shopId)` (interface tạo ở task này, bản thật ở T6; T4 dùng bản no-op tạm đăng ký trong DI và được T6 thay). Log `snapshotBytes`.
@@ -453,7 +461,7 @@ Handler (một `SaveChanges`):
 Route `POST /shops/{shopId}/website/publications` · `publishWebsite` · body `{ note? }` (tuỳ chọn) · `201` + `Location` ·
 `401 403 404 409 422`.
 
-- [ ] Test trước: `PublishWebsiteHandlerTests.cs` (handler, Postgres thật qua `WebsiteHandlerKit`)
+- [x] Test trước: `PublishWebsiteHandlerTests.cs` (handler, Postgres thật qua `WebsiteHandlerKit`)
   - website trắng publish được ngay: version 1, `Status = Published`, `CurrentPublicationId` trỏ đúng (R8)
   - publish lần hai → version 2; bản 1 còn nguyên, `Snapshot` không đổi
   - sau publish mọi draft `IsDirty = false`; draft vốn sạch giữ nguyên `Version` (R9)
@@ -465,9 +473,11 @@ Route `POST /shops/{shopId}/website/publications` · `publishWebsite` · body `{
   - draft bị đổi giữa đọc và ghi (dùng `BumpXminInterceptor` sẵn có ở `backend/tests/IntegrationTests/Website/WebsiteHandlerKit.cs:219`) → `PUBLISH_CONFLICT`, không có bản mới (R10)
   - tenant null → `TENANT_REQUIRED`; tenant shop B không publish được website shop A (`WEBSITE_NOT_FOUND`)
   - `snapshot.media` chứa đủ id ảnh của tree + OG
-- [ ] Test trước: `PublicationEndpointTests.cs` (HTTP, `ShopApiHarness`) — 201 + `Location`; không token 401; `Customer`/Owner shop khác 403; `note` 201 ký tự → 422; `GET website` trả `currentPublicationId`; `GET pages` trả `isDirty = false`
-- [ ] FAIL → hiện thực → PASS · `ShopScopedRouteFilterTests` xanh
-- [ ] Commit `feat(website): publish toàn site thành SitePublication (#41, WEBSITE-004)`
+  - draft có `imageId` viết **chữ hoa** → publish được; trong snapshot, `imageId` ở tree và khoá `media` đều là chữ
+    thường và khớp nhau (R14)
+- [x] Test trước: `PublicationEndpointTests.cs` (HTTP, `ShopApiHarness`) — 201 + `Location`; không token 401; `Customer`/Owner shop khác 403; `note` 201 ký tự → 422; `GET website` trả `currentPublicationId`; `GET pages` trả `isDirty = false`
+- [x] FAIL → hiện thực → PASS · `ShopScopedRouteFilterTests` xanh
+- [x] Commit `feat(website): publish toàn site thành SitePublication (#41, WEBSITE-004)`
 
 ### T5: Danh sách bản + rollback
 
@@ -480,14 +490,14 @@ mọi draft của website `MarkDirty()`, `SaveChanges`, `InvalidateAsync`.
 Route: `GET …/publications` (`listPublications`, `200 401 403 404`) ·
 `POST …/publications/{publicationId:guid}/rollback` (`rollbackPublication`, `200 401 403 404`).
 
-- [ ] Test trước (thêm vào `PublishWebsiteHandlerTests.cs` + `PublicationEndpointTests.cs`)
+- [x] Test trước (thêm vào `PublishWebsiteHandlerTests.cs` + `PublicationEndpointTests.cs`)
   - publish 3 lần → danh sách 3 mục giảm dần, đúng một `isCurrent`
   - rollback về bản 1 → `CurrentPublicationId` = bản 1; nội dung mọi `PageDraft.Tree` không đổi; mọi draft `IsDirty = true` (G7); không sinh bản mới
   - rollback bản đang chạy → 200, `UpdatedAt` của website không đổi
   - rollback `publicationId` của shop B qua route shop A → `404 PUBLICATION_NOT_FOUND`, con trỏ không đổi (R4)
   - id ngẫu nhiên → 404; `Customer` → 403; chưa có website → `404 WEBSITE_NOT_FOUND`
   - publish sau rollback → version = max + 1 (không tái dùng số)
-- [ ] FAIL → hiện thực → PASS · Commit `feat(website): danh sách bản publish + rollback (WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS · Commit `feat(website): danh sách bản publish + rollback (WEBSITE-004)`
 
 ### T6: Endpoint công khai `GET /api/site` + con trỏ Redis
 
@@ -522,7 +532,7 @@ public interface ISitePointerCache
 `ProducesProblem(404)`. Đặt header `ETag`, `Cache-Control: no-cache`. Đăng ký `api.MapSiteEndpoints()` cạnh
 [Program.cs:198](../../../backend/src/Vsite.Api/Program.cs#L198).
 
-- [ ] Test trước: `PublishedSiteEndpointTests.cs` (HTTP, đặt `request.Headers.Host = "{slug}.vsite.local"`)
+- [x] Test trước: `PublishedSiteEndpointTests.cs` (HTTP, đặt `request.Headers.Host = "{slug}.vsite.local"`)
   - đã publish → 200, `status = Published`, `publication.version` đúng, `shop.name` đúng, có `ETag`, `Cache-Control: no-cache`
   - gửi lại với `If-None-Match` = ETag → 304 không body; ETag khác → 200
   - host `admin.vsite.local`, host chính, slug không tồn tại → `404 SITE_NOT_FOUND` (R2)
@@ -532,24 +542,24 @@ public interface ISitePointerCache
   - đổi tên shop qua `PUT /api/shops/{id}` → ETag đổi, `shop.name` mới, `snapshot` y nguyên (R12)
   - gọi không token → 200 (không 401); kèm token bất kỳ → kết quả như nhau
   - `ApiRoutePrefixTests` xanh (có `operationId`, dưới `/api`)
-- [ ] FAIL → hiện thực → PASS · Commit `feat(website): endpoint công khai GET /api/site theo Host + ETag (#108, #109, WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS · Commit `feat(website): endpoint công khai GET /api/site theo Host + ETag (#108, #109, WEBSITE-004)`
 
 ### T7: Tenant isolation theo Host + tính bất biến
 
 Chỉ thêm test (code đã có từ T1–T6); test đỏ thì quay lại sửa task tương ứng.
 
-- [ ] `PublishedSiteTenantIsolationTests.cs`
+- [x] `PublishedSiteTenantIsolationTests.cs`
   - shop A và B đều publish, nội dung khác nhau: Host A → bản A, Host B → bản B
   - Host A kèm `?shopId={B}`, `?host={slugB}.vsite.local`, header `X-Forwarded-Host: {slugB}…` → vẫn bản A (R1)
   - Host A kèm token Owner của shop B → vẫn bản A (R1)
   - chỉ B publish: Host A → 404 dù B có bản
   - con trỏ Redis của A không bao giờ trả `publicationId` của B (publish B rồi đọc A)
-- [ ] Bất biến (R3): publish → ghi lại chuỗi `snapshot` + ETag → lần lượt `PUT draft`, `PUT theme`, `PUT page` (đổi
+- [x] Bất biến (R3): publish → ghi lại chuỗi `snapshot` + ETag → lần lượt `PUT draft`, `PUT theme`, `PUT page` (đổi
   SEO, tắt trang), `DELETE page` → `GET /api/site` trả `snapshot` giống hệt từng ký tự, ETag giữ nguyên
-- [ ] Xoá mềm ảnh sau publish → `snapshot.media` vẫn có ảnh đó (R11)
-- [ ] Kiểm kiến trúc: thêm test trong `backend/tests/ArchitectureTests` quét nguồn
+- [x] Xoá mềm ảnh sau publish → `snapshot.media` vẫn có ảnh đó (R11)
+- [x] Kiểm kiến trúc: thêm test trong `backend/tests/ArchitectureTests` quét nguồn
   `Vsite.Application/Website/Queries/GetPublishedSite/*.cs` — không chứa `PageDrafts`, `Pages`, `Themes`
-- [ ] PASS · Commit `test(website): tenant isolation theo Host + snapshot bất biến (#21, #108, WEBSITE-004)`
+- [x] PASS · Commit `test(website): tenant isolation theo Host + snapshot bất biến (#21, #108, WEBSITE-004)`
 
 ### T8: `references` — snapshot + ảnh OG/favicon
 
@@ -565,40 +575,40 @@ Chỉ thêm test (code đã có từ T1–T6); test đỏ thì quay lại sửa 
 - Đăng ký cả hai cạnh [DependencyInjection.cs:122](../../../backend/src/Vsite.Infrastructure/DependencyInjection.cs#L122). Xoá hai dòng TODO ở
   `MediaReferencesDto.cs:8-9` và `GetReferencesHandler.cs:12`.
 
-- [ ] Test trước: `PublicationReferenceSourceTests.cs`
+- [x] Test trước: `PublicationReferenceSourceTests.cs`
   - ảnh dùng trong bản đang chạy → một mục `SitePublication`, `isCurrent = true`
   - ảnh chỉ còn ở bản cũ (đã gỡ khỏi draft, publish lại) → `isCurrent = false`
   - ảnh ở 3 bản → vẫn một mục
   - ảnh OG của trang → `PageOgImage` + `pageId`/`pageTitle`; OG website / favicon → đúng kind
   - shop B không thấy tham chiếu của shop A; tenant null → rỗng
   - ảnh không dùng ở đâu → rỗng
-- [ ] FAIL → hiện thực → PASS · Commit `feat(media): references quét snapshot và ảnh OG/favicon (WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS · Commit `feat(media): references quét snapshot và ảnh OG/favicon (WEBSITE-004)`
 
 ### T9: Kết thúc S1
 
-- [ ] `dotnet test backend/vsite.sln` xanh toàn bộ (Docker thật); `pnpm build && pnpm test` xanh
-- [ ] `pnpm contract:export website media` → skill `contract-sync` → `Docs/tasks/WEBSITE-004/contract-diff.md` → **Gate 1** (#89).
+- [x] `dotnet test backend/vsite.sln` xanh toàn bộ (Docker thật); `pnpm build && pnpm test` xanh
+- [x] `pnpm contract:export website media` → skill `contract-sync` → `Docs/tasks/WEBSITE-004/contract-diff.md` → **Gate 1** (#89).
   Dự kiến chỉ thêm: 4 operation + 3 schema ở `website`; 4 giá trị enum + 1 field ở `media`; `WebsiteDto.currentPublicationId`.
   Lưu ý nợ classifier (TOOLING-001): thêm field vào DTO response có thể bị báo BREAKING nhầm — nêu rõ trong `contract-diff.md`.
-- [ ] Sau promote: `pnpm gen:api` · viết `Docs/tasks/WEBSITE-004/brief.md` cho 8c + màn publish Portal, bắt buộc ghi:
+- [x] Sau promote: `pnpm gen:api` · viết `Docs/tasks/WEBSITE-004/brief.md` cho 8c + màn publish Portal, bắt buộc ghi:
   header `Host` (#108), `ETag`/304, `Suspended` → `publication: null`, một mã 404, `snapshot` là `unknown` → parse bằng
   Zod `siteSnapshotSchema`, `snapshot.media` thay cho `mediaMap`, version draft đổi sau publish (R9), shape `PUBLISH_BLOCKED`.
-- [ ] `Docs/tasks/WEBSITE-004/changelog.md`: lệch có chủ đích (shape snapshot khác `05` §7: `id`, `media`, `tracking`,
+- [x] `Docs/tasks/WEBSITE-004/changelog.md`: lệch có chủ đích (shape snapshot khác `05` §7: `id`, `media`, `tracking`,
   `theme.presetKey`, `seo.faviconAssetId`; shop `Draft` không chặn site) + "Chưa làm xong / theo dõi" (phát hiện 4;
   anchor `#nodeId` + năm © → 8c; prune → 8d; custom domain; kiểm `Host` tự đặt từ Node → 8c)
-- [ ] Banner `STATUS` của `05` (Tasks + Changelog + Stale: §7 shape snapshot, §25 mục 4 đã chốt #109) và `08` (references
+- [x] Banner `STATUS` của `05` (Tasks + Changelog + Stale: §7 shape snapshot, §25 mục 4 đã chốt #109) và `08` (references
   đã quét snapshot) → `pnpm gen:doc-index`
-- [ ] `DesignIdeal/00-INDEX.md`: §1 dòng "Quyết định #N nằm ở đâu" thêm #108, #109; §3 dòng 8b; §4 gỡ hai dòng "Cần bạn chốt"
+- [x] `DesignIdeal/00-INDEX.md`: §1 dòng "Quyết định #N nằm ở đâu" thêm #108, #109; §3 dòng 8b; §4 gỡ hai dòng "Cần bạn chốt"
   của 8b, gỡ nợ `MEDIA-001` #2, `WEBSITE-001` #3 và #14, cập nhật dòng "Review kiến trúc P1"
-- [ ] `DesignIdeal/DECISIONS.md`: #108, #109 đổi trạng thái sang ✅ kèm tên test; #94 ghi `Snapshot` đã code
-- [ ] `backend/docs/modules/website.md`: entity, 4 route, quy ước đọc công khai, con trỏ Redis, sửa dòng 83
-- [ ] `pnpm check:docs` xanh
+- [x] `DesignIdeal/DECISIONS.md`: #108, #109 đổi trạng thái sang ✅ kèm tên test; #94 ghi `Snapshot` đã code
+- [x] `backend/docs/modules/website.md`: entity, 4 route, quy ước đọc công khai, con trỏ Redis, sửa dòng 83
+- [x] `pnpm check:docs` xanh
 
 ## 11. Đóng task (trước Gate 2)
 
-- [ ] `change-reviewer` trên toàn diff (model mạnh nhất — task chạm tenant + contract)
-- [ ] `Docs/tasks/WEBSITE-004/review.md` kèm mục "Ma sát quy trình"
-- [ ] Nghiệm thu tay tối thiểu (không có FE): bằng `curl` với header `Host: {slug}.vsite.local` qua BE dev —
+- [x] `change-reviewer` trên toàn diff (model mạnh nhất — task chạm tenant + contract)
+- [x] `Docs/tasks/WEBSITE-004/review.md` kèm mục "Ma sát quy trình"
+- [x] Nghiệm thu tay tối thiểu (không có FE): bằng `curl` với header `Host: {slug}.vsite.local` qua BE dev —
   publish, đọc, sửa draft, đọc lại, rollback, đọc lại
 
 ## 12. Giả định tôi đã tự đặt (chưa hỏi, cần duyệt)

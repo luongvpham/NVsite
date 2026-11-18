@@ -9,4 +9,8 @@ export type MediaReferenceKind = typeof MediaReferenceKind[keyof typeof MediaRef
 export const MediaReferenceKind = {
   ShopLogo: 'ShopLogo',
   PageDraft: 'PageDraft',
+  SitePublication: 'SitePublication',
+  PageOgImage: 'PageOgImage',
+  WebsiteOgImage: 'WebsiteOgImage',
+  WebsiteFavicon: 'WebsiteFavicon',
 } as const;

@@ -47,6 +47,33 @@ public sealed class SchemaVersioningTests
         Assert.Equal(1, DocumentSchemaVersions.Tree);
     }
 
+    [Fact]
+    public void Current_version_is_one_for_snapshot()
+    {
+        Assert.Equal(1, Versioning().Current(DocumentKind.Snapshot));
+        Assert.Equal(1, DocumentSchemaVersions.Snapshot);
+    }
+
+    [Fact]
+    public void Snapshot_newer_than_current_is_unsupported()
+    {
+        var result = Versioning().Upcast(DocumentKind.Snapshot, JsonNode.Parse("""{ "schemaVersion": 2 }"""));
+
+        Assert.Equal(UpcastStatus.Unsupported, result.Status);
+        Assert.Null(result.Document);
+    }
+
+    [Fact]
+    public void Snapshot_at_current_version_passes_through_untouched()
+    {
+        var doc = JsonNode.Parse("""{ "schemaVersion": 1, "x": 1 }""");
+
+        var result = Versioning().Upcast(DocumentKind.Snapshot, doc);
+
+        Assert.Equal(UpcastStatus.Current, result.Status);
+        Assert.True(JsonNode.DeepEquals(doc, result.Document));
+    }
+
     [Theory]
     [InlineData(DocumentKind.Tree)]
     [InlineData(DocumentKind.Tokens)]

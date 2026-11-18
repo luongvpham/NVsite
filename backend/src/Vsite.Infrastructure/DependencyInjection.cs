@@ -13,6 +13,7 @@ using Vsite.Application.Identity.Options;
 using Vsite.Application.Media;
 using Vsite.Application.Media.Interfaces;
 using Vsite.Application.Shop.Interfaces;
+using Vsite.Application.Website.Interfaces;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Infrastructure.Identity;
 using Vsite.Infrastructure.Imaging;
@@ -50,6 +51,7 @@ public static class DependencyInjection
         services.AddShopModule();
         services.AddImagingModule(configuration);
         services.AddMediaModule();
+        services.AddWebsiteModule();
 
         return services;
     }
@@ -105,6 +107,15 @@ public static class DependencyInjection
         return services;
     }
 
+    // ---- Website (catalog/validator là singleton ở Program.cs vì cần đường dẫn artifact) ----
+    private static IServiceCollection AddWebsiteModule(this IServiceCollection services)
+    {
+        // WEBSITE-004 T6: con trỏ "bản đang chạy" trên IDistributedCache (Redis) — #109.
+        services.AddSingleton<ISitePointerCache, Vsite.Infrastructure.Website.SitePointerCache>();
+
+        return services;
+    }
+
     // ---- Media (T5, MEDIA-001) ----
     private static IServiceCollection AddMediaModule(this IServiceCollection services)
     {
@@ -120,6 +131,10 @@ public static class DependencyInjection
 
         // T11 WEBSITE-001 (MEDIA-001 #2) — nguồn tham chiếu PageDraft do Website cài; đăng ký ở đây để Media không tham chiếu Website.
         services.AddScoped<IMediaReferenceSource, Vsite.Infrastructure.Website.PageDraftReferenceSource>();
+
+        // T8 WEBSITE-004 — snapshot publish (08 §4) và ảnh OG/favicon của Page/Website.
+        services.AddScoped<IMediaReferenceSource, Vsite.Infrastructure.Website.SitePublicationReferenceSource>();
+        services.AddScoped<IMediaReferenceSource, Vsite.Infrastructure.Website.SeoImageReferenceSource>();
 
         return services;
     }

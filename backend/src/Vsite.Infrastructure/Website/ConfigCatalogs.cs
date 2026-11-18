@@ -207,14 +207,21 @@ public sealed class TreeRulesCatalog : ITreeRulesCatalog
         var types = new Dictionary<string, TreeTypeRule>(StringComparer.Ordinal);
         foreach (var (name, raw) in file.Types)
         {
-            if (raw.AllowedInPageKinds is null || raw.EditableInSystemPageProps is null || raw.Variants is null || raw.Props is null)
+            if (raw.AllowedInPageKinds is null || raw.EditableInSystemPageProps is null || raw.Variants is null
+                || raw.Props is null || raw.RequiresProps is null)
             {
-                throw WebsiteConfigFile.BadShape(filePath, $"type '{name}' thiếu allowedInPageKinds/editableInSystemPageProps/variants/props.");
+                throw WebsiteConfigFile.BadShape(filePath, $"type '{name}' thiếu allowedInPageKinds/editableInSystemPageProps/variants/props/requiresProps.");
+            }
+
+            var requiresProps = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+            foreach (var (variant, propNames) in raw.RequiresProps)
+            {
+                requiresProps[variant] = propNames ?? throw WebsiteConfigFile.BadShape(filePath, $"type '{name}' có 'requiresProps.{variant}' null.");
             }
 
             types[name] = new TreeTypeRule(
                 raw.AcceptsChildren, raw.AllowedChildTypes, raw.AllowedInPageKinds, raw.MaxPerPage,
-                raw.EditableInSystemPageProps, raw.Variants, ToRules(raw.Props, filePath, name));
+                raw.EditableInSystemPageProps, raw.Variants, ToRules(raw.Props, filePath, name), requiresProps);
         }
 
         Types = types;
@@ -250,7 +257,8 @@ public sealed class TreeRulesCatalog : ITreeRulesCatalog
         int? MaxPerPage,
         List<string>? EditableInSystemPageProps,
         List<string>? Variants,
-        Dictionary<string, RawProp>? Props);
+        Dictionary<string, RawProp>? Props,
+        Dictionary<string, List<string>?>? RequiresProps);
 
     private sealed record RawProp(
         string? Kind,

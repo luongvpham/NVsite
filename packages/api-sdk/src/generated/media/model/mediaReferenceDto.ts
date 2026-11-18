@@ -9,4 +9,6 @@ export interface MediaReferenceDto {
   pageId?: string | null;
   /** @nullable */
   pageTitle?: string | null;
+  /** @nullable */
+  isCurrent?: boolean | null;
 }

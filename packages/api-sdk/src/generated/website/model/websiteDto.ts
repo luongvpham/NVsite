@@ -19,4 +19,6 @@ export interface WebsiteDto {
   faviconAssetId: string | null;
   trackingSnippets: JsonElement;
   homePageId: string;
+  /** @nullable */
+  currentPublicationId: string | null;
 }

@@ -72,6 +72,10 @@ public sealed record TreePropRule(
     IReadOnlyDictionary<string, TreePropRule>? ItemProps);
 
 /// <param name="AllowedChildTypes">null = không giới hạn (khi <paramref name="AcceptsChildren"/>).</param>
+/// <param name="RequiresProps">
+/// Tên các prop bắt buộc theo từng variant (8b, WEBSITE-004) — khoá = variant, giá trị = danh sách tên prop (đã sort).
+/// Chỉ dùng khi publish (<c>RequiredPropsChecker</c>), KHÔNG kiểm ở PUT draft. Mọi khoá là một variant trong <paramref name="Variants"/>.
+/// </param>
 public sealed record TreeTypeRule(
     bool AcceptsChildren,
     IReadOnlyList<string>? AllowedChildTypes,
@@ -79,7 +83,8 @@ public sealed record TreeTypeRule(
     int? MaxPerPage,
     IReadOnlyList<string> EditableInSystemPageProps,
     IReadOnlyList<string> Variants,
-    IReadOnlyDictionary<string, TreePropRule> Props);
+    IReadOnlyDictionary<string, TreePropRule> Props,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> RequiresProps);
 
 /// <summary>generated/tree-rules.json — luật op + bản đồ prop sinh từ manifest (#60).</summary>
 public interface ITreeRulesCatalog
@@ -90,11 +95,15 @@ public interface ITreeRulesCatalog
 
 public sealed record SchemaViolation(string Path, string Message);
 
-/// <summary>JSON Schema sinh từ Zod/manifest (#60, #97): vỏ Tree, vỏ Tokens, props từng component.</summary>
+/// <summary>JSON Schema sinh từ Zod/manifest (#60, #97): vỏ Tree, vỏ Tokens, vỏ SiteSnapshot, props từng component.</summary>
 public interface IWebsiteSchemaProvider
 {
     IReadOnlyList<SchemaViolation> ValidateTreeEnvelope(string json);
     IReadOnlyList<SchemaViolation> ValidateThemeTokens(string json);
+
+    /// <summary>Vỏ <c>SiteSnapshot</c> v1 (8b). Chỉ dùng trong test/khởi động để khẳng định snapshot dựng ra hợp lệ —
+    /// không nằm trên đường phục vụ request công khai (FE parse bằng Zod). Ném nếu provider dựng không có schema này.</summary>
+    IReadOnlyList<SchemaViolation> ValidateSiteSnapshot(string json);
 
     bool HasPropsSchema(string componentType);
     IReadOnlyList<SchemaViolation> ValidateProps(string componentType, string propsJson);

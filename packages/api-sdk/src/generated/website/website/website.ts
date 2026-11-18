@@ -26,6 +26,8 @@ import type {
   PageDraftDto,
   PageDto,
   ProblemDetails,
+  PublicationDto,
+  PublishWebsiteBody,
   SavePageDraftRequest,
   SavePageDraftResultDto,
   ThemeDto,
@@ -736,6 +738,208 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getUpdateThemeMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const publishWebsite = (
+    shopId: string,
+    publishWebsiteBody: PublishWebsiteBody,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<PublicationDto>(
+      {url: `/api/shops/${shopId}/website/publications`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: publishWebsiteBody, signal
+    },
+      options);
+    }
+  
+
+
+export const getPublishWebsiteMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishWebsite>>, TError,{shopId: string;data: PublishWebsiteBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof publishWebsite>>, TError,{shopId: string;data: PublishWebsiteBody}, TContext> => {
+
+const mutationKey = ['publishWebsite'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof publishWebsite>>, {shopId: string;data: PublishWebsiteBody}> = (props) => {
+          const {shopId,data} = props ?? {};
+
+          return  publishWebsite(shopId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PublishWebsiteMutationResult = NonNullable<Awaited<ReturnType<typeof publishWebsite>>>
+    export type PublishWebsiteMutationBody = PublishWebsiteBody
+    export type PublishWebsiteMutationError = ProblemDetails | HttpValidationProblemDetails
+
+    export const usePublishWebsite = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishWebsite>>, TError,{shopId: string;data: PublishWebsiteBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof publishWebsite>>,
+        TError,
+        {shopId: string;data: PublishWebsiteBody},
+        TContext
+      > => {
+
+      const mutationOptions = getPublishWebsiteMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const listPublications = (
+    shopId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<PublicationDto[]>(
+      {url: `/api/shops/${shopId}/website/publications`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListPublicationsQueryKey = (shopId?: string,) => {
+    return [
+    `/api/shops/${shopId}/website/publications`
+    ] as const;
+    }
+
+    
+export const getListPublicationsQueryOptions = <TData = Awaited<ReturnType<typeof listPublications>>, TError = ProblemDetails>(shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublications>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPublicationsQueryKey(shopId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPublications>>> = ({ signal }) => listPublications(shopId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(shopId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPublications>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListPublicationsQueryResult = NonNullable<Awaited<ReturnType<typeof listPublications>>>
+export type ListPublicationsQueryError = ProblemDetails
+
+
+export function useListPublications<TData = Awaited<ReturnType<typeof listPublications>>, TError = ProblemDetails>(
+ shopId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublications>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPublications>>,
+          TError,
+          Awaited<ReturnType<typeof listPublications>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPublications<TData = Awaited<ReturnType<typeof listPublications>>, TError = ProblemDetails>(
+ shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublications>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPublications>>,
+          TError,
+          Awaited<ReturnType<typeof listPublications>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPublications<TData = Awaited<ReturnType<typeof listPublications>>, TError = ProblemDetails>(
+ shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublications>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListPublications<TData = Awaited<ReturnType<typeof listPublications>>, TError = ProblemDetails>(
+ shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublications>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListPublicationsQueryOptions(shopId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const rollbackPublication = (
+    shopId: string,
+    publicationId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<PublicationDto>(
+      {url: `/api/shops/${shopId}/website/publications/${publicationId}/rollback`, method: 'POST', signal
+    },
+      options);
+    }
+  
+
+
+export const getRollbackPublicationMutationOptions = <TError = ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rollbackPublication>>, TError,{shopId: string;publicationId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof rollbackPublication>>, TError,{shopId: string;publicationId: string}, TContext> => {
+
+const mutationKey = ['rollbackPublication'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rollbackPublication>>, {shopId: string;publicationId: string}> = (props) => {
+          const {shopId,publicationId} = props ?? {};
+
+          return  rollbackPublication(shopId,publicationId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RollbackPublicationMutationResult = NonNullable<Awaited<ReturnType<typeof rollbackPublication>>>
+    
+    export type RollbackPublicationMutationError = ProblemDetails
+
+    export const useRollbackPublication = <TError = ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rollbackPublication>>, TError,{shopId: string;publicationId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof rollbackPublication>>,
+        TError,
+        {shopId: string;publicationId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getRollbackPublicationMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

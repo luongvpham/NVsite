@@ -27,6 +27,9 @@ public static class TreeErrorCodes
     public const string LinkUrlUnsafe = "LINK_URL_UNSAFE";
     public const string SystemPageStructureChanged = "SYSTEM_PAGE_STRUCTURE_CHANGED";
     public const string SystemPagePropNotEditable = "SYSTEM_PAGE_PROP_NOT_EDITABLE";
+
+    /// <summary>Prop bắt buộc theo variant bị thiếu khi publish (8b, WEBSITE-004). KHÔNG áp dụng ở PUT draft.</summary>
+    public const string RequiredPropMissing = "REQUIRED_PROP_MISSING";
 }
 
 /// <summary>

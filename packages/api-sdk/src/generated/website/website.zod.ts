@@ -22,7 +22,8 @@ export const getWebsiteResponse = zod.object({
   "defaultOgImageId": zod.string().uuid().nullable(),
   "faviconAssetId": zod.string().uuid().nullable(),
   "trackingSnippets": zod.unknown(),
-  "homePageId": zod.string().uuid()
+  "homePageId": zod.string().uuid(),
+  "currentPublicationId": zod.string().uuid().nullable()
 })
 
 
@@ -166,4 +167,58 @@ export const updateThemeResponse = zod.object({
   "presetKey": zod.string().nullable(),
   "tokens": zod.unknown(),
   "updatedAt": zod.string().datetime({})
+})
+
+
+export const publishWebsiteParams = zod.object({
+  "shopId": zod.string().uuid()
+})
+
+export const publishWebsiteBody = zod.object({
+  "note": zod.string().nullable()
+}).nullable()
+
+
+export const listPublicationsParams = zod.object({
+  "shopId": zod.string().uuid()
+})
+
+export const listPublicationsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "version": zod.number(),
+  "publishedAt": zod.string().datetime({}),
+  "publishedByUserId": zod.string().uuid().nullable(),
+  "note": zod.string().nullable(),
+  "isCurrent": zod.boolean()
+})
+export const listPublicationsResponse = zod.array(listPublicationsResponseItem)
+
+
+export const rollbackPublicationParams = zod.object({
+  "shopId": zod.string().uuid(),
+  "publicationId": zod.string().uuid()
+})
+
+export const rollbackPublicationResponse = zod.object({
+  "id": zod.string().uuid(),
+  "version": zod.number(),
+  "publishedAt": zod.string().datetime({}),
+  "publishedByUserId": zod.string().uuid().nullable(),
+  "note": zod.string().nullable(),
+  "isCurrent": zod.boolean()
+})
+
+
+export const getPublishedSiteResponse = zod.object({
+  "status": zod.enum(['Draft', 'Published', 'Suspended']),
+  "shop": zod.object({
+  "name": zod.string(),
+  "logoUrl": zod.string().nullable()
+}),
+  "publication": zod.object({
+  "id": zod.string().uuid(),
+  "version": zod.number(),
+  "publishedAt": zod.string().datetime({}),
+  "snapshot": zod.unknown()
+}).nullable()
 })

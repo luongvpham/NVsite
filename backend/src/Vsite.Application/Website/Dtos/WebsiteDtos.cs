@@ -4,7 +4,8 @@ using Vsite.Domain.Website.Enums;
 namespace Vsite.Application.Website.Dtos;
 
 /// <summary>`data-needs` — màn "Tạo website". <paramref name="HomePageId"/> để Portal mở thẳng editor.
-/// <paramref name="TrackingSnippets"/> là object JSON (<c>{ ga4?, metaPixel? }</c>).</summary>
+/// <paramref name="TrackingSnippets"/> là object JSON (<c>{ ga4?, metaPixel? }</c>). <paramref name="CurrentPublicationId"/> = bản đang
+/// chạy (null khi chưa publish lần nào — WEBSITE-004, additive).</summary>
 public sealed record WebsiteDto(
     Guid Id,
     WebsiteStatus Status,
@@ -15,7 +16,8 @@ public sealed record WebsiteDto(
     Guid? DefaultOgImageId,
     Guid? FaviconAssetId,
     JsonElement TrackingSnippets,
-    Guid HomePageId);
+    Guid HomePageId,
+    Guid? CurrentPublicationId);
 
 /// <summary>
 /// `data-needs` — màn "Danh sách trang" và "Thuộc tính trang". <paramref name="IsHomePage"/> suy ra từ <c>Slug == ""</c>
@@ -57,3 +59,13 @@ public sealed record SavePageDraftResultDto(long Version, bool IsDirty, bool San
 
 /// <summary>`data-needs` — "Theme panel".</summary>
 public sealed record ThemeDto(string? PresetKey, JsonElement Tokens, DateTimeOffset UpdatedAt);
+
+/// <summary>`data-needs` — "Portal — nút Xuất bản" / "lịch sử xuất bản" (WEBSITE-004). KHÔNG kèm snapshot.
+/// <paramref name="IsCurrent"/> = bản này là <c>Website.CurrentPublicationId</c>.</summary>
+public sealed record PublicationDto(
+    Guid Id,
+    int Version,
+    DateTimeOffset PublishedAt,
+    Guid? PublishedByUserId,
+    string? Note,
+    bool IsCurrent);

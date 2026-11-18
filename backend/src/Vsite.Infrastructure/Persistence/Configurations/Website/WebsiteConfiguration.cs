@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Vsite.Domain.Media.Entities;
+using Vsite.Domain.Website.Entities;
 using ShopEntity = Vsite.Domain.Shop.Entities.Shop;
 using WebsiteEntity = Vsite.Domain.Website.Entities.Website;
 
@@ -33,6 +34,12 @@ public sealed class WebsiteConfiguration : IEntityTypeConfiguration<WebsiteEntit
         builder.Ignore(w => w.Locales);
         builder.Property<List<string>>("_locales").HasColumnName("locales").HasColumnType("text[]").IsRequired();
 
+        builder.Property(w => w.CurrentPublicationId);
+
+        // Concurrency token = cột hệ thống `xmin` (shadow, không lộ ra Domain/DTO; không tạo cột thật — như PageDraft.Version).
+        // Publish và rollback đều ghi dòng này ⇒ hai thao tác song song: bên đến sau nhận DbUpdateConcurrencyException
+        // → PUBLISH_CONFLICT / ROLLBACK_CONFLICT, thay vì last-write-wins làm lệch con trỏ với cờ IsDirty (review I1, WEBSITE-004).
+        builder.Property<uint>("RowVersion").HasColumnName("xmin").IsRowVersion();
         builder.Property(w => w.DefaultSeoTitle).HasMaxLength(160);
         builder.Property(w => w.DefaultSeoDescription).HasMaxLength(320);
         builder.Property(w => w.TrackingSnippets).HasColumnType("jsonb").IsRequired();
@@ -60,6 +67,16 @@ public sealed class WebsiteConfiguration : IEntityTypeConfiguration<WebsiteEntit
             .HasForeignKey(w => new { w.FaviconAssetId, w.ShopId })
             .HasPrincipalKey(m => new { m.Id, m.ShopId })
             .HasConstraintName("fk_website_media_asset_favicon")
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Con trỏ tới bản đang chạy (8b). FK ghép (current_publication_id, id) → site_publication (id, website_id):
+        // current_publication_id NULLABLE nên MATCH SIMPLE bỏ qua khi null (= chưa publish); khi có giá trị thì bản
+        // phải thuộc đúng website này (#92, R4). Restrict → xoá bản đang là current bị DB từ chối.
+        builder.HasOne<SitePublication>()
+            .WithMany()
+            .HasForeignKey(w => new { w.CurrentPublicationId, w.Id })
+            .HasPrincipalKey(p => new { p.Id, p.WebsiteId })
+            .HasConstraintName("fk_website_current_publication")
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

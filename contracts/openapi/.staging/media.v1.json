@@ -942,13 +942,22 @@
             "type": "string",
             "default": null,
             "nullable": true
+          },
+          "isCurrent": {
+            "type": "boolean",
+            "default": null,
+            "nullable": true
           }
         }
       },
       "MediaReferenceKind": {
         "enum": [
           "ShopLogo",
-          "PageDraft"
+          "PageDraft",
+          "SitePublication",
+          "PageOgImage",
+          "WebsiteOgImage",
+          "WebsiteFavicon"
         ]
       },
       "MediaReferencesDto": {
