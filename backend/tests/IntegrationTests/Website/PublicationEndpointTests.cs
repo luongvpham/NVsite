@@ -64,6 +64,106 @@ public sealed class PublicationEndpointTests
         Assert.All(list, p => Assert.False(p.IsDirty));
     }
 
+    // ---- T5: list + rollback ----
+
+    private async Task<PublicationDto> PublishAsync(ShopApiHarness.TestUser owner, Guid shopId, string? note = null)
+    {
+        var response = await _h.SendJsonAsync(HttpMethod.Post, Publications(shopId), owner.Token, new { note });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<PublicationDto>(ShopApiHarness.Json))!;
+    }
+
+    private static string Rollback(Guid shopId, Guid publicationId) => $"{Publications(shopId)}/{publicationId}/rollback";
+
+    [Fact]
+    public async Task List_returns_versions_descending_with_one_current_and_no_snapshot_T5()
+    {
+        var (owner, shopId, _) = await OwnerWithWebsiteAsync();
+        var first = await PublishAsync(owner, shopId, "một");
+        await PublishAsync(owner, shopId, "hai");
+        var third = await PublishAsync(owner, shopId, "ba");
+
+        var response = await _h.SendAsync(HttpMethod.Get, Publications(shopId), owner.Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await JsonOf(response);
+        Assert.Equal([3, 2, 1], json.EnumerateArray().Select(e => e.GetProperty("version").GetInt32()));
+        Assert.Equal(third.Id, Assert.Single(json.EnumerateArray(), e => e.GetProperty("isCurrent").GetBoolean()).GetProperty("id").GetGuid());
+        Assert.All(json.EnumerateArray(), e => Assert.False(e.TryGetProperty("snapshot", out _)));
+        Assert.Equal(first.Id, json[2].GetProperty("id").GetGuid());
+    }
+
+    [Fact]
+    public async Task List_and_rollback_without_token_are_401_customer_403_no_website_404_T5()
+    {
+        var (owner, shopId, _) = await OwnerWithWebsiteAsync();
+        var published = await PublishAsync(owner, shopId);
+        var customer = await _h.NewMemberAsync(shopId, WellKnownRoles.CustomerId);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _h.SendAsync(HttpMethod.Get, Publications(shopId), token: null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _h.SendAsync(HttpMethod.Post, Rollback(shopId, published.Id), token: null)).StatusCode);
+
+        var listAsCustomer = await _h.SendAsync(HttpMethod.Get, Publications(shopId), customer.Token);
+        Assert.Equal(HttpStatusCode.Forbidden, listAsCustomer.StatusCode);
+        Assert.Equal("WEBSITE_OWNER_REQUIRED", await ErrorCode(listAsCustomer));
+        var rollbackAsCustomer = await _h.SendAsync(HttpMethod.Post, Rollback(shopId, published.Id), customer.Token);
+        Assert.Equal(HttpStatusCode.Forbidden, rollbackAsCustomer.StatusCode);
+
+        var (bare, bareShop) = await _h.NewOwnerWithShopAsync();
+        var noList = await _h.SendAsync(HttpMethod.Get, Publications(bareShop), bare.Token);
+        Assert.Equal(HttpStatusCode.NotFound, noList.StatusCode);
+        Assert.Equal("WEBSITE_NOT_FOUND", await ErrorCode(noList));
+        var noRollback = await _h.SendAsync(HttpMethod.Post, Rollback(bareShop, Guid.NewGuid()), bare.Token);
+        Assert.Equal(HttpStatusCode.NotFound, noRollback.StatusCode);
+        Assert.Equal("WEBSITE_NOT_FOUND", await ErrorCode(noRollback));
+    }
+
+    [Fact]
+    public async Task Rollback_200_repoints_and_marks_pages_dirty_T5()
+    {
+        var (owner, shopId, _) = await OwnerWithWebsiteAsync();
+        var first = await PublishAsync(owner, shopId);
+        var second = await PublishAsync(owner, shopId);
+        Assert.NotEqual(first.Id, second.Id);
+
+        var response = await _h.SendAsync(HttpMethod.Post, Rollback(shopId, first.Id), owner.Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var dto = (await response.Content.ReadFromJsonAsync<PublicationDto>(ShopApiHarness.Json))!;
+        Assert.Equal(first.Id, dto.Id);
+        Assert.True(dto.IsCurrent);
+        var website = (await (await _h.SendAsync(HttpMethod.Get, Site(shopId), owner.Token))
+            .Content.ReadFromJsonAsync<WebsiteDto>(ShopApiHarness.Json))!;
+        Assert.Equal(first.Id, website.CurrentPublicationId);
+        var pages = (await (await _h.SendAsync(HttpMethod.Get, Site(shopId) + "/pages", owner.Token))
+            .Content.ReadFromJsonAsync<List<PageDto>>(ShopApiHarness.Json))!;
+        Assert.All(pages, p => Assert.True(p.IsDirty));
+    }
+
+    [Fact]
+    public async Task Rollback_with_publication_of_another_shop_or_random_id_is_404_PUBLICATION_NOT_FOUND_R4_T5()
+    {
+        var (ownerA, shopA, _) = await OwnerWithWebsiteAsync();
+        var (ownerB, shopB, _) = await OwnerWithWebsiteAsync();
+        var current = await PublishAsync(ownerA, shopA);
+        var foreign = await PublishAsync(ownerB, shopB);
+
+        var cross = await _h.SendAsync(HttpMethod.Post, Rollback(shopA, foreign.Id), ownerA.Token);
+        var random = await _h.SendAsync(HttpMethod.Post, Rollback(shopA, Guid.NewGuid()), ownerA.Token);
+
+        Assert.Equal(HttpStatusCode.NotFound, cross.StatusCode);
+        Assert.Equal("PUBLICATION_NOT_FOUND", await ErrorCode(cross));
+        Assert.Equal(HttpStatusCode.NotFound, random.StatusCode);
+        Assert.Equal("PUBLICATION_NOT_FOUND", await ErrorCode(random));
+        var website = (await (await _h.SendAsync(HttpMethod.Get, Site(shopA), ownerA.Token))
+            .Content.ReadFromJsonAsync<WebsiteDto>(ShopApiHarness.Json))!;
+        Assert.Equal(current.Id, website.CurrentPublicationId);
+        // B không bị ảnh hưởng.
+        var websiteB = (await (await _h.SendAsync(HttpMethod.Get, Site(shopB), ownerB.Token))
+            .Content.ReadFromJsonAsync<WebsiteDto>(ShopApiHarness.Json))!;
+        Assert.Equal(foreign.Id, websiteB.CurrentPublicationId);
+    }
+
     [Fact]
     public async Task Body_is_optional()
     {

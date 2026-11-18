@@ -427,4 +427,193 @@ public sealed class PublishWebsiteHandlerTests(PostgresFixture postgres) : IAsyn
         Assert.Equal(clone.ToString(), treeImageId);
         Assert.True(snapshot["media"]!.AsObject().ContainsKey(treeImageId));
     }
+
+    // ---- T5: danh sách bản + rollback ----
+
+    private async Task<(Guid ShopId, Guid[] Ids)> ThreePublicationsAsync()
+    {
+        var seeded = await AddWebsiteAsync(Cs);
+        var ids = new List<Guid>();
+        for (var i = 1; i <= 3; i++)
+        {
+            await using var request = new Request(Cs, seeded.ShopId);
+            ids.Add((await request.Publish($"bản {i}")).Id);
+        }
+
+        return (seeded.ShopId, [.. ids]);
+    }
+
+    [Fact]
+    public async Task List_returns_publications_descending_with_exactly_one_current_T5()
+    {
+        var (shopId, ids) = await ThreePublicationsAsync();
+        await using var request = new Request(Cs, shopId);
+
+        var list = await request.ListPublications();
+
+        Assert.Equal([3, 2, 1], list.Select(p => p.Version));
+        Assert.Equal([ids[2], ids[1], ids[0]], list.Select(p => p.Id));
+        Assert.Equal(ids[2], Assert.Single(list, p => p.IsCurrent).Id);
+    }
+
+    [Fact]
+    public async Task List_is_capped_at_50_newest_T5()
+    {
+        var seeded = await AddWebsiteAsync(Cs);
+        for (var i = 0; i < 52; i++)
+        {
+            await using var request = new Request(Cs, seeded.ShopId);
+            await request.Publish();
+        }
+
+        await using var list = new Request(Cs, seeded.ShopId);
+        var result = await list.ListPublications();
+
+        Assert.Equal(50, result.Count);
+        Assert.Equal(52, result[0].Version);
+        Assert.Equal(3, result[^1].Version);
+    }
+
+    [Fact]
+    public async Task List_without_website_is_404_and_without_tenant_is_TENANT_REQUIRED_T5()
+    {
+        var shopId = await AddShopAsync(Cs);
+        await using var request = new Request(Cs, shopId);
+        await Assert.ThrowsAsync<NotFoundException>(() => request.ListPublications());
+
+        await using var noTenant = new Request(Cs, null);
+        var ex = await Assert.ThrowsAsync<ForbiddenAccessException>(() => noTenant.ListPublications());
+        Assert.Equal("TENANT_REQUIRED", ex.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Rollback_repoints_marks_all_drafts_dirty_keeps_trees_and_creates_no_publication_G7_T5()
+    {
+        var (shopId, ids) = await ThreePublicationsAsync();
+        Dictionary<Guid, string> treesBefore;
+        await using (var before = NewDb(Cs, shopId))
+        {
+            treesBefore = await before.PageDrafts.AsNoTracking().ToDictionaryAsync(d => d.Id, d => d.Tree);
+        }
+
+        await using var request = new Request(Cs, shopId);
+        var dto = await request.Rollback(ids[0]);
+
+        Assert.Equal(ids[0], dto.Id);
+        Assert.True(dto.IsCurrent);
+        Assert.Equal(1, dto.Version);
+
+        await using var db = NewDb(Cs, shopId);
+        Assert.Equal(ids[0], (await db.Websites.AsNoTracking().SingleAsync()).CurrentPublicationId);
+        var drafts = await db.PageDrafts.AsNoTracking().ToListAsync();
+        Assert.NotEmpty(drafts);
+        Assert.All(drafts, d => Assert.True(d.IsDirty));
+        Assert.All(drafts, d => Assert.Equal(treesBefore[d.Id], d.Tree));
+        Assert.Equal(3, (await PublicationsAsync(shopId)).Count);
+        Assert.Equal([shopId], request.PointerCache.Invalidated);
+    }
+
+    [Fact]
+    public async Task Rollback_to_current_publication_writes_nothing_T5()
+    {
+        var (shopId, ids) = await ThreePublicationsAsync();
+        DateTimeOffset? updatedBefore;
+        await using (var before = NewDb(Cs, shopId))
+        {
+            updatedBefore = (await before.Websites.AsNoTracking().SingleAsync()).UpdatedAt;
+        }
+
+        var draftsBefore = await DraftsAsync(shopId);
+        await using var request = new Request(Cs, shopId);
+        var dto = await request.Rollback(ids[2]);
+
+        Assert.True(dto.IsCurrent);
+        Assert.Equal(3, dto.Version);
+        await using var db = NewDb(Cs, shopId);
+        Assert.Equal(updatedBefore, (await db.Websites.AsNoTracking().SingleAsync()).UpdatedAt);
+        Assert.Equal(draftsBefore, await DraftsAsync(shopId));
+    }
+
+    [Fact]
+    public async Task Rollback_with_publication_of_another_shop_is_404_and_pointer_unchanged_R4_T5()
+    {
+        var (shopA, idsA) = await ThreePublicationsAsync();
+        var (_, idsB) = await ThreePublicationsAsync();
+        await using var request = new Request(Cs, shopA);
+
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() => request.Rollback(idsB[0]));
+
+        Assert.Equal("PUBLICATION_NOT_FOUND", ex.ErrorCode);
+        Assert.Empty(request.PointerCache.Invalidated);
+        await using var db = NewDb(Cs, shopA);
+        Assert.Equal(idsA[2], (await db.Websites.AsNoTracking().SingleAsync()).CurrentPublicationId);
+    }
+
+    [Fact]
+    public async Task Rollback_with_random_id_is_404_and_without_website_is_WEBSITE_NOT_FOUND_T5()
+    {
+        var (shopId, _) = await ThreePublicationsAsync();
+        await using var request = new Request(Cs, shopId);
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() => request.Rollback(Guid.NewGuid()));
+        Assert.Equal("PUBLICATION_NOT_FOUND", ex.ErrorCode);
+
+        var bare = await AddShopAsync(Cs);
+        await using var noWebsite = new Request(Cs, bare);
+        var ex2 = await Assert.ThrowsAsync<NotFoundException>(() => noWebsite.Rollback(Guid.NewGuid()));
+        Assert.Equal("WEBSITE_NOT_FOUND", ex2.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Rollback_does_not_change_Suspended_status_T5()
+    {
+        var (shopId, ids) = await ThreePublicationsAsync();
+        await using (var db = NewDb(Cs, shopId))
+        {
+            (await db.Websites.SingleAsync()).Suspend();
+            await db.SaveChangesAsync();
+        }
+
+        await using var request = new Request(Cs, shopId);
+        await request.Rollback(ids[0]);
+
+        await using var after = NewDb(Cs, shopId);
+        Assert.Equal(WebsiteStatus.Suspended, (await after.Websites.AsNoTracking().SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task Publish_after_rollback_uses_max_plus_one_not_reused_number_T5()
+    {
+        var (shopId, ids) = await ThreePublicationsAsync();
+        await using (var rollback = new Request(Cs, shopId))
+        {
+            await rollback.Rollback(ids[0]);
+        }
+
+        await using var request = new Request(Cs, shopId);
+        var dto = await request.Publish();
+
+        Assert.Equal(4, dto.Version);
+        Assert.True(dto.IsCurrent);
+    }
+
+    [Fact]
+    public async Task Rollback_cache_invalidation_failure_after_commit_is_swallowed_T5()
+    {
+        var (shopId, ids) = await ThreePublicationsAsync();
+        await using var db = NewDb(Cs, shopId);
+        var handler = new Vsite.Application.Website.Commands.RollbackPublication.RollbackPublicationHandler(
+            db, new Vsite.IntegrationTests.TestTenantContext(shopId), new ThrowingPointerCache(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Vsite.Application.Website.Commands.RollbackPublication.RollbackPublicationHandler>.Instance);
+
+        var dto = await handler.Handle(new Vsite.Application.Website.Commands.RollbackPublication.RollbackPublicationCommand(ids[0]), default);
+
+        Assert.True(dto.IsCurrent);
+        await using var check = NewDb(Cs, shopId);
+        Assert.Equal(ids[0], (await check.Websites.AsNoTracking().SingleAsync()).CurrentPublicationId);
+    }
+
+    private sealed class ThrowingPointerCache : Vsite.Application.Website.Interfaces.ISitePointerCache
+    {
+        public Task InvalidateAsync(Guid shopId, CancellationToken cancellationToken) => throw new InvalidOperationException("redis down");
+    }
 }

@@ -6,6 +6,8 @@ using Vsite.Application.Website.Commands.CreatePage;
 using Vsite.Application.Website.Commands.CreateWebsite;
 using Vsite.Application.Website.Commands.DeletePage;
 using Vsite.Application.Website.Commands.PublishWebsite;
+using Vsite.Application.Website.Commands.RollbackPublication;
+using Vsite.Application.Website.Queries.ListPublications;
 using Vsite.Application.Website.Commands.SavePageDraft;
 using Vsite.Application.Website.Commands.UpdatePage;
 using Vsite.Application.Website.Commands.UpdateTheme;
@@ -167,6 +169,13 @@ internal static class WebsiteHandlerKit
             new PublishWebsiteHandler(
                     Db, Tenant, S.Validator, S.RequiredProps, media ?? Media, Actor, PointerCache, NullLogger<PublishWebsiteHandler>.Instance)
                 .Handle(new PublishWebsiteCommand(note), default);
+
+        public Task<IReadOnlyList<PublicationDto>> ListPublications() =>
+            new ListPublicationsHandler(Db, Tenant).Handle(new ListPublicationsQuery(), default);
+
+        public Task<PublicationDto> Rollback(Guid publicationId) =>
+            new RollbackPublicationHandler(Db, Tenant, PointerCache, NullLogger<RollbackPublicationHandler>.Instance)
+                .Handle(new RollbackPublicationCommand(publicationId), default);
 
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }
