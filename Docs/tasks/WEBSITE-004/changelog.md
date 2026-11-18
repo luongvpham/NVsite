@@ -312,7 +312,7 @@ Endpoint công khai `GET /api/site` (`getPublishedSite`) + con trỏ Redis thậ
 - `Vsite.Application/Website/Queries/GetPublishedSite/` (mới) — handler theo plan T6 bước 1–8; **không** chạm `PageDrafts`/`Pages`/`Themes`,
   không `IgnoreQueryFilters()`, không đọc tham số định danh nào (query `?shopId=`/`?host=` không được bind).
 - `Vsite.Api/Website/SiteEndpoints.cs` (mới, `AllowAnonymous`, `Produces 200/304/404`) + `api.MapSiteEndpoints()`.
-- Test: `PublishedSiteEndpointTests` (12 ca), `SitePointerCacheTests` (4 ca), `WebsiteHandlerKit.RecordingSitePointerCache` +
+- Test: `PublishedSiteEndpointTests` (14 ca), `SitePointerCacheTests` (4 ca), `WebsiteHandlerKit.RecordingSitePointerCache` +
   `ThrowingPointerCache` khớp interface mới; `ShopScopedRouteFilterTests` + 1 ca.
 
 **Lệch có chủ đích / giả định tự đặt** (người rà ở pha 6)
@@ -341,3 +341,14 @@ Endpoint công khai `GET /api/site` (`getPublishedSite`) + con trỏ Redis thậ
 **Chưa làm (các task sau)**: test isolation theo Host + bất biến + test kiến trúc quét handler (T7 — R1, R3, R11), references (T8), docs module +
 contract-sync (T9; nêu `304`, header `ETag`/`Cache-Control`, `snapshot` schema rỗng ở `contract-diff.md`). `brief.md` (8c): SSR gọi với header `Host` gốc,
 gửi lại `If-None-Match`, `Suspended` không có ETag.
+
+**Theo dõi (từ `change-reviewer` T6: 0 Critical, 3 Important, 7 Minor)**
+- **I1/I2 — race đọc↔publish:** request công khai hụt cache đọc DB (v1), publish v2 commit + `InvalidateAsync`, rồi request đó `SetAsync(v1)` ghi đè →
+  con trỏ cũ sống tới 5' (kể cả 304 nếu client giữ ETag v1; rộng hơn mô tả "bản bị xoá cứng" ở trên). Cửa sổ vài ms. **Chấp nhận, TTL 5' là trần** (đã
+  giữ theo review T4); khoá bằng test `…known_limit_I1`. Sửa chắc cần token phiên bản (vd. `website.UpdatedAt`/xmin) trong con trỏ, `SetAsync` chỉ ghi khi khớp — làm nếu Gate 2 yêu cầu.
+- I3: đã thêm test giá trị hỏng trong Redis (coi như hụt, endpoint vẫn 200) và test con trỏ cũ; chưa test giá trị lạ (`"null"`, enum lạ).
+- M1 đã xoá test `Route_is_under_api…` (vô nghĩa; `ApiRoutePrefixTests` lo prefix/operationId). M5 đã sửa số ca.
+- M2: chưa có unit test handler với `AudienceKind != Shop` (test R2 qua HTTP không phân biệt middleware với handler).
+- M3: ETag dựa `Shop.UpdatedAt`; nếu logo đổi mà dòng `Shop` không được lưu ở trạng thái Modified thì `logoUrl` đổi, ETag không — chưa xác minh luồng upload/xoá logo.
+- M4: `Website.Suspend()/Reinstate()` chưa có endpoint; khi có phải gọi `ISitePointerCache.InvalidateAsync` (con trỏ giữ `WebsiteStatus`).
+- M6: `SetAsync` lỗi làm `GET /api/site` 500 — cân nhắc nuốt + log, và `GetAsync` lỗi rơi về DB (vận hành).

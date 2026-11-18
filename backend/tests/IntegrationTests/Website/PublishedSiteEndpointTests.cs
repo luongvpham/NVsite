@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Vsite.Api.Shop;
 using Vsite.Application.Website.Dtos;
@@ -312,10 +313,34 @@ public sealed class PublishedSiteEndpointTests
     }
 
     [Fact]
-    public async Task Route_is_under_api_with_operationId_and_Host_does_not_leak_into_the_Owner_surface_T6()
+    public async Task Corrupt_pointer_value_in_Redis_is_treated_as_a_miss_and_endpoint_still_200_I3()
     {
-        // ApiRoutePrefixTests chặn route ngoài /api và thiếu operationId; ở đây chỉ khẳng định route cũ không có.
-        var (_, _, host) = await OwnerWithWebsiteAsync();
-        Assert.Equal(HttpStatusCode.NotFound, (await GetSiteAsync(host, path: "/site")).StatusCode);
+        var (_, shopId, host, publication) = await PublishedShopAsync();
+        var cache = _h.Factory.Services.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>();
+        await cache.SetStringAsync($"site:pointer:{shopId:N}", "{not json");
+
+        var response = await GetSiteAsync(host);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(publication.Id, (await JsonOf(response)).GetProperty("publication").GetProperty("id").GetGuid());
+    }
+
+    [Fact]
+    public async Task Stale_pointer_to_an_existing_older_version_is_served_until_invalidated_known_limit_I1()
+    {
+        // Khoá hành vi đã chấp nhận (changelog T6 "Theo dõi"): con trỏ cũ trỏ bản còn tồn tại sống tới TTL; Invalidate sửa ngay.
+        var (owner, shopId, host, first) = await PublishedShopAsync();
+        await GetSiteAsync(host);
+        var second = await PublishAsync(owner, shopId);
+        await using var scope = _h.Factory.Services.CreateAsyncScope();
+        var cache = scope.ServiceProvider.GetRequiredService<ISitePointerCache>();
+        await cache.SetAsync(shopId, new SitePointer(WebsiteStatus.Published, first.Id), default);
+
+        var stale = await JsonOf(await GetSiteAsync(host));
+        Assert.Equal(first.Id, stale.GetProperty("publication").GetProperty("id").GetGuid());
+
+        await cache.InvalidateAsync(shopId, default);
+        var fresh = await JsonOf(await GetSiteAsync(host));
+        Assert.Equal(second.Id, fresh.GetProperty("publication").GetProperty("id").GetGuid());
     }
 }
