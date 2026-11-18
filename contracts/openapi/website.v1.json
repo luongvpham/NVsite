@@ -796,6 +796,276 @@
           }
         }
       }
+    },
+    "/api/shops/{shopId}/website/publications": {
+      "post": {
+        "tags": [
+          "Website"
+        ],
+        "operationId": "publishWebsite",
+        "parameters": [
+          {
+            "name": "shopId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/PublishWebsiteRequest"
+                  }
+                ],
+                "nullable": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicationDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Website"
+        ],
+        "operationId": "listPublications",
+        "parameters": [
+          {
+            "name": "shopId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicationDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shops/{shopId}/website/publications/{publicationId}/rollback": {
+      "post": {
+        "tags": [
+          "Website"
+        ],
+        "operationId": "rollbackPublication",
+        "parameters": [
+          {
+            "name": "shopId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "publicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicationDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/site": {
+      "get": {
+        "tags": [
+          "Site"
+        ],
+        "operationId": "getPublishedSite",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedSiteDto"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1051,6 +1321,121 @@
           }
         }
       },
+      "PublicationDto": {
+        "required": [
+          "id",
+          "version",
+          "publishedAt",
+          "publishedByUserId",
+          "note",
+          "isCurrent"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "publishedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "isCurrent": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PublishWebsiteRequest": {
+        "required": [
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PublishedPublicationDto": {
+        "required": [
+          "id",
+          "version",
+          "publishedAt",
+          "snapshot"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/JsonElement"
+          }
+        }
+      },
+      "PublishedShopDto": {
+        "required": [
+          "name",
+          "logoUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PublishedSiteDto": {
+        "required": [
+          "status",
+          "shop",
+          "publication"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/WebsiteStatus"
+          },
+          "shop": {
+            "$ref": "#/components/schemas/PublishedShopDto"
+          },
+          "publication": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublishedPublicationDto"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
       "SavePageDraftRequest": {
         "required": [
           "tree",
@@ -1174,7 +1559,8 @@
           "defaultOgImageId",
           "faviconAssetId",
           "trackingSnippets",
-          "homePageId"
+          "homePageId",
+          "currentPublicationId"
         ],
         "type": "object",
         "properties": {
@@ -1218,6 +1604,11 @@
           "homePageId": {
             "type": "string",
             "format": "uuid"
+          },
+          "currentPublicationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         }
       },
@@ -1233,6 +1624,9 @@
   "tags": [
     {
       "name": "Website"
+    },
+    {
+      "name": "Site"
     }
   ]
 }

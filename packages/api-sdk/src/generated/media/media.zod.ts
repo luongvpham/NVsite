@@ -153,13 +153,14 @@ export const getAssetReferencesParams = zod.object({
   "assetId": zod.string().uuid()
 })
 
-export const getAssetReferencesResponseReferencesItemPageIdDefault = null;export const getAssetReferencesResponseReferencesItemPageTitleDefault = null;
+export const getAssetReferencesResponseReferencesItemPageIdDefault = null;export const getAssetReferencesResponseReferencesItemPageTitleDefault = null;export const getAssetReferencesResponseReferencesItemIsCurrentDefault = null;
 
 export const getAssetReferencesResponse = zod.object({
   "references": zod.array(zod.object({
-  "kind": zod.enum(['ShopLogo', 'PageDraft']),
+  "kind": zod.enum(['ShopLogo', 'PageDraft', 'SitePublication', 'PageOgImage', 'WebsiteOgImage', 'WebsiteFavicon']),
   "pageId": zod.string().uuid().nullish(),
-  "pageTitle": zod.string().nullish()
+  "pageTitle": zod.string().nullish(),
+  "isCurrent": zod.boolean().nullish()
 }))
 })
 
