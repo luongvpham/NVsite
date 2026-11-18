@@ -58,3 +58,7 @@ Không có câu hỏi chặn. Các mục 4, 5, 7 ở trên là chỗ người du
 | Mục | Quyết định | Ngày |
 |---|---|---|
 | Promote theo Gate 1 gọn (#89: chỉ thêm, không câu hỏi, không `REMOVED`) | Promote ngay; người duyệt đọc lại file này sau | 2026-11-18 |
+| Giả định 7 — cặp OG/favicon báo hai mục | Duyệt → **#110** | 2026-11-18 |
+| Giả định 4 — `409 ROLLBACK_CONFLICT` | Giữ. Nay có nghĩa thật: `Website` có concurrency token, rollback chạy song song với publish nhận 409 (review I1). Không đổi contract (409 đã khai) | 2026-11-18 |
+| Giả định 5 — header `Location` của `201` publish | Giữ — cùng quy ước `createPage` (`Location` trỏ `/pages/{id}`, cũng không có `GET` một trang). FE dùng body. (Đề xuất bỏ header bị rút lại khi rà lần hai) | 2026-11-18 |
+| `listPublications` trả mảng (review I2) | Giữ mảng có trần cứng, ghi ngoại lệ của #19 ở `backend/docs/modules/website.md` | 2026-11-18 |

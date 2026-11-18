@@ -297,7 +297,7 @@ contract-sync (T9). Theo dõi T4 vẫn còn nguyên (đặc biệt: T6 giữ TTL
 **Theo dõi (từ `change-reviewer` T5: 0 Critical, 2 Important xử lý bằng tài liệu, 4 Minor — chưa làm)**
 - `409 ROLLBACK_CONFLICT` chưa có test race (cần interceptor bump `xmin` của draft như `BumpXminInterceptor`) và là thay đổi contract — nêu ở `contract-diff.md` T9 để Gate 1 chốt; plan §T5 vốn chỉ ghi 200/401/403/404.
 - Thiếu test rollback với draft trộn sạch/bẩn và với trang đã xoá mềm (hành vi đã có, chưa có test khoá).
-- Publish và rollback chạy song song: `Website` không có concurrency token → last-write-wins, cache xoá sau cả hai, trạng thái vẫn nhất quán. Chấp nhận.
+- ~~Publish và rollback chạy song song: last-write-wins, chấp nhận.~~ **Sai — đã sửa sau review §11 (I1):** xem mục "Sau review §11".
 - Có thể thay nạp entity bản đích bằng `Select` cột + `PointTo(Guid)` nếu snapshot lớn gây chậm; test cache-failure nên dùng `using` thay tên đầy đủ (style).
 
 ## T6
@@ -484,9 +484,28 @@ Kết thúc S1: contract-sync → Gate 1 → promote + SDK, `brief.md`, tài li�
 - T7: test kiến trúc quét văn bản (service ngoài thư mục `GetPublishedSite/`, `partial`, `//` trong chuỗi không bị bắt); regex `\bPages\b` có thể đỏ giả; R11 chứng minh "snapshot độc lập bảng media", không kiểm domain;
   chưa có ca Host viết hoa/port/dấu chấm cuối (M4); "giống từng byte" ở R3 là trên response, không phải chuỗi jsonb (M7).
 - T8: `references` 500 nếu snapshot hỏng/version lạ (M1); không tách được predicate `ShopId` tường minh khỏi Global Query Filter bằng test (#21.2 giữ theo quy ước).
-- T5: `ROLLBACK_CONFLICT` chưa có test race; thiếu test rollback trộn draft sạch/bẩn và trang xoá mềm; publish ∥ rollback là last-write-wins (nhất quán, chấp nhận); rollback nạp cả entity bản đích.
+- T5: thiếu test rollback trộn draft sạch/bẩn và trang xoá mềm; rollback nạp cả entity bản đích. (Race publish ∥ rollback + test `ROLLBACK_CONFLICT`: đã xong sau review §11.)
 - T4: thiếu ca R14 `imageId` chữ hoa trong list (`Gallery.items[]`); `Tenant_of_shop_B_cannot_publish…` yếu (B không có website); thiếu theme/draft ⇒ 500; `note` kiểm độ dài trước trim;
   OpenAPI không mô tả `params.errors[]`/`Location` (đã ghi `contract-diff.md` + `brief.md`).
 - Đã ghi ở `review.md`: `packages/builder-components/CLAUDE.md:58-59` còn ghi `requiresProps` "để dành cho Bước 5"; comment XML đầu class `Website.cs` còn liệt kê `CurrentPublicationId` ở mục "chưa có".
 
 **Chưa làm — thuộc §11 (đóng task, bước sau):** `change-reviewer` toàn diff, `review.md`, nghiệm thu tay bằng `curl`.
+
+## Sau review §11 (2026-11-18)
+
+`change-reviewer` toàn diff: 0 Critical, 3 Important, 6 Minor — chi tiết và nghiệm thu HTTP ở [`review.md`](review.md). Người duyệt chốt các đề xuất ở "Điểm cần anh quyết".
+
+**Sửa code (quay lại T5 — task gây lỗi)**
+- **I1 — publish ∥ rollback mất cập nhật im lặng.** `Website` không có concurrency token nên rollback (bỏ qua draft đang bẩn) và publish (hạ cờ draft đó) chạy song song
+  để con trỏ về bản cũ trong khi draft `IsDirty = false` — vi phạm G7, và `ROLLBACK_CONFLICT` gần như không bao giờ bắn. Sửa: `WebsiteConfiguration` thêm shadow property
+  `RowVersion` map cột hệ thống `xmin` + `IsRowVersion()` (như `PageDraft.Version`). Migration `WebsiteRowVersion` chỉ đổi model snapshot — Npgsql không sinh SQL cho `xmin`
+  (đã kiểm bằng `dotnet ef migrations script`). Hai handler vốn đã map `DbUpdateConcurrencyException` → 409 nên không đổi handler.
+  Test: `Rollback_racing_another_write_to_website_is_409_ROLLBACK_CONFLICT_and_pointer_unchanged_I1`, `Publish_racing_another_write_to_website_is_409_PUBLISH_CONFLICT_and_nothing_is_written_I1`
+  (`BumpWebsiteXminInterceptor` mới trong `WebsiteHandlerKit`) — RED (không ném) → GREEN. Không đổi contract (409 đã khai cho cả hai route).
+
+**Quyết định (người duyệt 2026-11-18)**
+- #110 duyệt. Cấp **#111** (trạng thái `Shop` đối với Shop Site) và **#112** (quy tắc publish/rollback 8b), định nghĩa ở `backend/docs/modules/website.md`.
+- I2: `listPublications` giữ mảng có trần cứng — ngoại lệ có chủ đích của #19, ghi ở `website.md`.
+- `ROLLBACK_CONFLICT` giữ. `Location` giữ — **rút lại đề xuất bỏ header**: rà lần hai thấy `createPage` cũng trả `Location` tới `/pages/{id}` không có `GET`; bỏ riêng ở publish làm lệch quy ước.
+- Nợ SHOP-001 (Owner tự gỡ `Suspended`) → `00-INDEX` §4, chặn **trước production**, task SHOP riêng; không chặn Gate 2 của task này.
+- Review M1–M4, M6 → gom vào dòng WEBSITE-004 ở `00-INDEX` §4. M5 (tài liệu lỗi thời) đã sửa.

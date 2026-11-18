@@ -51,7 +51,7 @@ Mọi route **trừ `getPublishedSite`**: `RequireAuthorization(RequireGlobalSco
 | `getTheme` | `GET /shops/{shopId}/website/theme` | 200 | 401 403 404 |
 | `updateTheme` | `PUT /shops/{shopId}/website/theme` | 200 | 401 403 404 413 422 |
 | `publishWebsite` | `POST /shops/{shopId}/website/publications` | 201 + `Location` | 401 403 404 409 `PUBLISH_CONFLICT` · 422 `PUBLISH_BLOCKED` |
-| `listPublications` | `GET /shops/{shopId}/website/publications` | 200 (≤ 50, version giảm dần, không kèm snapshot) | 401 403 404 |
+| `listPublications` | `GET /shops/{shopId}/website/publications` | 200 **mảng** (≤ 50, version giảm dần, không kèm snapshot) — ngoại lệ có chủ đích của "một shape pagination" (#19): danh sách có trần cứng, không phân trang; trần thành 20 khi có prune (8d). Như `listPages` | 401 403 404 |
 | `rollbackPublication` | `POST /shops/{shopId}/website/publications/{publicationId}/rollback` | 200 | 401 403 404 `PUBLICATION_NOT_FOUND` · 409 `ROLLBACK_CONFLICT` |
 | `getPublishedSite` | **`GET /api/site`** (tag `Site`, cùng document `website`) | 200 · 304 | 404 `SITE_NOT_FOUND` — **`AllowAnonymous`**, xem mục "Đọc công khai" |
 
@@ -125,7 +125,7 @@ Singleton, resolve **eager** ở `Program.cs` — thiếu/hỏng file làm host 
   handler cụ thể bắt `23505` trước để trả `WEBSITE_ALREADY_EXISTS`/`PAGE_SLUG_TAKEN`.
 - Cây y hệt bản đã lưu → EF không UPDATE → `version` giữ nguyên.
 - `Theme` **không** có concurrency.
-- `Website` không có concurrency token: publish ∥ rollback là last-write-wins (trạng thái vẫn nhất quán, cache xoá sau cả hai).
+- `Website` có concurrency token = cột hệ thống `xmin` (shadow property `RowVersion`, không lộ ra Domain/DTO; migration `WebsiteRowVersion` không sinh SQL). Publish và rollback đều ghi dòng này ⇒ chạy song song thì bên sau nhận `409 PUBLISH_CONFLICT` / `ROLLBACK_CONFLICT`, không còn last-write-wins (review I1, #112).
 
 ## Thêm một System page mới
 
@@ -156,6 +156,14 @@ ALTER TABLE page    ADD CONSTRAINT fk_page_media_asset_og_image
 
 Model/snapshot vẫn ghi `DeleteBehavior.Restrict` — **đúng chủ đích**. **Đừng sinh lại migration** (sẽ mất đoạn sửa tay); đổi schema thì thêm migration mới và
 kiểm `dotnet ef migrations has-pending-model-changes` ra "No changes". Mẫu cùng loại: `shop(logo_id, id) → media_asset(id, shop_id)` (#92).
+
+## Quyết định #111, #112
+
+- **#111 — Trạng thái `Shop` đối với Shop Site.** Chỉ `Suspended` (→ `200 { status: "Suspended", publication: null }`, không ETag) và `Closed` (→ `404 SITE_NOT_FOUND`) ảnh hưởng site.
+  Shop `Draft` **không** chặn: shop mới tạo mặc định `Draft` và chưa có luồng kích hoạt riêng. Ai được chuyển `ShopStatus` nào thuộc module Shop — hiện Owner tự đặt được bất kỳ (nợ trước production, `00-INDEX` §4).
+- **#112 — Quy tắc publish/rollback.** Một trang **đang bật** lỗi ⇒ chặn cả lần publish (`422 PUBLISH_BLOCKED`, lỗi theo trang, không ghi gì); trang đang tắt không bị kiểm, không vào snapshot;
+  trang chủ tắt vẫn publish được (site không có trang chủ — 8c hiện `NotFound`). Rollback chỉ đổi con trỏ: không sinh bản mới, không đổi `Status`, không đụng nội dung draft (draft sạch → `IsDirty = true`).
+  Publish ∥ rollback bị chặn bằng concurrency token của `Website`. 8b không có endpoint gỡ xuất bản / đình chỉ.
 
 ## Media liên quan
 

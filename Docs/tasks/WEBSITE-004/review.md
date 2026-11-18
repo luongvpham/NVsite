@@ -9,7 +9,7 @@
 **0 Critical** — tenant isolation sạch: `GET /api/site` chỉ lấy shop từ `ITenantContext` khi audience = Shop, không bind tham số nào, không chạm `PageDrafts`/`Pages`/`Themes`, không `IgnoreQueryFilters`;
 publish/rollback có `ShopId` tường minh trong query, FK ghép chặn trỏ chéo; hai `ReferenceSource` đúng `dependency-map.json`; contract khớp code.
 
-**Important (3) — chưa sửa, cần anh quyết (xem "Điểm cần anh quyết")**
+**Important (3) — đã xử lý theo quyết định 2026-11-18 (xem "Điểm cần anh quyết")**
 - **I1** `Website` không có concurrency token ⇒ publish ∥ rollback có thể mất cập nhật im lặng: rollback bỏ qua draft X đang bẩn, publish hạ cờ X, rollback commit sau → con trỏ về bản cũ mà X `IsDirty = false`.
   `ROLLBACK_CONFLICT` thực tế gần như không bắn (rollback không ghi draft bẩn). (`RollbackPublicationHandler.cs:43-62`, `PublishWebsiteHandler.cs:156-173`)
 - **I2** `listPublications` trả mảng trần (trái "một shape pagination", #19) và `Take(50)` có thể cắt mất bản current sau rollback về bản rất cũ (G11 chưa ai chốt).
@@ -37,12 +37,14 @@ Không chạy: CDN/Caddy, `X-Forwarded-Host` với proxy thật, gửi `Host` t�
 ## Nợ kỹ thuật
 Đã gộp vào `changelog.md` mục "Chưa làm xong / theo dõi" (T9) — không lặp lại ở đây. Đã đóng: `requiresProps` ở `builder-components/CLAUDE.md`, comment `Website.cs`, banner `05`/`08` (T9).
 
-## Điểm cần anh quyết
-1. **I1:** thêm concurrency token (`xmin`) cho `Website` + test race publish ∥ rollback — làm trước production hay ghi nhận chấp nhận? (Sửa là thay đổi code + migration model snapshot, không đổi contract.)
-2. **I2:** `listPublications` giữ mảng trần có trần 50 (ghi ngoại lệ ở `website.md`) hay đổi sang `{items,total,page,pageSize}` trước khi FE 8c bám vào? Và có luôn kèm bản current khi nó nằm ngoài 50 bản mới nhất không?
-3. **#110** (cặp OG/favicon báo hai mục) và hai giả định contract (`409 ROLLBACK_CONFLICT`, header `Location` trỏ tài nguyên chưa có GET) — duyệt hay đổi.
-4. Cấp `#N` cho các quyết định "người chốt" không số ở plan §4 (đặc biệt "shop `Draft` không chặn site", "rollback không đụng draft").
-5. Phát hiện 4 (Owner tự gỡ `Suspended`): xếp task SHOP riêng trước khi 8c đưa site lên production? (reviewer đề xuất coi là Important nếu vậy).
+## Điểm cần anh quyết — đã chốt 2026-11-18
+1. **I1:** làm — `Website` có concurrency token `xmin`; test race RED→GREEN (`…_I1`). Xem changelog "Sau review §11".
+2. **I2:** giữ mảng có trần cứng, ghi ngoại lệ #19 ở `website.md`.
+3. **#110** duyệt · `ROLLBACK_CONFLICT` giữ · `Location` **giữ** (rà lần hai: `createPage` cùng quy ước; đề xuất bỏ header bị rút lại).
+4. Cấp **#111** (trạng thái Shop ↔ Shop Site) và **#112** (quy tắc publish/rollback 8b).
+5. Nợ SHOP-001 (Owner tự gỡ `Suspended`) → `00-INDEX` §4, chặn trước production, task SHOP riêng; không chặn Gate 2.
+
+Còn lại cho Gate 2: anh duyệt toàn task.
 
 ## Ma sát quy trình
 - Dev server `Vsite.Api` chạy nền khoá DLL ⇒ `dotnet build`/`dotnet ef` lỗi MSB3027, reviewer không xác minh được `has-pending-model-changes`. Nên ghi "dừng dev server hoặc dùng output riêng" vào bước review.

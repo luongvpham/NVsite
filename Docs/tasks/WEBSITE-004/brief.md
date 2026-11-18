@@ -73,7 +73,7 @@ Shape v1 (**khác `05` §7**): `schemaVersion`, `version`, `defaultLocale`, `loc
 ### 5. Publish
 
 `POST …/website/publications` body `{ note? }` (tuỳ chọn, ≤ 200 ký tự sau trim; chuỗi chỉ có khoảng trắng → `null`). `201` + `PublicationDto`.
-Header `Location` có nhưng trỏ tài nguyên chưa có `GET` — **dùng body**.
+Header `Location` có (cùng quy ước `createPage`) nhưng trỏ tài nguyên chưa có `GET` — **dùng body**.
 
 - Publish luôn được phép dù không draft nào bẩn (G5). Website `Draft` → thành `Published`; `Suspended` → bản mới vẫn ghi nhưng giữ `Suspended` (G6).
 - **`422 PUBLISH_BLOCKED`** — chặn cả lần publish, không ghi gì. ProblemDetails có `error_code: "PUBLISH_BLOCKED"` và:
@@ -92,7 +92,7 @@ Header `Location` có nhưng trỏ tài nguyên chưa có `GET` — **dùng body
   - Tối đa 100 mục; `truncated = true` khi bị cắt (hoặc validator tự dừng sớm) — hiển thị "còn lỗi khác".
   - **Lỗi có thể đến hai đợt:** trang có cây sai cấu trúc chỉ báo lỗi cấu trúc trước; sửa xong mới tới lỗi prop/ảnh. Cho phép publish lại sau mỗi lần sửa.
   - Trang đang **tắt** không bị kiểm.
-- `409 PUBLISH_CONFLICT` — hai lần publish cùng lúc hoặc draft bị lưu giữa chừng; **không tự thử lại**, báo người dùng bấm lại.
+- `409 PUBLISH_CONFLICT` — hai lần publish cùng lúc, publish chạy song song với rollback, hoặc draft bị lưu giữa chừng; **không tự thử lại**, báo người dùng bấm lại.
 - `404 WEBSITE_NOT_FOUND` (chưa có website) · `403 WEBSITE_OWNER_REQUIRED` · `422` nếu `note` quá dài.
 
 ### 6. ⚠️ Version của draft đổi sau publish (R9)
@@ -105,9 +105,9 @@ trước khi cho autosave tiếp. Draft vốn sạch không bị ghi nên versio
 
 - `POST …/{publicationId}/rollback` → `200 PublicationDto` của bản đang chạy. **Không sinh bản mới**, không đụng nội dung draft; mọi draft đang sạch bị đánh `isDirty = true`
   (bản nháp giờ khác bản đang chạy, G7) ⇒ cũng **nạp lại version** như mục 6. Rollback về chính bản đang chạy: `200`, không ghi gì.
-- Bản của shop khác / không tồn tại → `404 PUBLICATION_NOT_FOUND`. `409 ROLLBACK_CONFLICT` nếu draft bị lưu giữa chừng (thêm ngoài plan — xem `contract-diff.md`).
+- Bản của shop khác / không tồn tại → `404 PUBLICATION_NOT_FOUND`. `409 ROLLBACK_CONFLICT` nếu rollback chạy song song với publish/rollback khác hoặc draft bị lưu giữa chừng — **không tự thử lại**, nạp lại danh sách rồi cho bấm lại.
 - Publish sau rollback → `version = max + 1` (không tái dùng số).
-- `GET …/publications`: trần 50, không phân trang (G11); đúng một mục `isCurrent`. `WebsiteDto.currentPublicationId` cũng cho biết bản đang chạy.
+- `GET …/publications`: **mảng**, trần 50, không phân trang (G11, đã chốt — không có `{items,total}`); đúng một mục `isCurrent`. `WebsiteDto.currentPublicationId` cũng cho biết bản đang chạy.
 - Không có endpoint gỡ xuất bản / đình chỉ website ở 8b.
 
 ---
