@@ -31,7 +31,7 @@ function deps(result: SiteResult | Error, over: Partial<LoadSiteDeps> = {}) {
     rootDomain: ROOT,
     origin: ORIGIN,
     fetchSite,
-    now: () => new Date('2026-12-31T23:59:59Z'),
+    now: () => new Date('2026-12-31T16:59:59Z'),
     logError,
     ...over,
   };
@@ -108,12 +108,18 @@ describe('loadSiteForHost — host shop', () => {
     expect(r.data).toMatchObject({ origin: 'http://spa-abc.vsite.local:3000' });
   });
 
-  it('year lấy năm UTC từ đồng hồ server, gọi now() đúng một lần (#23, R8)', async () => {
+  it('year lấy năm theo giờ Asia/Ho_Chi_Minh (UTC+7) từ đồng hồ server, gọi now() đúng một lần (#23, R8)', async () => {
     const now = vi.fn(() => new Date('2027-01-01T00:00:01Z'));
     const { d } = deps(siteResult, { now });
     const r = await loadSiteForHost('spa-abc.vsite.vn', '/', d);
     expect(r.data).toMatchObject({ year: 2027 });
     expect(now).toHaveBeenCalledTimes(1);
+  });
+
+  it('year: 17:00 UTC 31/12 đã là năm sau ở Việt Nam; 16:59 UTC thì chưa', async () => {
+    const at = (iso: string) => deps(siteResult, { now: () => new Date(iso) }).d;
+    expect((await loadSiteForHost('spa-abc.vsite.vn', '/', at('2026-12-31T17:00:00Z'))).data).toMatchObject({ year: 2027 });
+    expect((await loadSiteForHost('spa-abc.vsite.vn', '/', at('2026-12-31T16:59:59Z'))).data).toMatchObject({ year: 2026 });
   });
 
   it('notFound → 404 + Cache-Control', async () => {

@@ -46,7 +46,7 @@ export type SiteLoaderData =
       readonly publishedAt: string;
       /** Path request (bắt đầu bằng `/`); `selectPage(snapshot, path)` cho biết trang nào (không khớp → status 404). */
       readonly path: string;
-      /** Năm UTC theo đồng hồ server, tính một lần (#23, R8). */
+      /** Năm theo giờ Asia/Ho_Chi_Minh, đồng hồ server, tính một lần (#23, R8). */
       readonly year: number;
       /** Origin đang truy cập (`https://host[:port]`), dựng ở server từ request gốc — canonical/og:image tuyệt đối (A3). */
       readonly origin: string;
@@ -77,7 +77,11 @@ export interface LoadSiteDeps {
   readonly logError: (message: string, error: unknown) => void;
 }
 
-const SHOP_HEADERS = { 'Cache-Control': SITE_HTML_CACHE_CONTROL } as const;
+/** Năm © theo giờ Asia/Ho_Chi_Minh (UTC+7, VN không có DST) — quyết định 2026-11-19, thay cho UTC (B6). */
+const VN_UTC_OFFSET_MS = 7 * 60 * 60 * 1000;
+const vietnamYear = (d: Date): number => new Date(d.getTime() + VN_UTC_OFFSET_MS).getUTCFullYear();
+
+const SHOP_HEADERS ={ 'Cache-Control': SITE_HTML_CACHE_CONTROL } as const;
 const shop = (status: SiteHttpStatus, data: SiteLoaderData): SiteLoadOutcome => ({ status, headers: SHOP_HEADERS, data });
 
 export async function loadSiteForHost(rawHost: string, path: string, deps: LoadSiteDeps): Promise<SiteLoadOutcome> {
@@ -119,7 +123,7 @@ export async function loadSiteForHost(rawHost: string, path: string, deps: LoadS
         snapshot: result.snapshot as SiteLoaderSnapshot, // chỉ đổi kiểu, dữ liệu là JSON
         publishedAt: result.publishedAt,
         path,
-        year: deps.now().getUTCFullYear(),
+        year: vietnamYear(deps.now()),
         origin: deps.origin,
       });
   }

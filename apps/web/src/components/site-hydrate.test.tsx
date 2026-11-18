@@ -9,8 +9,8 @@ import { SitePage } from './site-page';
 
 /**
  * T10 (WEBSITE-005): HTML do server render từ loader data, client hydrate cùng cây + cùng loader data →
- * React không được cảnh báo lệch (console.error / onRecoverableError). R8: loader chạy 23:59:59 31/12 (UTC,
- * `getUTCFullYear` như `load-site-core`), client hydrate lúc 00:00:01 năm sau → năm © vẫn là của loader.
+ * React không được cảnh báo lệch (console.error / onRecoverableError). R8: loader chạy 23:59:59 31/12 (giờ VN,
+ * năm VN như `load-site-core`), client hydrate lúc 00:00:01 năm sau → năm © vẫn là của loader.
  */
 
 // ---- Fixture snapshot dựng tay qua schema (A12) — có Section lồng, Hero dùng ảnh trong `media`, RichText.
@@ -65,7 +65,7 @@ const SNAPSHOT = siteSnapshotSchema.parse({
 
 type SiteData = Extract<SiteLoaderData, { kind: 'site' }>;
 
-const LOADER_CLOCK = new Date('2026-12-31T23:59:59Z'); // server chạy loader
+const LOADER_CLOCK = new Date('2026-12-31T16:59:59Z'); // server chạy loader
 const CLIENT_CLOCK = new Date('2027-01-01T00:00:01Z'); // trình duyệt hydrate, 2 giây sau — đã sang năm
 
 /** Loader data đúng như server trả (đã qua serialize → JSON thuần, nên clone bằng JSON). */

@@ -297,7 +297,7 @@ export const Route = createFileRoute('/robots.txt')({
 | B3 | Zod sinh ra `publishedAt: z.string().datetime({})` từ chối `+00:00` mà .NET `DateTimeOffset` ghi. Override cục bộ ở `site-client` (extends schema sinh, chỉ `publishedAt` cho `offset: true`). Contract đúng, cấu hình Orval quá chặt. | **Đề xuất task riêng:** Orval zod `dateTimeOptions: { offset: true }` + regen (ảnh hưởng mọi datetime sinh ra). |
 | B4 | URI hỏng (`/%E0%A4%A`) → framework 400 trước loader (R6 ghi 404); `//x` → 308 do framework. Không crash. | Hành vi framework; chặn sớm hơn là chấp nhận được. |
 | B5 | Router `trailingSlash: 'preserve'`; canonical bỏ dấu `/` cuối. | A10: không redirect. |
-| B6 | Năm © = năm UTC của server (shop VN lệch 7 giờ lúc giao thừa). | **Người quyết** có dùng `Asia/Ho_Chi_Minh` không. |
+| B6 | Năm © theo giờ `Asia/Ho_Chi_Minh` (UTC+7 cố định, VN không DST), tính một lần ở loader. | Người quyết 2026-11-19 (ban đầu tôi đặt UTC). |
 | B7 | 404 không có `error_code = SITE_NOT_FOUND` → `SiteFetchError` (502); Published không có ETag thì phục vụ nhưng không cache. | Không đoán nghĩa của 404 lạ. |
 | B8 | Đoạn đầu path thuộc `reservedShopSitePaths` (không phân biệt hoa/thường, đã decode) trên host shop → 404 chung, không gọi BE. | Plan Phát hiện 2; cùng một nguồn `config/reserved-routes.json`. |
 | B9 | robots/sitemap dùng `resolveSiteHost` + `fetchPublishedSite` trực tiếp (không qua `loadSiteForHost`, vì hàm đó 404 khi thiếu trang chủ); Suspended → 404; mọi response `Cache-Control: private, no-cache`. | Site không có trang chủ vẫn có robots. |
