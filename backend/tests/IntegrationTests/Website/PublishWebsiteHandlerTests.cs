@@ -534,6 +534,50 @@ public sealed class PublishWebsiteHandlerTests(PostgresFixture postgres) : IAsyn
         Assert.Equal(draftsBefore, await DraftsAsync(shopId));
     }
 
+    // ---- review I1: publish ∥ rollback — Website có concurrency token (xmin) ----
+
+    [Fact]
+    public async Task Rollback_racing_another_write_to_website_is_409_ROLLBACK_CONFLICT_and_pointer_unchanged_I1()
+    {
+        var (shopId, ids) = await ThreePublicationsAsync();
+        Guid websiteId;
+        await using (var setup = NewDb(Cs, shopId))
+        {
+            websiteId = (await setup.Websites.AsNoTracking().SingleAsync()).Id;
+            // Mọi draft đang bẩn ⇒ rollback chỉ ghi dòng website (đúng kịch bản review: không draft nào bị xmin chặn).
+            await setup.Database.ExecuteSqlInterpolatedAsync($"UPDATE page_draft SET is_dirty = true WHERE shop_id = {shopId}");
+        }
+
+        await using var racing = new Request(Cs, shopId, null, new BumpWebsiteXminInterceptor(Cs, websiteId));
+        var ex = await Assert.ThrowsAsync<ConflictException>(() => racing.Rollback(ids[0]));
+
+        Assert.Equal("ROLLBACK_CONFLICT", ex.ErrorCode);
+        Assert.Equal(409, ex.StatusCode);
+        Assert.Empty(racing.PointerCache.Invalidated);
+        await using var db = NewDb(Cs, shopId);
+        Assert.Equal(ids[2], (await db.Websites.AsNoTracking().SingleAsync()).CurrentPublicationId);
+    }
+
+    [Fact]
+    public async Task Publish_racing_another_write_to_website_is_409_PUBLISH_CONFLICT_and_nothing_is_written_I1()
+    {
+        var (shopId, ids) = await ThreePublicationsAsync();
+        Guid websiteId;
+        await using (var setup = NewDb(Cs, shopId))
+        {
+            websiteId = (await setup.Websites.AsNoTracking().SingleAsync()).Id;
+        }
+
+        // Draft đều sạch sau ba lần publish ⇒ publish chỉ ghi dòng website + chèn bản mới.
+        await using var racing = new Request(Cs, shopId, null, new BumpWebsiteXminInterceptor(Cs, websiteId));
+        var ex = await Assert.ThrowsAsync<ConflictException>(() => racing.Publish());
+
+        Assert.Equal("PUBLISH_CONFLICT", ex.ErrorCode);
+        Assert.Equal(3, (await PublicationsAsync(shopId)).Count);
+        await using var db = NewDb(Cs, shopId);
+        Assert.Equal(ids[2], (await db.Websites.AsNoTracking().SingleAsync()).CurrentPublicationId);
+    }
+
     [Fact]
     public async Task Rollback_with_publication_of_another_shop_is_404_and_pointer_unchanged_R4_T5()
     {

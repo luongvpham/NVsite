@@ -295,6 +295,21 @@ internal static class WebsiteHandlerKit
         }
     }
 
+    /// <summary>
+    /// Mô phỏng một publish/rollback khác commit ngay TRƯỚC khi handler ghi: chạm dòng <c>website</c> (đổi <c>xmin</c>)
+    /// mà không đổi giá trị nào (review I1 — <c>Website</c> có concurrency token).
+    /// </summary>
+    public sealed class BumpWebsiteXminInterceptor(string connectionString, Guid websiteId) : SaveChangesInterceptor
+    {
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            await using var other = NewDb(connectionString, null);
+            await other.Database.ExecuteSqlInterpolatedAsync($"UPDATE website SET status = status WHERE id = {websiteId}", cancellationToken);
+            return result;
+        }
+    }
+
     /// <summary>Mô phỏng tab khác publish xong ngay TRƯỚC khi handler ghi: chèn sẵn bản cùng <paramref name="version"/> (một lần).</summary>
     public sealed class InsertPublicationInterceptor(string connectionString, Guid shopId, Guid websiteId, int version) : SaveChangesInterceptor
     {

@@ -35,6 +35,11 @@ public sealed class WebsiteConfiguration : IEntityTypeConfiguration<WebsiteEntit
         builder.Property<List<string>>("_locales").HasColumnName("locales").HasColumnType("text[]").IsRequired();
 
         builder.Property(w => w.CurrentPublicationId);
+
+        // Concurrency token = cột hệ thống `xmin` (shadow, không lộ ra Domain/DTO; không tạo cột thật — như PageDraft.Version).
+        // Publish và rollback đều ghi dòng này ⇒ hai thao tác song song: bên đến sau nhận DbUpdateConcurrencyException
+        // → PUBLISH_CONFLICT / ROLLBACK_CONFLICT, thay vì last-write-wins làm lệch con trỏ với cờ IsDirty (review I1, WEBSITE-004).
+        builder.Property<uint>("RowVersion").HasColumnName("xmin").IsRowVersion();
         builder.Property(w => w.DefaultSeoTitle).HasMaxLength(160);
         builder.Property(w => w.DefaultSeoDescription).HasMaxLength(320);
         builder.Property(w => w.TrackingSnippets).HasColumnType("jsonb").IsRequired();
