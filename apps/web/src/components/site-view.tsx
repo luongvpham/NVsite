@@ -3,6 +3,7 @@ import { decorateWithAnchor, RenderTree, SiteLayout, useAnchorScroll, type PageR
 import { themeStyle } from '@vsite/theme-engine';
 import { selectPage } from '../lib/select-page';
 import type { SiteLoaderData } from '../server/load-site-core';
+import { NotFoundPage } from './not-found-page';
 
 /**
  * Render snapshot đã publish bằng `builder-renderer` (WEBSITE-005 T5, #103). Cùng cấu trúc preview của Portal:
@@ -16,14 +17,8 @@ export function SiteView({ data }: Readonly<{ data: SiteViewData }>) {
   const { snapshot, shop, year, path } = data;
   const selection = selectPage(snapshot, path);
 
-  // Shop không có trang NotFound (hiếm: BE seed sẵn) → placeholder tối thiểu; T8 làm đẹp.
-  if (!selection.page) {
-    return (
-      <main>
-        <h1>Không tìm thấy trang</h1>
-      </main>
-    );
-  }
+  // Shop không có trang NotFound (hiếm: BE seed sẵn) → trang 404 chung của hệ thống (G4).
+  if (!selection.page) return <NotFoundPage />;
 
   const pages = snapshot.pages.map((p) => ({ id: p.id, slug: p.slug, systemType: p.systemType, isEnabled: true }));
   return (
