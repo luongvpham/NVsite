@@ -548,18 +548,18 @@ public interface ISitePointerCache
 
 Chỉ thêm test (code đã có từ T1–T6); test đỏ thì quay lại sửa task tương ứng.
 
-- [ ] `PublishedSiteTenantIsolationTests.cs`
+- [x] `PublishedSiteTenantIsolationTests.cs`
   - shop A và B đều publish, nội dung khác nhau: Host A → bản A, Host B → bản B
   - Host A kèm `?shopId={B}`, `?host={slugB}.vsite.local`, header `X-Forwarded-Host: {slugB}…` → vẫn bản A (R1)
   - Host A kèm token Owner của shop B → vẫn bản A (R1)
   - chỉ B publish: Host A → 404 dù B có bản
   - con trỏ Redis của A không bao giờ trả `publicationId` của B (publish B rồi đọc A)
-- [ ] Bất biến (R3): publish → ghi lại chuỗi `snapshot` + ETag → lần lượt `PUT draft`, `PUT theme`, `PUT page` (đổi
+- [x] Bất biến (R3): publish → ghi lại chuỗi `snapshot` + ETag → lần lượt `PUT draft`, `PUT theme`, `PUT page` (đổi
   SEO, tắt trang), `DELETE page` → `GET /api/site` trả `snapshot` giống hệt từng ký tự, ETag giữ nguyên
-- [ ] Xoá mềm ảnh sau publish → `snapshot.media` vẫn có ảnh đó (R11)
-- [ ] Kiểm kiến trúc: thêm test trong `backend/tests/ArchitectureTests` quét nguồn
+- [x] Xoá mềm ảnh sau publish → `snapshot.media` vẫn có ảnh đó (R11)
+- [x] Kiểm kiến trúc: thêm test trong `backend/tests/ArchitectureTests` quét nguồn
   `Vsite.Application/Website/Queries/GetPublishedSite/*.cs` — không chứa `PageDrafts`, `Pages`, `Themes`
-- [ ] PASS · Commit `test(website): tenant isolation theo Host + snapshot bất biến (#21, #108, WEBSITE-004)`
+- [x] PASS · Commit `test(website): tenant isolation theo Host + snapshot bất biến (#21, #108, WEBSITE-004)`
 
 ### T8: `references` — snapshot + ảnh OG/favicon
 

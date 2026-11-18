@@ -352,3 +352,41 @@ gửi lại `If-None-Match`, `Suspended` không có ETag.
 - M3: ETag dựa `Shop.UpdatedAt`; nếu logo đổi mà dòng `Shop` không được lưu ở trạng thái Modified thì `logoUrl` đổi, ETag không — chưa xác minh luồng upload/xoá logo.
 - M4: `Website.Suspend()/Reinstate()` chưa có endpoint; khi có phải gọi `ISitePointerCache.InvalidateAsync` (con trỏ giữ `WebsiteStatus`).
 - M6: `SetAsync` lỗi làm `GET /api/site` 500 — cân nhắc nuốt + log, và `GetAsync` lỗi rơi về DB (vận hành).
+
+## T7
+
+Chỉ thêm test (tenant isolation theo Host + bất biến snapshot + R11 + kiến trúc). **Không sửa code T1–T6, không test nào đỏ vì lỗi code** — mọi lỗi trong
+lúc viết là lỗi test (xem dưới).
+
+**Thay đổi**
+- `PublishedSiteTestBase` (mới): rút helper từ `PublishedSiteEndpointTests` (`GetSiteAsync`, `PublishedShopAsync`, `SqlAsync`, `InvalidatePointerAsync`…)
+  thành lớp cha dùng chung; `GetSiteAsync` thêm tham số `extraHeaders`. `PublishedSiteEndpointTests` kế thừa, không đổi ca nào.
+- `PublishedSiteTenantIsolationTests` (7 ca): mỗi Host ra đúng bản của mình · `?shopId=`/`?host=`/`X-Forwarded-Host`/`X-Original-Host`/`Forwarded`/`X-Shop-Id`
+  trên Host A vẫn ra A · token global của Owner B và token audience `shop:{B}` trên Host A (xem lệch) · chỉ B publish ⇒ Host A 404 (A có website Draft, và
+  A không có website) · con trỏ Redis của A không chứa `publicationId` của B (đọc qua `ISitePointerCache` và chuỗi Redis thô, kể cả sau khi publish lại B) ·
+  R3 · R11.
+- R3: publish → ghi `snapshot`+ETag → `PUT draft`, `PUT theme`, `PUT page` (SEO, rồi tắt trang), `DELETE page`, rồi con trỏ nguội → giống từng ký tự, ETag y nguyên.
+- `GetPublishedSiteHandlerTests` (4 ca, không Docker): `AudienceKind` Main/Portal (kể cả có `ShopId`), Shop mà `ShopId` null, Main không `ShopId` ⇒ `NotFoundException`.
+  Mọi phụ thuộc là `null!` nên handler đi qua cổng audience là NRE ⇒ test đỏ (M2 của review T6 đóng).
+- `ArchitectureTests/PublishedSiteBoundaryTests`: quét `GetPublishedSite/*.cs` (sau khi bỏ comment) cấm `PageDrafts`, `Pages`, `Themes`, `IgnoreQueryFilters`; có guard
+  "tìm thấy ≥ 2 file" + theory chuỗi cấm cài sẵn (5 ca, gồm xuống dòng / khoảng trắng trước `(`) + ca chứng minh comment không bị bắt ⇒ test không mù.
+
+**Lệch có chủ đích / giả định tự đặt** (người rà ở pha 6)
+- **"Token Owner của shop B" thành hai token.** Owner đăng nhập thường nhận token global ⇒ endpoint bỏ qua, y hệt không token (test). Token audience `shop:{B}` lấy bằng
+  đăng ký+xác minh+đăng nhập **trên host B** (cách `ShopEndpointTests` làm), là người dùng shop B chứ không phải Owner — Owner không có đường nào ra token đó. Trên host A:
+  `403 TOKEN_SHOP_MISMATCH` từ middleware, body không chứa nội dung A lẫn B; trên host B cùng token ⇒ 200 (chứng minh token hợp lệ).
+- **R11 xoá mềm ảnh bằng API + SQL.** `deleteFromLibrary` chỉ xoá bản `Library` (clone không bị kéo theo, và id clone ⇒ 404), nên test xoá library bằng API rồi
+  `UPDATE media_asset SET is_deleted = true` cho clone (cách các test Website khác làm). Test khẳng định `is_deleted = true` thật trước khi so snapshot.
+  Hệ quả cho T8: xoá library không làm ảnh trong site ẩn đi — đúng thiết kế, không phải lỗi.
+- `X-Forwarded-Host`/`Forwarded`… trong test host chỉ chứng minh server test không tin chúng; chưa chứng minh gì về proxy thật (cấu hình `ForwardedHeaders` là việc hạ tầng).
+- Test handler dùng `null!` thay vì dựng DB: chứng minh "ném TRƯỚC mọi truy cập" mạnh hơn một ca có DB, nhưng không phân biệt được "ném vì audience" với "ném vì lý do khác sau này"
+  (đều `NotFoundException`) — chấp nhận, `null!` đảm bảo chưa chạm DB.
+- Test kiến trúc dùng regex `\bPages\b` thô: nếu sau này handler có biến/property tên `Pages` hợp lệ (vd. đọc `snapshot.pages` vào record) sẽ đỏ giả — khi đó đổi tên hoặc
+  nới có chủ đích, đừng bỏ test.
+
+**Kiểm chứng** (Docker CÓ)
+- Test T7 viết sau code (plan: "code đã có từ T1–T6") nên không có pha RED theo nghĩa TDD; RED-do-lỗi-test: R11 đỏ 2 lần (clone không bị xoá theo library; API xoá clone ⇒ 404) → sửa test như trên.
+  Test kiến trúc kiểm bằng theory chuỗi cấm cài sẵn thay cho mutation trên code thật.
+- `dotnet test backend/vsite.sln` đầy đủ: ComponentSchemaTests 12/12, ArchitectureTests 19/19, IntegrationTests 883 passed / 1 skipped (skip có sẵn: `ShopEndpointTests` chờ module Listing).
+
+**Chưa làm (các task sau)**: references (T8), docs module + contract-sync (T9). Theo dõi T6 còn mở: I1/I2 (race đọc↔publish), I3 (giá trị lạ trong con trỏ), M3, M4, M6.
