@@ -45,10 +45,10 @@ const snapshot = (extra: Record<string, unknown> = {}) =>
   });
 
 const PUBLISHED_AT = '2026-11-01T10:00:00Z';
-const published = (name = 'Spa ABC', snap: unknown = snapshot()) => ({
+const published = (name = 'Spa ABC', snap: unknown = snapshot(), publishedAt = PUBLISHED_AT) => ({
   status: 'Published',
   shop: { name, logoUrl: null },
-  publication: { id: '11111111-2222-3333-4444-555555555555', version: 3, publishedAt: PUBLISHED_AT, snapshot: snap },
+  publication: { id: '11111111-2222-3333-4444-555555555555', version: 3, publishedAt, snapshot: snap },
 });
 const suspended = { status: 'Suspended', shop: { name: 'Spa ABC', logoUrl: null }, publication: null };
 const notFoundBody = { type: 'about:blank', title: 'Not Found', status: 404, error_code: 'SITE_NOT_FOUND' };
@@ -136,6 +136,23 @@ describe('site-client — results', () => {
       etag: '"e1"',
       publishedAt: PUBLISHED_AT,
     });
+  });
+
+  // .NET System.Text.Json ghi DateTimeOffset dạng `+00:00`, có thể kèm 7 chữ số thập phân.
+  it.each([
+    ['Z', '2026-11-01T10:00:00Z'],
+    ['+00:00', '2026-11-01T10:00:00+00:00'],
+    ['7 fractional digits + 00:00', '2026-11-01T10:00:00.1234567+00:00'],
+    ['+07:00', '2026-11-01T17:00:00+07:00'],
+  ])('200 Published accepts publishedAt with offset (%s)', async (_label, publishedAt) => {
+    responder = () => ({ status: 200, body: published('Spa ABC', snapshot(), publishedAt), etag: '"e1"' });
+    const r = await fetchSite('spa-abc.vsite.local');
+    expect(r.kind === 'site' && r.publishedAt).toBe(publishedAt);
+  });
+
+  it('200 Published with a non-datetime publishedAt → SiteDataError', async () => {
+    responder = () => ({ status: 200, body: published('Spa ABC', snapshot(), 'hôm qua'), etag: '"e1"' });
+    await expect(fetchSite('spa-abc.vsite.local')).rejects.toBeInstanceOf(SiteDataError);
   });
 
   it('200 Suspended → suspended with shop', async () => {
@@ -258,6 +275,7 @@ describe('site-client — invalid data and failures (R5)', () => {
     expect((err as Error).message).not.toContain('127.0.0.1');
     expect((err as Error).message).not.toContain(origin);
     expect((err as Error).cause).toBeDefined();
+    expect(cache.get('spa-abc.vsite.local')?.etag).toBe('"e1"');
   });
 
   it('network error → SiteFetchError', async () => {

@@ -1,6 +1,7 @@
 import '@tanstack/react-start/server-only';
 import { createApiClient, getPublishedSiteResponse, type PublishedShopDto } from '@vsite/api-sdk';
 import { siteSnapshotSchema, type SiteSnapshot } from '@vsite/builder-components';
+import { z } from 'zod';
 import { readServerEnv } from './env';
 import { LruCache } from './lru';
 
@@ -43,12 +44,19 @@ export interface CachedSite {
   readonly data: SiteData;
 }
 
-/** BE không trả được dữ liệu dùng được: 5xx, mạng, 304 không có bản giữ, 404 không phải `SITE_NOT_FOUND`. */
+/**
+ * BE không trả được dữ liệu dùng được: 5xx, mạng, 304 không có bản giữ, 404 không phải `SITE_NOT_FOUND`.
+ * ⚠️ `cause` có thể chứa BE URL / ProblemDetails / AxiosError — CHỈ log ở server, không bao giờ
+ * serialize vào loader data hay HTML.
+ */
 export class SiteFetchError extends Error {
   override readonly name = 'SiteFetchError';
 }
 
-/** BE trả 200 nhưng dữ liệu sai contract/schema (vỏ Zod, snapshot, `schemaVersion`). */
+/**
+ * BE trả 200 nhưng dữ liệu sai contract/schema (vỏ Zod, snapshot, `schemaVersion`).
+ * ⚠️ `cause` (ZodError, dữ liệu BE) CHỈ log ở server, không bao giờ serialize vào loader data hay HTML.
+ */
 export class SiteDataError extends Error {
   override readonly name = 'SiteDataError';
 }
@@ -68,6 +76,19 @@ export interface SiteClient {
   /** `host` phải là `host` đã chuẩn hoá từ `resolveSiteHost` (kind `shop`) — không tự resolve lại. */
   readonly fetchSite: (host: string) => Promise<SiteResult>;
 }
+
+/**
+ * Vỏ response = schema sinh từ contract, CHỈ nới `publication.publishedAt` để nhận offset (`+00:00`,
+ * kèm tới 7 chữ số thập phân) — đúng dạng .NET System.Text.Json ghi `DateTimeOffset`. Orval sinh
+ * `datetime({})` (Zod 3 mặc định `offset: false`, chỉ nhận `Z`): lỗi cấu hình Orval. Xoá override này
+ * khi config Orval zod có `dateTimeOptions: { offset: true }`.
+ */
+const generatedPublication = getPublishedSiteResponse.shape.publication.unwrap();
+const publishedSiteEnvelope = getPublishedSiteResponse.extend({
+  publication: generatedPublication
+    .extend({ publishedAt: z.string().datetime({ offset: true }) })
+    .nullable(),
+});
 
 function errorCodeOf(body: unknown): unknown {
   return typeof body === 'object' && body !== null ? (body as Record<string, unknown>).error_code : undefined;
@@ -122,7 +143,7 @@ export function createSiteClient(deps: SiteClientDeps): SiteClient {
     }
 
     // 200
-    const envelope = getPublishedSiteResponse.safeParse(response.data);
+    const envelope = publishedSiteEnvelope.safeParse(response.data);
     if (!envelope.success) {
       cache.delete(host);
       throw new SiteDataError('Dữ liệu site không hợp lệ.', { cause: envelope.error });
