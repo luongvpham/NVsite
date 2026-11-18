@@ -55,5 +55,5 @@
 - Zod (`generated/props-schemas.ts`) và JSON Schema (`generated/props-schemas.json`) sinh **độc lập
   trực tiếp** từ manifest trong `gen-registry.ts` — không convert từ cái này sang cái kia. (#60)
 - `props-schemas` (cả hai) chỉ validate **shape** — mọi prop optional ở tầng type-schema.
-  `requiresProps` là ràng buộc theo **variant**, không enforce được tĩnh ở tầng này; để dành cho
-  Operations Engine thật (Bước 5). Đừng "sửa cho chặt hơn" ở đây khi thấy field bắt buộc thiếu.
+  `requiresProps` là ràng buộc theo **variant**, không enforce được tĩnh ở tầng này; BE enforce lúc **publish**
+  (`RequiredPropsChecker`, đọc `generated/tree-rules.json` → `requiresProps`, Bước 8b / WEBSITE-004). Đừng "sửa cho chặt hơn" ở đây khi thấy field bắt buộc thiếu.

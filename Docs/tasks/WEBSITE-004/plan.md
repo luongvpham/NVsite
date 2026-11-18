@@ -606,9 +606,9 @@ Chỉ thêm test (code đã có từ T1–T6); test đỏ thì quay lại sửa 
 
 ## 11. Đóng task (trước Gate 2)
 
-- [ ] `change-reviewer` trên toàn diff (model mạnh nhất — task chạm tenant + contract)
-- [ ] `Docs/tasks/WEBSITE-004/review.md` kèm mục "Ma sát quy trình"
-- [ ] Nghiệm thu tay tối thiểu (không có FE): bằng `curl` với header `Host: {slug}.vsite.local` qua BE dev —
+- [x] `change-reviewer` trên toàn diff (model mạnh nhất — task chạm tenant + contract)
+- [x] `Docs/tasks/WEBSITE-004/review.md` kèm mục "Ma sát quy trình"
+- [x] Nghiệm thu tay tối thiểu (không có FE): bằng `curl` với header `Host: {slug}.vsite.local` qua BE dev —
   publish, đọc, sửa draft, đọc lại, rollback, đọc lại
 
 ## 12. Giả định tôi đã tự đặt (chưa hỏi, cần duyệt)

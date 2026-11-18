@@ -129,7 +129,7 @@ công khai mới → **không chạm contract**, không chạy contract-sync ở
 - `Vsite.Api/Program.cs` (sửa) — truyền path `site-snapshot.schema.json` (eager resolve lúc startup, fail-fast).
 - `Vsite.Api/Vsite.Api.csproj` (sửa) — link `site-snapshot.schema.json` ra `generated/` + thêm vào
   `EnsureWebsiteArtifacts` (thiếu artifact → build dừng với thông báo rõ).
-- `backend/tests/.../WebsiteHandlerKit.cs` (sửa) — `S.Schemas` nay dựng kèm snapshot path (dùng cho T2 và sẵn cho
+- `backend/tests/IntegrationTests/Website/WebsiteHandlerKit.cs` (sửa) — `S.Schemas` nay dựng kèm snapshot path (dùng cho T2 và sẵn cho
   T4/T6).
 
 **Lệch có chủ đích**: không có (vỏ snapshot là additive, `05` §7 shape đã thay ở S0-T2; `pages[].id` đã ghi

@@ -9,7 +9,7 @@ namespace Vsite.Domain.Website.Entities;
 /// Tên entity trùng tên module → nơi dùng phải alias <c>using WebsiteEntity = Vsite.Domain.Website.Entities.Website;</c>
 /// (cùng cách <c>ShopEntity</c>).
 ///
-/// Chưa có (ngoài phạm vi 5a, thêm additive sau): <c>CurrentPublicationId</c> (8b), <c>SeedTemplateId</c> (Bước 11).
+/// Chưa có: <c>SeedTemplateId</c> (Bước 11). <c>CurrentPublicationId</c> đã thêm ở 8b (WEBSITE-004).
 ///
 /// Mã locale có nằm trong <c>config/locales.json</c> hay không là việc của Application (catalog); entity
 /// chỉ giữ invariant <c>DefaultLocale ∈ Locales</c> (cũng là CHECK ở DB).

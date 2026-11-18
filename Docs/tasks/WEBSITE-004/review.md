@@ -1,22 +1,57 @@
 # Review — WEBSITE-004
 
 ## Tự động
-_(gate kiểm tự động: build, test, lint, check:docs — điền khi nghiệm thu)_
+- `dotnet test backend/vsite.sln` (Docker thật): ComponentSchemaTests 12/12, ArchitectureTests 22/22, IntegrationTests 897 passed / 1 skipped (skip có sẵn, `ShopEndpointTests` chờ module Listing).
+- `pnpm build` 4/4 · `pnpm test` 10/10 (lần đầu 3 test `gen-registry` timeout do chạy song song với dotnet — chạy lại riêng xanh).
+- `dotnet ef migrations has-pending-model-changes` → "No changes". `pnpm check:docs` xanh. `check-no-drift` OK. Thử Orval trên staging: không `…Dto2`.
 
-## change-reviewer
-_(tổng hợp Critical/Warning còn mở sau burn — anh rà lại ở Gate 2)_
+## change-reviewer (2026-11-18, model mạnh nhất, toàn diff `7c783a6..HEAD`)
+**0 Critical** — tenant isolation sạch: `GET /api/site` chỉ lấy shop từ `ITenantContext` khi audience = Shop, không bind tham số nào, không chạm `PageDrafts`/`Pages`/`Themes`, không `IgnoreQueryFilters`;
+publish/rollback có `ShopId` tường minh trong query, FK ghép chặn trỏ chéo; hai `ReferenceSource` đúng `dependency-map.json`; contract khớp code.
+
+**Important (3) — chưa sửa, cần anh quyết (xem "Điểm cần anh quyết")**
+- **I1** `Website` không có concurrency token ⇒ publish ∥ rollback có thể mất cập nhật im lặng: rollback bỏ qua draft X đang bẩn, publish hạ cờ X, rollback commit sau → con trỏ về bản cũ mà X `IsDirty = false`.
+  `ROLLBACK_CONFLICT` thực tế gần như không bắn (rollback không ghi draft bẩn). (`RollbackPublicationHandler.cs:43-62`, `PublishWebsiteHandler.cs:156-173`)
+- **I2** `listPublications` trả mảng trần (trái "một shape pagination", #19) và `Take(50)` có thể cắt mất bản current sau rollback về bản rất cũ (G11 chưa ai chốt).
+- **I3** #110 là giả định của agent (T8), không phải người chốt; định nghĩa nằm ở `contract-diff.md`. → **đã sửa một phần:** `DECISIONS.md` nay ghi "chờ người duyệt ở Gate 2". Còn lại: dòng "đã chốt" không số ở plan §4 (vd. shop `Draft` không chặn site) chưa có `#N`.
+
+**Minor (6)** — M1 ETag không đổi khi snapshot được upcast lúc đọc (nhét `schemaVersion` vào ETag khi có upcaster đầu tiên) · M2 thiếu theme/draft ⇒ 500 (`PublishWebsiteHandler.cs:48-49, 77`) ·
+M3 Redis lỗi ⇒ `GET /api/site` 500, nên nuốt `SetAsync` · M4 tenant resolve theo nhãn đầu của Host (`evil.com` → slug `evil`): không lộ dữ liệu nhưng 8c/`ShopDomain` phải đối chiếu Host đầy đủ ·
+M5 tài liệu lỗi thời → **đã sửa** (`builder-components/CLAUDE.md` `requiresProps`, comment XML `Website.cs`, đường dẫn tắt trong changelog) · M6 vài mục theo dõi BE chỉ nằm trong changelog, chưa có dòng ở `00-INDEX` §4.
+
+## Nghiệm thu tay bằng HTTP (BE dev thật, Postgres + Redis container, header `Host` tự đặt)
+Kịch bản `Host: {slug}.vsite.local`, Owner thật (đăng ký → verify → đăng nhập → tạo shop → tạo website). Tất cả khớp kỳ vọng:
+- Chưa có website → `404 SITE_NOT_FOUND`; website `Draft` chưa publish → 404.
+- Đặt draft A → publish #1 → `GET /api/site` 200 `status=Published`, `ETag` + `Cache-Control: no-cache`; `If-None-Match` → 304.
+- Sửa draft sang B + `PUT theme` → snapshot **giống hệt** và ETag giữ nguyên; draft `isDirty = true`.
+- Publish #2 → site thấy B ngay (không chờ TTL); `isDirty = false`; autosave bằng version cũ → `409` (R9 đúng như `brief.md`).
+- Rollback về #1 → 200, site ra A, snapshot khớp lần đầu, danh sách `v2 v1*`, không sinh bản mới; draft `isDirty = true` (G7).
+- Host `admin.…` / host lạ / `localhost` → 404; host lạ kèm `?shopId=<shop mình>&host=<slug mình>` → 404 (tham số bị bỏ qua); Host đúng + token Owner global → 200 như không token.
+- Draft `Hero01` thiếu `image` lưu được (200); publish → `422 PUBLISH_BLOCKED` `params.errors[{pageId,pageTitle,path:"/children/0/props/image",code:REQUIRED_PROP_MISSING}]`, `truncated:false`; site vẫn ở bản cũ.
+- Shop `Suspended` → `200 { status: "Suspended", publication: null }`, không ETag.
+- **Quan sát thêm (nợ SHOP-001, phát hiện 4 của plan):** chính Owner PATCH được `status: "Suspended"` cho shop của mình (và tương tự tự gỡ). Không sửa ở task này.
+- Thử sai (lỗi của kịch bản, không phải BE): id node phải khớp `^c_[A-Za-z0-9_-]{5,}$` (`NODE_ID_PATTERN`), nên 3 lần PUT đầu bị `422 TREE_ENVELOPE_INVALID`.
+
+Không chạy: CDN/Caddy, `X-Forwarded-Host` với proxy thật, gửi `Host` từ Node (việc của 8c).
 
 ## Nợ kỹ thuật
-- [S0-T1] `packages/builder-components/CLAUDE.md:58-59` vẫn ghi `requiresProps` "để dành cho Bước 5"; thực tế tiêu thụ ở Bước 8b. Reviewer đề xuất rà cùng T9 (tài liệu `backend/docs/modules/website.md`). Không chặn.
-- [S0-T2] Cập nhật DesignIdeal `05` §7 (shape snapshot "thay shape 05 §7") + banner STATUS — phạm vi đóng task (§11).
-- [T1] Comment XML doc đầu class `Vsite.Domain/Website/Entities/Website.cs` còn liệt kê `CurrentPublicationId (8b)` ở mục "chưa có" — nay đã thêm; cần bỏ dòng đó.
-- [T1] **Trước Gate 2:** banner `DesignIdeal/05-website-builder-and-product-design.md` còn ghi `SitePublication` ở mục "Chưa code (vẫn là spec)" — nay đã tạo entity + bảng. Phải bỏ khỏi "chưa code" + trỏ changelog trước Gate 2, nếu không thành Critical lúc nghiệm thu. (Thường gộp vào T9.)
+Đã gộp vào `changelog.md` mục "Chưa làm xong / theo dõi" (T9) — không lặp lại ở đây. Đã đóng: `requiresProps` ở `builder-components/CLAUDE.md`, comment `Website.cs`, banner `05`/`08` (T9).
 
 ## Điểm cần anh quyết
-_(để trống — anh điền ở Gate 2)_
+1. **I1:** thêm concurrency token (`xmin`) cho `Website` + test race publish ∥ rollback — làm trước production hay ghi nhận chấp nhận? (Sửa là thay đổi code + migration model snapshot, không đổi contract.)
+2. **I2:** `listPublications` giữ mảng trần có trần 50 (ghi ngoại lệ ở `website.md`) hay đổi sang `{items,total,page,pageSize}` trước khi FE 8c bám vào? Và có luôn kèm bản current khi nó nằm ngoài 50 bản mới nhất không?
+3. **#110** (cặp OG/favicon báo hai mục) và hai giả định contract (`409 ROLLBACK_CONFLICT`, header `Location` trỏ tài nguyên chưa có GET) — duyệt hay đổi.
+4. Cấp `#N` cho các quyết định "người chốt" không số ở plan §4 (đặc biệt "shop `Draft` không chặn site", "rollback không đụng draft").
+5. Phát hiện 4 (Owner tự gỡ `Suspended`): xếp task SHOP riêng trước khi 8c đưa site lên production? (reviewer đề xuất coi là Important nếu vậy).
 
 ## Ma sát quy trình
-_(để trống — chép từ "Ma sát — nháp từ burn" của batch file những dòng đáng giữ)_
+- Dev server `Vsite.Api` chạy nền khoá DLL ⇒ `dotnet build`/`dotnet ef` lỗi MSB3027, reviewer không xác minh được `has-pending-model-changes`. Nên ghi "dừng dev server hoặc dùng output riêng" vào bước review.
+- Quyết định "người chốt" và "agent chọn theo uỷ quyền" chỉ phân biệt bằng một dòng phân cách trong plan §4, dễ ghi nhầm giả định thành quyết định (I3); dòng "—" không số lọt kiểm DECISIONS.
+- `check:docs` chỉ cảnh báo đường dẫn chết, 21 cảnh báo cũ che mất cảnh báo mới của task.
+- `check:docs` đếm quyết định bằng regex 1–2 chữ số nên luôn in "109 quyết định".
+- Banner STATUS 05/08 dài hàng nghìn ký tự trên một dòng, khó rà bằng mắt.
+- Hook chặn heredoc nhắc đường dẫn contract; kịch bản nghiệm thu bash cũng dính lỗi escape nhiều lần — viết bằng Node (`http` đặt được `Host`) ổn hơn curl+bash.
+- `changelog.md` ~490 dòng, mục "theo dõi" lặp ở từng T rồi gộp lại ở cuối.
 
 ---
 
