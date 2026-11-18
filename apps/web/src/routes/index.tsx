@@ -1,8 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { SitePage } from '../components/site-page';
+import { loadSite } from '../server/load-site';
 
 export const Route = createFileRoute('/')({
-  component: HomePage,
+  // Host shop → trang chủ Shop Site; host platform → trang hiện tại (#104). Host đọc ở server.
+  loader: () => loadSite({ data: { path: '/' } }),
+  component: IndexPage,
 });
+
+function IndexPage() {
+  const data = Route.useLoaderData();
+  return data.kind === 'platform' ? <HomePage /> : <SitePage data={data} />;
+}
 
 function HomePage() {
   return (
