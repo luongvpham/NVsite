@@ -53,6 +53,7 @@ const data = (path: string, pages: unknown[] = PAGES): SiteData => ({
   publishedAt: '2026-11-01T10:00:00+00:00',
   path,
   year: 2027,
+  origin: 'https://spa-abc.vsite.vn',
 });
 const html = (d: SiteData) => renderToString(<SiteView data={d} />);
 

@@ -15,6 +15,7 @@ import { SiteDataError, SiteFetchError, SiteResultKind, type SiteResult } from '
  */
 
 const ROOT = 'vsite.vn';
+const ORIGIN = 'https://spa-abc.vsite.vn';
 const SHOP = { name: 'Spa ABC', logoUrl: null };
 // Lõi chỉ đọc pages (slug/systemType) để chọn trang (T5) — đối tượng thuần là đủ để kiểm truyền nguyên vẹn.
 const SNAPSHOT = { schemaVersion: 1, pages: [{ id: 'p_0001', slug: '', systemType: null }, { id: 'p_0002', slug: 'lien-he', systemType: 'Contact' }] } as unknown as SiteSnapshot;
@@ -28,6 +29,7 @@ function deps(result: SiteResult | Error, over: Partial<LoadSiteDeps> = {}) {
   const logError = vi.fn();
   const d: LoadSiteDeps = {
     rootDomain: ROOT,
+    origin: ORIGIN,
     fetchSite,
     now: () => new Date('2026-12-31T23:59:59Z'),
     logError,
@@ -90,6 +92,7 @@ describe('loadSiteForHost — host shop', () => {
         publishedAt: PUBLISHED_AT,
         path: '/lien-he',
         year: 2026,
+        origin: ORIGIN,
       },
     });
     expect(roundTrip(r.data)).toEqual(r.data); // serialize được (RPC điều hướng client)
@@ -97,6 +100,12 @@ describe('loadSiteForHost — host shop', () => {
       const forRenderer: SiteSnapshot = r.data.snapshot; // kiểu JsonSafe gán ngược được cho T5
       expect(forRenderer).toBe(SNAPSHOT);
     }
+  });
+
+  it('origin của deps đi vào loader data (A3)', async () => {
+    const { d } = deps(siteResult, { origin: 'http://spa-abc.vsite.local:3000' });
+    const r = await loadSiteForHost('spa-abc.vsite.vn', '/', d);
+    expect(r.data).toMatchObject({ origin: 'http://spa-abc.vsite.local:3000' });
   });
 
   it('year lấy năm UTC từ đồng hồ server, gọi now() đúng một lần (#23, R8)', async () => {

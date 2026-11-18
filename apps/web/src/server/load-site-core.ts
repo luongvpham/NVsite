@@ -48,6 +48,8 @@ export type SiteLoaderData =
       readonly path: string;
       /** Năm UTC theo đồng hồ server, tính một lần (#23, R8). */
       readonly year: number;
+      /** Origin đang truy cập (`https://host[:port]`), dựng ở server từ request gốc — canonical/og:image tuyệt đối (A3). */
+      readonly origin: string;
     }
   /** Không mang chi tiết lỗi (R5) — chi tiết chỉ nằm ở log server. */
   | { readonly kind: typeof SiteLoaderKind.Error };
@@ -65,6 +67,8 @@ export const SITE_HTML_CACHE_CONTROL = 'private, no-cache';
 
 export interface LoadSiteDeps {
   readonly rootDomain: string;
+  /** Origin của request gốc (protocol từ URL request, host từ `getRequestHost`) — không tin header proxy. */
+  readonly origin: string;
   /** Nhận host đã chuẩn hoá (kind `shop` của `resolveSiteHost`). */
   readonly fetchSite: (host: string) => Promise<SiteResult>;
   /** Đồng hồ server — chỉ gọi khi cần `year`. */
@@ -112,6 +116,7 @@ export async function loadSiteForHost(rawHost: string, path: string, deps: LoadS
         publishedAt: result.publishedAt,
         path,
         year: deps.now().getUTCFullYear(),
+        origin: deps.origin,
       });
   }
 }

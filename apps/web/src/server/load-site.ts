@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
-import { getRequestHost, setResponseHeader, setResponseStatus } from '@tanstack/react-start/server';
+import { getRequestHost, getRequestUrl, setResponseHeader, setResponseStatus } from '@tanstack/react-start/server';
 import { readServerEnv } from './env';
+import { buildOrigin } from './origin';
 import { loadSiteForHost, SiteLoaderKind, type SiteLoaderData } from './load-site-core';
 import { parseLoadSiteInput } from './load-site-input';
 import { fetchPublishedSite } from './site-client';
@@ -16,6 +17,7 @@ export const loadSite = createServerFn({ method: 'GET' })
   .validator(parseLoadSiteInput)
   .handler(async ({ data }): Promise<SiteLoaderData> => {
     const host = getRequestHost({ xForwardedHost: false });
+    const origin = buildOrigin(getRequestUrl({ xForwardedHost: false, xForwardedProto: false }).protocol, host);
     let rootDomain: string;
     try {
       rootDomain = readServerEnv().rootDomain;
@@ -26,6 +28,7 @@ export const loadSite = createServerFn({ method: 'GET' })
     }
     const outcome = await loadSiteForHost(host, data.path, {
       rootDomain,
+      origin,
       fetchSite: fetchPublishedSite,
       now: () => new Date(),
       logError: (message, error) => {
