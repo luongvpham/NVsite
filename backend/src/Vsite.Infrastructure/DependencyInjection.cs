@@ -110,8 +110,8 @@ public static class DependencyInjection
     // ---- Website (catalog/validator là singleton ở Program.cs vì cần đường dẫn artifact) ----
     private static IServiceCollection AddWebsiteModule(this IServiceCollection services)
     {
-        // WEBSITE-004 T4: bản no-op tạm; T6 thay bằng con trỏ Redis thật (#109).
-        services.AddSingleton<ISitePointerCache, Vsite.Infrastructure.Website.NoOpSitePointerCache>();
+        // WEBSITE-004 T6: con trỏ "bản đang chạy" trên IDistributedCache (Redis) — #109.
+        services.AddSingleton<ISitePointerCache, Vsite.Infrastructure.Website.SitePointerCache>();
 
         return services;
     }

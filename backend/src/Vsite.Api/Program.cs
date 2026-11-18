@@ -200,6 +200,7 @@ api.MapIdentityEndpoints();
 api.MapShopEndpoints();
 api.MapMediaEndpoints();
 api.MapWebsiteEndpoints();
+api.MapSiteEndpoints();
 
 app.Run();
 

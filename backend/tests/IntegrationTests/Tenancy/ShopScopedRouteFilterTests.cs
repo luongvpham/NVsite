@@ -80,10 +80,39 @@ public sealed class ShopScopedRouteFilterTests
     private static List<string> FindOwnerViolations(IEnumerable<RouteEndpoint> endpoints, string document, string errorCode) =>
         endpoints
             .Where(e => BelongsToDocument(e, document))
+            .Where(e => !IsPublicSiteRoute(e))
             .Where(e => e.Metadata.GetMetadata<ShopOwnerRequirement>() is not { } r || r.ErrorCode != errorCode
                 || e.Metadata.GetMetadata<ShopMembershipRequiredMarker>() is null)
             .Select(e => $"{e.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.HttpMethodMetadata>()?.HttpMethods.FirstOrDefault()} {e.RoutePattern.RawText}")
             .ToList();
+
+    /// <summary>Ngoại lệ DUY NHẤT (WEBSITE-004 T6, #108): <c>GET /api/site</c> thuộc document "website" nhưng là route công khai theo Host,
+    /// không có <c>{shopId}</c>. Hẹp có chủ đích — đúng đường dẫn, đúng method, và BẮT BUỘC <c>AllowAnonymous</c>; route nào khác
+    /// (hoặc cùng đường dẫn mà không khai ẩn danh) vẫn bị bắt.</summary>
+    private static bool IsPublicSiteRoute(RouteEndpoint e) =>
+        string.Equals((e.RoutePattern.RawText ?? string.Empty).Trim('/'), "api/site", StringComparison.Ordinal)
+        && e.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.HttpMethodMetadata>()?.HttpMethods.SequenceEqual(["GET"]) == true
+        && e.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>() is not null;
+
+    /// <summary>Route công khai của Shop Site không bị ép Owner (#108) — nhưng ngoại lệ không được rộng hơn đúng nó.</summary>
+    [Fact]
+    public void Public_site_route_is_the_only_anonymous_exception_in_the_website_document()
+    {
+        var group = new Microsoft.AspNetCore.Routing.EndpointGroupNameAttribute("website");
+        var anonymous = new Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute();
+        var publicOk = FakeEndpoint("/api/site", group, new Microsoft.AspNetCore.Routing.HttpMethodMetadata(["GET"]), anonymous);
+        var publicNoAnonymous = FakeEndpoint("/api/site", group, new Microsoft.AspNetCore.Routing.HttpMethodMetadata(["GET"]));
+        var publicPost = FakeEndpoint("/api/site", group, new Microsoft.AspNetCore.Routing.HttpMethodMetadata(["POST"]), anonymous);
+        var anonymousOwnerRoute = FakeEndpoint("/api/shops/{shopId:guid}/website/x", group, anonymous);
+
+        var violations = FindOwnerViolations(
+            [publicOk, publicNoAnonymous, publicPost, anonymousOwnerRoute], "website", "WEBSITE_OWNER_REQUIRED");
+
+        Assert.Equal(
+            ["/api/site", "/api/site", "/api/shops/{shopId:guid}/website/x"],
+            violations.Select(v => v[(v.IndexOf(' ') + 1)..]).ToList());
+        Assert.True(IsPublicSiteRoute(publicOk));
+    }
 
     private static RouteEndpoint FakeEndpoint(string pattern, params object[] metadata)
     {

@@ -81,10 +81,15 @@ internal static class WebsiteHandlerKit
         public RequiredPropsChecker RequiredProps { get; }
     }
 
-    /// <summary>Ghi lại shop nào bị xoá con trỏ cache (T4 chỉ cần biết handler GỌI; bản Redis thật ở T6).</summary>
+    /// <summary>Ghi lại shop nào bị xoá con trỏ cache (test handler publish/rollback chỉ cần biết handler GỌI; bản Redis thật được
+    /// test ở <c>SitePointerCacheTests</c>). Get luôn hụt, Set bỏ qua.</summary>
     public sealed class RecordingSitePointerCache : ISitePointerCache
     {
         public List<Guid> Invalidated { get; } = [];
+
+        public Task<SitePointer?> GetAsync(Guid shopId, CancellationToken cancellationToken) => Task.FromResult<SitePointer?>(null);
+
+        public Task SetAsync(Guid shopId, SitePointer pointer, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task InvalidateAsync(Guid shopId, CancellationToken cancellationToken)
         {

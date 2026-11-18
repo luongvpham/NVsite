@@ -614,6 +614,12 @@ public sealed class PublishWebsiteHandlerTests(PostgresFixture postgres) : IAsyn
 
     private sealed class ThrowingPointerCache : Vsite.Application.Website.Interfaces.ISitePointerCache
     {
+        public Task<Vsite.Application.Website.Interfaces.SitePointer?> GetAsync(Guid shopId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("redis down");
+
+        public Task SetAsync(Guid shopId, Vsite.Application.Website.Interfaces.SitePointer pointer, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("redis down");
+
         public Task InvalidateAsync(Guid shopId, CancellationToken cancellationToken) => throw new InvalidOperationException("redis down");
     }
 }
