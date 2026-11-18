@@ -150,9 +150,6 @@ public sealed class PublishedSiteTenantIsolationTests(MediaApiFactory factory) :
         var mismatch = await GetSiteAsync(hostA, token: shopBToken);
         Assert.Equal(HttpStatusCode.Forbidden, mismatch.StatusCode);
         Assert.Equal("TOKEN_SHOP_MISMATCH", await ErrorCode(mismatch));
-        var mismatchBody = await BodyOf(mismatch);
-        Assert.DoesNotContain(markerB, mismatchBody);
-        Assert.DoesNotContain(markerA, mismatchBody);
 
         // Cùng token trên đúng host B vẫn bình thường (chứng minh token hợp lệ, không phải token hỏng).
         var onB = await GetSiteAsync(hostB, token: shopBToken);
@@ -225,6 +222,8 @@ public sealed class PublishedSiteTenantIsolationTests(MediaApiFactory factory) :
         var extra = (await created.Content.ReadFromJsonAsync<PageDto>(ShopApiHarness.Json))!;
         await SaveHomeAsync(owner, shopId, WebsiteHandlerKit.TreeWith(WebsiteHandlerKit.RichText("c_mark1", $"<p>{marker}</p>")));
         await PublishAsync(owner, shopId);
+        var homeId = (await (await _h.SendAsync(HttpMethod.Get, Site(shopId) + "/pages", owner.Token))
+            .Content.ReadFromJsonAsync<List<PageDto>>(ShopApiHarness.Json))!.Single(p => p.Slug == "").Id;
 
         var before = await GetSiteAsync(host);
         var etag = before.Headers.ETag!.Tag;
@@ -242,6 +241,8 @@ public sealed class PublishedSiteTenantIsolationTests(MediaApiFactory factory) :
 
         // PUT draft
         await SaveHomeAsync(owner, shopId, WebsiteHandlerKit.TreeWith(WebsiteHandlerKit.RichText("c_mark1", "<p>đã sửa sau publish</p>")));
+        var liveDraft = await JsonOf(await _h.SendAsync(HttpMethod.Get, $"{Site(shopId)}/pages/{homeId}/draft", owner.Token));
+        Assert.Contains("đã sửa sau publish", liveDraft.GetProperty("tree").GetRawText()); // PUT có hiệu lực thật
         await AssertUnchanged("PUT draft");
 
         // PUT theme
@@ -251,16 +252,22 @@ public sealed class PublishedSiteTenantIsolationTests(MediaApiFactory factory) :
         var putTheme = await _h.SendRawJsonAsync(HttpMethod.Put, Site(shopId) + "/theme", owner.Token,
             $"{{\"presetKey\":null,\"tokens\":{tokens.ToJsonString()}}}");
         Assert.Equal(HttpStatusCode.OK, putTheme.StatusCode);
+        var liveTheme = await JsonOf(await _h.SendAsync(HttpMethod.Get, Site(shopId) + "/theme", owner.Token));
+        Assert.Equal("#ff0000", liveTheme.GetProperty("tokens").GetProperty("colors").GetProperty("primary").GetString());
         await AssertUnchanged("PUT theme");
 
         // PUT page: đổi SEO rồi tắt trang
         var seo = await _h.SendJsonAsync(HttpMethod.Put, $"{Site(shopId)}/pages/{extra.Id}", owner.Token,
             new { slug = (string?)null, title = "Tiêu đề mới", seoTitle = "SEO mới", seoDescription = "mô tả mới", noIndex = true, isEnabled = true });
         Assert.Equal(HttpStatusCode.OK, seo.StatusCode);
+        var seoLive = await JsonOf(seo);
+        Assert.Equal("SEO mới", seoLive.GetProperty("seoTitle").GetString());
+        Assert.True(seoLive.GetProperty("noIndex").GetBoolean());
         await AssertUnchanged("PUT page (SEO)");
         var disable = await _h.SendJsonAsync(HttpMethod.Put, $"{Site(shopId)}/pages/{extra.Id}", owner.Token,
             new { slug = (string?)null, title = "Tiêu đề mới", seoTitle = "SEO mới", noIndex = true, isEnabled = false });
         Assert.Equal(HttpStatusCode.OK, disable.StatusCode);
+        Assert.False((await JsonOf(disable)).GetProperty("isEnabled").GetBoolean());
         await AssertUnchanged("PUT page (tắt trang)");
 
         // DELETE page

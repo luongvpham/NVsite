@@ -369,7 +369,7 @@ lúc viết là lỗi test (xem dưới).
 - `GetPublishedSiteHandlerTests` (4 ca, không Docker): `AudienceKind` Main/Portal (kể cả có `ShopId`), Shop mà `ShopId` null, Main không `ShopId` ⇒ `NotFoundException`.
   Mọi phụ thuộc là `null!` nên handler đi qua cổng audience là NRE ⇒ test đỏ (M2 của review T6 đóng).
 - `ArchitectureTests/PublishedSiteBoundaryTests`: quét `GetPublishedSite/*.cs` (sau khi bỏ comment) cấm `PageDrafts`, `Pages`, `Themes`, `IgnoreQueryFilters`; có guard
-  "tìm thấy ≥ 2 file" + theory chuỗi cấm cài sẵn (5 ca, gồm xuống dòng / khoảng trắng trước `(`) + ca chứng minh comment không bị bắt ⇒ test không mù.
+  "tìm thấy ≥ 2 file" + theory chuỗi cấm cài sẵn (8 ca, gồm tên kiểu `Page`/`Theme`, xuống dòng / khoảng trắng trước `(`) + ca chứng minh comment không bị bắt ⇒ test không mù.
 
 **Lệch có chủ đích / giả định tự đặt** (người rà ở pha 6)
 - **"Token Owner của shop B" thành hai token.** Owner đăng nhập thường nhận token global ⇒ endpoint bỏ qua, y hệt không token (test). Token audience `shop:{B}` lấy bằng
@@ -384,9 +384,20 @@ lúc viết là lỗi test (xem dưới).
 - Test kiến trúc dùng regex `\bPages\b` thô: nếu sau này handler có biến/property tên `Pages` hợp lệ (vd. đọc `snapshot.pages` vào record) sẽ đỏ giả — khi đó đổi tên hoặc
   nới có chủ đích, đừng bỏ test.
 
+**Theo dõi từ `change-reviewer` T7 (0 Critical, 4 Important, 7 Minor)**
+- I1 đã sửa một phần: regex kiến trúc nay bắt cả tên kiểu (`Page`/`PageDraft`/`Theme`). **Còn hở, chấp nhận:** handler gọi service nằm ngoài thư mục `GetPublishedSite/`
+  hoặc `partial` sang thư mục khác không bị bắt (test quét văn bản, không quét phụ thuộc); `//` trong chuỗi ("http://") làm phần sau dòng coi là comment.
+- I2 (**theo dõi, chưa ai làm**): không có `UseForwardedHeaders` trong src nên `X-Forwarded-Host`/`Forwarded` bị bỏ qua mặc định — ca R1 chỉ là hồi quy "đừng tin chúng".
+  Khi hạ tầng (Caddy) bật ForwardedHeaders phải thêm test với `KnownProxies` thật.
+- I3: ca R11 chứng minh "snapshot độc lập với bảng media" (handler không đọc `media_asset`), không kiểm hành vi domain; xoá mềm làm bằng SQL `is_deleted`. Vế `references` cảnh báo ở T8.
+- I4 đã sửa: R3 đọc lại giá trị live sau mỗi PUT (draft, theme, SEO, tắt trang) để chứng minh PUT không phải no-op.
+- M1 đã xoá hai `DoesNotContain` vô nghĩa trên body 403. Còn lại: M2 (hai `DoesNotContain` trên chuỗi Redis thừa so với `Assert.Equal`), M3 (NRE thay vì lỗi assert nếu con trỏ chưa ghi),
+  M4 (chưa có ca Host viết hoa/port/dấu chấm cuối).
+- M7: "giống từng byte" ở R3 là trên response (đã parse + serialize lại), không phải chuỗi jsonb lưu trong DB.
+
 **Kiểm chứng** (Docker CÓ)
 - Test T7 viết sau code (plan: "code đã có từ T1–T6") nên không có pha RED theo nghĩa TDD; RED-do-lỗi-test: R11 đỏ 2 lần (clone không bị xoá theo library; API xoá clone ⇒ 404) → sửa test như trên.
   Test kiến trúc kiểm bằng theory chuỗi cấm cài sẵn thay cho mutation trên code thật.
-- `dotnet test backend/vsite.sln` đầy đủ: ComponentSchemaTests 12/12, ArchitectureTests 19/19, IntegrationTests 883 passed / 1 skipped (skip có sẵn: `ShopEndpointTests` chờ module Listing).
+- `dotnet test backend/vsite.sln` đầy đủ: ComponentSchemaTests 12/12, ArchitectureTests 22/22, IntegrationTests 883 passed / 1 skipped (skip có sẵn: `ShopEndpointTests` chờ module Listing).
 
 **Chưa làm (các task sau)**: references (T8), docs module + contract-sync (T9). Theo dõi T6 còn mở: I1/I2 (race đọc↔publish), I3 (giá trị lạ trong con trỏ), M3, M4, M6.

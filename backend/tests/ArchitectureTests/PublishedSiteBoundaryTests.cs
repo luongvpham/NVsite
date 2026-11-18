@@ -11,12 +11,16 @@ namespace ArchitectureTests;
 /// </summary>
 public sealed class PublishedSiteBoundaryTests
 {
-    private static readonly string[] Forbidden = ["PageDrafts", "Pages", "Themes", "IgnoreQueryFilters"];
+    // Cả tên DbSet (PageDrafts/Pages/Themes) lẫn tên kiểu (Set<Page>(), .Include(w => w.Theme)).
+    private static readonly string[] Forbidden = ["PageDrafts?", "Pages?", "Themes?", "IgnoreQueryFilters"];
 
     private static readonly Regex Comments = new(@"//[^\n]*|/\*.*?\*/", RegexOptions.Compiled | RegexOptions.Singleline);
 
     private static IReadOnlyList<string> Violations(string source) =>
-        Forbidden.Where(token => Regex.IsMatch(Comments.Replace(source, string.Empty), $@"\b{token}\b")).ToList();
+        Forbidden.Where(token => Regex.IsMatch(Comments.Replace(source, string.Empty), $@"\b{token}\b"))
+            .Select(token => token.Replace("?", string.Empty)).ToList();
+
+    // `PageDrafts?` khớp cả PageDraft lẫn PageDrafts; theory dưới đây khẳng định theo tên đã bỏ `?` (PageDrafts, Pages, Themes, ...).
 
     private static string HandlerDirectory() =>
         Path.Combine(FindRepoRoot(), "backend", "src", "Vsite.Application", "Website", "Queries", "GetPublishedSite");
@@ -40,6 +44,9 @@ public sealed class PublishedSiteBoundaryTests
     [InlineData("var d = await db.PageDrafts.ToListAsync();", "PageDrafts")]
     [InlineData("var p = db.Pages.Where(x => x.IsEnabled);", "Pages")]
     [InlineData("var t = db\n    .Themes\n    .FirstAsync();", "Themes")]
+    [InlineData("db.Set<PageDraft>().Count()", "PageDrafts")]
+    [InlineData("db.Set<Page>().Count()", "Pages")]
+    [InlineData("db.Websites.Include(w => w.Theme)", "Themes")]
     [InlineData("db.SitePublications.IgnoreQueryFilters()", "IgnoreQueryFilters")]
     [InlineData("db.Websites\n  .IgnoreQueryFilters ()", "IgnoreQueryFilters")]
     public void Scanner_catches_planted_forbidden_tokens(string source, string expected)
