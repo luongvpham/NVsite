@@ -299,3 +299,45 @@ contract-sync (T9). Theo dõi T4 vẫn còn nguyên (đặc biệt: T6 giữ TTL
 - Thiếu test rollback với draft trộn sạch/bẩn và với trang đã xoá mềm (hành vi đã có, chưa có test khoá).
 - Publish và rollback chạy song song: `Website` không có concurrency token → last-write-wins, cache xoá sau cả hai, trạng thái vẫn nhất quán. Chấp nhận.
 - Có thể thay nạp entity bản đích bằng `Select` cột + `PointTo(Guid)` nếu snapshot lớn gây chậm; test cache-failure nên dùng `using` thay tên đầy đủ (style).
+
+## T6
+
+Endpoint công khai `GET /api/site` (`getPublishedSite`) + con trỏ Redis thật (Bước 8b, S1, #108, #109). **Chạm contract** (route mới,
+`PublishedSiteDto`, `304`, header `ETag`/`Cache-Control`) — contract-sync gộp ở T9.
+
+**Thay đổi**
+- `ISitePointerCache` thêm `GetAsync`/`SetAsync` + `SitePointer(WebsiteStatus?, Guid?)` (`WebsiteStatus = null` ⇒ shop chưa có website).
+- `Vsite.Infrastructure/Website/SitePointerCache.cs` (mới) trên `IDistributedCache`, key `site:pointer:{shopId:N}`, TTL **5'** có website /
+  **1'** chưa có; JSON `{websiteStatus, publicationId}`; giá trị hỏng coi như hụt. `NoOpSitePointerCache` đã xoá, DI trỏ bản thật.
+- `Vsite.Application/Website/Queries/GetPublishedSite/` (mới) — handler theo plan T6 bước 1–8; **không** chạm `PageDrafts`/`Pages`/`Themes`,
+  không `IgnoreQueryFilters()`, không đọc tham số định danh nào (query `?shopId=`/`?host=` không được bind).
+- `Vsite.Api/Website/SiteEndpoints.cs` (mới, `AllowAnonymous`, `Produces 200/304/404`) + `api.MapSiteEndpoints()`.
+- Test: `PublishedSiteEndpointTests` (12 ca), `SitePointerCacheTests` (4 ca), `WebsiteHandlerKit.RecordingSitePointerCache` +
+  `ThrowingPointerCache` khớp interface mới; `ShopScopedRouteFilterTests` + 1 ca.
+
+**Lệch có chủ đích / giả định tự đặt** (người rà ở pha 6)
+- **`ShopScopedRouteFilterTests` được nới đúng một ngoại lệ.** Plan bắt `GET /api/site` thuộc document OpenAPI "website", nhưng test #100
+  ép MỌI endpoint của document đó là Owner-only → đỏ. Ngoại lệ chỉ khớp: đường dẫn `/api/site`, method `GET` duy nhất, **và** có `AllowAnonymous`;
+  thêm test chứng minh cùng đường dẫn thiếu `AllowAnonymous`, hoặc method khác, hoặc route Owner có `AllowAnonymous` vẫn bị bắt.
+- `If-None-Match: *` cũng cho 304 (RFC 9110); plan chỉ nói `W/` và danh sách dấu phẩy. Response `Suspended` không có ETag nên không bao giờ 304.
+- **304 không đọc `snapshot` và không gọi `IShopLogoReader`** (ETag đã gồm `Shop.UpdatedAt` nên đổi logo/tên làm ETag đổi). Header `ETag` + `Cache-Control`
+  vẫn có trên 304.
+- Con trỏ cũ (cache trỏ bản không còn): ETag tính từ `publicationId` trong con trỏ nên client giữ ETag của bản đó vẫn nhận 304 tới hết TTL (≤5').
+  Chỉ xảy ra khi bản bị xoá cứng (chưa có đường nào làm vậy; prune là 8d) — chấp nhận, TTL là lưới an toàn.
+- Cache Redis lỗi (`GetAsync`/`SetAsync` ném) thì request công khai lỗi 500 — không có fallback sang DB. Middleware tenant đã phụ thuộc Redis
+  cho mọi request (`ShopLookupService`) nên không thêm độ tin cậy nếu chỉ bọc ở đây.
+- Token **của shop khác** (audience `shop:{B}`) gửi trên Host shop A bị `ShopMembershipValidationMiddleware` chặn `403 TOKEN_SHOP_MISMATCH` TRƯỚC khi tới
+  endpoint (hành vi có sẵn, fail-closed, không lộ bản của B). Token global (loại login thường) thì kết quả y hệt không token — có test.
+- `Shop.UpdatedAt` null (chưa từng sửa) dùng `CreatedAt` cho ETag.
+- Thêm ngoài checklist: con trỏ cũ tự chữa (cache trỏ bản không tồn tại → xoá, đọc DB đúng một lần); test TTL qua spy `IDistributedCache`; `www.` host → 404.
+- **Redis thật** được dùng trong test (`MediaApiFactory` có Redis Testcontainers) — không phải in-memory.
+
+**Kiểm chứng** (Docker CÓ)
+- TDD: test viết trước, đỏ vì thiếu kiểu (biên dịch) → hiện thực → 2 ca đỏ do test gọi sai PUT thay PATCH `/api/shops/{id}` (lỗi test, sửa) → 18/18.
+- `ShopScopedRouteFilterTests` đỏ sau khi thêm route (xem lệch ở trên) → sửa → xanh.
+- `dotnet test backend/vsite.sln` đầy đủ: ComponentSchemaTests 12/12, ArchitectureTests 12/12, IntegrationTests 871 passed / 1 skipped (skip có sẵn:
+  `ShopEndpointTests` chờ module Listing).
+
+**Chưa làm (các task sau)**: test isolation theo Host + bất biến + test kiến trúc quét handler (T7 — R1, R3, R11), references (T8), docs module +
+contract-sync (T9; nêu `304`, header `ETag`/`Cache-Control`, `snapshot` schema rỗng ở `contract-diff.md`). `brief.md` (8c): SSR gọi với header `Host` gốc,
+gửi lại `If-None-Match`, `Suspended` không có ETag.

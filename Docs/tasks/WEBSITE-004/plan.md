@@ -133,12 +133,12 @@ Trần 50 bản mới nhất (job prune 20 bản là 8d). Chưa có website → 
 
 ```text
 1. Trình duyệt mở {slug}.vsite.vn → SSR apps/web lấy host từ URL        ❌ 8c
-2. SSR gọi GET /api/site, header Host = host gốc, If-None-Match?         ❌ T6
+2. SSR gọi GET /api/site, header Host = host gốc, If-None-Match?         ✅ T6
 3. Middleware suy ShopId + AudienceKind = Shop                           ✅ TenantResolutionMiddleware.cs:42-47
-4. Handler: audience phải là Shop, nếu không → 404                       ❌ T6
-5. Đọc Shop (name, status, logo, updatedAt) — một query theo khoá chính  ❌ T6
-6. Đọc con trỏ { websiteStatus, publicationId } từ Redis, hụt thì DB     ❌ T6
-7. So ETag → 304; không khớp thì đọc snapshot (Global Filter) → 200      ❌ T6
+4. Handler: audience phải là Shop, nếu không → 404                       ✅ T6
+5. Đọc Shop (name, status, logo, updatedAt) — một query theo khoá chính  ✅ T6
+6. Đọc con trỏ { websiteStatus, publicationId } từ Redis, hụt thì DB     ✅ T6
+7. So ETag → 304; không khớp thì đọc snapshot (Global Filter) → 200      ✅ T6
 ```
 
 - `404 SITE_NOT_FOUND` cho mọi trường hợp "không có site": host không phải shop, host `admin`/host chính, shop
@@ -532,7 +532,7 @@ public interface ISitePointerCache
 `ProducesProblem(404)`. Đặt header `ETag`, `Cache-Control: no-cache`. Đăng ký `api.MapSiteEndpoints()` cạnh
 [Program.cs:198](../../../backend/src/Vsite.Api/Program.cs#L198).
 
-- [ ] Test trước: `PublishedSiteEndpointTests.cs` (HTTP, đặt `request.Headers.Host = "{slug}.vsite.local"`)
+- [x] Test trước: `PublishedSiteEndpointTests.cs` (HTTP, đặt `request.Headers.Host = "{slug}.vsite.local"`)
   - đã publish → 200, `status = Published`, `publication.version` đúng, `shop.name` đúng, có `ETag`, `Cache-Control: no-cache`
   - gửi lại với `If-None-Match` = ETag → 304 không body; ETag khác → 200
   - host `admin.vsite.local`, host chính, slug không tồn tại → `404 SITE_NOT_FOUND` (R2)
@@ -542,7 +542,7 @@ public interface ISitePointerCache
   - đổi tên shop qua `PUT /api/shops/{id}` → ETag đổi, `shop.name` mới, `snapshot` y nguyên (R12)
   - gọi không token → 200 (không 401); kèm token bất kỳ → kết quả như nhau
   - `ApiRoutePrefixTests` xanh (có `operationId`, dưới `/api`)
-- [ ] FAIL → hiện thực → PASS · Commit `feat(website): endpoint công khai GET /api/site theo Host + ETag (#108, #109, WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS · Commit `feat(website): endpoint công khai GET /api/site theo Host + ETag (#108, #109, WEBSITE-004)`
 
 ### T7: Tenant isolation theo Host + tính bất biến
 
