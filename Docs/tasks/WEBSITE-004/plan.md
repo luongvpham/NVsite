@@ -490,14 +490,14 @@ mọi draft của website `MarkDirty()`, `SaveChanges`, `InvalidateAsync`.
 Route: `GET …/publications` (`listPublications`, `200 401 403 404`) ·
 `POST …/publications/{publicationId:guid}/rollback` (`rollbackPublication`, `200 401 403 404`).
 
-- [ ] Test trước (thêm vào `PublishWebsiteHandlerTests.cs` + `PublicationEndpointTests.cs`)
+- [x] Test trước (thêm vào `PublishWebsiteHandlerTests.cs` + `PublicationEndpointTests.cs`)
   - publish 3 lần → danh sách 3 mục giảm dần, đúng một `isCurrent`
   - rollback về bản 1 → `CurrentPublicationId` = bản 1; nội dung mọi `PageDraft.Tree` không đổi; mọi draft `IsDirty = true` (G7); không sinh bản mới
   - rollback bản đang chạy → 200, `UpdatedAt` của website không đổi
   - rollback `publicationId` của shop B qua route shop A → `404 PUBLICATION_NOT_FOUND`, con trỏ không đổi (R4)
   - id ngẫu nhiên → 404; `Customer` → 403; chưa có website → `404 WEBSITE_NOT_FOUND`
   - publish sau rollback → version = max + 1 (không tái dùng số)
-- [ ] FAIL → hiện thực → PASS · Commit `feat(website): danh sách bản publish + rollback (WEBSITE-004)`
+- [x] FAIL → hiện thực → PASS · Commit `feat(website): danh sách bản publish + rollback (WEBSITE-004)`
 
 ### T6: Endpoint công khai `GET /api/site` + con trỏ Redis
 

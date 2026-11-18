@@ -261,3 +261,35 @@ plan §5), không chạy ở bước này.
 
 **Chưa làm (các task sau)**: list/rollback (T5), `GET /api/site` + con trỏ Redis thật thay no-op (T6), isolation/bất biến
 (T7), references (T8), docs module + contract-sync (T9). `brief.md`: FE nạp lại version draft sau publish (R9) — viết sau Gate 1.
+
+## T5
+
+Danh sách bản + rollback: `GET /api/shops/{shopId}/website/publications` (`listPublications`) và
+`POST …/publications/{publicationId}/rollback` (`rollbackPublication`) (Bước 8b, S1). **Chạm contract** (2 route mới, dùng lại
+`PublicationDto`) — contract-sync gộp ở T9.
+
+**Thay đổi**
+- `Vsite.Application/Website/Queries/ListPublications/` (mới) — `Take(50)` theo `Version` giảm dần, chiếu cột tường minh nên
+  **không kéo `Snapshot`**; `isCurrent` so với `Website.CurrentPublicationId`. Chưa có website → `WEBSITE_NOT_FOUND`.
+- `Vsite.Application/Website/Commands/RollbackPublication/` (mới) — tìm bản bằng `Id + ShopId + WebsiteId` trong một query
+  (`PUBLICATION_NOT_FOUND`); đã là current → trả luôn, không ghi; còn lại `Website.PointTo` + `MarkDirty` các draft đang sạch,
+  một `SaveChanges`, rồi `ISitePointerCache.InvalidateAsync` (lỗi xoá cache sau commit chỉ log, như publish).
+- `Vsite.Api/Website/WebsiteEndpoints.cs` — hai route, `RequireGlobalScope` + `RequireOwner` (#100).
+- Test: `PublishWebsiteHandlerTests` (+10 ca), `PublicationEndpointTests` (+4 ca), `WebsiteHandlerKit` (`ListPublications`, `Rollback`).
+
+**Lệch có chủ đích / giả định tự đặt** (người rà ở pha 6)
+- Rollback có thêm `409 ROLLBACK_CONFLICT` (plan chỉ liệt kê 200/401/403/404): nếu draft bị lưu giữa lúc đọc và lúc ghi cờ
+  (`xmin` lệch) thì báo xung đột thay vì 500. Khai `409` trong OpenAPI — nêu ở `contract-diff.md` (T9). Chưa có test cho nhánh này.
+- Chỉ draft đang **sạch** bị ghi khi rollback (draft đã bẩn giữ nguyên) — kết quả quan sát được giống "mọi draft `IsDirty = true`".
+- Draft của trang đã xoá mềm không bị đụng (lọc qua `Page` thuộc website).
+- Rollback nạp cả entity bản đích (có `Snapshot`, một bản) vì `Website.PointTo` nhận entity.
+- Rollback về bản đang chạy: không ghi, không gọi `InvalidateAsync`.
+
+**Kiểm chứng** (Docker CÓ)
+- TDD: handler test đỏ vì thiếu kiểu (biên dịch); 4 test HTTP đỏ (405/404) trước khi thêm route → xanh.
+- `PublishWebsiteHandlerTests|PublicationEndpointTests|ShopScopedRouteFilterTests|ApiRoutePrefixTests` 47/47.
+- `dotnet test backend/vsite.sln` đầy đủ: ComponentSchemaTests 12/12, ArchitectureTests 12/12, IntegrationTests 853 passed / 1 skipped
+  (skip có sẵn: `ShopEndpointTests` chờ module Listing).
+
+**Chưa làm (các task sau)**: `GET /api/site` + con trỏ Redis thật (T6), isolation/bất biến (T7), references (T8), docs module +
+contract-sync (T9). Theo dõi T4 vẫn còn nguyên (đặc biệt: T6 giữ TTL con trỏ 5').
