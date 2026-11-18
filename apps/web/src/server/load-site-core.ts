@@ -1,5 +1,6 @@
 import type { SiteSnapshot } from '@vsite/builder-components';
 import { SiteDataError, SiteFetchError, SiteResultKind, type SiteResult, type SiteShop } from './site-client';
+import { selectPage } from '../lib/select-page';
 import { resolveSiteHost } from './site-host';
 
 /**
@@ -43,7 +44,7 @@ export type SiteLoaderData =
       readonly shop: SiteShop;
       readonly snapshot: SiteLoaderSnapshot;
       readonly publishedAt: string;
-      /** Path request (bắt đầu bằng `/`), CHƯA khớp trang — T5 chọn trang theo slug. */
+      /** Path request (bắt đầu bằng `/`); `selectPage(snapshot, path)` cho biết trang nào (không khớp → status 404). */
       readonly path: string;
       /** Năm UTC theo đồng hồ server, tính một lần (#23, R8). */
       readonly year: number;
@@ -103,7 +104,8 @@ export async function loadSiteForHost(rawHost: string, path: string, deps: LoadS
     case SiteResultKind.Suspended:
       return shop(503, { kind: SiteLoaderKind.Suspended, shop: result.shop });
     case SiteResultKind.Site:
-      return shop(200, {
+      // T5: không có trang khớp path → 404 ngay ở server; data vẫn mang site để vẽ NotFound trong layout.
+      return shop(selectPage(result.snapshot, path).kind === 'page' ? 200 : 404, {
         kind: SiteLoaderKind.Site,
         shop: result.shop,
         snapshot: result.snapshot as SiteLoaderSnapshot, // chỉ đổi kiểu, dữ liệu là JSON

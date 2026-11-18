@@ -16,8 +16,8 @@ import { SiteDataError, SiteFetchError, SiteResultKind, type SiteResult } from '
 
 const ROOT = 'vsite.vn';
 const SHOP = { name: 'Spa ABC', logoUrl: null };
-// Lõi không đọc snapshot (T5 chọn trang) — đối tượng thuần là đủ để kiểm truyền nguyên vẹn.
-const SNAPSHOT = { schemaVersion: 1, pages: [{ id: 'p_0001', slug: '' }] } as unknown as SiteSnapshot;
+// Lõi chỉ đọc pages (slug/systemType) để chọn trang (T5) — đối tượng thuần là đủ để kiểm truyền nguyên vẹn.
+const SNAPSHOT = { schemaVersion: 1, pages: [{ id: 'p_0001', slug: '', systemType: null }, { id: 'p_0002', slug: 'lien-he', systemType: 'Contact' }] } as unknown as SiteSnapshot;
 const PUBLISHED_AT = '2026-11-01T10:00:00+00:00';
 const SECRET = 'http://10.0.0.5:5270/api/site';
 
@@ -142,5 +142,34 @@ describe('loadSiteForHost — lỗi (R5): status đúng, log ở server, loader 
     expect(JSON.stringify(r)).not.toContain('10.0.0.5');
     expect(logError).toHaveBeenCalledTimes(1);
     expect(logError.mock.calls[0]).toContain(err); // lỗi kèm cause đi vào log server
+  });
+});
+
+describe('loadSiteForHost — chọn trang (T5, A10, R6, R7)', () => {
+  const pg = (id: string, slug: string | null, systemType: string | null = null) => ({ id, slug, systemType });
+  const withPages = (...pages: ReturnType<typeof pg>[]): SiteResult => ({
+    ...siteResult,
+    snapshot: { schemaVersion: 1, pages } as unknown as SiteSnapshot,
+  });
+  const run = (r: SiteResult, path: string) => loadSiteForHost('spa-abc.vsite.vn', path, deps(r).d);
+
+  it('có trang khớp → 200', async () => {
+    expect((await run(withPages(pg('h', ''), pg('c', 'lien-he')), '/lien-he')).status).toBe(200);
+    expect((await run(withPages(pg('h', '')), '/')).status).toBe(200);
+  });
+  it('không khớp → 404 nhưng data vẫn mang site (để vẽ NotFound trong layout)', async () => {
+    const out = await run(withPages(pg('h', '')), '/khong-co');
+    expect(out.status).toBe(404);
+    expect(out.data.kind).toBe(SiteLoaderKind.Site);
+    expect(out.headers['Cache-Control']).toBe(SITE_HTML_CACHE_CONTROL);
+  });
+  it('R7: thiếu trang chủ → "/" 404', async () => {
+    expect((await run(withPages(pg('c', 'lien-he')), '/')).status).toBe(404);
+  });
+  it('R6: /media/x, /api/x, //, /%E0%A4%A → 404, không ném', async () => {
+    const r = withPages(pg('h', ''), pg('m', 'media'));
+    for (const p of ['/media/x', '/media', '/api/x', '//', '/%E0%A4%A']) {
+      expect((await run(r, p)).status, p).toBe(404);
+    }
   });
 });
