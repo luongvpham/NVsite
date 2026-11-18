@@ -324,10 +324,21 @@ export const Route = createFileRoute('/robots.txt')({
 11. **A9 đã đo:** snapshot ~3 KB; RSS dừng ở ~88 MB sau 1000 request với heap cap 48 MB. Chỉ đáng lo khi snapshot rất lớn.
 12. Điều hướng client tới trang NotFound: RPC `_serverFn` trả 404 (DevTools hiện dòng đỏ), client vẫn render đúng. `favicon.ico` 404 khi snapshot không có favicon: vô hại.
 13. Chưa kiểm Firefox/Safari; link `<a>` trong nội dung là reload đầy đủ, không qua router.
+14. **Không cache 404 ở FE** (review m4): flood `{rand}.{ROOT_DOMAIN}` → mỗi request một lần gọi BE (BE có negative cache 1'). Chấp nhận trước production; rate-limit ở Caddy khi lên production.
+15. **Canonical `encodeURI` trên path router đã decode** (review m5, `site-head.ts:31`): path chứa `%25` thành `%2525` trong canonical. Slug BE là ASCII nên gần như không xảy ra; sửa khi có slug ngoài ASCII.
+
+## Sửa sau review (Gate 2)
+
+- **C1** — Banner STATUS `DesignIdeal/05` (thêm WEBSITE-005 vào Tasks, Changelog trỏ file này, bỏ "render site công khai (8c)" khỏi "chưa code", anchor/năm © "đã code ở WEBSITE-005") + câu "Runtime đọc gì" ở §7 viết lại theo thực tế (GET /api/site theo Host, LRU theo host + ETag/304, HTML `private, no-cache`). 00-INDEX §2 sinh lại bằng `pnpm gen:doc-index`.
+- **I1 + m3** — `site-client.ts`: request `/api/site` có `timeout: SITE_FETCH_TIMEOUT_MS` (5000, tiêm được qua `deps.timeoutMs`), `maxRedirects: 0`, `proxy: false`. BE treo / 3xx → `SiteFetchError` → 502. Test bằng Node http server thật: server không trả lời (timeout 200 ms), 302 (không theo, đúng 1 request), `HTTP_PROXY` trỏ cổng chết vẫn tới BE.
+- **I2** — `eslint.config.mjs`: block riêng `apps/web/**` với `no-restricted-imports` — `paths` cấm theo tên mọi export runtime draft/editing của module website (`@vsite/api-sdk`: hàm, hook, query key/options, mutation options, schema Zod; `@vsite/api-sdk/mocks`: mock MSW của `website.msw`), giữ luật cấm `builder-core` + `apps/`, thêm cấm đi tắt `api-sdk/src/**`. Đã thử RED (file thăm dò: 4 import draft + builder-core bị chặn, `getPublishedSite`/`createApiClient`/`getSiteMock` không) rồi xoá.
+- **m1, m6** — `apps/web/CLAUDE.md`: mô tả chốt lint thật, timeout BE, cách chạy dev/build với `API_ORIGIN`/`ROOT_DOMAIN`, bảng Phạm vi ghi một dòng nhất quán.
+- **m2 — đã kiểm, ĐẠT, không nợ.** Build `b67e293`, `node .output` + BE stub, gọi `GET /_serverFn/<loadSite id>?payload=…` như client (kèm `x-tsr-serverFn`, `Sec-Fetch-Site: same-origin`): shop không tồn tại → 404, Suspended → 503, BE 500 → 502; cả ba có `Cache-Control: private, no-cache` + `x-tss-serialized: true`, body 502 chỉ `{kind:'error'}`. Thiếu `Sec-Fetch-Site`/`Origin` → 403 (CSRF guard đúng).
+- **m4, m5** — ghi theo dõi (mục 14, 15 ở trên).
 
 ## Kiểm tra
 
-- `pnpm --filter @vsite/web test`: **264 passed** (17 file); lint + typecheck sạch.
+- `pnpm --filter @vsite/web test`: **268 passed** (17 file, sau sửa review ở `b67e293`); lint + typecheck + build sạch. `pnpm lint` toàn repo: fail ở `@vsite/builder-components` (`meta/envelope-schema.ts:231-232` no-unused-vars) — có từ trước, fail y hệt với `eslint.config.mjs` của HEAD cũ, không thuộc task này.
 - `pnpm build && pnpm test` toàn repo: exit 0 (build 4/4, test 10/10; còn dòng nhiễu cũ `ReferenceError: module is not defined`, exit 0). Đo ở `db71a28`; `69e53b0` sau đó chạy lại package web.
 - `pnpm check:docs`: OK (20 cảnh báo cũ, không chặn).
 - Nghiệm thu tay: 7/7 bước ĐẠT (phần trên).

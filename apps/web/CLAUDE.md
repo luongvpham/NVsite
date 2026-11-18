@@ -40,7 +40,9 @@ Tenant resolve **chỉ theo Host**, theo thứ tự: custom domain → subdomain
 - **Host chỉ lấy trong server fn** bằng `getRequestHost({ xForwardedHost: false })`, rồi chuẩn hoá (lowercase, bỏ một dấu chấm cuối, bỏ cổng). `loadSite` chỉ nhận `path` làm input; server fn là endpoint RPC gọi được từ ngoài, nhận host qua input là mở cửa đọc shop bất kỳ. Không `X-Forwarded-Host`/`Forwarded`, không query/cookie.
 - **Chỉ host dạng `{label}.{ROOT_DOMAIN}`** (một nhãn, không reserved) mới gọi BE (`server/site-host.ts`); host khác (IP, IPv6, `a.b.`, custom domain) là platform/404, **0 request** tới BE. BE vẫn suy tenant theo nhãn đầu của Host (M4) nên FE là lớp chặn duy nhất.
 - **Forward Host bằng axios**: `createApiClient({ baseURL: API_ORIGIN, headers: { Host } })` cho từng request, `Host` = đúng giá trị đã chuẩn hoá (cũng là key LRU). `fetch`/undici **bỏ** header `Host` tự đặt, đừng đổi sang chúng. Không forward `Cookie`/`Authorization` của khách. ETag/304 và LRU ở `site-client.ts`; module có `API_ORIGIN`/LRU import `@tanstack/react-start/server-only`.
-- **Không đọc draft** (`05` §7): chỉ import `getPublishedSite` và type của nó từ `@vsite/api-sdk` (test cấm import hook draft/page).
+- **Không đọc draft** (`05` §7): từ `@vsite/api-sdk` chỉ import `createApiClient`, `getPublishedSiteResponse` (Zod) và type `PublishedShopDto`/`PublishedSite*`. Lint `no-restricted-imports` ở `eslint.config.mjs` (block `apps/web/**`) chặn theo tên mọi hàm/hook/query-key/mutation-options/schema Zod/mock MSW draft của module website (`getWebsite`, `listPages`, `getPageDraft`, `savePageDraft`, `updateTheme`, `publishWebsite`, `rollbackPublication`, `use*`…) và import đi tắt vào `api-sdk/src/**`. Orval sinh endpoint website mới → thêm tên vào `WEBSITE_DRAFT_SDK_NAMES`.
+- **Gọi BE có giới hạn**: `GET /api/site` timeout `SITE_FETCH_TIMEOUT_MS` (5 s), `maxRedirects: 0`, `proxy: false` (bỏ `HTTP(S)_PROXY` của env); timeout/3xx → `SiteFetchError` → 502.
+- **Chạy dev/build**: `pnpm --filter @vsite/web dev` tự nạp `apps/web/.env` vào `process.env` (đã kiểm: `API_ORIGIN`/`ROOT_DOMAIN` từ `.env` tới được server fn) — chép từ `.env.example`. Bản build `node .output/server/index.mjs` thì truyền qua env shell: `PORT=3000 API_ORIGIN=http://localhost:5270 ROOT_DOMAIN=vsite.local node .output/server/index.mjs`.
 - **Reserved path trên host shop**: đoạn đầu `media|api|assets|static` (từ `config/reserved-routes.json`, không phân biệt hoa/thường) → 404 chung, không gọi BE. `node .output` **không proxy** `/media` và `/api`: production phải route chúng sang BE ở Caddy.
 - **`src/start.ts`**: request middleware đưa status (503/502) và `Cache-Control` do server fn đặt vào HTML (router chỉ tự đặt 200/404/500; h3 bỏ header event ở response không ok). Khai `requestMiddleware` làm Start **bỏ** CSRF middleware mặc định, nên `csrfMiddleware` được thêm lại đứng đầu chuỗi: đừng xoá nó. Nợ ⛔ trước production: cookie `SameSite=Lax` chưa xử lý.
 - **Server route cho `.txt`/`.xml`**: tên file escape dấu chấm, `routes/robots[.]txt.ts`, `routes/sitemap[.]xml.ts`; handler `server: { handlers: { GET } }`.
@@ -101,8 +103,8 @@ contracts/openapi/*.json  ──pnpm gen:api (Orval)──→  packages/api-sdk/
 | | |
 |---|---|
 | ✅ Được ghi | `apps/web/**` · `packages/ui` · `packages/shared` · `packages/theme-engine` |
-| ⚠️ Ngoại lệ đã làm (WEBSITE-005) | `packages/builder-renderer` (anchor) · `packages/api-sdk/src/index.ts` (chỉ barrel export, không đụng `generated/**`) — mỗi lần mở rộng như vậy phải được duyệt trong plan |
-| ❌ Cấm ghi | `packages/api-sdk/**` (generated) · `backend/**` · `contracts/**` · `config/**` · `DesignIdeal/**` |
+| ⚠️ Chỉ khi plan duyệt | `packages/builder-renderer` · barrel `packages/api-sdk/src/index.ts` + `src/mocks.ts` (chỉ thêm export) — WEBSITE-005 đã duyệt và làm cả hai (anchor; export site) |
+| ❌ Cấm ghi | `packages/api-sdk/**` trừ hai file barrel trên · `backend/**` · `contracts/**` · `config/**` · `DesignIdeal/**` |
 
 ---
 
