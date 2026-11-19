@@ -21,4 +21,10 @@ describe('sameJson — so cấu trúc kiểu JSON', () => {
   it('key giá trị undefined coi như không có (JSON bỏ nó khi gửi)', () => {
     expect(sameJson({ a: 1, b: undefined }, { a: 1 })).toBe(true);
   });
+
+  it('như JSON.stringify: undefined trong mảng thành null; null khác key vắng', () => {
+    expect(sameJson([undefined], [null])).toBe(true);
+    expect(sameJson({ a: [1, undefined] }, { a: [1, null] })).toBe(true);
+    expect(sameJson({ a: null }, {})).toBe(false);
+  });
 });
