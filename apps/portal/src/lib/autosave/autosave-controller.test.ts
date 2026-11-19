@@ -46,7 +46,27 @@ function setup(initialVersion = 7) {
     store.getState().dispatch({ type: 'update', nodeId, path: ['title'], value });
   const titleOf = () => (store.getState().tree?.children[0]?.props as { title?: string } | undefined)?.title;
   const flushTimers = () => vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS);
-  return { store, save, fetchDraft, controller, edit, titleOf, flushTimers };
+  const initialTree = store.getState().tree as TreeEnvelope;
+  /** GET trả đúng cây đã lưu gần nhất (bản sao JSON, đảo thứ tự key) — như server sau publish (chỉ hạ isDirty). */
+  const echoSaved = (version: number) =>
+    fetchDraft.mockImplementation(() => {
+      const last = save.mock.calls.at(-1)?.[0] ?? initialTree;
+      return Promise.resolve({ version, tree: reverseKeys(JSON.parse(JSON.stringify(last))) as TreeEnvelope });
+    });
+  return { store, save, fetchDraft, controller, edit, titleOf, flushTimers, echoSaved };
+}
+
+/** Đảo thứ tự key mọi object (đệ quy) — để chắc phép so cây không phụ thuộc thứ tự key. */
+function reverseKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(reverseKeys);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .reverse()
+        .map(([k, v]) => [k, reverseKeys(v)]),
+    );
+  }
+  return value;
 }
 
 beforeEach(() => {
@@ -579,6 +599,7 @@ describe('R9 — nhường chỗ cho publish (prepareForPublish / finishPublish)
     edit('trong-luc-khoa');
     expect(controller.getState().status).toBe('unsaved');
     expect(controller.hasUnsavedChanges).toBe(true);
+    expect(vi.getTimerCount()).toBe(0); // không hẹn giờ PUT nào
     await flushTimers();
     await flushTimers();
     controller.retry();
@@ -587,10 +608,10 @@ describe('R9 — nhường chỗ cho publish (prepareForPublish / finishPublish)
   });
 
   it('gõ trong lúc PUT của prepare đang bay → prepare vẫn ok; phần gõ thêm chờ tới finishPublish', async () => {
-    const { save, fetchDraft, controller, edit, flushTimers } = setup(7);
+    const { save, controller, edit, flushTimers, echoSaved } = setup(7);
     const put = deferred<ReturnType<typeof ok>>();
     save.mockReturnValueOnce(put.promise).mockResolvedValueOnce(ok(21));
-    fetchDraft.mockResolvedValue({ version: 20, tree: heroTree('server') });
+    echoSaved(20);
     edit('a1');
     const pending = controller.prepareForPublish();
     edit('a2');
@@ -606,10 +627,10 @@ describe('R9 — nhường chỗ cho publish (prepareForPublish / finishPublish)
     expect(save.mock.calls[1]?.[1]).toBe(20);
   });
 
-  it('refreshVersion giữ cây: finishPublish lấy version từ GET, KHÔNG đè cây, giữ nguyên tham chiếu, vẫn "saved"', async () => {
-    const { save, fetchDraft, controller, edit, flushTimers, store, titleOf } = setup(7);
+  it('refreshVersion giữ cây: GET trả đúng cây đã lưu (khác thứ tự key) → dùng version của GET, KHÔNG đè cây, giữ tham chiếu', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers, store, titleOf, echoSaved } = setup(7);
     save.mockResolvedValueOnce(ok(8)).mockResolvedValueOnce(ok(31));
-    fetchDraft.mockResolvedValue({ version: 30, tree: heroTree('ban-server-khac') });
+    echoSaved(30);
     edit('cua-toi');
     await controller.prepareForPublish();
     const before = store.getState().tree;
@@ -629,10 +650,40 @@ describe('R9 — nhường chỗ cho publish (prepareForPublish / finishPublish)
     expect(save.mock.calls[1]?.[1]).toBe(30); // version của GET, không phải 8 → không 409
   });
 
+  it('W3 — GET trả cây KHÁC cây đã lưu (tab khác vừa lưu) → giữ version cũ, không đụng cây local; PUT sau sẽ 409', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers, store, titleOf } = setup(7);
+    save.mockResolvedValueOnce(ok(8)).mockResolvedValueOnce(ok(9));
+    fetchDraft.mockResolvedValue({ version: 30, tree: heroTree('tab-khac') });
+    edit('cua-toi');
+    await controller.prepareForPublish();
+    const before = store.getState().tree;
+
+    await controller.finishPublish();
+    expect(store.getState().tree).toBe(before);
+    expect(titleOf()).toBe('cua-toi');
+    expect(controller.getState().status).toBe('saved');
+
+    edit('sau-publish'); // vẫn mở khoá → autosave chạy
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save.mock.calls[1]?.[1]).toBe(8); // version cũ — BE sẽ 409 DRAFT_CONFLICT, dialog có sẵn lo
+  });
+
+  it('W3 — GET trả tree null (không đọc được) → giữ version cũ, mở khoá', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers } = setup(7);
+    save.mockResolvedValue(ok(8));
+    fetchDraft.mockResolvedValue({ version: 30, tree: null });
+    await controller.prepareForPublish();
+    await controller.finishPublish();
+    edit('sau');
+    await flushTimers();
+    expect(save.mock.calls[0]?.[1]).toBe(7);
+  });
+
   it('R1 — gõ trong lúc khoá → lưu NGAY sau finishPublish (không đợi debounce) bằng version của GET', async () => {
-    const { save, fetchDraft, controller, edit } = setup(7);
+    const { save, controller, edit, echoSaved } = setup(7);
     save.mockResolvedValue(ok(41));
-    fetchDraft.mockResolvedValue({ version: 40, tree: heroTree('server') });
+    echoSaved(40);
     await controller.prepareForPublish();
     edit('go-trong-luc-khoa');
 
@@ -644,12 +695,11 @@ describe('R9 — nhường chỗ cho publish (prepareForPublish / finishPublish)
     expect(controller.getState().status).toBe('saved');
   });
 
-  it('R2 — publish lỗi (422/409) vẫn finishPublish: lấy version rồi mở lại autosave', async () => {
+  it('finishPublish luôn GET rồi mở khoá (không phụ thuộc kết quả publish — R2 thật test ở F5)', async () => {
     const { save, fetchDraft, controller, edit, flushTimers } = setup(7);
     save.mockResolvedValue(ok(51));
-    fetchDraft.mockResolvedValue({ version: 7, tree: heroTree() }); // publish lỗi không ghi gì → version như cũ
+    fetchDraft.mockResolvedValue({ version: 7, tree: heroTree() });
     await controller.prepareForPublish();
-    // POST publish trả 422/409 ở tầng UI — controller không biết, chỉ được gọi finishPublish.
     await controller.finishPublish();
     expect(fetchDraft).toHaveBeenCalledTimes(1);
 
@@ -732,5 +782,114 @@ describe('R9 — nhường chỗ cho publish (prepareForPublish / finishPublish)
     await flushTimers();
     expect(save).toHaveBeenCalledTimes(1);
     expect(save.mock.calls[0]?.[1]).toBe(7); // GET bị bỏ sau dispose
+  });
+
+  it('W1 — prepare #2 khi finishPublish #1 còn chờ GET → chờ finish xong rồi chuẩn bị thật; publish #2 vẫn khoá và lấy version', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers, echoSaved } = setup(7);
+    const get1 = deferred<FetchedDraft>();
+    echoSaved(30);
+    fetchDraft.mockReturnValueOnce(get1.promise);
+    save.mockResolvedValueOnce(ok(21)).mockResolvedValueOnce(ok(31));
+
+    await controller.prepareForPublish();
+    edit('trong-khoa-1');
+    const finish1 = controller.finishPublish();
+    let settled = false;
+    const prepare2 = controller.prepareForPublish().then((r) => {
+      settled = true;
+      return r;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).toBe(false); // không trả ok ngay khi khoá đang được mở
+
+    get1.resolve({ version: 20, tree: heroTree() }); // = cây đã lưu (ban đầu)
+    await finish1;
+    await expect(prepare2).resolves.toEqual({ ok: true });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0]?.[1]).toBe(20);
+
+    edit('trong-khoa-2'); // publish #2 đang khoá
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(1);
+
+    await controller.finishPublish();
+    expect(fetchDraft).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save.mock.calls[1]?.[1]).toBe(30); // version của GET #2
+  });
+
+  it('W1 — finishPublish khi prepare còn đang chạy → chờ prepare, rồi finish thật (không kẹt khoá)', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers, echoSaved } = setup(7);
+    const put = deferred<ReturnType<typeof ok>>();
+    save.mockReturnValueOnce(put.promise).mockResolvedValueOnce(ok(41));
+    echoSaved(40);
+    edit('b');
+    const prepare = controller.prepareForPublish();
+    const finish = controller.finishPublish();
+    put.resolve(ok(8));
+    await expect(prepare).resolves.toEqual({ ok: true });
+    await finish;
+    expect(fetchDraft).toHaveBeenCalledTimes(1);
+
+    edit('sau'); // đã mở khoá
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save.mock.calls[1]?.[1]).toBe(40);
+  });
+
+  it('W1 — finishPublish khi prepare đang chạy mà prepare thất bại → không GET, không khoá', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers } = setup(7);
+    const put = deferred<ReturnType<typeof ok>>();
+    save.mockReturnValueOnce(put.promise).mockResolvedValueOnce(ok(8));
+    edit('b');
+    const prepare = controller.prepareForPublish();
+    const finish = controller.finishPublish();
+    put.reject({ status: 422, error_code: 'RICHTEXT_UNSAFE' });
+    await expect(prepare).resolves.toEqual({ ok: false, reason: 'invalid' });
+    await finish;
+    expect(fetchDraft).not.toHaveBeenCalled();
+    edit('sua');
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  it('W2 — dispose + start (remount) giữa lúc prepare chờ PUT → prepare cũ không PUT nữa, phiên mới không bị khoá', async () => {
+    const { save, controller, edit, flushTimers } = setup(7);
+    const first = deferred<ReturnType<typeof ok>>();
+    save.mockReturnValueOnce(first.promise).mockResolvedValue(ok(50));
+    edit('b');
+    await flushTimers();
+    edit('b-them');
+    const pending = controller.prepareForPublish();
+    controller.dispose();
+    controller.start();
+    await vi.advanceTimersByTimeAsync(0);
+    first.resolve(ok(8));
+    await expect(pending).resolves.toEqual({ ok: false, reason: 'error' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1); // prepare cũ không gửi PUT thứ hai
+
+    edit('phien-moi'); // phiên mới: không khoá → autosave bình thường
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(2);
+    await expect(controller.prepareForPublish()).resolves.toEqual({ ok: true }); // khoá mới thật, không phải khoá sót
+  });
+
+  it('W2 — dispose + start giữa lúc finishPublish chờ GET → GET cũ không đổi version, không mở/khoá phiên mới', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers } = setup(7);
+    const get = deferred<FetchedDraft>();
+    fetchDraft.mockReturnValueOnce(get.promise);
+    save.mockResolvedValue(ok(8));
+    await controller.prepareForPublish();
+    const pending = controller.finishPublish();
+    controller.dispose();
+    controller.start();
+    get.resolve({ version: 99, tree: heroTree() });
+    await expect(pending).resolves.toBeUndefined();
+    edit('c');
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0]?.[1]).toBe(7);
   });
 });
