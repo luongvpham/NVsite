@@ -30,20 +30,28 @@ trên `master`), rồi đánh dấu N1–N5 "Đã promote", thêm P12–P16, c�
 - `pnpm gen:api`: chỉ thêm `src/generated/index.ts` + `mocks.ts`, mọi file generated khác không đổi.
 - `node --test tools/docs/lib/doc-checks.test.mjs`: 10/10 (13/13 sau review). `check:docs` xanh trên repo hiện tại
   (122 quyết định). Thử thật rule (a) bằng một changelog tạm → fail đúng thông báo, đã xoá.
-- `pnpm turbo run test --force`: mọi package xanh trừ 3 ca timeout ở `builder-components`, xem dưới.
+- `pnpm turbo run test --force`: 10/10 package xanh, 2/2 lần (sau khi sửa lỗi có sẵn, xem dưới). `pnpm typecheck` + `pnpm lint` xanh.
 - Không chạm `backend/` → không có nợ Docker (`Docs/DOCKER-TEST-DEBT.md` không đổi).
 
-## Phát hiện ngoài phạm vi — chưa sửa
+## Lỗi có sẵn trên `master` — đã trace và sửa trong nhánh này
 
-1. **`pnpm typecheck` trên `master` đỏ ở `apps/portal`** (có từ trước nhánh này, cùng loại lỗi với N1):
-   - `apps/portal/src/components/media/media-library-picker.tsx:27` — `describeReference` không phủ các
-     `MediaReferenceKind` mới của WEBSITE-004 (`d592df9`) → trả `undefined`, UI cảnh báo xoá in sai.
-   - `apps/portal/src/routes/-website.test.tsx:17` — fixture thiếu `currentPublicationId` (bắt buộc từ `d592df9`).
-   Lỗi 1 là bug sản phẩm (câu chữ cho từng loại tham chiếu cần người chọn) → đề nghị một task lane A riêng.
-   CI job `fe-tests` có bước `pnpm typecheck`, nên PR này cũng sẽ đỏ ở bước đó cho tới khi sửa.
-2. **`builder-components` `tests/gen-registry.test.ts` timeout khi chạy song song** (3 ca nhóm
-   `tree-rules.json`, timeout mặc định 5 s, dòng 306, 319, 330). Chạy riêng package thì 4/5 lần xanh. Không do
-   diff này (không chạm test hay generator). Đề nghị nâng timeout cho nhóm đó hoặc dùng chung một lần sinh.
+Người yêu cầu sửa luôn (2026-11-19) để session sau khỏi tốn token dò lại nguyên cớ.
+
+1. **`pnpm typecheck` đỏ ở `apps/portal`** — nguyên cớ: WEBSITE-004 (`d592df9`) thêm 4 `MediaReferenceKind`
+   (`SitePublication`, `PageOgImage`, `WebsiteOgImage`, `WebsiteFavicon`) và `WebsiteDto.currentPublicationId`
+   bắt buộc, portal không theo; CI không bắt vì lint đã đỏ sẵn (N1).
+   - `media-library-picker.tsx` `describeReference`: phủ đủ 6 loại → trước đây 4 loại mới in **dòng trống**
+     trong cảnh báo xoá ảnh. Giữ switch không `default` để kind mới sau này làm `typecheck` đỏ ngay.
+   - `-website.test.tsx`: fixture thêm `currentPublicationId: null`.
+   - Test mới `media-library-picker.test.tsx` "4 loại tham chiếu của WEBSITE-004": đỏ trước sửa, xanh sau.
+2. **`gen-registry.test.ts` timeout khi `turbo test` chạy song song** — nguyên cớ: `readTreeRules()` spawn
+   `npx tsx scripts/gen-registry.ts` ở **mỗi** test (7 lần, 2–7 s/lần khi máy bận), 3 test cuối không khai
+   timeout → vượt 5 s mặc định. Sửa: sinh một lần trong `beforeAll` (60 s); output chỉ phụ thuộc manifest.
+   `pnpm turbo run test --force`: trước đỏ 3 ca, sau xanh 2/2 lần.
+
+Còn lại (không sửa): chạy `typecheck lint test` của mọi package **cùng lúc** (nặng hơn CI, vốn chạy tuần tự)
+thì 2 test portal chạm trần `findBy` 4 s (4073 ms) và test byte-identical của `gen-registry` vượt 60 s. Chỉ
+lộ ở mức tải đó; chạy như CI thì xanh.
 
 ## Giả định tôi đã tự đặt
 
@@ -67,7 +75,7 @@ trên `master`), rồi đánh dấu N1–N5 "Đã promote", thêm P12–P16, c�
 | W1 | Regex 3 chữ số nhận nhầm số PR (sẽ vượt #112), `&#123;`, anchor `a.md#105-x`, `color: #333` → `check:docs` fail giả | Sửa: lookbehind `(?<![\w&/.])` + bỏ tiền tố `PR`/`issue`/thuộc tính màu. +2 ca test, gồm ca vẫn phải bắt `(#21)`, `#89:` |
 | W2 | Không chỗ nào nhắc Gate 2 duyệt các dòng 🟡 | Sửa: khuôn §9 "Điểm cần anh quyết" thêm dòng `#N 🟡`; plan-template §11 thêm checkbox; burn ghi `#N` 🟡 vào `review.md` "Điểm cần anh quyết" |
 | W3 | `plan-task/SKILL.md` "chỉ khi người đã chốt" mâu thuẫn cột "Ai chốt"; ví dụ §4 lẫn | Sửa: viết lại ranh giới (người chốt → số thường; người uỷ quyền → số 🟡; không ai → hỏi); ví dụ §4 cho `#N` nhận cả ba giá trị |
-| W4 | Hai phát hiện ngoài phạm vi không ai theo dõi; CI của PR này sẽ đỏ ở `pnpm typecheck` | Ghi vào `DesignIdeal/00-INDEX.md` §4 "Nợ kỹ thuật". CI đỏ: **người quyết** (xem dưới) |
+| W4 | Hai phát hiện ngoài phạm vi không ai theo dõi; CI của PR này sẽ đỏ ở `pnpm typecheck` | Sau đó người yêu cầu sửa luôn → đã sửa cả hai (mục "Lỗi có sẵn trên `master`") |
 | W5 | Rule (a) bắt theo tên file → có thể nhồi Tasks vào banner, ngược hướng N15 | Giữ (giả định 1); rà ở mốc P13 |
 | S1 | Tag OpenAPI tên "model" rơi vào thư mục type | Sửa: `barrel.mjs` throw khi `model/` có `.msw`; +1 ca test |
 | S2 | Số burn cấp không trỏ nơi định nghĩa | Sửa: mẫu D{n} ghi "Định nghĩa tại" = `contract-diff-D{n}.md`, trả về "Số đã cấp" |
@@ -81,6 +89,4 @@ Sau sửa: `doc-checks.test.mjs` 13/13, `barrel.test.mjs` 6/6, `check:docs` + `g
 ## Theo dõi
 
 - P12–P16 ở bảng "Đã promote" của `improvement-proposals.md`, mỗi dòng có mốc rà lại.
-- Hai phát hiện ngoài phạm vi → `DesignIdeal/00-INDEX.md` §4 "Nợ kỹ thuật đã ghi nhận".
-- **CI của PR này sẽ đỏ** ở bước `pnpm typecheck` (phát hiện #1, có từ `master`) — trái với dòng mới
-  "CI của PR xanh" mà chính task này thêm. Cần người chọn: sửa portal trước rồi merge, hoặc merge kèm ngoại lệ ghi rõ.
+- Hai lỗi có sẵn trên `master` đã sửa trong nhánh (mục trên) — đã gỡ khỏi `00-INDEX` §4.
