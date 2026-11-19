@@ -35,6 +35,13 @@ export const NODE_ID_PATTERN = '^c_[A-Za-z0-9_-]{5,}$';
 
 type JsonSchemaObject = Record<string, unknown>;
 
+const SCHEMA_HEADER_KEYS: ReadonlySet<string> = new Set(['$schema', '$id', 'title']);
+
+/** Bỏ `$schema`/`$id`/`title` khi nhúng một schema độc lập vào `$defs` của schema gốc. */
+function withoutSchemaHeader(schema: JsonSchemaObject): JsonSchemaObject {
+  return Object.fromEntries(Object.entries(schema).filter(([key]) => !SCHEMA_HEADER_KEYS.has(key)));
+}
+
 function enumOf(values: readonly string[], what: string): [string, ...string[]] {
   const [first, ...rest] = values;
   if (first === undefined) throw new Error(`envelope-schema: tập giá trị '${what}' rỗng`);
@@ -228,8 +235,8 @@ export function buildSiteSnapshotJsonSchema(
   const treeSchema = buildTreeEnvelopeJsonSchema(locales);
   const tokensSchema = buildThemeTokensJsonSchema(themeConfig);
   // Nâng `node` của vỏ Tree lên `$defs` gốc; `treeEnvelope` giữ nguyên thân (children vẫn `$ref #/$defs/node`).
-  const { $defs: treeDefs = {}, $schema: _ts, $id: _ti, title: _tt, ...treeEnvelopeBody } = treeSchema;
-  const { $schema: _ks, $id: _ki, title: _kt, ...themeTokensBody } = tokensSchema;
+  const { $defs: treeDefs = {}, ...treeEnvelopeBody } = withoutSchemaHeader(treeSchema);
+  const themeTokensBody = withoutSchemaHeader(tokensSchema);
   const node = (treeDefs as JsonSchemaObject).node;
 
   const nullableString = { type: ['string', 'null'] };
