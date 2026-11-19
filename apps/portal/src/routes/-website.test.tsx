@@ -25,6 +25,7 @@ const website: WebsiteDto = {
   faviconAssetId: null,
   trackingSnippets: {},
   homePageId: 'p-home',
+  currentPublicationId: null,
 };
 
 function page(overrides: Partial<PageDto>): PageDto {

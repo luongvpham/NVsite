@@ -248,6 +248,41 @@ describe('MediaLibraryPicker (F3)', () => {
     expect(items.map((li) => li.textContent)).toEqual(['Logo shop', 'Trang Dịch vụ', 'Trang Giới thiệu']);
   });
 
+  it('xoá: 4 loại tham chiếu của WEBSITE-004 (#110) đều có câu riêng, không dòng nào trống', async () => {
+    server.use(
+      http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([asset('a1')]))),
+      http.get('*/api/shops/:shopId/media/usage', () => HttpResponse.json({ usedBytes: 0 })),
+      http.get('*/api/shops/:shopId/media/library/:assetId/references', () =>
+        HttpResponse.json({
+          references: [
+            { kind: 'WebsiteOgImage' },
+            { kind: 'WebsiteFavicon' },
+            { kind: 'PageOgImage', pageId: 'p-1', pageTitle: 'Dịch vụ' },
+            { kind: 'PageOgImage', pageId: 'p-2', pageTitle: null },
+            { kind: 'SitePublication', isCurrent: true },
+            { kind: 'SitePublication', isCurrent: false },
+          ],
+        }),
+      ),
+    );
+    renderWithQuery(
+      <MediaLibraryPicker shopId="shop-1" preset="800x800,cover" isOwner open onClose={vi.fn()} onSelect={vi.fn()} />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Xoá' }));
+
+    const confirm = await screen.findByRole('alertdialog');
+    const items = within(within(confirm).getByRole('list')).getAllByRole('listitem');
+    expect(items.map((li) => li.textContent)).toEqual([
+      'Ảnh chia sẻ mặc định của website',
+      'Biểu tượng website (favicon)',
+      'Ảnh chia sẻ của trang Dịch vụ',
+      'Ảnh chia sẻ của một trang',
+      'Website đang chạy',
+      'Bản website đã publish trước đây',
+    ]);
+  });
+
   it('xoá: reference PageDraft thiếu pageTitle → vẫn hiện "Một trang", không in "null"', async () => {
     server.use(
       http.get('*/api/shops/:shopId/media/library', () => HttpResponse.json(libraryPage([asset('a1')]))),
