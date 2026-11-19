@@ -34,6 +34,8 @@ TÀI LIỆU CÒN ĐÚNG KHÔNG — loại lỗi này không có test nào bắt,
 - File DesignIdeal mô tả thứ diff này làm đổi, mà dòng "> **STATUS:**" ở đầu file đó
   chưa cập nhật (vẫn ghi THIẾT KẾ — CHƯA CODE, hoặc chưa trỏ changelog)             → Critical
 - Quyết định người duyệt chốt ở Gate 1 mà chưa có dòng trong DesignIdeal/DECISIONS.md → Critical
+- Diff thêm dòng #N mới ở DECISIONS.md mà không có dấu người duyệt ("Người duyệt chốt
+  {ngày}", hoặc plan §4 "Ai chốt = người") và cũng không ở trạng thái 🟡 đề xuất — chờ Gate 2 → Warning
 - changelog.md có mục "chưa làm xong" mà không nơi nào theo dõi tiếp
   (00-INDEX §4 hoặc Docs/DOCKER-TEST-DEBT.md)                                        → Warning
 - Tài liệu trích đường dẫn file/test không còn tồn tại                                → Warning

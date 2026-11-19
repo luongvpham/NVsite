@@ -41,10 +41,12 @@ Rút từ [`Docs/tasks/MEDIA-001/plan.md`](../../../../Docs/tasks/MEDIA-001/plan
 {các bước ✅/🟡/❌ kèm link, nhánh lỗi và hành vi đã chốt}
 
 ## 4. Đã chốt trong session lập plan
-| # | Chốt |
-|---|---|
-| #N | {quyết định mới đã cấp số ở DECISIONS.md} |
-| — | {chi tiết thực thi đã chốt, không cần số} |
+| # | Chốt | Ai chốt |
+|---|---|---|
+| #N | {quyết định mới đã cấp số ở DECISIONS.md} | người |
+| — | {chi tiết thực thi đã chốt, không cần số} | người / agent-uỷ-quyền / burn-auto |
+
+`Ai chốt` khác `người` → dòng `#N` ở DECISIONS.md mang trạng thái 🟡 đề xuất — chờ Gate 2.
 
 ## 5. Trình tự session *(lane C)*
 {S0/S1/S2 là gì, vì sao thứ tự này, cổng giữa các session}

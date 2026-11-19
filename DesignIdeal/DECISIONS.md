@@ -24,6 +24,11 @@ Số kế tiếp = **số lớn nhất trong bảng dưới + 1**. Cấp số **
 dung ở file chuyên đề. Không cấp số rải rác ở file con nữa — đó chính là lý do `#68` bị viết xong
 trước khi `#40`–`#67` kịp có chỗ đứng.
 
+**Agent cấp số thì chưa phải đã chốt.** Dòng do agent cấp (giả định tự đặt, `burn-auto` theo #102) mang
+trạng thái **🟡 đề xuất — chờ Gate 2** và ghi ai đặt (`agent-uỷ-quyền {ID}` / `burn-auto {ID}`). Người
+duyệt ở Gate 2 thay bằng trạng thái thật + "Người duyệt chốt {ngày}", hoặc viết đè/gỡ. Dòng chưa có dấu
+người duyệt thì đừng làm theo như quyết định đã chốt (WEBSITE-004 I3, TOOLING-004).
+
 ## Ký hiệu trạng thái
 
 | Ký hiệu | Nghĩa |
@@ -31,6 +36,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | ✅ **enforce** | Đã code **và** có cơ chế máy chặn vi phạm (test / lock file / codegen hard-fail). Cột ghi rõ cơ chế nào |
 | ✅ đã code | Đã hiện thực hoá, nhưng vi phạm chỉ bị bắt bằng code review |
 | 📐 thiết kế | Đã chốt trên giấy, **chưa có code**. Bước triển khai ghi theo `step.md` |
+| 🟡 đề xuất — chờ Gate 2 | Agent cấp số, **người chưa duyệt**. Gate 2 đổi sang trạng thái thật hoặc gỡ |
 | ⏳ Phase 2+ | Chốt rồi nhưng cố ý hoãn |
 | 🔁 superseded | Đã bị quyết định sau thay thế — **đừng làm theo** |
 
@@ -141,7 +147,7 @@ trước khi `#40`–`#67` kịp có chỗ đứng.
 | **#99** | Handler tenant-scoped lấy `ShopId` từ **`ITenantContext` duy nhất**; command chỉ mang id con. Ngoại lệ: lệnh tạo aggregate gốc (`CreateWebsite`) nhận `shopId` tường minh. Handler Media/Shop cũ chưa đổi (nợ) | `backend/docs/modules/website.md` §Quy ước phân quyền và tenant | ✅ enforce ở Website (WEBSITE-001) — handler Media/Shop cũ chưa đổi (nợ, `00-INDEX.md` §4) |
 | **#100** | **Website và Media chỉ `Owner`** — mọi endpoint `/api/shops/{shopId}/website…` và `/api/shops/{shopId}/media/**`, đọc lẫn ghi. Lý do: `RequireShopMembership` nhận cả `Customer`, và khách có token global gọi được | `backend/docs/modules/website.md` §Quy ước phân quyền và tenant | ✅ enforce — Website + 10/10 route Media (`ShopScopedRouteFilterTests`, `MediaOwnerOnlyTests`); `GET /api/shops/{shopId}` còn mở cho Customer (nợ) |
 | **#101** | **Refresh token chỉ sống trong cookie `vsite_rt` `HttpOnly; Secure; SameSite=Lax; Path=/api/auth`, host-only** — không bao giờ trong body/response/JS. `Secure = !IsDevelopment` (chưa có `UseForwardedHeaders`). Có `POST /api/auth/logout` (AllowAnonymous, thu hồi token đang dùng, xoá cookie, luôn 204). Nợ có chủ đích: đa tab đua refresh có thể đăng xuất cả hai (không grace window); CSRF chỉ dựa `SameSite=Lax` | `backend/docs/modules/identity.md` · `Docs/tasks/IDENTITY-002/plan.md` | ✅ đã code — IDENTITY-002 (`RefreshTokenCookieTests`); nợ: đa tab, CSRF chỉ Lax |
-| **#102** | **Burn tự duyệt contract trước production** (mở rộng #89): bước burn thiếu field/endpoint → burn tự mở vòng D{n}, tự quyết tên/kiểu/nullable, promote `approvedBy = burn-auto`, ghi từng quyết định vào "Người duyệt đã quyết" của `contract-diff-D{n}.md`; người đọc lại ở Gate 2. Vẫn dừng: `REMOVED` · đổi auth policy endpoint đã có · chạm #21 · quá 2 vòng/task. **Đảo lại** từ lần deploy production đầu tiên (cùng #89, Rule 5) | `ai-agent-development-workflow.md` §6.1 | ✅ quy trình — skill `weekend-burn` (TOOLING-002) |
+| **#102** | **Burn tự duyệt contract trước production** (mở rộng #89): bước burn thiếu field/endpoint → burn tự mở vòng D{n}, tự quyết tên/kiểu/nullable, promote `approvedBy = burn-auto`, ghi từng quyết định vào "Người duyệt đã quyết" của `contract-diff-D{n}.md`; quyết định cần số thì burn cấp `#N` ở đây với trạng thái 🟡 đề xuất — chờ Gate 2 (TOOLING-004); người đọc lại ở Gate 2. Vẫn dừng: `REMOVED` · đổi auth policy endpoint đã có · chạm #21 · quá 2 vòng/task. **Đảo lại** từ lần deploy production đầu tiên (cùng #89, Rule 5) | `ai-agent-development-workflow.md` §6.1 | ✅ quy trình — skill `weekend-burn` (TOOLING-002) |
 | **#103** | **URL của Shop Site:** `basePath` + (`/{locale}` khi khác `Website.DefaultLocale`) + `/{slug}`; trang chủ (`slug ""`) → `…/`; link `systemPage` → slug của trang có `systemType` đó, chưa có trang thì route đầu tiên trong `config/system-pages.json`; `NotFound` không có URL; link tới trang đã xoá → `#`. `basePath = ''` trên `{slug}.vsite.vn` và domain riêng — khác `''` chỉ ở preview Portal. Một hàm `resolveUrl` dùng cho preview (Bước 6) và render công khai (8b) | `Docs/tasks/WEBSITE-003/plan.md` §4 | ✅ đã code Bước 6 (WEBSITE-003) — `site-url.ts`; nghiệm thu tay + Gate 2 xong 2026-11-12 |
 | **#104** | **Bỏ chế độ path `vsite.vn/{slug}` cho Shop Site.** Shop Site chỉ có ở `{slug}.vsite.vn` (mặc định của gói website) và domain riêng. `ShopDomain.kind` còn `Subdomain`/`Custom`; `TenantContext` không còn `BasePath`. Lý do: script trên site shop ở `vsite.vn/{slug}` chạy ngay trên origin của vsite; và code từ Bước 3 đã chỉ resolve theo Host. Gốc `vsite.vn/*` thuộc hẳn về nền tảng | `02 §Quyết định #7` | ✅ đã code — `TenantResolutionMiddleware` (chỉ Host), #103 (`basePath = ''` trên site thật) |
 | **#105** | **AI thuộc Phase 2, hai chế độ nối tiếp:** (1) *tạo website* — form câu hỏi + template của lĩnh vực → AI dựng bản demo; (2) *chat sửa* (#14–#16) dùng sau khi đã có website. AI luôn biến đổi một template đã duyệt, không dựng từ trang trắng. Shop dịch vụ trước (A0–A3), shop có sản phẩm sau `Product` (A4) | `01` §5.4 · bước ở `step.md` | 📐 bước A0–A4 |

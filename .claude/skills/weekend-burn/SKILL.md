@@ -133,6 +133,8 @@ không ai trả lời câu hỏi; tự quyết và ghi lại.
 1. Sửa backend tối thiểu cho đúng nhu cầu trên; test theo DoD BE (Docker không có → DOCKER-TEST-DEBT).
 2. Skill contract-sync. contract-diff ghi vào Docs/tasks/{ID}/contract-diff-D{n}.md; bảng
    "Người duyệt đã quyết": mỗi quyết định bạn tự đặt (tên, kiểu, nullable, …) một dòng `burn-auto (#102)`.
+   Quyết định đáng có số (ngữ nghĩa response, quy tắc nghiệp vụ — không phải tên field) → cấp #N ở
+   DesignIdeal/DECISIONS.md, trạng thái "🟡 đề xuất — chờ Gate 2", ghi "burn-auto {ID}".
 3. node tools/contract-sync/promote.mjs {ID}-D{n} burn-auto <module>.v<n>.json → pnpm gen:api.
 4. changelog: mục "## D{n}". brief.md: cập nhật "Việc FE cần làm" nếu đổi.
 5. Commit. Working tree sạch.
@@ -149,5 +151,7 @@ Trả về khung như implementer, thêm dòng: Contract: <file> sha256 <8 ký t
 ## Ranh giới của burn
 
 Burn không push, không merge, không chạy Gate 2, không tạo nhánh hay Task ID, không sửa `.claude/**`.
-Quyết định ngoài contract mà cần số `#N` mới → `Cần người quyết`, không tự sửa `DECISIONS.md`. Hook
+Quyết định contract `burn-auto` cần số → cấp `#N` ở `DECISIONS.md` với trạng thái 🟡 đề xuất — chờ Gate 2,
+ghi `burn-auto {ID}` (#102, TOOLING-004). Quyết định **ngoài** contract mà cần số → `Cần người quyết`,
+không cấp số. Hook
 `BLOCKED` là đúng — ghi vào Ma sát rồi `BLOCKED`, không thử lối khác.
