@@ -76,7 +76,7 @@ lệch có chủ đích.**
 | 5b | Operations Engine + editor Portal | ✅ WEBSITE-002 (2026-11-11: nghiệm thu tay với BE thật + Gate 2 + `review.md`) — Operations Engine (`builder-core`), editor, autosave/409, Theme panel (CSS vars), Lexical RichText, khung crop preset. Việc theo dõi sau review: §4 dòng WEBSITE-002 |
 | 6 | `builder-renderer` hoàn thiện (`basePath`, `locale`, SSR↔CSR) + preview toàn trang | ✅ WEBSITE-003 (đã đóng 2026-11-12) |
 | 8b | `SitePublication` + publish/rollback + endpoint đọc công khai (BE) | ✅ WEBSITE-004 — đã merge `master` (PR #25), Gate 2 đóng. Quyết định #108–#112. UI publish ở Portal → 8e |
-| 8c | `apps/web` render công khai + cache (FE) | ✅ WEBSITE-005 — đã merge `master` (PR #26), Gate 2 đóng 2026-11-19; nghiệm thu tay 7/7 ĐẠT với BE thật ([`changelog.md`](../Docs/tasks/WEBSITE-005/changelog.md)). Còn nợ ⛔ trước production (§4). **Đang ở mốc review #96–#98** — chưa bắt đầu bước sau khi người chưa duyệt |
+| 8c | `apps/web` render công khai + cache (FE) | ✅ WEBSITE-005 — đã merge `master` (PR #26), Gate 2 đóng 2026-11-19; nghiệm thu tay 7/7 ĐẠT với BE thật ([`changelog.md`](../Docs/tasks/WEBSITE-005/changelog.md)). Còn nợ ⛔ trước production (§4). Mốc review #96–#98: người duyệt giữ nguyên (2026-11-19) |
 | 8e | UI publish/rollback ở Portal + nạp lại draft sau publish (FE) | ⬜ WEBSITE-006 |
 | 7 | `NavigationConfig` | ⬜ |
 | 8a | Hangfire (hạ tầng job dùng chung) | ⬜ |
