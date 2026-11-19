@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const PKG_ROOT = path.resolve(import.meta.dirname, '..');
 const REGISTRY_DIR = path.join(PKG_ROOT, 'registry');
@@ -261,9 +261,17 @@ describe('tree-rules.json (WEBSITE-001 S0-T3, #60) — luật cây cho BE, sinh 
   };
   type TreeRules = { schemaVersion: number; types: Record<string, TypeRule> };
 
-  const readTreeRules = (): TreeRules => {
+  // Sinh MỘT lần cho cả nhóm: tree-rules.json chỉ phụ thuộc manifest, không test nào sửa nó. Trước đây
+  // mỗi test tự spawn gen-registry (2–7 s/lần khi máy bận) và 3 test không khai timeout → vượt 5 s mặc định
+  // khi `turbo test` chạy song song (TOOLING-004).
+  let treeRules: TreeRules | undefined;
+  beforeAll(() => {
     runGenRegistry();
-    return JSON.parse(readFileSync(path.join(TEMP_GENERATED, 'tree-rules.json'), 'utf8')) as TreeRules;
+    treeRules = JSON.parse(readFileSync(path.join(TEMP_GENERATED, 'tree-rules.json'), 'utf8')) as TreeRules;
+  }, 60_000);
+  const readTreeRules = (): TreeRules => {
+    if (!treeRules) throw new Error('beforeAll chưa sinh tree-rules.json');
+    return treeRules;
   };
 
   it('khớp op-rules.ts từng type, từng trường (acceptsChildren, allowedChildTypes, allowedInPageKinds, maxPerPage, editableInSystemPageProps)', async () => {
