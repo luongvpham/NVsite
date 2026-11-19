@@ -10,7 +10,7 @@ nói **làm theo thứ tự nào**. Hai thứ được phép khác nhau — ti�
 code, changelog và `DECISIONS.md` đã trỏ tới chúng. Thứ tự làm là **thứ tự các mục trong file này**:
 
 ```
-1 → 2 → 3 → 4 → 5a → 5b → 6 → 8b → 8c → 7 → 8a → 8d → 9 → C → 11 → A0 → A1 → A2 → A3
+1 → 2 → 3 → 4 → 5a → 5b → 6 → 8b → 8c → 8e → 7 → 8a → 8d → 9 → C → 11 → A0 → A1 → A2 → A3
   → M0…M5 → 10a → 10b → 10c → A4
 ```
 
@@ -107,6 +107,21 @@ xong thì site về bản cũ; xem nguồn trang thấy HTML đã render ở ser
 
 > **Mốc review.** Sau 8c là lần đầu một website shop chạy end-to-end. Dừng ở đây để người duyệt xem lại
 > #96–#98 trên thứ đang chạy trước khi làm tiếp.
+
+## 8e. UI publish/rollback ở Portal — FE (WEBSITE-006)
+
+8b có API, 8c có site công khai, nhưng Owner chưa có nút publish — nghiệm thu 8c phải gọi `curl`. Bước 7
+cần publish từ Portal để kiểm menu, nên bước này đứng trước 7. Contract đã có từ 8b; phần chi tiết ở
+`Docs/tasks/WEBSITE-004/brief.md` mục B.
+
+**Gồm**
+- Nút publish (kèm `note`), hiện lỗi `422 PUBLISH_BLOCKED` theo từng trang (#112).
+- Danh sách bản publish + rollback.
+- Nạp lại `version` của draft sau publish (R9, brief §6) để autosave kế tiếp không dính `409`.
+- Portal chuyển sang `decorateWithAnchor` của `builder-renderer`, bỏ `decorateWithId` riêng (WEBSITE-005 A8).
+
+**Xong khi:** Owner publish từ editor và thấy site công khai đổi; trang đang bật mà lỗi thì Portal chỉ ra
+đúng trang đó; rollback từ danh sách được; sửa draft ngay sau publish không gặp `409`.
 
 ## 7. `NavigationConfig`
 
