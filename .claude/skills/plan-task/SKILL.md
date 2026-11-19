@@ -16,7 +16,9 @@ Vị trí trong quy trình: đây là bước "Business requirement → Bước 
 ## Ranh giới
 
 - **Ghi được:** `Docs/tasks/{ID}/data-needs.md`, `Docs/tasks/{ID}/plan.md`, và dòng mới ở
-  `DesignIdeal/DECISIONS.md` **chỉ khi người đã chốt** quyết định đó.
+  `DesignIdeal/DECISIONS.md` khi người đã chốt quyết định đó. Người **uỷ quyền** cho agent tự chọn thì
+  vẫn cấp số, nhưng trạng thái 🟡 đề xuất — chờ Gate 2 và plan §4 ghi `Ai chốt = agent-uỷ-quyền`.
+  Không ai chốt, không ai uỷ quyền → hỏi, không cấp số.
 - **Không sửa code, contract, config, `CLAUDE.md`.** Thấy code sai hay tài liệu lệch → ghi vào plan
   (mục "Phát hiện khi khảo sát"), không sửa tiện tay.
 - **Không đoán thay người** ở: hình dạng API, tên field, nullable, ranh giới module, tenant isolation,

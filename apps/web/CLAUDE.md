@@ -103,8 +103,8 @@ contracts/openapi/*.json  ──pnpm gen:api (Orval)──→  packages/api-sdk/
 | | |
 |---|---|
 | ✅ Được ghi | `apps/web/**` · `packages/ui` · `packages/shared` · `packages/theme-engine` |
-| ⚠️ Chỉ khi plan duyệt | `packages/builder-renderer` · barrel `packages/api-sdk/src/index.ts` + `src/mocks.ts` (chỉ thêm export) — WEBSITE-005 đã duyệt và làm cả hai (anchor; export site) |
-| ❌ Cấm ghi | `packages/api-sdk/**` trừ hai file barrel trên · `backend/**` · `contracts/**` · `config/**` · `DesignIdeal/**` |
+| ⚠️ Chỉ khi plan duyệt | `packages/builder-renderer` |
+| ❌ Cấm ghi | `packages/api-sdk/**` (barrel cũng do `pnpm gen:api` sinh, TOOLING-004) · `backend/**` · `contracts/**` · `config/**` · `DesignIdeal/**` |
 
 ---
 

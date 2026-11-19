@@ -30,7 +30,17 @@ function describeReference(reference: MediaReferenceDto): string {
       return 'Logo shop';
     case MediaReferenceKind.PageDraft:
       return reference.pageTitle ? `Trang ${reference.pageTitle}` : 'Một trang';
+    case MediaReferenceKind.PageOgImage:
+      return reference.pageTitle ? `Ảnh chia sẻ của trang ${reference.pageTitle}` : 'Ảnh chia sẻ của một trang';
+    case MediaReferenceKind.WebsiteOgImage:
+      return 'Ảnh chia sẻ mặc định của website';
+    case MediaReferenceKind.WebsiteFavicon:
+      return 'Biểu tượng website (favicon)';
+    // #110: mọi bản publish gộp thành một mục; `isCurrent` = bản đang chạy có dùng ảnh.
+    case MediaReferenceKind.SitePublication:
+      return reference.isCurrent ? 'Website đang chạy' : 'Bản website đã publish trước đây';
   }
+  // Không có `default`: contract thêm kind mới thì `pnpm typecheck` báo TS2366 ở đây (WEBSITE-004 đã lọt vì CI đỏ sẵn).
 }
 
 interface MediaLibraryPickerBaseProps {

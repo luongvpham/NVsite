@@ -42,7 +42,9 @@ Fail mục 1–2 → dừng, báo, không chạy bước nào. Batch đã `RUNNI
 2. `git checkout feature/{ID}` · ghi `BASE=$(git rev-parse HEAD)`.
 3. **Spawn implementer** — `general-purpose`, **foreground** (Rule 14), prompt theo "Mẫu prompt implementer".
 4. **Kiểm, đừng tin lời** (Rule 14): `git status --porcelain` rỗng — bẩn → `HALT`. Implementer báo
-   `PASS*` mà `git log BASE..HEAD` không có commit → `BLOCKED`. Báo `BLOCKED` → sang bước 7.
+   `PASS*` mà `git log BASE..HEAD` không có commit → `BLOCKED`. Dòng `Test:` có lệnh lọc, hoặc chạm
+   `apps/`/`packages/` mà thiếu lint/typecheck → chưa kiểm: tự chạy đủ lệnh trong mẫu prompt rồi mới xét.
+   Báo `BLOCKED` → sang bước 7.
    Báo `NEEDS-CONTRACT` → chạy **"Vòng D{n} tự động"** rồi quay lại bước 3 (implementer mới, kèm tên
    stash nếu có).
 5. **Spawn `change-reviewer`**, foreground: "Review `git diff BASE..HEAD` của {ID} bước {Fn}. Plan:
@@ -51,7 +53,8 @@ Fail mục 1–2 → dừng, báo, không chạy bước nào. Batch đã `RUNNI
    `BLOCKED`; riêng Critical về tenant (#21) vẫn còn → `HALT`.
 7. **Ghi file — thứ tự này; commit riêng `review.md` với message `docs({ID}): burn {Fn} — {STATUS}`:**
    - `Docs/tasks/{ID}/review.md`: thêm mục `## Burn {ngày trong tên batch file} — {Fn}` = Critical/Warning
-     của reviewer (nguyên văn, rút gọn) + `STATUS` + vòng D{n} đã mở trong bước này (nếu có). Chưa có file
+     của reviewer (nguyên văn, rút gọn) + `STATUS` + vòng D{n} đã mở trong bước này (nếu có). `#N` 🟡 đã
+     cấp trong bước → thêm vào mục `Điểm cần anh quyết`. Chưa có file
      → tạo đủ khung workflow §9 (`Tự động` · `change-reviewer` · `Nợ kỹ thuật` · `Điểm cần anh quyết` ·
      `Ma sát quy trình`), để trống các mục người điền.
    - Batch file: tick dòng hàng đợi của bước này (**mọi** STATUS — tick = "đã có dòng Log"; các bước sau
@@ -75,7 +78,7 @@ Implementer trả `NEEDS-CONTRACT` = bước cần field/endpoint mà contract c
 | STATUS | Khi nào | Tiếp theo |
 |---|---|---|
 | `PASS` | DoD đủ, không còn Critical | Bước kế |
-| `PASS-WITH-DEBT` | Có Warning, hoặc test Docker đã ghi `Docs/DOCKER-TEST-DEBT.md` | Bước kế |
+| `PASS-WITH-DEBT` | Có Warning, hoặc test Docker đã ghi `Docs/DOCKER-TEST-DEBT.md`, hoặc kiểm đầy đủ đỏ từ trước bước này | Bước kế |
 | `BLOCKED` | Implementer báo `BLOCKED` · Critical sau một lần sửa · vòng D chạm hàng rào (mẫu D{n}) · quá 2 vòng D | Bỏ các bước còn lại **của task này**, sang task kế |
 | `HALT` | Tree bẩn sau bước · hook `BLOCKED` mà agent tìm đường vòng · tenant Critical không sửa được · build nhánh hỏng | Dừng cả batch, banner → `HALTED` |
 
@@ -98,6 +101,9 @@ Contract — trước production burn tự duyệt (#102):
     Không tự sửa backend trong bước này, không viết type tạm.
 Docker không có → viết test đủ, ghi Docs/DOCKER-TEST-DEBT.md theo quy ước trong file.
 changelog: thêm mục "## {Fn}" vào Docs/tasks/{ID}/changelog.md. Tick checkbox của {Fn} trong plan.md.
+Trước commit chạy kiểm ĐẦY ĐỦ, không lọc (--filter, -t, tên file): chạm backend/ → dotnet test backend/vsite.sln;
+  chạm apps/ hoặc packages/ → pnpm lint && pnpm typecheck && pnpm test. Đỏ mà không do bước này → vẫn
+  STATUS PASS-WITH-DEBT, ghi nguyên văn lỗi vào "Ma sát"; đỏ do bước này → sửa, không commit đỏ.
 Commit code + changelog trên feature/{ID}. Để working tree sạch.
 Dừng giữa chừng (BLOCKED / NEEDS-CONTRACT): không commit phần dở;
   `git stash push -u -m "burn {ID} {Fn}"`, ghi tên stash vào khung trả về.
@@ -128,6 +134,9 @@ không ai trả lời câu hỏi; tự quyết và ghi lại.
 1. Sửa backend tối thiểu cho đúng nhu cầu trên; test theo DoD BE (Docker không có → DOCKER-TEST-DEBT).
 2. Skill contract-sync. contract-diff ghi vào Docs/tasks/{ID}/contract-diff-D{n}.md; bảng
    "Người duyệt đã quyết": mỗi quyết định bạn tự đặt (tên, kiểu, nullable, …) một dòng `burn-auto (#102)`.
+   Quyết định đáng có số (ngữ nghĩa response, quy tắc nghiệp vụ — không phải tên field) → cấp #N ở
+   DesignIdeal/DECISIONS.md, trạng thái "🟡 đề xuất — chờ Gate 2", ghi "burn-auto {ID}", cột "Định nghĩa
+   tại" = Docs/tasks/{ID}/contract-diff-D{n}.md. Trả về thêm dòng: Số đã cấp: <#N, … — hoặc "không">.
 3. node tools/contract-sync/promote.mjs {ID}-D{n} burn-auto <module>.v<n>.json → pnpm gen:api.
 4. changelog: mục "## D{n}". brief.md: cập nhật "Việc FE cần làm" nếu đổi.
 5. Commit. Working tree sạch.
@@ -144,5 +153,7 @@ Trả về khung như implementer, thêm dòng: Contract: <file> sha256 <8 ký t
 ## Ranh giới của burn
 
 Burn không push, không merge, không chạy Gate 2, không tạo nhánh hay Task ID, không sửa `.claude/**`.
-Quyết định ngoài contract mà cần số `#N` mới → `Cần người quyết`, không tự sửa `DECISIONS.md`. Hook
+Quyết định contract `burn-auto` cần số → cấp `#N` ở `DECISIONS.md` với trạng thái 🟡 đề xuất — chờ Gate 2,
+ghi `burn-auto {ID}` (#102, TOOLING-004). Quyết định **ngoài** contract mà cần số → `Cần người quyết`,
+không cấp số. Hook
 `BLOCKED` là đúng — ghi vào Ma sát rồi `BLOCKED`, không thử lối khác.

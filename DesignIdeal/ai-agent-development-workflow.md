@@ -139,6 +139,7 @@ mới là chỗ hay sai.
 
 ⚠️ **"Người duyệt đã quyết" là chỗ hay mất nhất.** Mọi quyết định phải rơi vào **một `#N` đã có** (ghi
 số) hoặc **một dòng mới ở [`DECISIONS.md`](DECISIONS.md)**. Không có ô thứ ba tên là "nhớ trong đầu".
+Dòng do agent cấp mang trạng thái 🟡 đề xuất — chờ Gate 2 cho tới khi người duyệt.
 
 ### Checklist
 
@@ -168,7 +169,8 @@ Mỗi vòng tốn một lượt chờ người — nhiều vòng trong một tas
 quy trình" (§9).
 
 **Burn trước production (#102):** không ai chờ — burn tự mở D{n}, tự quyết tên/kiểu/nullable, promote với
-`approvedBy = burn-auto`, ghi từng quyết định vào bảng "Người duyệt đã quyết" của `contract-diff-D{n}.md`.
+`approvedBy = burn-auto`, ghi từng quyết định vào bảng "Người duyệt đã quyết" của `contract-diff-D{n}.md`;
+quyết định cần số thì cấp `#N` trạng thái 🟡 đề xuất.
 Vẫn dừng khi: `REMOVED` · đổi auth policy của endpoint đã có · chạm #21 · quá 2 vòng/task · đã production.
 Người đọc lại ở Gate 2. Chi tiết: skill `weekend-burn`. *(MEDIA-001 dùng folder `MEDIA-001-D2…D4` riêng, trước quy ước này.)*
 
@@ -215,7 +217,8 @@ read-only, context sạch → [`.claude/agents/change-reviewer.md`](../.claude/a
 
 ```markdown
 ## Tự động
-- [ ] BE test: x/y          - [ ] FE test: x/y
+- [ ] BE test: x/y          - [ ] FE test: x/y        (suite đầy đủ, không lọc)
+- [ ] lint + typecheck toàn repo · CI của PR xanh
 - [ ] Integration (MSW off): PASS / FAIL
 - [ ] contract-sync sau cùng: không còn diff ngoài contract đã duyệt
 - [ ] check:docs + gen:doc-index --check: PASS / FAIL
@@ -224,6 +227,7 @@ read-only, context sạch → [`.claude/agents/change-reviewer.md`](../.claude/a
 ## change-reviewer — Critical / Warning
 ## Nợ kỹ thuật cố ý + task theo dõi
 ## Điểm cần anh quyết trước khi merge
+- [ ] #N 🟡 do agent cấp trong task: … (đổi trạng thái thật / viết đè / gỡ)
 
 ## Ma sát quy trình
 | Ma sát | Nguyên cớ gốc | Mức A/B/C | Bằng chứng (file:dòng / commit) | Đề xuất (bớt trước, thêm sau) |
