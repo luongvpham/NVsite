@@ -3,9 +3,12 @@
 
 /** `#N`, `#N.M`. Ba chữ số — trước TOOLING-004 regex dừng ở hai chữ số nên mọi #100+ lọt kiểm. */
 const DECISION_ROW = /^\|\s*\*\*#(\d{1,3}(?:\.\d)?)\*\*/gm;
-const DECISION_REF = /#(\d{1,3}(?:\.\d)?)\b/g;
+// `#` dính sau chữ/số/`&`/`/`/`.` không phải quyết định: anchor `a.md#105-x`, entity `&#123;`.
+const DECISION_REF = /(?<![\w&/.])#(\d{1,3}(?:\.\d)?)\b/g;
 /** `§25 #2` nghĩa là "mục 2 của §25", KHÔNG phải Quyết định #2 — bỏ qua dạng đó. */
 const SUBITEM_PREFIX = /§\s*\d+(?:\.\d+)?\s*$/;
+/** Số PR/issue (sẽ vượt #112) và màu hex chỉ có chữ số (`color: #333`). */
+const NOT_DECISION_PREFIX = /(?:\b(?:PR|pull|issue)s?\s*(?:#\d+\s*(?:,|và|and)\s*)*|(?:color|background|fill|stroke)[\w-]*:\s*)$/i;
 
 /** Số quyết định có dòng trong bảng của DECISIONS.md. */
 export function declaredDecisions(decisionsRaw) {
@@ -21,6 +24,7 @@ export function decisionRefs(text) {
     // ghi dòng sẽ lọt đúng lúc cần bắt nhất. Chỉ loại 0 và số quá lớn để không nhận nhầm.
     if (base < 1 || base > 999) continue;
     if (SUBITEM_PREFIX.test(text.slice(Math.max(0, m.index - 12), m.index))) continue;
+    if (NOT_DECISION_PREFIX.test(text.slice(Math.max(0, m.index - 40), m.index))) continue;
     refs.push(m[1]);
   }
   return refs;
@@ -67,4 +71,15 @@ export function bannersMissingTask({ taskId, changelogText, banners }) {
   return designDocsReferenced(changelogText, byFile.keys())
     .filter((file) => !byFile.get(file).tasks.map(parentTaskId).includes(id))
     .map((file) => ({ file, taskId: id }));
+}
+
+/**
+ * Số quyết định có từ hai dòng trở lên. Nhánh song song cùng cấp "max + 1" thì trùng số;
+ * merge chưa chắc conflict nếu hai dòng nằm khác chỗ (review S3, TOOLING-004).
+ */
+export function duplicateDecisions(decisionsRaw) {
+  const seen = new Set();
+  const dup = new Set();
+  for (const m of decisionsRaw.matchAll(DECISION_ROW)) (seen.has(m[1]) ? dup : seen).add(m[1]);
+  return [...dup];
 }

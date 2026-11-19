@@ -227,6 +227,7 @@ read-only, context sạch → [`.claude/agents/change-reviewer.md`](../.claude/a
 ## change-reviewer — Critical / Warning
 ## Nợ kỹ thuật cố ý + task theo dõi
 ## Điểm cần anh quyết trước khi merge
+- [ ] #N 🟡 do agent cấp trong task: … (đổi trạng thái thật / viết đè / gỡ)
 
 ## Ma sát quy trình
 | Ma sát | Nguyên cớ gốc | Mức A/B/C | Bằng chứng (file:dòng / commit) | Đề xuất (bớt trước, thêm sau) |

@@ -53,7 +53,8 @@ Fail mục 1–2 → dừng, báo, không chạy bước nào. Batch đã `RUNNI
    `BLOCKED`; riêng Critical về tenant (#21) vẫn còn → `HALT`.
 7. **Ghi file — thứ tự này; commit riêng `review.md` với message `docs({ID}): burn {Fn} — {STATUS}`:**
    - `Docs/tasks/{ID}/review.md`: thêm mục `## Burn {ngày trong tên batch file} — {Fn}` = Critical/Warning
-     của reviewer (nguyên văn, rút gọn) + `STATUS` + vòng D{n} đã mở trong bước này (nếu có). Chưa có file
+     của reviewer (nguyên văn, rút gọn) + `STATUS` + vòng D{n} đã mở trong bước này (nếu có). `#N` 🟡 đã
+     cấp trong bước → thêm vào mục `Điểm cần anh quyết`. Chưa có file
      → tạo đủ khung workflow §9 (`Tự động` · `change-reviewer` · `Nợ kỹ thuật` · `Điểm cần anh quyết` ·
      `Ma sát quy trình`), để trống các mục người điền.
    - Batch file: tick dòng hàng đợi của bước này (**mọi** STATUS — tick = "đã có dòng Log"; các bước sau
@@ -134,7 +135,8 @@ không ai trả lời câu hỏi; tự quyết và ghi lại.
 2. Skill contract-sync. contract-diff ghi vào Docs/tasks/{ID}/contract-diff-D{n}.md; bảng
    "Người duyệt đã quyết": mỗi quyết định bạn tự đặt (tên, kiểu, nullable, …) một dòng `burn-auto (#102)`.
    Quyết định đáng có số (ngữ nghĩa response, quy tắc nghiệp vụ — không phải tên field) → cấp #N ở
-   DesignIdeal/DECISIONS.md, trạng thái "🟡 đề xuất — chờ Gate 2", ghi "burn-auto {ID}".
+   DesignIdeal/DECISIONS.md, trạng thái "🟡 đề xuất — chờ Gate 2", ghi "burn-auto {ID}", cột "Định nghĩa
+   tại" = Docs/tasks/{ID}/contract-diff-D{n}.md. Trả về thêm dòng: Số đã cấp: <#N, … — hoặc "không">.
 3. node tools/contract-sync/promote.mjs {ID}-D{n} burn-auto <module>.v<n>.json → pnpm gen:api.
 4. changelog: mục "## D{n}". brief.md: cập nhật "Việc FE cần làm" nếu đổi.
 5. Commit. Working tree sạch.

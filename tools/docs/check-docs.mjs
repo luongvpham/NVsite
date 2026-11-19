@@ -8,7 +8,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { REPO_ROOT, existsExact, allBanners } from './lib/doc-status.mjs';
-import { bannersMissingTask, declaredDecisions, decisionRefs, strayBacktickInBanner } from './lib/doc-checks.mjs';
+import {
+  bannersMissingTask,
+  declaredDecisions,
+  decisionRefs,
+  duplicateDecisions,
+  strayBacktickInBanner,
+} from './lib/doc-checks.mjs';
 
 const SCAN_ROOTS = ['DesignIdeal', 'Docs', 'backend/docs', 'CLAUDE.md', 'backend/CLAUDE.md',
   'apps/web/CLAUDE.md', 'apps/portal/CLAUDE.md',
@@ -53,6 +59,9 @@ for (const b of banners) {
 
 // ─── [3] Mọi quyết định #N được tham chiếu đều có dòng trong DECISIONS.md ──────
 const declared = declaredDecisions(readRel(DECISIONS));
+for (const num of duplicateDecisions(readRel(DECISIONS))) {
+  fail('decision-dup', `${DECISIONS} có nhiều dòng cho #${num} — cấp lại số cho một bên`);
+}
 
 for (const file of mdFiles) {
   if (file === DECISIONS) continue;

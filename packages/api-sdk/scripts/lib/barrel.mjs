@@ -57,6 +57,11 @@ export function buildBarrels(generatedDir) {
 
     const modelDir = path.join(moduleDir, 'model');
     const models = subdirs(moduleDir).includes('model') ? tsFiles(modelDir) : [];
+    // Tag OpenAPI tên "model" sẽ rơi client vào chung thư mục với type — barrel không phân biệt được.
+    if (models.some((f) => f.endsWith('.msw.ts'))) {
+      throw new Error(`[barrel] '${module}/model/' có file .msw — một tag OpenAPI tên "model" trùng thư mục type. Đổi tên tag.`);
+    }
+    // Chỉ dedupe model. Trùng tên operation/zod giữa module thì `pnpm typecheck` báo TS2308.
     for (const file of models.filter((f) => f !== 'index.ts')) {
       const content = readFileSync(path.join(modelDir, file), 'utf8');
       const first = exportedModels.get(file);

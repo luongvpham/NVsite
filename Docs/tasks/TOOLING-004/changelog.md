@@ -26,9 +26,9 @@ trên `master`), rồi đánh dấu N1–N5 "Đã promote", thêm P12–P16, c�
 ## Đã kiểm
 
 - `pnpm lint`: 11/11 package xanh (trước task: `builder-components` đỏ 6 lỗi).
-- `node --test packages/api-sdk/scripts/lib/barrel.test.mjs`: 5/5. `pnpm --filter @vsite/api-sdk test`: 12/12 vitest + 5/5 node.
+- `node --test packages/api-sdk/scripts/lib/barrel.test.mjs`: 5/5 (6/6 sau review). `pnpm --filter @vsite/api-sdk test`: 12/12 vitest + 5/5 node.
 - `pnpm gen:api`: chỉ thêm `src/generated/index.ts` + `mocks.ts`, mọi file generated khác không đổi.
-- `node --test tools/docs/lib/doc-checks.test.mjs`: 10/10. `check:docs` xanh trên repo hiện tại
+- `node --test tools/docs/lib/doc-checks.test.mjs`: 10/10 (13/13 sau review). `check:docs` xanh trên repo hiện tại
   (122 quyết định). Thử thật rule (a) bằng một changelog tạm → fail đúng thông báo, đã xoá.
 - `pnpm turbo run test --force`: mọi package xanh trừ 3 ca timeout ở `builder-components`, xem dưới.
 - Không chạm `backend/` → không có nợ Docker (`Docs/DOCKER-TEST-DEBT.md` không đổi).
@@ -60,7 +60,27 @@ trên `master`), rồi đánh dấu N1–N5 "Đã promote", thêm P12–P16, c�
    chỉ nằm trong `generated/`" và hook `guard-write` sẵn có.
 7. Thứ tự commit: lint (N1) → meta-review → N5 → N1 tài liệu → N2 → N3 → N4 → đánh dấu promote + changelog.
 
+## Review (`change-reviewer`, một vòng) — 0 Critical, 5 Warning
+
+| # | Vấn đề | Xử lý |
+|---|---|---|
+| W1 | Regex 3 chữ số nhận nhầm số PR (sẽ vượt #112), `&#123;`, anchor `a.md#105-x`, `color: #333` → `check:docs` fail giả | Sửa: lookbehind `(?<![\w&/.])` + bỏ tiền tố `PR`/`issue`/thuộc tính màu. +2 ca test, gồm ca vẫn phải bắt `(#21)`, `#89:` |
+| W2 | Không chỗ nào nhắc Gate 2 duyệt các dòng 🟡 | Sửa: khuôn §9 "Điểm cần anh quyết" thêm dòng `#N 🟡`; plan-template §11 thêm checkbox; burn ghi `#N` 🟡 vào `review.md` "Điểm cần anh quyết" |
+| W3 | `plan-task/SKILL.md` "chỉ khi người đã chốt" mâu thuẫn cột "Ai chốt"; ví dụ §4 lẫn | Sửa: viết lại ranh giới (người chốt → số thường; người uỷ quyền → số 🟡; không ai → hỏi); ví dụ §4 cho `#N` nhận cả ba giá trị |
+| W4 | Hai phát hiện ngoài phạm vi không ai theo dõi; CI của PR này sẽ đỏ ở `pnpm typecheck` | Ghi vào `DesignIdeal/00-INDEX.md` §4 "Nợ kỹ thuật". CI đỏ: **người quyết** (xem dưới) |
+| W5 | Rule (a) bắt theo tên file → có thể nhồi Tasks vào banner, ngược hướng N15 | Giữ (giả định 1); rà ở mốc P13 |
+| S1 | Tag OpenAPI tên "model" rơi vào thư mục type | Sửa: `barrel.mjs` throw khi `model/` có `.msw`; +1 ca test |
+| S2 | Số burn cấp không trỏ nơi định nghĩa | Sửa: mẫu D{n} ghi "Định nghĩa tại" = `contract-diff-D{n}.md`, trả về "Số đã cấp" |
+| S3 | Nhánh song song cấp trùng số, `Set` không báo | Sửa: `duplicateDecisions()` → `check:docs` fail `decision-dup`; +1 ca test |
+| S4 | Ô trạng thái #102 chỉ nhắc TOOLING-002 | Sửa |
+| S5 | Brief cũ ở `.superpowers/sdd/plan-WEBSITE-005/` còn nói sửa barrel tay | Không sửa — artifact cũ, không tái dùng |
+
+Sau sửa: `doc-checks.test.mjs` 13/13, `barrel.test.mjs` 6/6, `check:docs` + `gen-doc-index --check` xanh,
+`pnpm gen:api` không đổi `generated/`.
+
 ## Theo dõi
 
 - P12–P16 ở bảng "Đã promote" của `improvement-proposals.md`, mỗi dòng có mốc rà lại.
-- Hai phát hiện ngoài phạm vi ở trên — chưa có task, cần người tạo.
+- Hai phát hiện ngoài phạm vi → `DesignIdeal/00-INDEX.md` §4 "Nợ kỹ thuật đã ghi nhận".
+- **CI của PR này sẽ đỏ** ở bước `pnpm typecheck` (phát hiện #1, có từ `master`) — trái với dòng mới
+  "CI của PR xanh" mà chính task này thêm. Cần người chọn: sửa portal trước rồi merge, hoặc merge kèm ngoại lệ ghi rõ.

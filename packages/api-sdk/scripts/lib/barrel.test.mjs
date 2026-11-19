@@ -71,3 +71,9 @@ test('output ổn định (sort), không phụ thuộc thứ tự readdir', () =
   const { index } = buildBarrels(root);
   assert.ok(index.indexOf("'./a/a/a'") < index.indexOf("'./b/b/b'"));
 });
+
+test('tag OpenAPI tên "model" trùng thư mục type → throw (review S1)', () => {
+  put('shop/model/model.ts');
+  put('shop/model/model.msw.ts');
+  assert.throws(() => buildBarrels(root), /tag OpenAPI tên "model"/);
+});

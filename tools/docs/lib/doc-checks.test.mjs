@@ -21,7 +21,15 @@ test('decisionRefs bắt #100+ — trước TOOLING-004 #110 lọt kiểm', () =
 });
 
 test('decisionRefs bỏ §25 #2 (mục con), #0, số quá lớn và màu hex', () => {
-  assert.deepEqual(decisionRefs('§25 #2 · § 6.1 #3 · #0 · #1000 · #0a0 · #ffffff · #123abc'), []);
+  assert.deepEqual(decisionRefs('§25 #2 · § 6.1 #3 · #0 · #1000 · #0a0 · #ffffff · #123abc · color: #333'), []);
+});
+
+test('decisionRefs bỏ số PR/issue, entity HTML, anchor link (review W1)', () => {
+  assert.deepEqual(decisionRefs('PR #130 · PR #25 và #26 · issue #140 · &#123; · [x](a.md#105-foo)'), []);
+});
+
+test('decisionRefs vẫn bắt dạng thường gặp: (#21), "#21:", đầu dòng', () => {
+  assert.deepEqual(decisionRefs('(#21) · #89: gọn · \n#110 ở đầu dòng · **#102**'), ['21', '89', '110', '102']);
 });
 
 // ─── (b) backtick lẻ trong banner ───────────────────────────────────────────────
@@ -71,4 +79,10 @@ test('vòng D{n} tính theo task cha (workflow §6.1)', () => {
 test('tài liệu quy trình (không đánh số 0X) không đòi Tasks', () => {
   const changelogText = 'DesignIdeal/ai-agent-development-workflow.md §9';
   assert.deepEqual(bannersMissingTask({ taskId: 'TOOLING-004', changelogText, banners }), []);
+});
+
+test('duplicateDecisions bắt số cấp trùng (review S3)', async () => {
+  const { duplicateDecisions } = await import('./doc-checks.mjs');
+  assert.deepEqual(duplicateDecisions('| **#113** | a |\n| **#7** | b |\n| **#113** | c |'), ['113']);
+  assert.deepEqual(duplicateDecisions('| **#1** | a |\n| **#2** | b |'), []);
 });

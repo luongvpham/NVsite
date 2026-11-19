@@ -43,10 +43,11 @@ Rút từ [`Docs/tasks/MEDIA-001/plan.md`](../../../../Docs/tasks/MEDIA-001/plan
 ## 4. Đã chốt trong session lập plan
 | # | Chốt | Ai chốt |
 |---|---|---|
-| #N | {quyết định mới đã cấp số ở DECISIONS.md} | người |
+| #N | {quyết định mới đã cấp số ở DECISIONS.md} | người / agent-uỷ-quyền / burn-auto |
 | — | {chi tiết thực thi đã chốt, không cần số} | người / agent-uỷ-quyền / burn-auto |
 
-`Ai chốt` khác `người` → dòng `#N` ở DECISIONS.md mang trạng thái 🟡 đề xuất — chờ Gate 2.
+Dòng `#N` mà `Ai chốt` khác `người` → ở DECISIONS.md mang trạng thái 🟡 đề xuất — chờ Gate 2, và §11
+liệt kê nó để người duyệt.
 
 ## 5. Trình tự session *(lane C)*
 {S0/S1/S2 là gì, vì sao thứ tự này, cổng giữa các session}
@@ -85,6 +86,7 @@ CLAUDE.md nói là có chốt khi chưa có.
 
 ## 11. Đóng task (trước Gate 2)
 - [ ] Integration tắt MSW · `change-reviewer` · `review.md` (kèm "Ma sát quy trình")
+- [ ] Mọi `#N` 🟡 cấp trong task → liệt kê ở `review.md` "Điểm cần anh quyết"
 
 ## 12. Giả định tôi đã tự đặt (chưa hỏi, cần duyệt)
 | # | Giả định | Vì sao | Nếu sai thì |
