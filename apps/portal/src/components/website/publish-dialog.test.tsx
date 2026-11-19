@@ -4,6 +4,7 @@ import { RouterProvider, createMemoryHistory, createRootRoute, createRoute, crea
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { server } from '../../test/msw-server';
+import { getGetWebsiteQueryKey, getListPagesQueryKey, getListPublicationsQueryKey } from '@vsite/api-sdk';
 import { PublishDialog, type PublishDialogProps } from './publish-dialog';
 
 function renderDialog(props: Partial<PublishDialogProps> = {}) {
@@ -34,13 +35,13 @@ function renderDialog(props: Partial<PublishDialogProps> = {}) {
     routeTree: rootRoute.addChildren([editorRoute]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
   });
-  render(
+  const utils = render(
     <QueryClientProvider client={queryClient}>
       {/* Router test riêng, không phải routeTree thật của app — ép kiểu để khỏi vướng Register. */}
       <RouterProvider router={router as never} />
     </QueryClientProvider>,
   );
-  return { onOpenChange, onSettled, invalidate };
+  return { onOpenChange, onSettled, invalidate, unmount: utils.unmount };
 }
 
 const publication = {
@@ -92,7 +93,12 @@ describe('PublishDialog', () => {
     expect(body).toEqual({ note: 'đợt 2' });
     expect(screen.getByRole('link', { name: 'Mở site' })).toHaveAttribute('href', 'http://spa.vsite.local:3000');
     expect(onSettled).toHaveBeenCalledTimes(1);
-    expect(invalidate).toHaveBeenCalledTimes(3);
+    const keys = invalidate.mock.calls.map(([filters]) => filters?.queryKey);
+    expect(keys).toEqual([
+      getGetWebsiteQueryKey('shop-1'),
+      getListPagesQueryKey('shop-1'),
+      getListPublicationsQueryKey('shop-1'),
+    ]);
   });
 
   it('không có siteUrl ⇒ không có link Mở site', async () => {
@@ -211,6 +217,50 @@ describe('PublishDialog', () => {
     await openDialog();
     fireEvent.click(screen.getByRole('button', { name: 'Xuất bản' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
+  });
+
+  it('đang xuất bản: Huỷ disabled, Escape/✕ không gọi onOpenChange; onSettled vẫn chạy khi unmount giữa chừng', async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post(POST_URL, async () => {
+        await gate;
+        return HttpResponse.json(publication, { status: 201 });
+      }),
+    );
+    const { onOpenChange, onSettled, unmount } = renderDialog();
+    await openDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'Xuất bản' }));
+    await screen.findByRole('button', { name: 'Đang xuất bản…' });
+
+    expect(screen.getByRole('button', { name: 'Huỷ' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Đóng' })).not.toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    unmount();
+    release();
+    await waitFor(() => {
+      expect(onSettled).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('màn thành công: Escape và ✕ gọi onOpenChange(false); nút "Xong" cũng đóng', async () => {
+    server.use(http.post(POST_URL, () => HttpResponse.json(publication, { status: 201 })));
+    const { onOpenChange } = renderDialog();
+    await openDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'Xuất bản' }));
+    await screen.findByText('Đã xuất bản bản v7');
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Đóng' }));
+    expect(onOpenChange).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
+    expect(onOpenChange).toHaveBeenCalledTimes(3);
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
   });
 
   it('nút Huỷ gọi onOpenChange(false)', async () => {

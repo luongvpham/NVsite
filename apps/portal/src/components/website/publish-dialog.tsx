@@ -12,7 +12,10 @@ export interface PublishDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Trang đang mở trong editor (F5); lỗi thuộc trang này hiện "trang này" thay vì link "Mở trang". */
   currentPageId?: string;
-  /** Gọi đúng một lần mỗi lần xuất bản kết thúc (thành công hoặc lỗi). */
+  /**
+   * Gọi đúng một lần mỗi lần xuất bản kết thúc (thành công hoặc lỗi) — kể cả khi dialog đã đóng/unmount
+   * giữa chừng. Dialog không đóng được khi đang xuất bản.
+   */
   onSettled?: () => void;
   /** URL site công khai (`shopSiteUrl(slug)`); `null` ⇒ ẩn link "Mở site". */
   siteUrl?: string | null;
@@ -21,7 +24,7 @@ export interface PublishDialogProps {
 /** Dialog xuất bản dùng chung cho màn tổng quan (F4) và toolbar editor (F5). */
 export function PublishDialog({ shopId, open, onOpenChange, currentPageId, onSettled, siteUrl = null }: PublishDialogProps) {
   const [note, setNote] = useState('');
-  const { publish, isPending, result, failure, reset } = usePublishWebsiteFlow(shopId);
+  const { publish, isPending, result, failure, reset } = usePublishWebsiteFlow(shopId, { onSettled });
 
   useEffect(() => {
     if (open) {
@@ -32,10 +35,13 @@ export function PublishDialog({ shopId, open, onOpenChange, currentPageId, onSet
 
   const trimmedLength = note.trim().length;
   const tooLong = trimmedLength > PUBLISH_NOTE_MAX;
-  const close = () => { onOpenChange(false); };
+  const close = () => {
+    if (isPending) return;
+    onOpenChange(false);
+  };
 
   return (
-    <Dialog open={open} onClose={close} title="Xuất bản website">
+    <Dialog open={open} onClose={close} title="Xuất bản website" dismissible={!isPending}>
       {result ? (
         <div className="space-y-4">
           <p className="text-sm text-foreground">Đã xuất bản bản v{result.version}</p>
@@ -51,7 +57,7 @@ export function PublishDialog({ shopId, open, onOpenChange, currentPageId, onSet
               </a>
             )}
             <Button type="button" onClick={close}>
-              Đóng
+              Xong
             </Button>
           </div>
         </div>
@@ -61,7 +67,7 @@ export function PublishDialog({ shopId, open, onOpenChange, currentPageId, onSet
           onSubmit={(event) => {
             event.preventDefault();
             if (isPending || tooLong) return;
-            publish(note, onSettled);
+            publish(note);
           }}
         >
           <div>
@@ -81,8 +87,8 @@ export function PublishDialog({ shopId, open, onOpenChange, currentPageId, onSet
           </div>
 
           {failure && (
-            <div role="alert" className="space-y-2 text-sm text-destructive">
-              <p>{failure.message}</p>
+            <div className="space-y-2 text-sm text-destructive">
+              <p role="alert">{failure.message}</p>
               {failure.kind === 'blocked' && (
                 <PublishErrors shopId={shopId} params={failure.params} currentPageId={currentPageId} />
               )}
@@ -90,7 +96,7 @@ export function PublishDialog({ shopId, open, onOpenChange, currentPageId, onSet
           )}
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={close}>
+            <Button type="button" variant="outline" disabled={isPending} onClick={close}>
               Huỷ
             </Button>
             <Button type="submit" disabled={isPending || tooLong}>
