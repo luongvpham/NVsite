@@ -425,3 +425,312 @@ describe('413 + giới hạn kích thước + lỗi tạm', () => {
     expect(controller.hasUnsavedChanges).toBe(false);
   });
 });
+
+describe('R9 — nhường chỗ cho publish (prepareForPublish / finishPublish)', () => {
+  const invalid422 = { status: 422, error_code: 'RICHTEXT_UNSAFE' };
+
+  it('không có thay đổi → khoá ngay, không PUT, ok', async () => {
+    const { save, controller, flushTimers } = setup();
+    await expect(controller.prepareForPublish()).resolves.toEqual({ ok: true });
+    await flushTimers();
+    expect(save).not.toHaveBeenCalled();
+    expect(controller.getState().status).toBe('saved');
+  });
+
+  it('đang chờ debounce → huỷ hẹn giờ, PUT ngay đúng MỘT lần rồi ok', async () => {
+    const { save, controller, edit, flushTimers } = setup(7);
+    save.mockResolvedValue(ok(8));
+    edit('b');
+    const result = await controller.prepareForPublish(); // không đợi debounce
+    expect(result).toEqual({ ok: true });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0]?.[1]).toBe(7);
+    expect(save.mock.calls[0]?.[0].children[0]?.props).toMatchObject({ title: 'b' });
+    await flushTimers();
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(controller.getState().status).toBe('saved');
+    expect(controller.hasUnsavedChanges).toBe(false);
+  });
+
+  it('PUT đang bay → chờ xong (không PUT song song), rồi lưu phần sửa thêm bằng version mới', async () => {
+    const { save, controller, edit, flushTimers } = setup(7);
+    const first = deferred<ReturnType<typeof ok>>();
+    save.mockReturnValueOnce(first.promise).mockResolvedValueOnce(ok(9));
+    edit('b');
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(1);
+    edit('b-them'); // sửa trong lúc bay
+
+    let settled = false;
+    const pending = controller.prepareForPublish().then((r) => {
+      settled = true;
+      return r;
+    });
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS * 3);
+    expect(settled).toBe(false);
+    expect(save).toHaveBeenCalledTimes(1); // R1: không PUT thứ hai khi cái đầu còn bay
+
+    first.resolve(ok(8));
+    await expect(pending).resolves.toEqual({ ok: true });
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save.mock.calls[1]?.[1]).toBe(8);
+    expect(save.mock.calls[1]?.[0].children[0]?.props).toMatchObject({ title: 'b-them' });
+    expect(controller.hasUnsavedChanges).toBe(false);
+  });
+
+  it('PUT đang bay và không sửa thêm → chờ xong, không PUT lại', async () => {
+    const { save, controller, edit, flushTimers } = setup(7);
+    const first = deferred<ReturnType<typeof ok>>();
+    save.mockReturnValueOnce(first.promise);
+    edit('b');
+    await flushTimers();
+    const pending = controller.prepareForPublish();
+    first.resolve(ok(8));
+    await expect(pending).resolves.toEqual({ ok: true });
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('422 → ok:false invalid, không PUT, không khoá (sửa tiếp vẫn autosave)', async () => {
+    const { save, controller, edit, flushTimers } = setup();
+    save.mockRejectedValueOnce(invalid422).mockResolvedValueOnce(ok(8));
+    edit('x');
+    await flushTimers();
+    expect(controller.getState().status).toBe('invalid');
+
+    await expect(controller.prepareForPublish()).resolves.toEqual({ ok: false, reason: 'invalid' });
+    expect(save).toHaveBeenCalledTimes(1);
+
+    edit('sua');
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(controller.getState().status).toBe('saved');
+  });
+
+  it('422 của PUT đang bay → ok:false invalid sau khi chờ, không PUT thêm', async () => {
+    const { save, controller, edit, flushTimers } = setup();
+    const first = deferred<ReturnType<typeof ok>>();
+    save.mockReturnValueOnce(first.promise);
+    edit('x');
+    await flushTimers();
+    const pending = controller.prepareForPublish();
+    first.reject(invalid422);
+    await expect(pending).resolves.toEqual({ ok: false, reason: 'invalid' });
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('409 → ok:false conflict, không PUT', async () => {
+    const { save, controller, edit, flushTimers } = setup();
+    save.mockRejectedValueOnce(conflict(99));
+    edit('x');
+    await flushTimers();
+    await expect(controller.prepareForPublish()).resolves.toEqual({ ok: false, reason: 'conflict' });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(controller.getState().status).toBe('conflict');
+  });
+
+  it('413 → ok:false blocked, không PUT lại', async () => {
+    const { save, controller, edit, flushTimers } = setup();
+    save.mockRejectedValueOnce({ status: 413, error_code: 'TREE_BODY_TOO_LARGE' });
+    edit('x');
+    await flushTimers();
+    await expect(controller.prepareForPublish()).resolves.toEqual({ ok: false, reason: 'blocked' });
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('cây vượt giới hạn đang chờ debounce → ok:false blocked, không PUT', async () => {
+    const { store, save, controller } = setup();
+    store.setState({ tree: heroTree('x'.repeat(1_100_000)) });
+    await expect(controller.prepareForPublish()).resolves.toEqual({ ok: false, reason: 'blocked' });
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('lỗi mạng trước đó → thử lưu MỘT lần; vẫn lỗi → ok:false error, không khoá', async () => {
+    const { save, controller, edit, flushTimers } = setup();
+    save
+      .mockRejectedValueOnce(new Error('Network Error'))
+      .mockRejectedValueOnce(new Error('Network Error'))
+      .mockResolvedValueOnce(ok(8));
+    edit('x');
+    await flushTimers();
+    expect(controller.getState().status).toBe('error');
+
+    await expect(controller.prepareForPublish()).resolves.toEqual({ ok: false, reason: 'error' });
+    expect(save).toHaveBeenCalledTimes(2);
+
+    controller.retry(); // không khoá → Thử lại vẫn gửi
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(3);
+    expect(controller.getState().status).toBe('saved');
+  });
+
+  it('lỗi mạng trước đó, thử lại thành công → ok', async () => {
+    const { save, controller, edit, flushTimers } = setup();
+    save.mockRejectedValueOnce(new Error('Network Error')).mockResolvedValueOnce(ok(8));
+    edit('x');
+    await flushTimers();
+    await expect(controller.prepareForPublish()).resolves.toEqual({ ok: true });
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  it('R1 — không PUT khi đang publish: gõ trong lúc khoá chỉ đánh dấu unsaved; retry cũng không gửi', async () => {
+    const { save, controller, edit, flushTimers } = setup();
+    await controller.prepareForPublish();
+    edit('trong-luc-khoa');
+    expect(controller.getState().status).toBe('unsaved');
+    expect(controller.hasUnsavedChanges).toBe(true);
+    await flushTimers();
+    await flushTimers();
+    controller.retry();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('gõ trong lúc PUT của prepare đang bay → prepare vẫn ok; phần gõ thêm chờ tới finishPublish', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers } = setup(7);
+    const put = deferred<ReturnType<typeof ok>>();
+    save.mockReturnValueOnce(put.promise).mockResolvedValueOnce(ok(21));
+    fetchDraft.mockResolvedValue({ version: 20, tree: heroTree('server') });
+    edit('a1');
+    const pending = controller.prepareForPublish();
+    edit('a2');
+    put.resolve(ok(8));
+    await expect(pending).resolves.toEqual({ ok: true });
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(controller.getState().status).toBe('unsaved');
+
+    await controller.finishPublish();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save.mock.calls[1]?.[1]).toBe(20);
+  });
+
+  it('refreshVersion giữ cây: finishPublish lấy version từ GET, KHÔNG đè cây, giữ nguyên tham chiếu, vẫn "saved"', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers, store, titleOf } = setup(7);
+    save.mockResolvedValueOnce(ok(8)).mockResolvedValueOnce(ok(31));
+    fetchDraft.mockResolvedValue({ version: 30, tree: heroTree('ban-server-khac') });
+    edit('cua-toi');
+    await controller.prepareForPublish();
+    const before = store.getState().tree;
+
+    await controller.finishPublish();
+    expect(fetchDraft).toHaveBeenCalledTimes(1);
+    expect(store.getState().tree).toBe(before);
+    expect(titleOf()).toBe('cua-toi');
+    expect(controller.getState().status).toBe('saved');
+    expect(controller.hasUnsavedChanges).toBe(false);
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(1); // không có gì mới để gửi
+
+    edit('sau-publish');
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save.mock.calls[1]?.[1]).toBe(30); // version của GET, không phải 8 → không 409
+  });
+
+  it('R1 — gõ trong lúc khoá → lưu NGAY sau finishPublish (không đợi debounce) bằng version của GET', async () => {
+    const { save, fetchDraft, controller, edit } = setup(7);
+    save.mockResolvedValue(ok(41));
+    fetchDraft.mockResolvedValue({ version: 40, tree: heroTree('server') });
+    await controller.prepareForPublish();
+    edit('go-trong-luc-khoa');
+
+    await controller.finishPublish();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0]?.[1]).toBe(40);
+    expect(save.mock.calls[0]?.[0].children[0]?.props).toMatchObject({ title: 'go-trong-luc-khoa' });
+    expect(controller.getState().status).toBe('saved');
+  });
+
+  it('R2 — publish lỗi (422/409) vẫn finishPublish: lấy version rồi mở lại autosave', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers } = setup(7);
+    save.mockResolvedValue(ok(51));
+    fetchDraft.mockResolvedValue({ version: 7, tree: heroTree() }); // publish lỗi không ghi gì → version như cũ
+    await controller.prepareForPublish();
+    // POST publish trả 422/409 ở tầng UI — controller không biết, chỉ được gọi finishPublish.
+    await controller.finishPublish();
+    expect(fetchDraft).toHaveBeenCalledTimes(1);
+
+    edit('tiep');
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0]?.[1]).toBe(7);
+  });
+
+  it('R3 — GET lỗi → vẫn mở khoá, giữ version cũ, không ném', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers, titleOf } = setup(7);
+    save.mockResolvedValueOnce(ok(8)).mockResolvedValueOnce(ok(9)).mockResolvedValueOnce(ok(10));
+    fetchDraft.mockRejectedValue(new Error('net'));
+    edit('truoc-publish'); // ≠ 'a' (title mặc định) để có PUT thật
+    await controller.prepareForPublish();
+    expect(save).toHaveBeenCalledTimes(1);
+    edit('b'); // gõ trong lúc khoá
+
+    await expect(controller.finishPublish()).resolves.toBeUndefined();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save.mock.calls[1]?.[1]).toBe(8); // version cũ (của PUT trước)
+    expect(titleOf()).toBe('b');
+
+    edit('c');
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(3); // autosave chạy lại bình thường
+  });
+
+  it('finishPublish khi không khoá → no-op (không GET)', async () => {
+    const { fetchDraft, controller } = setup();
+    await controller.finishPublish();
+    expect(fetchDraft).not.toHaveBeenCalled();
+  });
+
+  it('gọi prepareForPublish hai lần → chung một lượt lưu, không PUT thừa', async () => {
+    const { save, controller, edit } = setup(7);
+    const put = deferred<ReturnType<typeof ok>>();
+    save.mockReturnValueOnce(put.promise);
+    edit('b');
+    const a = controller.prepareForPublish();
+    const b = controller.prepareForPublish();
+    put.resolve(ok(8));
+    await expect(a).resolves.toEqual({ ok: true });
+    await expect(b).resolves.toEqual({ ok: true });
+    expect(save).toHaveBeenCalledTimes(1);
+    await expect(controller.prepareForPublish()).resolves.toEqual({ ok: true }); // đã khoá
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('dispose giữa lúc prepare chờ PUT → không ném, ok:false', async () => {
+    const { save, controller, edit, flushTimers } = setup();
+    const first = deferred<ReturnType<typeof ok>>();
+    save.mockReturnValueOnce(first.promise);
+    edit('b');
+    await flushTimers();
+    const pending = controller.prepareForPublish();
+    controller.dispose();
+    await expect(pending).resolves.toEqual({ ok: false, reason: 'error' });
+    first.resolve(ok(8)); // response tới muộn không làm gì
+    await vi.advanceTimersByTimeAsync(0);
+  });
+
+  it('dispose giữa lúc finishPublish chờ GET → không ném, không PUT; start lại thì không còn khoá', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers } = setup();
+    const get = deferred<FetchedDraft>();
+    fetchDraft.mockReturnValueOnce(get.promise);
+    save.mockResolvedValue(ok(8));
+    await controller.prepareForPublish();
+    edit('b');
+    const pending = controller.finishPublish();
+    controller.dispose();
+    get.resolve({ version: 99, tree: heroTree() });
+    await expect(pending).resolves.toBeUndefined();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).not.toHaveBeenCalled();
+
+    controller.start(); // StrictMode mount lại
+    edit('c');
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0]?.[1]).toBe(7); // GET bị bỏ sau dispose
+  });
+});

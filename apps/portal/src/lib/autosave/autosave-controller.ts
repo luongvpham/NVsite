@@ -26,6 +26,11 @@ export interface AutosaveState {
 }
 
 /** Bản draft vừa GET lại. `tree` null = vỏ cây không đọc được (Zod). `version` lấy nguyên văn từ response. */
+/** Kết quả `prepareForPublish`. `ok: false` ⇒ controller KHÔNG khoá (autosave chạy tiếp như thường). */
+export type PrepareForPublishResult =
+  | { ok: true }
+  | { ok: false; reason: 'invalid' | 'conflict' | 'blocked' | 'error' };
+
 export interface FetchedDraft {
   version: number;
   tree: TreeEnvelope | null;
@@ -53,6 +58,11 @@ export interface AutosaveDeps {
  *   vừa gửi (R2) — không thì để lần lưu sạch kế tiếp.
  * - "Đã lưu" = tham chiếu cây hiện tại === tham chiếu cây của lần PUT thành công gần nhất (Immer giữ nguyên tham chiếu
  *   khi op không đổi gì, nên không có "bẩn giả").
+ * - **Khoá cho publish** (R9, WEBSITE-006): `prepareForPublish` chờ PUT đang bay, lưu ngay phần còn lại rồi khoá;
+ *   khoá kéo dài tới `finishPublish` (cả lúc dialog ghi chú đang mở — G5). Trong lúc khoá KHÔNG có PUT nào (kể cả
+ *   `retry`): sửa cây chỉ đánh dấu `unsaved`. `finishPublish` GET lấy `version` (publish hạ `isDirty` ⇒ version draft
+ *   đổi), KHÔNG đè cây và không đổi `savedTree`; GET lỗi ⇒ giữ `version` cũ (R3). Mở khoá xong, phần gõ trong lúc khoá
+ *   được lưu ngay. `prepareForPublish` trả `ok: false` thì không bao giờ để lại khoá.
  */
 export class AutosaveController {
   private readonly deps: AutosaveDeps;
@@ -63,6 +73,18 @@ export class AutosaveController {
   private pendingFlush = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private disposed = false;
+  /** `preparing`: đang chạy `prepareForPublish`; `locked`: đã khoá, chờ `finishPublish`. */
+  private lock: 'none' | 'preparing' | 'locked' = 'none';
+  /** Getter vì cùng lý do với `stopped`: dispose (reset khoá) có thể chạy trong lúc `await`. */
+  private get isLocked(): boolean {
+    return this.lock === 'locked';
+  }
+  private preparing: Promise<PrepareForPublishResult> | undefined;
+  /** Cây của lần gửi/kiểm tra thất bại gần nhất — để biết "cây chưa đổi kể từ lỗi" (gửi lại cũng y hệt). */
+  private lastFailedTree: TreeEnvelope | null = null;
+  /** Lượt `flush` đang gửi; `prepareForPublish` chờ nó (được thả cả khi dispose). */
+  private idle: Promise<void> | undefined;
+  private releaseIdle: (() => void) | undefined;
   /** Getter để TS không thu hẹp `disposed` thành `false` sau `await` (dispose có thể chạy trong lúc chờ). */
   private get stopped(): boolean {
     return this.disposed;
@@ -119,12 +141,19 @@ export class AutosaveController {
     this.unsubscribeStore = undefined;
     this.inFlight = false;
     this.pendingFlush = false;
+    this.lock = 'none';
+    this.preparing = undefined;
+    // Ai đang chờ lượt gửi (prepareForPublish) thì thả ra — họ tự thấy `stopped`.
+    const release = this.releaseIdle;
+    this.idle = undefined;
+    this.releaseIdle = undefined;
+    release?.();
   }
 
   // ── Điều khiển ──────────────────────────────────────────────────────────────
   /** Nút "Thử lại": lưu ngay, bỏ qua debounce. */
   retry() {
-    if (this.state.conflict) return;
+    if (this.state.conflict || this.lock !== 'none') return;
     this.cancelTimer();
     void this.flush();
   }
@@ -167,7 +196,115 @@ export class AutosaveController {
     }
   }
 
+  /**
+   * Trước khi publish: chờ PUT đang bay, lưu ngay phần còn lại (huỷ debounce), rồi khoá autosave.
+   * `ok: false` ⇒ không khoá. Gọi lại khi đang chuẩn bị ⇒ dùng chung kết quả; khi đã khoá ⇒ `ok: true`.
+   */
+  prepareForPublish(): Promise<PrepareForPublishResult> {
+    if (this.lock === 'locked') return Promise.resolve({ ok: true });
+    if (this.preparing) return this.preparing;
+    if (this.disposed) return Promise.resolve({ ok: false, reason: 'error' });
+    if (this.state.conflict) return Promise.resolve({ ok: false, reason: 'conflict' });
+    const run = this.runPrepare();
+    this.preparing = run;
+    return run;
+  }
+
+  /**
+   * Sau publish (thành công hay lỗi): GET lấy `version` — KHÔNG đè cây — rồi mở khoá; phần gõ trong lúc khoá được lưu
+   * ngay. GET lỗi ⇒ vẫn mở khoá với `version` cũ (R3). Không khoá ⇒ no-op. Không bao giờ ném.
+   */
+  async finishPublish(): Promise<void> {
+    if (this.lock !== 'locked' || this.disposed) return;
+    try {
+      const latest = await this.deps.fetchDraft();
+      if (this.stopped || !this.isLocked) return;
+      // Chỉ lấy version; cây trên server chính là cây đã lưu (publish chỉ hạ isDirty — G6).
+      this.version = latest.version;
+    } catch {
+      if (this.stopped || !this.isLocked) return;
+      // R3: giữ version cũ; nếu PUT sau đó 409 thì dialog xung đột lo, cây local không mất.
+    }
+    this.lock = 'none';
+    if (this.state.conflict) return;
+    if (this.deps.store.getState().tree !== this.savedTree) {
+      this.cancelTimer();
+      void this.flush();
+    }
+  }
+
   // ── Nội bộ ──────────────────────────────────────────────────────────────────
+  private async runPrepare(): Promise<PrepareForPublishResult> {
+    this.lock = 'preparing';
+    this.cancelTimer();
+    const result = await this.saveRemainder();
+    if (this.stopped) return { ok: false, reason: 'error' };
+    this.preparing = undefined;
+    if (result.ok) {
+      this.lock = 'locked';
+    } else {
+      this.lock = 'none';
+      this.resumeAfterUnlock();
+    }
+    return result;
+  }
+
+  /** Lõi của prepare: chờ lượt gửi đang bay rồi lưu ngay phần chưa lưu. Chạy khi `lock === 'preparing'`. */
+  private async saveRemainder(): Promise<PrepareForPublishResult> {
+    while (this.idle) await this.idle;
+    if (this.stopped) return { ok: false, reason: 'error' };
+    if (this.state.conflict) return { ok: false, reason: 'conflict' };
+
+    const tree = this.deps.store.getState().tree;
+    if (tree === this.savedTree) return { ok: true };
+    // Lỗi nội dung/kích thước mà cây chưa đổi kể từ lỗi → gửi lại cũng y hệt: không PUT.
+    const { status } = this.state;
+    if ((status === 'invalid' || status === 'blocked') && tree === this.lastFailedTree) {
+      return { ok: false, reason: status };
+    }
+    return this.flushForPublish();
+  }
+
+  /** Một lượt lưu ngay (bỏ qua khoá đang chuẩn bị) rồi đọc kết quả từ `status`. */
+  private async flushForPublish(): Promise<PrepareForPublishResult> {
+    await this.flush(true);
+    if (this.stopped) return { ok: false, reason: 'error' };
+    const after = this.state.status;
+    if (after === 'conflict' || after === 'invalid' || after === 'blocked' || after === 'error') {
+      return { ok: false, reason: after };
+    }
+    // PUT thành công. Gõ thêm trong lúc PUT bay (`unsaved`) thuộc về sau khoá — lưu sau `finishPublish`.
+    return { ok: true };
+  }
+
+  /** Prepare thất bại: autosave chạy tiếp nếu có thay đổi chưa thử (gõ trong lúc chuẩn bị). */
+  private resumeAfterUnlock() {
+    if (this.disposed || this.state.conflict) return;
+    const tree = this.deps.store.getState().tree;
+    if (tree === this.savedTree || tree === this.lastFailedTree || this.timer !== undefined) return;
+    this.timer = setTimeout(() => {
+      this.timer = undefined;
+      void this.flush();
+    }, this.debounceMs);
+  }
+
+  /** Đánh dấu có lượt gửi; trả hàm thả (luôn resolve chính promise của nó, chỉ xoá `idle` nếu chưa bị thay). */
+  private markBusy(): () => void {
+    let resolve!: () => void;
+    const promise = new Promise<void>((r) => {
+      resolve = r;
+    });
+    this.idle = promise;
+    this.releaseIdle = resolve;
+    return () => {
+      if (this.idle === promise) {
+        this.idle = undefined;
+        this.releaseIdle = undefined;
+      }
+      resolve();
+    };
+  }
+
   private setConflict(patch: Partial<NonNullable<AutosaveState['conflict']>>) {
     const current = this.state.conflict;
     if (current) this.setState({ conflict: { ...current, ...patch } });
@@ -188,6 +325,7 @@ export class AutosaveController {
       return;
     }
     if (!this.inFlight) this.setState({ status: 'unsaved' });
+    if (this.lock !== 'none') return; // R9: đang publish → chỉ đánh dấu, không hẹn giờ PUT
     clearTimeout(this.timer);
     this.timer = setTimeout(() => {
       this.timer = undefined;
@@ -195,8 +333,10 @@ export class AutosaveController {
     }, this.debounceMs);
   }
 
-  private async flush(): Promise<void> {
+  /** `force`: do `prepareForPublish` gọi — được gửi dù đang chuẩn bị khoá. */
+  private async flush(force = false): Promise<void> {
     if (this.disposed || this.state.conflict) return;
+    if (this.lock !== 'none' && !force) return; // R9: không PUT trong lúc publish
     if (this.inFlight) {
       this.pendingFlush = true; // xong request đang bay thì lưu tiếp (R1)
       return;
@@ -212,27 +352,35 @@ export class AutosaveController {
     const limit = checkTreeLimits(tree);
     if (!limit.ok) {
       // R6: không gửi. Cây vẫn nằm ở store nên undo được; đổi tiếp thì debounce kiểm lại.
+      this.lastFailedTree = tree;
       this.setState({ status: 'blocked', blocked: { code: limit.code, message: limit.message } });
       return;
     }
 
     this.inFlight = true;
+    const release = this.markBusy();
     this.setState({ status: 'saving', blocked: null });
     try {
-      const result = await this.deps.save(tree, this.version);
-      if (this.stopped) return;
-      this.version = result.version;
-      this.savedTree = tree;
-      this.inFlight = false;
-      // Lưu thành công → lỗi 422 cũ hết hiệu lực (R5).
-      this.setState({ status: this.deps.store.getState().tree === tree ? 'saved' : 'unsaved', invalid: null, blocked: null });
-      if (result.sanitized) await this.reloadSanitized(tree);
-    } catch (error) {
-      this.inFlight = false;
-      if (this.stopped) return;
-      this.handleFailure(error);
+      try {
+        const result = await this.deps.save(tree, this.version);
+        if (this.stopped) return;
+        this.version = result.version;
+        this.savedTree = tree;
+        this.lastFailedTree = null;
+        this.inFlight = false;
+        // Lưu thành công → lỗi 422 cũ hết hiệu lực (R5).
+        this.setState({ status: this.deps.store.getState().tree === tree ? 'saved' : 'unsaved', invalid: null, blocked: null });
+        if (result.sanitized) await this.reloadSanitized(tree);
+      } catch (error) {
+        this.inFlight = false;
+        if (this.stopped) return;
+        this.lastFailedTree = tree;
+        this.handleFailure(error);
+      }
+      this.afterAttempt(tree);
+    } finally {
+      release();
     }
-    this.afterAttempt(tree);
   }
 
   /** `sanitized: true` (R2): BE đã làm sạch cây → GET rồi thay cây, nhưng chỉ khi người dùng chưa sửa tiếp. */
@@ -285,6 +433,11 @@ export class AutosaveController {
   /** Sau mỗi lượt gửi: nếu người dùng sửa tiếp trong lúc bay mà hẹn giờ đã trôi qua, lưu tiếp ngay (R1). */
   private afterAttempt(sentTree: TreeEnvelope) {
     if (this.disposed || this.state.conflict) return;
+    if (this.lock !== 'none') {
+      // R9: đang chuẩn bị/khoá publish — prepare tự lo phần còn lại, `finishPublish` lưu phần gõ trong lúc khoá.
+      this.pendingFlush = false;
+      return;
+    }
     const dirty = this.deps.store.getState().tree !== this.savedTree;
     if (!dirty) return;
     const failed = ['error', 'blocked', 'invalid'].includes(this.state.status);
