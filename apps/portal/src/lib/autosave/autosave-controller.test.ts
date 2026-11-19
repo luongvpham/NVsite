@@ -187,7 +187,7 @@ describe('R2 — sanitized', () => {
     expect(save.mock.calls[1]?.[1]).toBe(8);
   });
 
-  it('sanitized nhưng người dùng đã sửa tiếp → KHÔNG nạp lại; lần lưu sạch kế tiếp mới nạp', async () => {
+  it('sanitized nhưng người dùng đã sửa tiếp → KHÔNG nạp lại; PUT kế tiếp (BE làm sạch lại) mới nạp', async () => {
     const { save, fetchDraft, edit, flushTimers, titleOf } = setup(7);
     const first = deferred<ReturnType<typeof ok>>();
     save.mockReturnValueOnce(first.promise).mockResolvedValueOnce(ok(9, true));
@@ -303,6 +303,22 @@ describe('409 DRAFT_CONFLICT', () => {
     await controller.reloadLatest();
     expect(controller.getState().conflict?.resolveFailed).toBe(true);
     expect(titleOf()).toBe('cua-toi');
+  });
+
+  it('C1 — "Giữ bản của tôi" rồi PUT lỗi mạng, undo về đúng bản đã lưu → KHÔNG nạp cây server (tab khác), giữ lịch sử undo/redo', async () => {
+    const { controller, fetchDraft, store, titleOf, save, flushTimers } = await conflicted();
+    fetchDraft.mockResolvedValue({ version: 123, tree: heroTree('tab-khac') });
+    save.mockRejectedValueOnce(new Error('net'));
+    await controller.keepMine();
+    expect(controller.getState().status).toBe('error');
+    expect(titleOf()).toBe('cua-toi');
+
+    store.getState().undo(); // về đúng savedTree (cây lúc mở phiên)
+    await flushTimers();
+    expect(titleOf()).toBe('a'); // không bị thay bằng 'tab-khac'
+    expect(store.temporal.getState().futureStates).toHaveLength(1);
+    store.getState().redo();
+    expect(titleOf()).toBe('cua-toi'); // phần sửa chưa lưu vẫn còn
   });
 
   it('bản server không đọc được (tree null) → "Tải bản mới" không nạp, không mất cây local', async () => {
@@ -920,10 +936,7 @@ describe('R9 — nhường chỗ cho publish (prepareForPublish / finishPublish)
     await flushTimers();
     expect(controller.hasUnsavedChanges).toBe(false);
     expect(save).toHaveBeenCalledTimes(1);
-    // Khoảng trống cũ: bản sạch trên server giờ được nạp (cây local = cây đã gửi, không có gì để mất).
-    expect(titleOf()).toBe('da-lam-sach');
-    expect(store.temporal.getState().pastStates).toHaveLength(0);
-    expect(controller.getState().status).toBe('saved');
+    expect(titleOf()).toBe('ban-ban'); // không nạp bản sạch khi undo (khoảng trống vô hại, theo dõi riêng)
 
     fetchDraft.mockResolvedValue({ version: 50, tree: heroTree('da-lam-sach') });
     await expect(controller.prepareForPublish()).resolves.toEqual({ ok: true });

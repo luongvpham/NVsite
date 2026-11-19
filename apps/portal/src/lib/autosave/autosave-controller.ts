@@ -64,7 +64,9 @@ export interface AutosaveDeps {
  * - `version` opaque: chỉ gán từ response PUT/GET, không so sánh/tăng. 409 "Giữ bản của tôi" lấy version bằng GET mới (R8),
  *   không dùng `params.currentVersion`.
  * - Response KHÔNG ghi đè cây local (R1). Ngoại lệ duy nhất: `sanitized` → nạp lại, và CHỈ khi cây hiện tại đúng là cây
- *   vừa gửi (R2) — không thì để lần lưu sạch kế tiếp.
+ *   vừa gửi (R2). Đã sửa tiếp ⇒ giữ cây local (còn phần chưa làm sạch); PUT kế tiếp BE làm sạch lại và trả
+ *   `sanitized` lần nữa ⇒ nạp lúc đó nếu khi ấy chưa sửa tiếp. Undo về đúng cây đã gửi ⇒ không PUT nên chưa nạp
+ *   (khoảng trống vô hại: lần sửa sau PUT lại và BE làm sạch).
  * - "Đã lưu" = tham chiếu cây hiện tại === tham chiếu cây của lần PUT thành công gần nhất (Immer giữ nguyên tham chiếu
  *   khi op không đổi gì, nên không có "bẩn giả").
  * - **Khoá cho publish** (R9, WEBSITE-006): `prepareForPublish` chờ PUT đang bay, lưu ngay phần còn lại rồi khoá;
@@ -74,10 +76,10 @@ export interface AutosaveDeps {
  *   `serverTree` (cây mình biết chắc đang nằm trên server ở `version` hiện tại — có thể là bản BE đã làm sạch).
  *   Khác (tab khác vừa lưu) / tree null / chưa biết cây server / GET lỗi (R3) ⇒ giữ `version` cũ — PUT kế tiếp nhận
  *   409 và dialog xung đột lo. 409 giả còn hơn ghi đè mất bản của người khác.
+ *   Mở khoá xong, phần gõ trong lúc khoá được lưu ngay. `prepareForPublish` trả `ok: false` thì không để lại khoá.
  * - `serverTree`: PUT sạch ⇒ cây vừa gửi; PUT `sanitized` ⇒ chưa biết cho tới khi GET của reloadSanitized về với đúng
  *   `version` vừa PUT (ghi nhận cả khi không nạp được vào store vì người dùng đang gõ); GET "Tải bản mới"/"Giữ bản của
- *   tôi" ⇒ cây của GET đó. Undo về đúng `savedTree` mà `serverTree` (đã biết) khác nó ⇒ nạp `serverTree` (bản sạch).
- *   Mở khoá xong, phần gõ trong lúc khoá được lưu ngay. `prepareForPublish` trả `ok: false` thì không để lại khoá.
+ *   tôi" ⇒ cây của GET đó. Chỉ dùng để quyết `finishPublish` có nhận `version` hay không — không bao giờ nạp vào store.
  * - **Thứ tự gọi**: `prepareForPublish` → (người xác nhận, POST publish — thành công hay lỗi) → `finishPublish`, đúng
  *   một cặp cho mỗi lần publish. Cặp này CHỈ dành cho publish từ editor, không dùng cho rollback. Gọi chồng được xếp hàng: prepare khi finish còn chạy
  *   ⇒ chờ finish rồi chuẩn bị thật; finish khi prepare còn chạy ⇒ chờ prepare rồi finish (prepare lỗi ⇒ không làm gì).
@@ -393,7 +395,6 @@ export class AutosaveController {
       // Undo về đúng bản đã lưu: không còn gì để gửi.
       this.cancelTimer();
       if (!this.inFlight) this.setState({ status: 'saved', blocked: null });
-      if (this.serverTree && this.serverTree !== this.savedTree) this.scheduleAdoptServerTree();
       return;
     }
     if (!this.inFlight) this.setState({ status: 'unsaved' });
@@ -403,24 +404,6 @@ export class AutosaveController {
       this.timer = undefined;
       void this.flush();
     }, this.debounceMs);
-  }
-
-  /**
-   * Cây local trở về đúng `savedTree` (bản mình gửi, chưa làm sạch) trong khi đã biết bản sạch trên server ⇒ nạp bản
-   * sạch (không mất gì: cây local đúng là cây đã gửi). Hoãn một microtask: đang ở trong listener của store (vd. giữa lúc
-   * zundo undo cập nhật lịch sử), nạp ngay sẽ đua với chính thao tác đó. Kiểm lại mọi điều kiện khi chạy.
-   */
-  private scheduleAdoptServerTree() {
-    const gen = this.session;
-    queueMicrotask(() => {
-      const server = this.serverTree;
-      if (!this.alive(gen) || this.inFlight || this.state.conflict || !server) return;
-      if (server === this.savedTree || this.deps.store.getState().tree !== this.savedTree) return;
-      // Đặt mốc "đã lưu" TRƯỚC khi nạp để onTreeChanged thấy cây === savedTree (không lên lịch lưu).
-      this.savedTree = server;
-      this.deps.store.getState().loadDraft(server, this.deps.store.getState().pageKind, { keepSelection: true });
-      this.setState({ status: 'saved' });
-    });
   }
 
   /** `force`: do `prepareForPublish` gọi — được gửi dù đang chuẩn bị khoá. */
@@ -486,7 +469,7 @@ export class AutosaveController {
     try {
       const latest = await this.deps.fetchDraft();
       if (!this.alive(gen) || !latest.tree) return;
-      // Đã sửa tiếp (trong lúc PUT hoặc lúc GET) → không đè việc đang làm; lần lưu sạch kế tiếp sẽ nạp lại.
+      // Đã sửa tiếp (trong lúc PUT hoặc lúc GET) → không đè việc đang làm; PUT kế tiếp BE làm sạch lại ⇒ nạp lúc đó.
       // Vẫn ghi nhận bản sạch là cây server — nhưng chỉ khi GET đúng là bản của lần PUT này (cùng version, chưa có
       // lần ghi nào khác chen vào).
       if (this.deps.store.getState().tree !== sentTree) {
@@ -500,7 +483,7 @@ export class AutosaveController {
       this.deps.store.getState().loadDraft(latest.tree, this.deps.store.getState().pageKind, { keepSelection: true });
       this.setState({ status: 'saved' });
     } catch {
-      // Không GET được thì giữ cây local; bản trên server đã sạch, lần lưu kế tiếp sẽ thử nạp lại.
+      // Không GET được thì giữ cây local; bản trên server đã sạch, PUT kế tiếp BE làm sạch lại ⇒ thử nạp lại lúc đó.
     }
   }
 
