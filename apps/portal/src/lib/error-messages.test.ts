@@ -47,6 +47,20 @@ describe('getErrorMessage', () => {
     }
   });
 
+  it('mã lỗi publish/rollback trong WEBSITE-004/brief.md §5, §7 có thông báo riêng', () => {
+    const fallback = getErrorMessage(undefined);
+    for (const code of [
+      'PUBLISH_BLOCKED',
+      'PUBLISH_CONFLICT',
+      'ROLLBACK_CONFLICT',
+      'PUBLICATION_NOT_FOUND',
+      'REQUIRED_PROP_MISSING',
+    ]) {
+      expect(getErrorMessage(code), code).not.toBe(fallback);
+    }
+    expect(getErrorMessage('PUBLISH_CONFLICT')).not.toBe(getErrorMessage('ROLLBACK_CONFLICT'));
+  });
+
   it('trả fallback message cho error_code không nhận diện được hoặc undefined', () => {
     expect(getErrorMessage(undefined)).toBe('Có lỗi xảy ra, vui lòng thử lại.');
     expect(getErrorMessage('SOME_UNKNOWN_CODE')).toBe('Có lỗi xảy ra, vui lòng thử lại.');
