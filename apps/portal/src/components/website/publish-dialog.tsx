@@ -19,10 +19,12 @@ export interface PublishDialogProps {
   onSettled?: () => void;
   /** URL site công khai (`shopSiteUrl(slug)`); `null` ⇒ ẩn link "Mở site". */
   siteUrl?: string | null;
+  /** Một dòng ghi chú riêng của nơi mở dialog (editor: sửa sau khi bấm Xuất bản không nằm trong bản này). */
+  notice?: string;
 }
 
 /** Dialog xuất bản dùng chung cho màn tổng quan (F4) và toolbar editor (F5). */
-export function PublishDialog({ shopId, open, onOpenChange, currentPageId, onSettled, siteUrl = null }: PublishDialogProps) {
+export function PublishDialog({ shopId, open, onOpenChange, currentPageId, onSettled, siteUrl = null, notice }: PublishDialogProps) {
   const [note, setNote] = useState('');
   const { publish, isPending, result, failure, reset } = usePublishWebsiteFlow(shopId, { onSettled });
 
@@ -42,6 +44,7 @@ export function PublishDialog({ shopId, open, onOpenChange, currentPageId, onSet
 
   return (
     <Dialog open={open} onClose={close} title="Xuất bản website" dismissible={!isPending}>
+      {notice && <p className="mb-3 text-sm text-muted-foreground">{notice}</p>}
       {result ? (
         <div className="space-y-4">
           <p className="text-sm text-foreground">Đã xuất bản bản v{result.version}</p>
