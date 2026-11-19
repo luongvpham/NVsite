@@ -5,10 +5,10 @@ import { getErrorCode } from '@vsite/shared';
 import { useGetShop, useGetWebsite, useListPages } from '@vsite/api-sdk';
 import { createResolveUrl, matchSiteUrl, type SitePageRef, type SiteUrlOptions } from '@vsite/builder-components';
 import {
+  decorateWithAnchor,
   RenderContextProvider,
   RenderTree,
   SiteLayout,
-  type DecorateNode,
   type PageRoot,
 } from '@vsite/builder-renderer';
 import type { EditorStore } from '@vsite/builder-core';
@@ -32,13 +32,6 @@ interface View {
   pageId: string | null;
   notice?: Notice;
 }
-
-/** Bọc mỗi node bằng `id` để link `anchor` (#nodeId) cuộn tới được; `display: contents` giữ nguyên bố cục. */
-const decorateWithId: DecorateNode = (node, rendered) => (
-  <div id={node.id} style={{ display: 'contents' }}>
-    {rendered}
-  </div>
-);
 
 /**
  * Xem trước toàn trang (Bước 6): lớp phủ toàn màn hình trong editor. Khung SiteLayout + theme đang chỉnh +
@@ -242,7 +235,7 @@ function PreviewBody({
     <RenderContextProvider value={{ mediaMap }}>
       <RenderTree
         tree={state.tree as unknown as PageRoot}
-        decorateNode={decorateWithId}
+        decorateNode={decorateWithAnchor}
         basePath={urlOptions.basePath}
         locale={urlOptions.locale}
         defaultLocale={urlOptions.defaultLocale}
