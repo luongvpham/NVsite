@@ -1,12 +1,13 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getListShopsQueryKey, type PageDto, type ShopSummaryDto, type WebsiteDto } from '@vsite/api-sdk';
 import { useSessionStore } from '../stores/session-store';
 import { renderApp } from '../test/render-app';
 import { server } from '../test/msw-server';
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   useSessionStore.getState().clearSession();
 });
 
@@ -305,5 +306,32 @@ describe('Website — trạng thái xuất bản', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Quay về bản này' }));
     fireEvent.click(screen.getByRole('button', { name: 'Xác nhận quay về' }));
     expect(await screen.findByText('Đang chạy bản v1')).toBeInTheDocument();
+  });
+
+  it('W3: không cấu hình origin site (env rỗng) → Published vẫn không có link Mở site', async () => {
+    vi.stubEnv('VITE_SHOP_SITE_ORIGIN_TEMPLATE', '');
+    serve({ ...website, status: 'Published', currentPublicationId: 'pub-2' });
+    renderApp('/shops/shop-1/website');
+    expect(await screen.findByText('Đang chạy bản v2')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Mở site' })).not.toBeInTheDocument();
+  });
+
+  it('R6 chéo: đang rollback → nút Xuất bản ở khối trạng thái disabled', async () => {
+    serve({ ...website, status: 'Published', currentPublicationId: 'pub-2' });
+    let release: () => void = () => undefined;
+    server.use(
+      http.post('*/api/shops/:shopId/website/publications/:id/rollback', async () => {
+        await new Promise<void>((resolve) => { release = resolve; });
+        return HttpResponse.json(publications[1]);
+      }),
+    );
+    renderApp('/shops/shop-1/website');
+    expect(await screen.findByText('Đang chạy bản v2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Xuất bản' })).toBeEnabled();
+    fireEvent.click(await screen.findByRole('button', { name: 'Quay về bản này' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận quay về' }));
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Xuất bản' })).toBeDisabled(); });
+    release();
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Xuất bản' })).toBeEnabled(); });
   });
 });

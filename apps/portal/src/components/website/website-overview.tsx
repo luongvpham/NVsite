@@ -13,6 +13,7 @@ import {
   WebsiteStatus,
   type WebsiteDto,
 } from '@vsite/api-sdk';
+import { useIsRollingBack } from '../../hooks/use-publication-mutations';
 import { getErrorMessage } from '../../lib/error-messages';
 import { shopSiteUrl } from '../../lib/site-url';
 import { PageList } from './page-list';
@@ -69,6 +70,7 @@ function PublishStatus({ shopId, website }: { shopId: string; website: WebsiteDt
   const [dialogOpen, setDialogOpen] = useState(false);
   const shopQuery = useGetShop(shopId);
   const publicationsQuery = useListPublications(shopId);
+  const isRollingBack = useIsRollingBack(); // R6 chéo
 
   const hasPublication = website.currentPublicationId !== null;
   const siteUrl = shopQuery.data ? shopSiteUrl(shopQuery.data.slug) : null;
@@ -101,6 +103,7 @@ function PublishStatus({ shopId, website }: { shopId: string; website: WebsiteDt
         <Button
           type="button"
           size="sm"
+          disabled={isRollingBack}
           onClick={() => {
             setDialogOpen(true);
           }}

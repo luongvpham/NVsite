@@ -9,7 +9,7 @@ import { PublishDialog, type PublishDialogProps } from './publish-dialog';
 
 function renderDialog(props: Partial<PublishDialogProps> = {}) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: { queries: { retry: false }, mutations: { retry: 3, retryDelay: 0 } },
   });
   const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
   const onOpenChange = vi.fn();

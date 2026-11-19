@@ -1,7 +1,14 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
-import { getGetWebsiteQueryKey, getListPagesQueryKey, getListPublicationsQueryKey, type PublicationDto } from '@vsite/api-sdk';
+import {
+  getGetWebsiteQueryKey,
+  getListPagesQueryKey,
+  getListPublicationsQueryKey,
+  getPublishWebsiteMutationOptions,
+  publishWebsite,
+  type PublicationDto,
+} from '@vsite/api-sdk';
 import { server } from '../../test/msw-server';
 import { renderWithQuery } from '../../test/render-with-query';
 import { PublicationHistory } from './publication-history';
@@ -102,7 +109,7 @@ describe('PublicationHistory — rollback', () => {
 
     fireEvent.click(within(row(2)).getByRole('button', { name: 'Quay về bản này' }));
     expect(posted).toBeNull(); // chưa xác nhận thì chưa gọi
-    expect(screen.getByRole('alertdialog')).toHaveTextContent('v2');
+    expect(screen.getByRole('dialog')).toHaveTextContent('v2');
     fireEvent.click(screen.getByRole('button', { name: 'Xác nhận quay về' }));
 
     await waitFor(() => { expect(posted).toBe('pub-2'); });
@@ -111,7 +118,7 @@ describe('PublicationHistory — rollback', () => {
     expect(keys).toContain(JSON.stringify(getGetWebsiteQueryKey('shop-1')));
     expect(keys).toContain(JSON.stringify(getListPagesQueryKey('shop-1')));
     expect(keys).toContain(JSON.stringify(getListPublicationsQueryKey('shop-1')));
-    await waitFor(() => { expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.queryByRole('dialog')).not.toBeInTheDocument(); });
   });
 
   it('Huỷ → không gọi POST', async () => {
@@ -127,14 +134,14 @@ describe('PublicationHistory — rollback', () => {
     await screen.findByText('v2');
     fireEvent.click(within(row(2)).getByRole('button', { name: 'Quay về bản này' }));
     fireEvent.click(screen.getByRole('button', { name: 'Huỷ' }));
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(posts).toBe(0);
   });
 
   it.each([
     [404, 'PUBLICATION_NOT_FOUND', 'Không tìm thấy bản xuất bản này'],
     [409, 'ROLLBACK_CONFLICT', 'Có thao tác khác vừa chạy'],
-  ])('%i %s → thông điệp, nạp lại danh sách, đúng 1 POST, bấm lại được', async (status, code, text) => {
+  ])('%i %s → thông điệp, nạp lại danh sách, đúng 1 POST; 404 đóng xác nhận, 409 cho bấm lại', async (status, code, text) => {
     const counter = serveList();
     let posts = 0;
     server.use(
@@ -143,7 +150,7 @@ describe('PublicationHistory — rollback', () => {
         return posts === 1 ? problem(status, code) : HttpResponse.json(list[1]);
       }),
     );
-    renderWithQuery(<PublicationHistory shopId="shop-1" />);
+    renderWithQuery(<PublicationHistory shopId="shop-1" />, { mutationRetry: 3 });
     await screen.findByText('v2');
     fireEvent.click(within(row(2)).getByRole('button', { name: 'Quay về bản này' }));
     fireEvent.click(screen.getByRole('button', { name: 'Xác nhận quay về' }));
@@ -154,9 +161,16 @@ describe('PublicationHistory — rollback', () => {
     await new Promise((r) => setTimeout(r, 100));
     expect(posts).toBe(1);
 
-    // Người dùng bấm lại thủ công → thử lại được.
-    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận quay về' }));
-    await waitFor(() => { expect(posts).toBe(2); });
+    if (status === 404) {
+      // Bản đã biến mất: đóng xác nhận (không cho bấm lại vào một id không còn), thông điệp ở mức danh sách.
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Xác nhận quay về' })).not.toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent(text);
+    } else {
+      // 409: người dùng bấm lại thủ công → thử lại được.
+      fireEvent.click(screen.getByRole('button', { name: 'Xác nhận quay về' }));
+      await waitFor(() => { expect(posts).toBe(2); });
+    }
   });
 
   it('R6: đang rollback → mọi nút Quay về/Xác nhận disabled', async () => {
@@ -179,5 +193,28 @@ describe('PublicationHistory — rollback', () => {
     expect(within(row(2)).getByRole('button', { name: 'Quay về bản này' })).toBeDisabled();
     release();
     await waitFor(() => { expect(within(row(1)).getByRole('button', { name: 'Quay về bản này' })).toBeEnabled(); });
+  });
+
+  it('R6 chéo: đang xuất bản → nút Quay về bản này disabled', async () => {
+    serveList();
+    let release: () => void = () => undefined;
+    server.use(
+      http.post('*/api/shops/:shopId/website/publications', async () => {
+        await new Promise<void>((resolve) => { release = resolve; });
+        return HttpResponse.json(list[0], { status: 201 });
+      }),
+    );
+    const { queryClient } = renderWithQuery(<PublicationHistory shopId="shop-1" />);
+    await screen.findByText('v2');
+    expect(within(row(2)).getByRole('button', { name: 'Quay về bản này' })).toBeEnabled();
+
+    const publishing = queryClient.getMutationCache().build(queryClient, {
+      mutationKey: getPublishWebsiteMutationOptions().mutationKey,
+      mutationFn: () => publishWebsite('shop-1', { note: null }),
+    });
+    void publishing.execute(undefined);
+    await waitFor(() => { expect(within(row(2)).getByRole('button', { name: 'Quay về bản này' })).toBeDisabled(); });
+    release();
+    await waitFor(() => { expect(within(row(2)).getByRole('button', { name: 'Quay về bản này' })).toBeEnabled(); });
   });
 });

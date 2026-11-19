@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button } from '@vsite/ui';
+import { Button, Dialog } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
 import {
   getGetWebsiteQueryKey,
@@ -10,6 +10,7 @@ import {
   useRollbackPublication,
   type PublicationDto,
 } from '@vsite/api-sdk';
+import { useIsPublishing } from '../../hooks/use-publication-mutations';
 import { getErrorMessage } from '../../lib/error-messages';
 
 const vnTime = new Intl.DateTimeFormat('vi-VN', {
@@ -34,6 +35,7 @@ export function formatPublishedAt(iso: string): string {
  */
 export function PublicationHistory({ shopId }: { shopId: string }) {
   const queryClient = useQueryClient();
+  const isPublishing = useIsPublishing();
   const publicationsQuery = useListPublications(shopId);
   const [pending, setPending] = useState<PublicationDto | null>(null);
 
@@ -42,6 +44,10 @@ export function PublicationHistory({ shopId }: { shopId: string }) {
       retry: false,
       onSuccess: () => {
         setPending(null);
+      },
+      onError: (error) => {
+        // Bản đã biến mất: bấm lại chỉ 404 mãi — đóng xác nhận, thông điệp hiện ở mức danh sách.
+        if (getErrorCode(error) === 'PUBLICATION_NOT_FOUND') setPending(null);
       },
       onSettled: () => {
         void queryClient.invalidateQueries({ queryKey: getGetWebsiteQueryKey(shopId) });
@@ -68,44 +74,60 @@ export function PublicationHistory({ shopId }: { shopId: string }) {
 
   const publications = publicationsQuery.data;
   const busy = rollback.isPending;
+  const locked = busy || isPublishing; // R6: khoá chéo với publish đang chạy
 
   return (
     <section className="space-y-3">
       <h2 className="text-base font-semibold text-foreground">Lịch sử xuất bản</h2>
 
+      {!pending && rollback.isError && (
+        <p role="alert" className="text-sm text-destructive">
+          {getErrorMessage(getErrorCode(rollback.error))}
+        </p>
+      )}
+
       {pending && (
-        <div role="alertdialog" className="space-y-2 rounded border border-border bg-muted p-3">
-          <p className="text-sm">{`Quay về bản v${String(pending.version)}? Site công khai sẽ chạy lại nội dung của bản này ngay lập tức (không tạo bản mới).`}</p>
-          {rollback.isError && (
-            <p role="alert" className="text-sm text-destructive">
-              {getErrorMessage(getErrorCode(rollback.error))}
-            </p>
-          )}
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={busy}
-              onClick={() => {
-                rollback.reset();
-                setPending(null);
-              }}
-            >
-              Huỷ
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              disabled={busy}
-              onClick={() => {
-                rollback.mutate({ shopId, publicationId: pending.id });
-              }}
-            >
-              {busy ? 'Đang quay về...' : 'Xác nhận quay về'}
-            </Button>
+        <Dialog
+          open
+          title="Quay về bản cũ"
+          dismissible={!busy}
+          onClose={() => {
+            if (busy) return;
+            rollback.reset();
+            setPending(null);
+          }}
+        >
+          <div className="space-y-4">
+            <p className="text-sm">{`Quay về bản v${String(pending.version)}? Site công khai sẽ chạy lại nội dung của bản này ngay lập tức (không tạo bản mới).`}</p>
+            {rollback.isError && (
+              <p role="alert" className="text-sm text-destructive">
+                {getErrorMessage(getErrorCode(rollback.error))}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() => {
+                  rollback.reset();
+                  setPending(null);
+                }}
+              >
+                Huỷ
+              </Button>
+              <Button
+                type="button"
+                disabled={locked}
+                onClick={() => {
+                  rollback.mutate({ shopId, publicationId: pending.id });
+                }}
+              >
+                {busy ? 'Đang quay về...' : 'Xác nhận quay về'}
+              </Button>
+            </div>
           </div>
-        </div>
+        </Dialog>
       )}
 
       {publications.length === 0 ? (
@@ -129,7 +151,7 @@ export function PublicationHistory({ shopId }: { shopId: string }) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={busy}
+                  disabled={locked}
                   onClick={() => {
                     rollback.reset();
                     setPending(p);
