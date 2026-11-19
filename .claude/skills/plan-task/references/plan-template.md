@@ -52,7 +52,12 @@ Rút từ [`Docs/tasks/MEDIA-001/plan.md`](../../../../Docs/tasks/MEDIA-001/plan
 {S0/S1/S2 là gì, vì sao thứ tự này, cổng giữa các session}
 
 ## 6. Ràng buộc toàn cục
-{invariant áp dụng cho mọi task: tenant #21 cụ thể cho task này, #19, generated files, hook…}
+| Ràng buộc | Giữ bằng (test / lint / type — đường dẫn) | Ở task |
+|---|---|---|
+| {invariant cho task này: tenant #21, #19, generated files, cấm import…} | {`tests/x.test.ts` "tên ca" · rule lint · kiểu} | T? |
+
+Mỗi dòng phải có checkbox tương ứng ở §9/§10. Không giữ được bằng máy → ghi "review" + lý do; đừng để
+CLAUDE.md nói là có chốt khi chưa có.
 
 ## 7. Review focus — lỗi dễ lọt khi spec im lặng
 | # | Tình huống | Hành vi đúng | Test ở |
