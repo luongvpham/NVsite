@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, Dialog } from '@vsite/ui';
 import { usePublishWebsiteFlow } from '../../hooks/use-publish-website';
 import { PublishErrors } from './publish-errors';
@@ -23,17 +23,29 @@ export interface PublishDialogProps {
   notice?: string;
 }
 
-/** Dialog xuất bản dùng chung cho màn tổng quan (F4) và toolbar editor (F5). */
-export function PublishDialog({ shopId, open, onOpenChange, currentPageId, onSettled, siteUrl = null, notice }: PublishDialogProps) {
-  const [note, setNote] = useState('');
-  const { publish, isPending, result, failure, reset } = usePublishWebsiteFlow(shopId, { onSettled });
+/**
+ * Dialog xuất bản dùng chung cho màn tổng quan (F4) và toolbar editor (F5).
+ *
+ * Mỗi lần mở (đóng → mở) là một phiên mới: thân dialog mount lại theo `key` ngay trong lần render mở, nên note và
+ * kết quả/lỗi của lần trước đã sạch TRƯỚC khi người dùng thấy dialog — không có khe "reset trong effect" để một cú
+ * bấm lọt vào trước rồi bị xoá kết quả. Dialog không đóng được khi POST đang chạy ⇒ lúc mở lại không còn POST nào
+ * của phiên cũ đang bay; `onSettled` gắn ở tầng mutation nên vẫn chạy cả khi thân cũ đã unmount.
+ */
+export function PublishDialog(props: PublishDialogProps) {
+  const { open } = props;
+  const [session, setSession] = useState(0);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    // Điều chỉnh state theo prop ngay khi render (không effect) — React render lại tức thì trước khi commit.
+    setWasOpen(open);
+    if (open) setSession((n) => n + 1);
+  }
+  return <PublishDialogBody key={session} {...props} />;
+}
 
-  useEffect(() => {
-    if (open) {
-      setNote('');
-      reset();
-    }
-  }, [open, reset]);
+function PublishDialogBody({ shopId, open, onOpenChange, currentPageId, onSettled, siteUrl = null, notice }: PublishDialogProps) {
+  const [note, setNote] = useState('');
+  const { publish, isPending, result, failure } = usePublishWebsiteFlow(shopId, { onSettled });
 
   const trimmedLength = note.trim().length;
   const tooLong = trimmedLength > PUBLISH_NOTE_MAX;

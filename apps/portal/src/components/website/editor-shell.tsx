@@ -109,9 +109,6 @@ function EditorSession({
   const { mediaMap, addAsset } = useMediaMap(shopId, workingTree);
 
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [publishOpen, setPublishOpen] = useState(false);
-  // Đang xem trước / dialog xuất bản đang mở thì phím tắt soạn trang (Delete/Ctrl+Z) không được tác động lên cây phía sau lớp phủ.
-  useEditorShortcuts(store, !previewOpen && !publishOpen);
 
   const { controller, state: autosave } = useAutosave({
     store,
@@ -145,8 +142,11 @@ function EditorSession({
     pageId,
     controller,
     themeDirty: theme.dirty,
-    onDialogOpenChange: setPublishOpen,
+    autosaveStatus: autosave.status,
   });
+  // Đang xem trước / đang chuẩn bị xuất bản / dialog xuất bản mở thì phím tắt soạn trang (Delete/Ctrl+Z) không được
+  // tác động lên cây phía sau lớp phủ (lúc chuẩn bị: cây vừa chốt để lưu).
+  useEditorShortcuts(store, !previewOpen && !publish.busy);
 
   const nodeErrors = autosave.invalid?.mapped.byNode;
   const invalidNodeIds = useMemo(() => new Set(nodeErrors?.keys()), [nodeErrors]);
