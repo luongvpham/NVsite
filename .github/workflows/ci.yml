@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
+      - name: Test hàm kiểm tài liệu (banner Tasks, backtick lẻ, #100+)
+        run: node --test tools/docs/lib/doc-checks.test.mjs
       - name: Banner STATUS, tham chiếu quyết định, changelog theo task, đường dẫn
         run: node tools/docs/check-docs.mjs
       - name: 00-INDEX §2 khớp banner (sinh lại rồi so)

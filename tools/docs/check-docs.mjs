@@ -1,12 +1,14 @@
 #!/usr/bin/env node
-// Năm khẳng định về tài liệu. Loại lỗi này không test nào bắt được, và nó là loại
+// Sáu khẳng định về tài liệu. Loại lỗi này không test nào bắt được, và nó là loại
 // làm agent tra sai rồi tự tin đi tiếp — đắt hơn nhiều so với một test đỏ.
 //
 //   node tools/docs/check-docs.mjs
+//   node --test tools/docs/lib/doc-checks.test.mjs   (hàm thuần dùng ở [1] [3] [4b])
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { REPO_ROOT, existsExact, allBanners } from './lib/doc-status.mjs';
+import { bannersMissingTask, declaredDecisions, decisionRefs, strayBacktickInBanner } from './lib/doc-checks.mjs';
 
 const SCAN_ROOTS = ['DesignIdeal', 'Docs', 'backend/docs', 'CLAUDE.md', 'backend/CLAUDE.md',
   'apps/web/CLAUDE.md', 'apps/portal/CLAUDE.md',
@@ -45,27 +47,16 @@ for (const b of banners) {
   if (b.status === 'IMPLEMENTED' && !b.changelog) {
     fail('banner', `DesignIdeal/${b.file} — STATUS=IMPLEMENTED mà không khai Changelog (Definition of Done mục 9)`);
   }
+  const stray = strayBacktickInBanner(readRel(`DesignIdeal/${b.file}`));
+  if (stray) fail('banner', `DesignIdeal/${b.file} — ${stray}`);
 }
 
 // ─── [3] Mọi quyết định #N được tham chiếu đều có dòng trong DECISIONS.md ──────
-const decisionsRaw = readRel(DECISIONS);
-const declared = new Set(
-  [...decisionsRaw.matchAll(/^\|\s*\*\*#(\d{1,2}(?:\.\d)?)\*\*/gm)].map((m) => m[1]),
-);
-
-// `§25 #2` nghĩa là "mục 2 của §25", KHÔNG phải Quyết định #2 — bỏ qua dạng đó.
-const SUBITEM_PREFIX = /§\s*\d+(?:\.\d+)?\s*$/;
+const declared = declaredDecisions(readRel(DECISIONS));
 
 for (const file of mdFiles) {
   if (file === DECISIONS) continue;
-  const text = readRel(file);
-  for (const m of text.matchAll(/#(\d{1,2}(?:\.\d)?)\b/g)) {
-    const num = m[1];
-    const base = Number.parseInt(num, 10);
-    // KHÔNG chặn trần ở số quyết định lớn nhất hiện có — chặn thế thì #69 mới cấp mà quên
-    // ghi dòng sẽ lọt đúng lúc cần bắt nhất. Chỉ loại 0 và số quá lớn để không nhận nhầm.
-    if (base < 1 || base > 99) continue;
-    if (SUBITEM_PREFIX.test(text.slice(Math.max(0, m.index - 12), m.index))) continue;
+  for (const num of new Set(decisionRefs(readRel(file)))) {
     if (!declared.has(num)) {
       fail('decision-ref', `${file} tham chiếu #${num} nhưng ${DECISIONS} không có dòng nào cho nó`);
     }
@@ -81,7 +72,16 @@ if (fs.existsSync(TASKS_DIR)) {
     if (!fs.statSync(dir).isDirectory()) continue;
     const files = fs.readdirSync(dir);
     const wentThroughGate1 = files.includes('brief.md') || files.includes('contract-diff.md');
-    if (!wentThroughGate1 || files.includes('changelog.md')) continue;
+    if (files.includes('changelog.md')) {
+      // [4b] Changelog trỏ tới DesignIdeal/0X → banner 0X phải có mã task ở `Tasks:` (N2, TOOLING-004).
+      const changelogText = fs.readFileSync(path.join(dir, 'changelog.md'), 'utf8');
+      const validBanners = banners.filter((b) => !b.error);
+      for (const { file, taskId } of bannersMissingTask({ taskId: id, changelogText, banners: validBanners })) {
+        fail('banner-tasks', `Docs/tasks/${id}/changelog.md trỏ tới DesignIdeal/${file} mà banner thiếu '${taskId}' ở Tasks:`);
+      }
+      continue;
+    }
+    if (!wentThroughGate1) continue;
 
     if (files.includes('.no-changelog')) {
       const reason = fs.readFileSync(path.join(dir, '.no-changelog'), 'utf8').trim().split('\n')[0];
