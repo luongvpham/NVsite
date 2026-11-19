@@ -29,7 +29,7 @@ const conflict = (currentVersion = 99) => ({
   params: { currentVersion, updatedAt: '2026-11-08T01:00:00Z', updatedByUserId: null },
 });
 
-function setup(initialVersion = 7) {
+function setup(initialVersion = 7, messageFor: (code: string) => string = (code) => `msg:${code}`) {
   const store: EditorStore = createEditorStore();
   store.getState().loadDraft(heroTree(), PageKind.Composable);
   const save = vi.fn<(tree: TreeEnvelope, version: number) => Promise<ReturnType<typeof ok>>>();
@@ -39,7 +39,7 @@ function setup(initialVersion = 7) {
     initialVersion,
     save,
     fetchDraft,
-    messageFor: (code) => `msg:${code}`,
+    messageFor,
   });
   controller.start();
   const edit = (value: string, nodeId = 'c_hero1') =>
@@ -854,29 +854,59 @@ describe('R9 — nhường chỗ cho publish (prepareForPublish / finishPublish)
     expect(save).toHaveBeenCalledTimes(2);
   });
 
-  it('W-new-1 — PUT của prepare bị sanitize trong lúc vẫn gõ → finishPublish vẫn nhận version của GET, không 409 giả', async () => {
-    const { save, fetchDraft, controller, edit, titleOf } = setup(7);
+  /** PUT của prepare trả `sanitized` trong lúc người dùng vẫn gõ → reloadSanitized không nạp được cây vào store. */
+  async function sanitizedWhileTyping(reloadGet: () => Promise<FetchedDraft>, finishGet: FetchedDraft) {
+    const ctx = setup(7);
     const put = deferred<ReturnType<typeof ok>>();
-    save.mockReturnValueOnce(put.promise).mockResolvedValue(ok(31));
-    // Server giữ bản ĐÃ LÀM SẠCH (khác cây local đã gửi) — cả GET của reloadSanitized lẫn GET của finishPublish.
-    fetchDraft.mockResolvedValue({ version: 30, tree: heroTree('da-lam-sach') });
-
-    edit('ban-ban');
-    const prepare = controller.prepareForPublish();
-    edit('go-tiep'); // gõ trong lúc PUT bay → reloadSanitized bỏ qua
+    ctx.save.mockReturnValueOnce(put.promise).mockResolvedValue(ok(31));
+    ctx.fetchDraft.mockImplementationOnce(reloadGet).mockResolvedValueOnce(finishGet);
+    ctx.edit('ban-ban');
+    const prepare = ctx.controller.prepareForPublish();
+    ctx.edit('go-tiep'); // gõ trong lúc PUT bay → reloadSanitized bỏ qua việc nạp cây
     put.resolve(ok(8, true));
     await expect(prepare).resolves.toEqual({ ok: true });
-    expect(titleOf()).toBe('go-tiep');
-
-    await controller.finishPublish();
+    expect(ctx.titleOf()).toBe('go-tiep');
+    await ctx.controller.finishPublish();
     await vi.advanceTimersByTimeAsync(0);
-    expect(save).toHaveBeenCalledTimes(2);
-    expect(save.mock.calls[1]?.[1]).toBe(30); // version của GET (bản chính mình ghi), không phải 8 → không 409
-    expect(titleOf()).toBe('go-tiep'); // không nạp cây
+    expect(ctx.save).toHaveBeenCalledTimes(2);
+    expect(ctx.titleOf()).toBe('go-tiep'); // finishPublish không bao giờ nạp cây
+    return ctx;
+  }
+
+  it('W-new-1 — PUT của prepare bị sanitize trong lúc vẫn gõ → cây server biết từ GET của reloadSanitized ⇒ nhận version, không 409 giả', async () => {
+    const { save } = await sanitizedWhileTyping(
+      () => Promise.resolve({ version: 8, tree: heroTree('da-lam-sach') }),
+      { version: 30, tree: heroTree('da-lam-sach') },
+    );
+    expect(save.mock.calls[1]?.[1]).toBe(30);
+  });
+
+  it('W3+sanitize — như trên nhưng tab khác đã lưu trong lúc publish (GET khác cây server đã biết) ⇒ giữ version cũ', async () => {
+    const { save } = await sanitizedWhileTyping(
+      () => Promise.resolve({ version: 8, tree: heroTree('da-lam-sach') }),
+      { version: 30, tree: heroTree('tab-khac') },
+    );
+    expect(save.mock.calls[1]?.[1]).toBe(8); // BE sẽ 409 → dialog có sẵn
+  });
+
+  it('W3+sanitize — GET của reloadSanitized lỗi (không biết cây server) ⇒ giữ version cũ', async () => {
+    const { save } = await sanitizedWhileTyping(
+      () => Promise.reject(new Error('net')),
+      { version: 30, tree: heroTree('da-lam-sach') },
+    );
+    expect(save.mock.calls[1]?.[1]).toBe(8);
+  });
+
+  it('W3+sanitize — GET của reloadSanitized trả version khác version vừa PUT (đã có ghi khác chen vào) ⇒ không coi là cây server ⇒ giữ version cũ', async () => {
+    const { save } = await sanitizedWhileTyping(
+      () => Promise.resolve({ version: 9, tree: heroTree('da-lam-sach') }),
+      { version: 30, tree: heroTree('da-lam-sach') },
+    );
+    expect(save.mock.calls[1]?.[1]).toBe(8);
   });
 
   it('W-new-1 — autosave thường bỏ qua nạp bản sanitize, publish sau không cần PUT → vẫn nhận version của GET', async () => {
-    const { save, fetchDraft, controller, edit, flushTimers, store } = setup(7);
+    const { save, fetchDraft, controller, edit, flushTimers, store, titleOf } = setup(7);
     const put = deferred<ReturnType<typeof ok>>();
     save.mockReturnValueOnce(put.promise).mockResolvedValue(ok(51));
     fetchDraft.mockResolvedValue({ version: 8, tree: heroTree('da-lam-sach') });
@@ -885,10 +915,15 @@ describe('R9 — nhường chỗ cho publish (prepareForPublish / finishPublish)
     edit('go-tiep'); // bước undo riêng (đã qua nhịp gộp)
     put.resolve(ok(8, true)); // sanitize, nhưng reloadSanitized bỏ qua vì đã gõ tiếp
     await vi.advanceTimersByTimeAsync(0);
+    expect(titleOf()).toBe('go-tiep');
     store.getState().undo(); // về đúng cây đã gửi (chưa làm sạch) → không còn gì để PUT
     await flushTimers();
     expect(controller.hasUnsavedChanges).toBe(false);
     expect(save).toHaveBeenCalledTimes(1);
+    // Khoảng trống cũ: bản sạch trên server giờ được nạp (cây local = cây đã gửi, không có gì để mất).
+    expect(titleOf()).toBe('da-lam-sach');
+    expect(store.temporal.getState().pastStates).toHaveLength(0);
+    expect(controller.getState().status).toBe('saved');
 
     fetchDraft.mockResolvedValue({ version: 50, tree: heroTree('da-lam-sach') });
     await expect(controller.prepareForPublish()).resolves.toEqual({ ok: true });
@@ -916,6 +951,42 @@ describe('R9 — nhường chỗ cho publish (prepareForPublish / finishPublish)
     edit('khoa'); // đang khoá thật
     await flushTimers();
     expect(save).not.toHaveBeenCalled();
+  });
+
+  it('runPrepare không reject khi lõi ném (messageFor ném lúc xử lý 413) ⇒ ok:false error, không kẹt khoá; finish chờ nó cũng không ném', async () => {
+    const { save, fetchDraft, controller, edit, flushTimers } = setup(7, () => {
+      throw new Error('boom');
+    });
+    save.mockRejectedValueOnce({ status: 413, error_code: 'TREE_BODY_TOO_LARGE' }).mockResolvedValue(ok(8));
+    edit('b');
+    const prepare = controller.prepareForPublish();
+    const finish = controller.finishPublish(); // xếp hàng sau prepare
+    await expect(prepare).resolves.toEqual({ ok: false, reason: 'error' });
+    await expect(finish).resolves.toBeUndefined();
+    expect(fetchDraft).not.toHaveBeenCalled();
+
+    edit('c'); // không khoá → autosave chạy
+    await flushTimers();
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  it('chuỗi chờ vẫn chạy khi phía kia reject (white-box: tiêm promise reject vào finishing/preparing)', async () => {
+    const { save, controller } = setup(7);
+    save.mockResolvedValue(ok(8));
+    const internals = controller as unknown as {
+      finishing: Promise<void> | undefined;
+      preparing: Promise<unknown> | undefined;
+    };
+    internals.finishing = Promise.reject(new Error('finish')).finally(() => {
+      internals.finishing = undefined;
+    });
+    await expect(controller.prepareForPublish()).resolves.toEqual({ ok: true });
+    await controller.finishPublish();
+
+    internals.preparing = Promise.reject(new Error('prepare')).finally(() => {
+      internals.preparing = undefined;
+    });
+    await expect(controller.finishPublish()).resolves.toBeUndefined();
   });
 
   it('W2 — dispose + start (remount) giữa lúc prepare chờ PUT → prepare cũ không PUT nữa, phiên mới không bị khoá', async () => {
