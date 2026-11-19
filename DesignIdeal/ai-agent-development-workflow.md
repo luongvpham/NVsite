@@ -215,7 +215,8 @@ read-only, context sạch → [`.claude/agents/change-reviewer.md`](../.claude/a
 
 ```markdown
 ## Tự động
-- [ ] BE test: x/y          - [ ] FE test: x/y
+- [ ] BE test: x/y          - [ ] FE test: x/y        (suite đầy đủ, không lọc)
+- [ ] lint + typecheck toàn repo · CI của PR xanh
 - [ ] Integration (MSW off): PASS / FAIL
 - [ ] contract-sync sau cùng: không còn diff ngoài contract đã duyệt
 - [ ] check:docs + gen:doc-index --check: PASS / FAIL

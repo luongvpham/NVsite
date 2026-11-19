@@ -42,7 +42,9 @@ Fail mục 1–2 → dừng, báo, không chạy bước nào. Batch đã `RUNNI
 2. `git checkout feature/{ID}` · ghi `BASE=$(git rev-parse HEAD)`.
 3. **Spawn implementer** — `general-purpose`, **foreground** (Rule 14), prompt theo "Mẫu prompt implementer".
 4. **Kiểm, đừng tin lời** (Rule 14): `git status --porcelain` rỗng — bẩn → `HALT`. Implementer báo
-   `PASS*` mà `git log BASE..HEAD` không có commit → `BLOCKED`. Báo `BLOCKED` → sang bước 7.
+   `PASS*` mà `git log BASE..HEAD` không có commit → `BLOCKED`. Dòng `Test:` có lệnh lọc, hoặc chạm
+   `apps/`/`packages/` mà thiếu lint/typecheck → chưa kiểm: tự chạy đủ lệnh trong mẫu prompt rồi mới xét.
+   Báo `BLOCKED` → sang bước 7.
    Báo `NEEDS-CONTRACT` → chạy **"Vòng D{n} tự động"** rồi quay lại bước 3 (implementer mới, kèm tên
    stash nếu có).
 5. **Spawn `change-reviewer`**, foreground: "Review `git diff BASE..HEAD` của {ID} bước {Fn}. Plan:
@@ -75,7 +77,7 @@ Implementer trả `NEEDS-CONTRACT` = bước cần field/endpoint mà contract c
 | STATUS | Khi nào | Tiếp theo |
 |---|---|---|
 | `PASS` | DoD đủ, không còn Critical | Bước kế |
-| `PASS-WITH-DEBT` | Có Warning, hoặc test Docker đã ghi `Docs/DOCKER-TEST-DEBT.md` | Bước kế |
+| `PASS-WITH-DEBT` | Có Warning, hoặc test Docker đã ghi `Docs/DOCKER-TEST-DEBT.md`, hoặc kiểm đầy đủ đỏ từ trước bước này | Bước kế |
 | `BLOCKED` | Implementer báo `BLOCKED` · Critical sau một lần sửa · vòng D chạm hàng rào (mẫu D{n}) · quá 2 vòng D | Bỏ các bước còn lại **của task này**, sang task kế |
 | `HALT` | Tree bẩn sau bước · hook `BLOCKED` mà agent tìm đường vòng · tenant Critical không sửa được · build nhánh hỏng | Dừng cả batch, banner → `HALTED` |
 
@@ -98,6 +100,9 @@ Contract — trước production burn tự duyệt (#102):
     Không tự sửa backend trong bước này, không viết type tạm.
 Docker không có → viết test đủ, ghi Docs/DOCKER-TEST-DEBT.md theo quy ước trong file.
 changelog: thêm mục "## {Fn}" vào Docs/tasks/{ID}/changelog.md. Tick checkbox của {Fn} trong plan.md.
+Trước commit chạy kiểm ĐẦY ĐỦ, không lọc (--filter, -t, tên file): chạm backend/ → dotnet test backend/vsite.sln;
+  chạm apps/ hoặc packages/ → pnpm lint && pnpm typecheck && pnpm test. Đỏ mà không do bước này → vẫn
+  STATUS PASS-WITH-DEBT, ghi nguyên văn lỗi vào "Ma sát"; đỏ do bước này → sửa, không commit đỏ.
 Commit code + changelog trên feature/{ID}. Để working tree sạch.
 Dừng giữa chừng (BLOCKED / NEEDS-CONTRACT): không commit phần dở;
   `git stash push -u -m "burn {ID} {Fn}"`, ghi tên stash vào khung trả về.
