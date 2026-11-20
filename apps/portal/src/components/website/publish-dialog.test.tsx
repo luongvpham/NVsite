@@ -2,12 +2,14 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { http, HttpResponse } from 'msw';
+import { useState, type ComponentType } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { server } from '../../test/msw-server';
 import { getGetWebsiteQueryKey, getListPagesQueryKey, getListPublicationsQueryKey } from '@vsite/api-sdk';
 import { PublishDialog, type PublishDialogProps } from './publish-dialog';
 
-function renderDialog(props: Partial<PublishDialogProps> = {}) {
+/** `Root`: thay dialog mặc định (open cố định) bằng component riêng — vd. harness tự đóng/mở. */
+function renderDialog(props: Partial<PublishDialogProps> = {}, Root?: ComponentType) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: 3, retryDelay: 0 } },
   });
@@ -15,16 +17,19 @@ function renderDialog(props: Partial<PublishDialogProps> = {}) {
   const onOpenChange = vi.fn();
   const onSettled = vi.fn();
   const rootRoute = createRootRoute({
-    component: () => (
-      <PublishDialog
-        shopId="shop-1"
-        open
-        onOpenChange={onOpenChange}
-        onSettled={onSettled}
-        siteUrl="http://spa.vsite.local:3000"
-        {...props}
-      />
-    ),
+    component: () =>
+      Root ? (
+        <Root />
+      ) : (
+        <PublishDialog
+          shopId="shop-1"
+          open
+          onOpenChange={onOpenChange}
+          onSettled={onSettled}
+          siteUrl="http://spa.vsite.local:3000"
+          {...props}
+        />
+      ),
   });
   const editorRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -261,6 +266,44 @@ describe('PublishDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
     expect(onOpenChange).toHaveBeenCalledTimes(3);
     expect(onOpenChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it('F5-S3: đóng rồi mở lại ⇒ phiên mới — ghi chú rỗng, không còn "Đã xuất bản bản vN", form hiện lại', async () => {
+    server.use(http.post(POST_URL, () => HttpResponse.json(publication, { status: 201 })));
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => { setOpen(true); }}>
+            Mở dialog
+          </button>
+          <PublishDialog shopId="shop-1" open={open} onOpenChange={setOpen} siteUrl="http://spa.vsite.local:3000" />
+        </>
+      );
+    }
+    renderDialog({}, Harness);
+
+    // Phiên 1: gõ ghi chú rồi đóng (Huỷ) — mở lại thì ô ghi chú rỗng.
+    fireEvent.click(await screen.findByRole('button', { name: 'Mở dialog' }));
+    await openDialog();
+    fireEvent.change(screen.getByLabelText('Ghi chú (tuỳ chọn)'), { target: { value: 'nháp cũ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Huỷ' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mở dialog' }));
+    expect(await openDialog()).toBeInTheDocument();
+    expect(screen.getByLabelText('Ghi chú (tuỳ chọn)')).toHaveValue('');
+
+    // Phiên 2: xuất bản thành công rồi đóng (Xong) — mở lại thì về form, không còn kết quả cũ.
+    fireEvent.change(screen.getByLabelText('Ghi chú (tuỳ chọn)'), { target: { value: 'đợt 3' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Xuất bản' }));
+    await screen.findByText('Đã xuất bản bản v7');
+    fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mở dialog' }));
+    await openDialog();
+    expect(screen.queryByText(/Đã xuất bản bản v/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Ghi chú (tuỳ chọn)')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Xuất bản' })).toBeEnabled();
   });
 
   it('nút Huỷ gọi onOpenChange(false)', async () => {
