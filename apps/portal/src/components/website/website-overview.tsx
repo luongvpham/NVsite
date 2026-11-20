@@ -115,7 +115,9 @@ function PublishStatus({ shopId, website }: { shopId: string; website: WebsiteDt
         shopId={shopId}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        siteUrl={hasPublication ? siteUrl : null}
+        // Dialog chỉ hiện link ở trạng thái thành công ⇒ truyền bất kể hasPublication: lần xuất bản đầu có
+        // "Mở site" ngay, không chờ getWebsite refetch (S6).
+        siteUrl={siteUrl}
       />
     </div>
   );

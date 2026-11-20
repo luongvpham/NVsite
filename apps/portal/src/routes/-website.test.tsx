@@ -286,6 +286,33 @@ describe('Website — trạng thái xuất bản', () => {
     expect(await screen.findByText('Đang chạy bản v1')).toBeInTheDocument();
   });
 
+  it('S6: lần xuất bản đầu → dialog thành công có link "Mở site" ngay, không chờ getWebsite refetch', async () => {
+    serve(website, []);
+    let releaseWebsite: () => void = () => undefined;
+    let published = false;
+    server.use(
+      // Sau publish, GET website treo — khối trạng thái vẫn là "chưa xuất bản" (hasPublication = false).
+      http.get('*/api/shops/:shopId/website', async () => {
+        if (published) await new Promise<void>((resolve) => { releaseWebsite = resolve; });
+        return HttpResponse.json(website);
+      }),
+      http.post('*/api/shops/:shopId/website/publications', () => {
+        published = true;
+        return HttpResponse.json({ ...publications[1], isCurrent: true }, { status: 201 });
+      }),
+    );
+    renderApp('/shops/shop-1/website');
+    fireEvent.click(await screen.findByRole('button', { name: 'Xuất bản' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Xuất bản' }));
+    expect(await within(dialog).findByText(/Đã xuất bản bản v1/)).toBeInTheDocument();
+    const link = within(dialog).getByRole('link', { name: 'Mở site' });
+    expect(link).toHaveAttribute('href', 'http://spa-abc.vsite.local:3000');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(screen.getByText('Chưa xuất bản')).toBeInTheDocument(); // refetch chưa về
+    releaseWebsite();
+  });
+
   it('rollback ở lịch sử → trạng thái đổi sang bản mới', async () => {
     let current = 'pub-2';
     serve({ ...website, status: 'Published', currentPublicationId: 'pub-2' });
