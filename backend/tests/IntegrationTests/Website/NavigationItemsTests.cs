@@ -197,6 +197,22 @@ public sealed class NavigationItemsTests
     }
 
     [Fact]
+    public void ToSnapshotJsonArray_HasNoHiddenAtAnyLevel_OmitsEmptyChildren_KeepsNullLabel_StoredKeepsHidden()
+    {
+        var items = new[] { Pg(A, children: [Pg(B), Custom("Fb", "https://fb.com")]), Pg(C), Custom("x", "/x") };
+        var snap = NavigationItems.ToSnapshotJsonArray(items);
+        var json = snap.ToJsonString();
+        Assert.DoesNotContain("hidden", json);
+        Assert.Equal(2, snap[0]!["children"]!.AsArray().Count);
+        Assert.Null(snap[1]!.AsObject()["children"]);
+        Assert.True(snap[1]!.AsObject().ContainsKey("label"));
+        Assert.Null(snap[1]!["label"]);
+        Assert.Null(snap[0]!["children"]![0]!.AsObject()["children"]);
+        Assert.Equal("https://fb.com", (string?)snap[0]!["children"]![1]!["url"]);
+        Assert.Contains("\"hidden\"", NavigationItems.Serialize(items, Versioning));
+    }
+
+    [Fact]
     public void Parse_Malformed_Throws()
     {
         Assert.Throws<InvalidOperationException>(() => NavigationItems.Parse("{\"items\":[]}", Versioning));

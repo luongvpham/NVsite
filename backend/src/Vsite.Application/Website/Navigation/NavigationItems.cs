@@ -195,7 +195,22 @@ public static class NavigationItems
         return doc.ToJsonString();
     }
 
-    /// <summary>Mảng <c>items</c> trần — cho <c>snapshot.navigation.items</c> (T4).</summary>
+    /// <summary>
+    /// Mảng <c>items</c> cho <c>snapshot.navigation.items</c> (T4): <c>{ key, label, url?, children? }</c> — KHÔNG có
+    /// <c>hidden</c> (mục ẩn đã bị <see cref="ForSnapshot"/> loại); <c>children</c> bị bỏ khi rỗng; <c>label</c> null vẫn ghi.
+    /// </summary>
+    public static JsonArray ToSnapshotJsonArray(IReadOnlyList<NavItem> items)
+    {
+        var arr = new JsonArray();
+        foreach (var item in items)
+        {
+            arr.Add(ToJson(item, topLevel: true, forSnapshot: true));
+        }
+
+        return arr;
+    }
+
+    /// <summary>Mảng <c>items</c> của tài liệu lưu (có <c>hidden</c>, <c>children</c> luôn có ở cấp 1). Snapshot dùng <see cref="ToSnapshotJsonArray"/>.</summary>
     public static JsonArray ToJsonArray(IReadOnlyList<NavItem> items)
     {
         var arr = new JsonArray();
@@ -272,7 +287,7 @@ public static class NavigationItems
         }
     }
 
-    private static JsonObject ToJson(NavItem item, bool topLevel)
+    private static JsonObject ToJson(NavItem item, bool topLevel, bool forSnapshot = false)
     {
         var o = new JsonObject
         {
@@ -284,13 +299,17 @@ public static class NavigationItems
             o["url"] = item.Url;
         }
 
-        o["hidden"] = item.Hidden;
-        if (topLevel)
+        if (!forSnapshot)
+        {
+            o["hidden"] = item.Hidden;
+        }
+
+        if (topLevel && (!forSnapshot || item.Children.Count > 0))
         {
             var children = new JsonArray();
             foreach (var c in item.Children)
             {
-                children.Add(ToJson(c, topLevel: false));
+                children.Add(ToJson(c, topLevel: false, forSnapshot));
             }
 
             o["children"] = children;
