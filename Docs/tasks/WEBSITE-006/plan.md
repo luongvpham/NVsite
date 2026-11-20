@@ -1,6 +1,6 @@
 # WEBSITE-006 — Publish / rollback website từ Portal (Bước 8e)
 
-> **Đã code 2026-11-20 — chờ Gate 2** (G1–G6 người đã duyệt 2026-11-19). Kết quả, lệch, nợ: [`changelog.md`](changelog.md)
+> **Đã code 2026-11-20 — Gate 2 đóng 2026-11-20** (G1–G6 người đã duyệt 2026-11-19). Kết quả, lệch, nợ: [`changelog.md`](changelog.md)
 >
 > **Lane A** (không chạm contract — API publish/rollback/list đã có từ 8b, WEBSITE-004) + `plan.md` gọn vì
 > R9 (version draft đổi sau publish) dễ sai. Cổng: Gate 2. Chỉ FE (`apps/portal`, nhỏ ở `builder-renderer` nếu cần).

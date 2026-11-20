@@ -77,7 +77,7 @@ lệch có chủ đích.**
 | 6 | `builder-renderer` hoàn thiện (`basePath`, `locale`, SSR↔CSR) + preview toàn trang | ✅ WEBSITE-003 (đã đóng 2026-11-12) |
 | 8b | `SitePublication` + publish/rollback + endpoint đọc công khai (BE) | ✅ WEBSITE-004 — đã merge `master` (PR #25), Gate 2 đóng. Quyết định #108–#112. UI publish ở Portal → 8e |
 | 8c | `apps/web` render công khai + cache (FE) | ✅ WEBSITE-005 — đã merge `master` (PR #26), Gate 2 đóng 2026-11-19; nghiệm thu tay 7/7 ĐẠT với BE thật ([`changelog.md`](../Docs/tasks/WEBSITE-005/changelog.md)). Còn nợ ⛔ trước production (§4). Mốc review #96–#98: người duyệt giữ nguyên (2026-11-19) |
-| 8e | UI publish/rollback ở Portal + nạp lại draft sau publish (FE) | 🔶 WEBSITE-006 — đã code trên `feature/WEBSITE-006`, chờ Gate 2. Nghiệm thu 6/6 ĐẠT với BE thật bằng trình duyệt ([`changelog.md`](../Docs/tasks/WEBSITE-006/changelog.md)). Lệch G6: sau publish chỉ nhận version mới khi cây server trùng cây đã lưu |
+| 8e | UI publish/rollback ở Portal + nạp lại draft sau publish (FE) | ✅ WEBSITE-006 — Gate 2 đóng 2026-11-20 (nhánh `feature/WEBSITE-006`). Nghiệm thu 6/6 ĐẠT với BE thật bằng trình duyệt ([`changelog.md`](../Docs/tasks/WEBSITE-006/changelog.md)). Lệch G6: sau publish chỉ nhận version mới khi cây server trùng cây đã lưu |
 | 7 | `NavigationConfig` | ⬜ |
 | 8a | Hangfire (hạ tầng job dùng chung) | ⬜ |
 | 8d | Job của builder: prune publication, dọn media/menu/draft mồ côi | ⬜ |
