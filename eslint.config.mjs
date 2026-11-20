@@ -92,6 +92,17 @@ export default tseslint.config(
     },
   },
   {
+    // #19: enum TS bị cấm — đẩy quy ước lên lint thay vì chỉ ghi ở CLAUDE.md (#17). Repo chưa có `no-restricted-syntax`
+    // nào khác; thêm selector mới thì gộp vào đây (flat config ghi đè chứ không gộp rule cùng tên).
+    files: ['**/*.{ts,tsx,mts,cts}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        { selector: 'TSEnumDeclaration', message: 'Không dùng enum TS — dùng const object + union type (Quyết định #19).' },
+      ],
+    },
+  },
+  {
     // §9 "test rẻ mà đáng" — enforce isomorphic invariant (#23) bằng lint, không chỉ CLAUDE.md.
     // builder-components/builder-renderer phải chạy được server-side (SSR ở apps/web sau này);
     // window/document chỉ được dùng trong effect sau hydrate, không phải trong logic render chính.
