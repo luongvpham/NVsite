@@ -37,6 +37,9 @@ public sealed record NavError(string Path, string Code, string Message);
 
 public static class NavigationErrorCodes
 {
+    /// <summary>Mã cấp ProblemDetails của 422 khi lưu menu (khuôn <c>THEME_INVALID</c>); lỗi từng mục ở <c>params.errors[]</c>.</summary>
+    public const string Invalid = "NAVIGATION_INVALID";
+
     public const string TooDeep = "NAV_TOO_DEEP";
     public const string PageNotFound = "NAV_PAGE_NOT_FOUND";
     public const string PageDuplicate = "NAV_PAGE_DUPLICATE";

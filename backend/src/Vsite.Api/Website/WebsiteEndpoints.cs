@@ -11,11 +11,13 @@ using Vsite.Application.Website.Commands.CreateWebsite;
 using Vsite.Application.Website.Commands.DeletePage;
 using Vsite.Application.Website.Commands.PublishWebsite;
 using Vsite.Application.Website.Commands.RollbackPublication;
+using Vsite.Application.Website.Commands.SaveNavigation;
 using Vsite.Application.Website.Commands.SavePageDraft;
 using Vsite.Application.Website.Commands.UpdatePage;
 using Vsite.Application.Website.Commands.UpdateTheme;
 using Vsite.Application.Website.Dtos;
 using Vsite.Application.Website.Options;
+using Vsite.Application.Website.Queries.GetNavigation;
 using Vsite.Application.Website.Queries.GetPageDraft;
 using Vsite.Application.Website.Queries.GetTheme;
 using Vsite.Application.Website.Queries.GetWebsite;
@@ -27,7 +29,7 @@ using Vsite.Domain.Exceptions;
 namespace Vsite.Api.Website;
 
 /// <summary>
-/// T10, WEBSITE-001 — 10 endpoint dưới <c>/api/shops/{shopId}/website</c>. MỌI route (đọc lẫn ghi) gắn
+/// T10, WEBSITE-001 — các endpoint dưới <c>/api/shops/{shopId}/website</c>. MỌI route (đọc lẫn ghi) gắn
 /// <c>RequireShopOwner("WEBSITE_OWNER_REQUIRED", …)</c> (#100): một Customer/Manager/Staff có token global không đọc/ghi được
 /// website. <c>ShopId</c> chỉ đến từ route (filter set <c>ITenantContext</c>), không bao giờ từ body (#21.4, #99).
 ///
@@ -222,6 +224,29 @@ public static class WebsiteEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        // WEBSITE-007 T3 — menu website (#113). Body là DTO có kiểu (Orval sinh type); ShopId chỉ từ route/ITenantContext (#99).
+        website.MapGet("/navigation", async (Guid shopId, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetNavigationQuery(), ct)))
+            .WithName("getNavigation")
+            .RequireAuthorization(AuthPolicies.RequireGlobalScope)
+            .RequireOwner()
+            .Produces<NavigationDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        website.MapPut("/navigation", async (Guid shopId, SaveNavigationRequest body, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new SaveNavigationCommand(body.Version, body.Items), ct)))
+            .WithName("saveNavigation")
+            .RequireAuthorization(AuthPolicies.RequireGlobalScope)
+            .RequireOwner()
+            .Produces<SaveNavigationResultDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
+
         return app;
     }
 
@@ -354,6 +379,10 @@ public sealed class SavePageDraftRequest
     public required JsonElement Tree { get; set; }
     public required long Version { get; set; }
 }
+
+/// <summary>Body <c>PUT …/website/navigation</c> (WEBSITE-007): thay toàn bộ menu. <c>Version</c> = token <c>xmin</c> nhận từ
+/// <c>getNavigation</c>/lần lưu trước, <c>null</c> khi chưa từng lưu. Không có <c>shopId</c> (#21.4).</summary>
+public sealed record SaveNavigationRequest(long? Version, IReadOnlyList<NavigationItemDto> Items);
 
 /// <summary>Shape OpenAPI của body <c>updateTheme</c> — KHÔNG dùng để bind thật.</summary>
 public sealed class UpdateThemeRequest
