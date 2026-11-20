@@ -321,6 +321,35 @@ describe('409 DRAFT_CONFLICT', () => {
     expect(titleOf()).toBe('cua-toi'); // phần sửa chưa lưu vẫn còn
   });
 
+  it('W1 — "Giữ bản của tôi" → PUT lỗi → undo về cây lúc mở phiên: KHÔNG báo "Đã lưu" (server giữ cây tab khác); publish PUT cây A trước', async () => {
+    const { controller, fetchDraft, store, titleOf, save } = await conflicted();
+    fetchDraft.mockResolvedValue({ version: 123, tree: heroTree('tab-khac') });
+    save.mockRejectedValueOnce(new Error('net'));
+    await controller.keepMine();
+    expect(controller.getState().status).toBe('error');
+
+    store.getState().undo(); // về đúng cây lúc mở phiên — nhưng server đang giữ cây 'tab-khac'
+    expect(titleOf()).toBe('a');
+    expect(controller.getState().status).not.toBe('saved');
+    expect(controller.hasUnsavedChanges).toBe(true);
+
+    save.mockResolvedValueOnce(ok(124));
+    await expect(controller.prepareForPublish()).resolves.toEqual({ ok: true });
+    expect(save).toHaveBeenCalledTimes(3);
+    expect(save.mock.calls[2]?.[0].children[0]?.props).toMatchObject({ title: 'a' });
+    expect(save.mock.calls[2]?.[1]).toBe(123);
+  });
+
+  it('W1 — "Giữ bản của tôi" mà GET trả tree null → coi là bẩn: undo về cây lúc mở phiên vẫn chưa "Đã lưu"', async () => {
+    const { controller, fetchDraft, store, save } = await conflicted();
+    fetchDraft.mockResolvedValue({ version: 123, tree: null });
+    save.mockRejectedValueOnce(new Error('net'));
+    await controller.keepMine();
+    store.getState().undo();
+    expect(controller.getState().status).not.toBe('saved');
+    expect(controller.hasUnsavedChanges).toBe(true);
+  });
+
   it('bản server không đọc được (tree null) → "Tải bản mới" không nạp, không mất cây local', async () => {
     const { controller, fetchDraft, titleOf } = await conflicted();
     fetchDraft.mockResolvedValue({ version: 12, tree: null });

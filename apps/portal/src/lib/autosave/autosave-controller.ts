@@ -67,8 +67,9 @@ export interface AutosaveDeps {
  *   vừa gửi (R2). Đã sửa tiếp ⇒ giữ cây local (còn phần chưa làm sạch); PUT kế tiếp BE làm sạch lại và trả
  *   `sanitized` lần nữa ⇒ nạp lúc đó nếu khi ấy chưa sửa tiếp. Undo về đúng cây đã gửi ⇒ không PUT nên chưa nạp
  *   (khoảng trống vô hại: lần sửa sau PUT lại và BE làm sạch).
- * - "Đã lưu" = tham chiếu cây hiện tại === tham chiếu cây của lần PUT thành công gần nhất (Immer giữ nguyên tham chiếu
- *   khi op không đổi gì, nên không có "bẩn giả").
+ * - "Đã lưu" = tham chiếu cây hiện tại === `savedTree`: cây của lần PUT thành công gần nhất, hoặc cây của GET gần nhất
+ *   đã nhận `version` (Tải bản mới / Giữ bản của tôi / sanitized) — luôn là cây server đang giữ ở `version` hiện tại
+ *   (Immer giữ nguyên tham chiếu khi op không đổi gì, nên không có "bẩn giả").
  * - **Khoá cho publish** (R9, WEBSITE-006): `prepareForPublish` chờ PUT đang bay, lưu ngay phần còn lại rồi khoá;
  *   khoá kéo dài tới `finishPublish` (cả lúc dialog ghi chú đang mở — G5). Trong lúc khoá KHÔNG có PUT nào (kể cả
  *   `retry`): sửa cây chỉ đánh dấu `unsaved`. `finishPublish` GET lấy `version` (publish hạ `isDirty` ⇒ version draft
@@ -217,6 +218,9 @@ export class AutosaveController {
   /**
    * 409 → "Giữ bản của tôi": lấy `version` bằng GET mới (R8) rồi PUT cây local. Chỉ lấy `version` từ GET,
    * không đụng cây local. Nếu giữa lúc đó lại có bản mới hơn thì PUT sẽ 409 lần nữa → dialog hiện lại.
+   * Mốc "đã lưu" chuyển sang cây của GET (cây server đang giữ ở `version` mới) — không phải cây local nào: PUT lỗi
+   * rồi undo về cây cũ thì vẫn bẩn, không báo "Đã lưu" cho cây khác cây server. GET không đọc được cây (`null`) ⇒
+   * `savedTree = null`, mọi cây local đều bẩn.
    */
   async keepMine() {
     if (!this.state.conflict || this.state.conflict.resolving) return;
@@ -226,6 +230,7 @@ export class AutosaveController {
       const latest = await this.deps.fetchDraft();
       if (!this.alive(gen)) return;
       this.version = latest.version;
+      this.savedTree = latest.tree;
       this.serverTree = latest.tree;
       this.setState({ conflict: null, status: 'unsaved' });
       this.cancelTimer();
