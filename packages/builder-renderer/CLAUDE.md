@@ -20,7 +20,7 @@ Sửa manifest, prop kind, binding source (kể cả cấm `"Review"`) → luậ
   URL = `basePath` + (`/{locale}` khi ≠ `defaultLocale`) + `/{slug}`; trang chủ `…/`; `NotFound`/trang đã xoá → `#`.
   `basePath = ''` trên site thật; khác `''` chỉ ở preview Portal. `matchSiteUrl` là nghịch đảo (preview tra href → trang).
 - `SiteLayout` (Header/Footer) nằm **ngoài** Component Tree, không có manifest. Năm © truyền qua props — không đọc đồng hồ khi render (R3).
-- **Anchor `#nodeId` (WEBSITE-005, G3):** `decorateWithAnchor` (`src/anchor.tsx`) truyền vào `decorateNode` bọc node bằng wrapper `id={nodeId}` (`display: contents`); `useAnchorScroll()` cuộn tới nội dung của node khớp `location.hash` sau hydrate và mỗi lần `hashchange` (hash hỏng → dùng giá trị thô; wrapper không có `firstElementChild` → no-op). `window`/`document` chỉ nằm trong effect của hook, không trong render (#23). `apps/web` dùng cặp này; Portal vẫn dùng `decorateWithId` riêng (chưa chuyển).
+- **Anchor `#nodeId` (WEBSITE-005, G3):** `decorateWithAnchor` (`src/anchor.tsx`) truyền vào `decorateNode` bọc node bằng wrapper `id={nodeId}` (`display: contents`); `useAnchorScroll()` cuộn tới nội dung của node khớp `location.hash` sau hydrate và mỗi lần `hashchange` (hash hỏng → dùng giá trị thô; wrapper không có `firstElementChild` → no-op). `window`/`document` chỉ nằm trong effect của hook, không trong render (#23). `apps/web` dùng cặp này; Portal (xem trước — `apps/portal/src/components/website/site-preview.tsx`) cũng dùng `decorateWithAnchor` (WEBSITE-006).
 - Test: `tests/ssr-hydrate.node.test.tsx` (snapshot SSR ở Node) + `tests/ssr-hydrate.test.tsx` (hydrate không lệch).
 
 ## Ranh giới kiến trúc
