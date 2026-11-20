@@ -238,6 +238,16 @@ describe('SitePreview — xem trước toàn trang (WEBSITE-003 T4)', () => {
     expect(query?.gcTime).toBe(0);
   });
 
+  it('mỗi node có wrapper id = node.id, display:contents — cùng anchor với site công khai (decorateWithAnchor, WEBSITE-006 F6)', async () => {
+    setup(heroTree('Có neo'));
+    const dialog = await screen.findByRole('dialog', { name: 'Xem trước trang' });
+    await within(dialog).findByText('Có neo');
+    const wrapper = dialog.querySelector('#c_hero1');
+    expect(wrapper).toBeInstanceOf(HTMLDivElement);
+    expect((wrapper as HTMLElement).style.display).toBe('contents');
+    expect(wrapper).toHaveTextContent('Có neo');
+  });
+
   it('link anchor cuộn tới phần tử có box, không phải wrapper display:contents (review I2)', async () => {
     const scroll = vi.fn();
     Element.prototype.scrollIntoView = scroll;

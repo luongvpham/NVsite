@@ -10,7 +10,8 @@
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^build", "^gen:api", "^gen:registry", "gen:api", "gen:registry"]
+      "dependsOn": ["^build", "^gen:api", "^gen:registry", "gen:api", "gen:registry"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/eslint.config.mjs"]
     },
     "typecheck": {
       "dependsOn": ["^build", "^gen:api", "^gen:registry", "gen:api", "gen:registry"]

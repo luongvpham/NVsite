@@ -45,6 +45,21 @@ export type DraftConflictParams = {
   updatedByUserId: string | null;
 };
 
+/** Một lỗi chặn publish. `pageId`/`pageTitle` = `null` với lỗi cấp website (favicon / OG mặc định — đứng đầu danh sách). */
+export type PublishBlockedError = {
+  pageId: string | null;
+  pageTitle: string | null;
+  path: string;
+  code: string;
+  message: string;
+};
+
+/** `params` của 422 `PUBLISH_BLOCKED` (WEBSITE-004 brief §5). BE trả tối đa 100 lỗi; `truncated` = còn nữa. */
+export type PublishBlockedParams = {
+  errors: PublishBlockedError[];
+  truncated: boolean;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
 function isTreeValidationError(value: unknown): value is TreeValidationError {
@@ -65,12 +80,27 @@ export function isTreeValidationParams(value: unknown): value is TreeValidationP
   );
 }
 
+const isStringOrNull = (value: unknown): value is string | null => value === null || typeof value === 'string';
+
+function isPublishBlockedError(value: unknown): value is PublishBlockedError {
+  return isRecord(value) && isStringOrNull(value.pageId) && isStringOrNull(value.pageTitle) && isTreeValidationError(value);
+}
+
+export function isPublishBlockedParams(value: unknown): value is PublishBlockedParams {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.errors) &&
+    value.errors.every(isPublishBlockedError) &&
+    typeof value.truncated === 'boolean'
+  );
+}
+
 export function isDraftConflictParams(value: unknown): value is DraftConflictParams {
   return (
     isRecord(value) &&
     typeof value.currentVersion === 'number' &&
     typeof value.updatedAt === 'string' &&
-    (value.updatedByUserId === null || typeof value.updatedByUserId === 'string')
+    isStringOrNull(value.updatedByUserId)
   );
 }
 

@@ -4,6 +4,7 @@ import {
   getProblemParams,
   isDraftConflictParams,
   isProblemDetails,
+  isPublishBlockedParams,
   isTreeValidationParams,
 } from './problem-details';
 
@@ -84,5 +85,43 @@ describe('getProblemParams', () => {
       errors: [],
       truncated: true,
     });
+  });
+});
+
+/** `params` của 422 `PUBLISH_BLOCKED` (WEBSITE-004 brief §5): lỗi theo trang, `pageId`/`pageTitle` null = lỗi cấp website. */
+describe('isPublishBlockedParams', () => {
+  const pageError = {
+    pageId: 'p-1',
+    pageTitle: 'Trang chủ',
+    path: '/children/0/props/image',
+    code: 'REQUIRED_PROP_MISSING',
+    message: 'Thiếu ảnh',
+  };
+  const siteError = { pageId: null, pageTitle: null, path: '', code: 'MEDIA_INVALID_IMAGE_REFERENCE', message: 'Favicon' };
+
+  it('nhận đúng dạng, kể cả lỗi cấp website (pageId/pageTitle null) và truncated', () => {
+    const problem = { error_code: 'PUBLISH_BLOCKED', params: { errors: [siteError, pageError], truncated: true } };
+    const params = getProblemParams(problem, isPublishBlockedParams);
+    expect(params?.errors).toEqual([siteError, pageError]);
+    expect(params?.truncated).toBe(true);
+    expect(isPublishBlockedParams({ errors: [], truncated: false })).toBe(true);
+  });
+
+  it('từ chối thiếu errors / truncated', () => {
+    expect(isPublishBlockedParams({ truncated: false })).toBe(false);
+    expect(isPublishBlockedParams({ errors: [pageError] })).toBe(false);
+    expect(isPublishBlockedParams(null)).toBe(false);
+    expect(isPublishBlockedParams({ errors: 'x', truncated: false })).toBe(false);
+  });
+
+  it('từ chối phần tử sai kiểu — không cast mù', () => {
+    const bad = (e: unknown) => isPublishBlockedParams({ errors: [e], truncated: false });
+    expect(bad({ ...pageError, pageId: 1 })).toBe(false);
+    expect(bad({ ...pageError, pageTitle: undefined })).toBe(false);
+    expect(bad({ pageTitle: 'T', path: '', code: 'X', message: 'm' })).toBe(false); // thiếu pageId
+    expect(bad({ ...pageError, path: null })).toBe(false);
+    expect(bad({ ...pageError, code: 5 })).toBe(false);
+    expect(bad({ ...pageError, message: undefined })).toBe(false);
+    expect(bad(null)).toBe(false);
   });
 });

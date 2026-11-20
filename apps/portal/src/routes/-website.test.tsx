@@ -1,12 +1,13 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getListShopsQueryKey, type PageDto, type ShopSummaryDto, type WebsiteDto } from '@vsite/api-sdk';
 import { useSessionStore } from '../stores/session-store';
 import { renderApp } from '../test/render-app';
 import { server } from '../test/msw-server';
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   useSessionStore.getState().clearSession();
 });
 
@@ -216,5 +217,148 @@ describe('Website — danh sách trang', () => {
     );
     renderApp('/shops/shop-1/website');
     expect(await screen.findByRole('alert')).toHaveTextContent('Chỉ chủ shop');
+  });
+});
+
+describe('Website — trạng thái xuất bản', () => {
+  const publications = [
+    { id: 'pub-2', version: 2, publishedAt: '2026-10-21T17:30:00Z', publishedByUserId: null, note: null, isCurrent: true },
+    { id: 'pub-1', version: 1, publishedAt: '2026-10-20T10:00:00Z', publishedByUserId: null, note: null, isCurrent: false },
+  ];
+
+  function serve(w: WebsiteDto, pubs: unknown[] = publications) {
+    asRole('Owner');
+    server.use(
+      http.get('*/api/shops/:shopId', () =>
+        HttpResponse.json({ id: 'shop-1', name: 'Spa ABC', slug: 'spa-abc', kind: 'Hosted', externalUrl: null, status: 'Active', logoId: null, logoUrl: null }),
+      ),
+      http.get('*/api/shops/:shopId/website', () => HttpResponse.json(w)),
+      http.get('*/api/shops/:shopId/website/pages', () => HttpResponse.json(seededPages)),
+      http.get('*/api/shops/:shopId/website/publications', () => HttpResponse.json(pubs)),
+    );
+  }
+
+  it('Draft chưa xuất bản → "Chưa xuất bản", không có link Mở site, có nút Xuất bản + "Chưa có bản nào"', async () => {
+    serve(website, []);
+    renderApp('/shops/shop-1/website');
+    expect(await screen.findByText('Chưa xuất bản')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Xuất bản' })).toBeInTheDocument();
+    expect(await screen.findByText('Chưa có bản nào')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Mở site' })).not.toBeInTheDocument();
+  });
+
+  it('Published → "Đang chạy bản v2" + link Mở site (tab mới)', async () => {
+    serve({ ...website, status: 'Published', currentPublicationId: 'pub-2' });
+    renderApp('/shops/shop-1/website');
+    expect(await screen.findByText('Đang chạy bản v2')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Mở site' });
+    expect(link).toHaveAttribute('href', 'http://spa-abc.vsite.local:3000');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link.getAttribute('rel')).toContain('noopener');
+  });
+
+  it('R8: Suspended → ghi rõ đình chỉ, vẫn có nút Xuất bản', async () => {
+    serve({ ...website, status: 'Suspended', currentPublicationId: 'pub-2' });
+    renderApp('/shops/shop-1/website');
+    expect(await screen.findByText(/Đang bị đình chỉ — site công khai không hiển thị nội dung/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Xuất bản' })).toBeEnabled();
+  });
+
+  it('bấm Xuất bản → mở dialog; xuất bản xong nạp lại trạng thái', async () => {
+    let published = false;
+    serve(website, []);
+    server.use(
+      http.get('*/api/shops/:shopId/website', () =>
+        HttpResponse.json(published ? { ...website, status: 'Published', currentPublicationId: 'pub-1' } : website),
+      ),
+      http.get('*/api/shops/:shopId/website/publications', () =>
+        HttpResponse.json(published ? [{ ...publications[1], isCurrent: true }] : []),
+      ),
+      http.post('*/api/shops/:shopId/website/publications', () => {
+        published = true;
+        return HttpResponse.json({ ...publications[1], isCurrent: true }, { status: 201 });
+      }),
+    );
+    renderApp('/shops/shop-1/website');
+    fireEvent.click(await screen.findByRole('button', { name: 'Xuất bản' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Xuất bản' }));
+    expect(await screen.findByText('Đang chạy bản v1')).toBeInTheDocument();
+  });
+
+  it('S6: lần xuất bản đầu → dialog thành công có link "Mở site" ngay, không chờ getWebsite refetch', async () => {
+    serve(website, []);
+    let releaseWebsite: () => void = () => undefined;
+    let published = false;
+    server.use(
+      // Sau publish, GET website treo — khối trạng thái vẫn là "chưa xuất bản" (hasPublication = false).
+      http.get('*/api/shops/:shopId/website', async () => {
+        if (published) await new Promise<void>((resolve) => { releaseWebsite = resolve; });
+        return HttpResponse.json(website);
+      }),
+      http.post('*/api/shops/:shopId/website/publications', () => {
+        published = true;
+        return HttpResponse.json({ ...publications[1], isCurrent: true }, { status: 201 });
+      }),
+    );
+    renderApp('/shops/shop-1/website');
+    fireEvent.click(await screen.findByRole('button', { name: 'Xuất bản' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Xuất bản' }));
+    expect(await within(dialog).findByText(/Đã xuất bản bản v1/)).toBeInTheDocument();
+    const link = within(dialog).getByRole('link', { name: 'Mở site' });
+    expect(link).toHaveAttribute('href', 'http://spa-abc.vsite.local:3000');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(screen.getByText('Chưa xuất bản')).toBeInTheDocument(); // refetch chưa về
+    releaseWebsite();
+  });
+
+  it('rollback ở lịch sử → trạng thái đổi sang bản mới', async () => {
+    let current = 'pub-2';
+    serve({ ...website, status: 'Published', currentPublicationId: 'pub-2' });
+    server.use(
+      http.get('*/api/shops/:shopId/website', () =>
+        HttpResponse.json({ ...website, status: 'Published', currentPublicationId: current }),
+      ),
+      http.get('*/api/shops/:shopId/website/publications', () =>
+        HttpResponse.json(publications.map((p) => ({ ...p, isCurrent: p.id === current }))),
+      ),
+      http.post('*/api/shops/:shopId/website/publications/:id/rollback', ({ params }) => {
+        current = params.id as string;
+        return HttpResponse.json({ ...publications[1], isCurrent: true });
+      }),
+    );
+    renderApp('/shops/shop-1/website');
+    expect(await screen.findByText('Đang chạy bản v2')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Quay về bản này' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận quay về' }));
+    expect(await screen.findByText('Đang chạy bản v1')).toBeInTheDocument();
+  });
+
+  it('W3: không cấu hình origin site (env rỗng) → Published vẫn không có link Mở site', async () => {
+    vi.stubEnv('VITE_SHOP_SITE_ORIGIN_TEMPLATE', '');
+    serve({ ...website, status: 'Published', currentPublicationId: 'pub-2' });
+    renderApp('/shops/shop-1/website');
+    expect(await screen.findByText('Đang chạy bản v2')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Mở site' })).not.toBeInTheDocument();
+  });
+
+  it('R6 chéo: đang rollback → nút Xuất bản ở khối trạng thái disabled', async () => {
+    serve({ ...website, status: 'Published', currentPublicationId: 'pub-2' });
+    let release: () => void = () => undefined;
+    server.use(
+      http.post('*/api/shops/:shopId/website/publications/:id/rollback', async () => {
+        await new Promise<void>((resolve) => { release = resolve; });
+        return HttpResponse.json(publications[1]);
+      }),
+    );
+    renderApp('/shops/shop-1/website');
+    expect(await screen.findByText('Đang chạy bản v2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Xuất bản' })).toBeEnabled();
+    fireEvent.click(await screen.findByRole('button', { name: 'Quay về bản này' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận quay về' }));
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Xuất bản' })).toBeDisabled(); });
+    release();
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Xuất bản' })).toBeEnabled(); });
   });
 });

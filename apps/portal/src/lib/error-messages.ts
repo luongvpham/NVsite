@@ -51,6 +51,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   SCHEMA_VERSION_UNSUPPORTED: 'Phiên bản dữ liệu trang không được hỗ trợ. Tải lại trang.',
   THEME_INVALID: 'Giao diện có giá trị chưa hợp lệ.',
   THEME_BODY_TOO_LARGE: 'Cấu hình giao diện quá lớn để lưu.',
+  // Publish / rollback (WEBSITE-004/brief.md §5, §7)
+  PUBLISH_BLOCKED: 'Chưa xuất bản được: còn trang có lỗi cần sửa trước.',
+  PUBLISH_CONFLICT: 'Có thao tác khác vừa chạy trên website (xuất bản, quay về bản cũ hoặc lưu trang). Bấm Xuất bản lại.',
+  ROLLBACK_CONFLICT: 'Có thao tác khác vừa chạy trên website. Danh sách bản đã được tải lại, hãy bấm lại.',
+  PUBLICATION_NOT_FOUND: 'Không tìm thấy bản xuất bản này (có thể đã bị xoá). Danh sách bản đã được tải lại.',
+  REQUIRED_PROP_MISSING: 'Khối còn thiếu nội dung bắt buộc.',
 };
 
 const FALLBACK_MESSAGE = 'Có lỗi xảy ra, vui lòng thử lại.';

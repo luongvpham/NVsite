@@ -33,6 +33,7 @@ import { EditorDnd } from './editor-dnd';
 import { useThemeDraft } from '../../hooks/use-theme-draft';
 import { AutosaveStatus, ConflictDialog, LeavePrompt, LeaveThemeTabPrompt, ValidationBanner } from './autosave-ui';
 import { SitePreview } from './site-preview';
+import { useEditorPublish } from './editor-publish';
 import { ThemePanel } from './theme-panel';
 
 /**
@@ -108,8 +109,6 @@ function EditorSession({
   const { mediaMap, addAsset } = useMediaMap(shopId, workingTree);
 
   const [previewOpen, setPreviewOpen] = useState(false);
-  // Đang xem trước thì phím tắt soạn trang (Delete/Ctrl+Z) không được tác động lên cây phía sau lớp phủ.
-  useEditorShortcuts(store, !previewOpen);
 
   const { controller, state: autosave } = useAutosave({
     store,
@@ -138,12 +137,26 @@ function EditorSession({
     withResolver: true,
   });
 
+  const publish = useEditorPublish({
+    shopId,
+    pageId,
+    controller,
+    themeDirty: theme.dirty,
+    autosaveStatus: autosave.status,
+  });
+  // Đang xem trước / đang chuẩn bị xuất bản / dialog xuất bản mở thì phím tắt soạn trang (Delete/Ctrl+Z) không được
+  // tác động lên cây phía sau lớp phủ (lúc chuẩn bị: cây vừa chốt để lưu).
+  useEditorShortcuts(store, !previewOpen && !publish.busy);
+
   const nodeErrors = autosave.invalid?.mapped.byNode;
   const invalidNodeIds = useMemo(() => new Set(nodeErrors?.keys()), [nodeErrors]);
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
-      <Toolbar store={store} autosave={autosave} controller={controller} onPreview={() => { setPreviewOpen(true); }} />
+      <Toolbar store={store} autosave={autosave} controller={controller} onPreview={() => { setPreviewOpen(true); }}>
+        {publish.button}
+      </Toolbar>
+      {publish.dialog}
       {previewOpen && (
         <SitePreview shopId={shopId} pageId={pageId} store={store} onClose={() => { setPreviewOpen(false); }} />
       )}
@@ -222,11 +235,14 @@ function Toolbar({
   autosave,
   controller,
   onPreview,
+  children,
 }: {
   store: EditorStore;
   autosave: AutosaveState;
   controller: AutosaveController;
   onPreview: () => void;
+  /** Nút Xuất bản (F5). */
+  children?: React.ReactNode;
 }) {
   const canUndo = useStore(store.temporal, (s) => s.pastStates.length > 0);
   const canRedo = useStore(store.temporal, (s) => s.futureStates.length > 0);
@@ -265,6 +281,7 @@ function Toolbar({
         Xem trước
       </Button>
       <AutosaveStatus state={autosave} controller={controller} />
+      <div className="ml-auto flex items-center gap-2">{children}</div>
     </div>
   );
 }
