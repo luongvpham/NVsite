@@ -68,7 +68,7 @@ R1, R2 422/409, R5, theme bẩn, trang lỗi, PUT trước POST, huỷ, gõ khi 
 
 ## Nghiệm thu với BE thật (F7) — 6/6 ĐẠT
 
-> 2026-11-20, nhánh `feature/WEBSITE-006` @ **`27edf42`**, cây làm việc sạch.
+> 2026-11-20, nhánh `feature/WEBSITE-006` @ **`27edf42`**, cây làm việc sạch. **Chạy lại sau đợt sửa final review @ `7da99cd`: 6/6 ĐẠT** (cùng kịch bản, shop `w6smoke34682`, kết quả từng bước giống bảng dưới).
 > - **Trình duyệt thật:** Microsoft Edge headless qua `playwright-core` (cài trong scratchpad, không vào repo), bấm/gõ trên
 >   UI Portal như người dùng.
 > - Portal: dev server sẵn có của người dùng `admin.vsite.local:5173` (Vite phục vụ mã nguồn hiện tại; Portal không có MSW
@@ -82,7 +82,7 @@ R1, R2 422/409, R5, theme bẩn, trang lỗi, PUT trước POST, huỷ, gõ khi 
 > - Owner mới `w6-smoke2-…@example.com`: link verify lấy từ log của một instance BE **tạm** (`:5271`, cùng bản build) rồi
 >   tắt ngay. Shop smoke (`w6smoke32349`) + website + trang tạo bằng API; cây khởi đầu PUT bằng API: trang chủ = Hero02
 >   "W6 ban A" + RichText; trang "Gioi thieu" = Hero02 "Gioi thieu W6".
-> - ⚠️ Shop `w6smoke31981`, `w6smoke32288`, `w6smoke32349` (của các lần chạy thử kịch bản) **vẫn còn trong DB dev**.
+> - ⚠️ Shop `w6smoke31981`, `w6smoke32288`, `w6smoke32349`, `w6smoke34682` (các lần chạy kịch bản) **vẫn còn trong DB dev**.
 
 | # | Bước | Kết quả |
 |---|---|---|
