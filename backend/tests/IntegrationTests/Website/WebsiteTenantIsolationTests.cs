@@ -51,6 +51,9 @@ public sealed class WebsiteTenantIsolationTests : IAsyncLifetime
         db.Themes.AddRange(
             Theme.Create(_websiteA.Id, _shopAId, """{"schemaVersion":1}"""),
             Theme.Create(_websiteB.Id, _shopBId, """{"schemaVersion":1}"""));
+        db.NavigationConfigs.AddRange(
+            NavigationConfig.Create(_websiteA.Id, _shopAId, """{"schemaVersion":1,"items":[]}"""),
+            NavigationConfig.Create(_websiteB.Id, _shopBId, """{"schemaVersion":1,"items":[]}"""));
         db.PageDrafts.AddRange(
             PageDraft.Create(_shopAId, _pageA.Id, """{"schemaVersion":1,"id":"root","type":"Page","children":[]}"""),
             PageDraft.Create(_shopBId, _pageB.Id, """{"schemaVersion":1,"id":"root","type":"Page","children":[]}"""));
@@ -73,12 +76,14 @@ public sealed class WebsiteTenantIsolationTests : IAsyncLifetime
         var websites = await db.Websites.Where(w => w.Id == _websiteA.Id || w.Id == _websiteB.Id).ToListAsync();
         var themes = await db.Themes.Where(t => t.Id == _websiteA.Id || t.Id == _websiteB.Id).ToListAsync();
         var pages = await db.Pages.Where(p => p.Id == _pageA.Id || p.Id == _pageB.Id).ToListAsync();
+        var navs = await db.NavigationConfigs.Where(n => n.Id == _websiteA.Id || n.Id == _websiteB.Id).ToListAsync();
         var drafts = await db.PageDrafts.Where(d => d.Id == _pageA.Id || d.Id == _pageB.Id).ToListAsync();
         var pubs = await db.SitePublications.Where(p => p.Id == _pubA.Id || p.Id == _pubB.Id).ToListAsync();
 
         Assert.Equal(_shopAId, Assert.Single(websites).ShopId);
         Assert.Equal(_shopAId, Assert.Single(themes).ShopId);
         Assert.Equal(_shopAId, Assert.Single(pages).ShopId);
+        Assert.Equal(_shopAId, Assert.Single(navs).ShopId);
         Assert.Equal(_shopAId, Assert.Single(drafts).ShopId);
         Assert.Equal(_shopAId, Assert.Single(pubs).ShopId);
     }
@@ -100,6 +105,7 @@ public sealed class WebsiteTenantIsolationTests : IAsyncLifetime
         Assert.Empty(await db.Websites.Where(w => w.Id == _websiteA.Id || w.Id == _websiteB.Id).ToListAsync());
         Assert.Empty(await db.Themes.Where(t => t.Id == _websiteA.Id || t.Id == _websiteB.Id).ToListAsync());
         Assert.Empty(await db.Pages.Where(p => p.Id == _pageA.Id || p.Id == _pageB.Id).ToListAsync());
+        Assert.Empty(await db.NavigationConfigs.Where(n => n.Id == _websiteA.Id || n.Id == _websiteB.Id).ToListAsync());
         Assert.Empty(await db.PageDrafts.Where(d => d.Id == _pageA.Id || d.Id == _pageB.Id).ToListAsync());
         Assert.Empty(await db.SitePublications.Where(p => p.Id == _pubA.Id || p.Id == _pubB.Id).ToListAsync());
     }

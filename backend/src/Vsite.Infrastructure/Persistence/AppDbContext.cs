@@ -52,6 +52,7 @@ public sealed class AppDbContext(
     public DbSet<Theme> Themes => Set<Theme>();
     public DbSet<Page> Pages => Set<Page>();
     public DbSet<PageDraft> PageDrafts => Set<PageDraft>();
+    public DbSet<NavigationConfig> NavigationConfigs => Set<NavigationConfig>();
     public DbSet<SitePublication> SitePublications => Set<SitePublication>();
 
     /// <summary>

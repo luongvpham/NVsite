@@ -139,6 +139,54 @@ public sealed class WebsiteDbConstraintTests(PostgresFixture postgres)
         Assert.Equal("fk_theme_website", ex.ConstraintName);
     }
 
+    // ---------------------------------------------------------------- navigation_config
+
+    [Fact]
+    public async Task NavigationConfig_composite_fk_blocks_pointing_at_website_of_another_shop()
+    {
+        await using var db = await NewDbAsync();
+        var shopA = await AddShopAsync(db);
+        var shopB = await AddShopAsync(db);
+        var website = WebsiteEntity.Create(shopA.Id);
+        db.Websites.Add(website);
+        await db.SaveChangesAsync();
+
+        db.NavigationConfigs.Add(NavigationConfig.Create(website.Id, shopB.Id, """{"schemaVersion":1,"items":[]}"""));
+        var ex = await AssertPgAsync(db, FkViolation);
+
+        Assert.Equal("fk_navigation_config_website", ex.ConstraintName);
+    }
+
+    [Fact]
+    public async Task NavigationConfig_is_one_to_one_items_are_jsonb_and_version_follows_xmin()
+    {
+        await using var db = await NewDbAsync();
+        var shop = await AddShopAsync(db);
+        var website = WebsiteEntity.Create(shop.Id);
+        db.Websites.Add(website);
+        await db.SaveChangesAsync();
+        db.NavigationConfigs.Add(NavigationConfig.Create(website.Id, shop.Id, """{"schemaVersion":1,"items":[]}"""));
+        await db.SaveChangesAsync();
+
+        await using var db2 = NewContext(shop.Id);
+        db2.NavigationConfigs.Add(NavigationConfig.Create(website.Id, shop.Id, """{"schemaVersion":1,"items":[]}"""));
+        var ex = await AssertPgAsync(db2, UniqueViolation);
+        Assert.Equal("pk_navigation_config", ex.ConstraintName);
+
+        await using var verify = NewContext(shop.Id);
+        var nav = await verify.NavigationConfigs.SingleAsync(n => n.Id == website.Id);
+        var jsonType = await verify.Database.SqlQuery<string>(
+            $"SELECT data_type AS \"Value\" FROM information_schema.columns WHERE table_name = 'navigation_config' AND column_name = 'items'")
+            .SingleAsync();
+        Assert.Equal("jsonb", jsonType);
+        Assert.True(nav.IsDirty);
+
+        var before = nav.Version;
+        nav.MarkPublished();
+        await verify.SaveChangesAsync();
+        Assert.NotEqual(before, nav.Version);
+    }
+
     [Fact]
     public async Task Theme_is_one_to_one_with_website_and_tokens_are_jsonb()
     {

@@ -10,6 +10,7 @@ public enum DocumentKind
     Tree,
     Tokens,
     Snapshot,
+    Navigation,
 }
 
 /// <summary>Phiên bản schema hiện hành của tài liệu JSON (#94). Đổi khi thêm upcaster tương ứng.</summary>
@@ -20,6 +21,9 @@ public static class DocumentSchemaVersions
 
     /// <summary>Vỏ <c>SiteSnapshot</c> (8b). Chưa có upcaster nào — bản publish luôn ghi/đọc ở version này.</summary>
     public const int Snapshot = 1;
+
+    /// <summary>Tài liệu menu <c>{ schemaVersion, items }</c> của <c>NavigationConfig</c> (WEBSITE-007, #94).</summary>
+    public const int Navigation = 1;
 }
 
 /// <summary>
@@ -65,16 +69,19 @@ public sealed class DocumentVersioning
     private readonly int _treeCurrent;
     private readonly int _tokensCurrent;
     private readonly int _snapshotCurrent;
+    private readonly int _navigationCurrent;
 
     public DocumentVersioning(
         IEnumerable<IDocumentUpcaster> upcasters,
         int treeCurrent = DocumentSchemaVersions.Tree,
         int tokensCurrent = DocumentSchemaVersions.Tokens,
-        int snapshotCurrent = DocumentSchemaVersions.Snapshot)
+        int snapshotCurrent = DocumentSchemaVersions.Snapshot,
+        int navigationCurrent = DocumentSchemaVersions.Navigation)
     {
         _treeCurrent = treeCurrent;
         _tokensCurrent = tokensCurrent;
         _snapshotCurrent = snapshotCurrent;
+        _navigationCurrent = navigationCurrent;
         foreach (var upcaster in upcasters)
         {
             if (!_upcasters.TryAdd((upcaster.Kind, upcaster.FromVersion), upcaster))
@@ -90,6 +97,7 @@ public sealed class DocumentVersioning
         DocumentKind.Tree => _treeCurrent,
         DocumentKind.Tokens => _tokensCurrent,
         DocumentKind.Snapshot => _snapshotCurrent,
+        DocumentKind.Navigation => _navigationCurrent,
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 

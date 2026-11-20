@@ -227,4 +227,43 @@ public sealed class WebsiteEntityTests
         withPub.Reinstate();
         Assert.Equal(WebsiteStatus.Published, withPub.Status);
     }
+
+    private const string EmptyNav = """{"schemaVersion":1,"items":[]}""";
+
+    [Fact]
+    public void NavigationConfig_is_keyed_by_website_starts_dirty_and_replace_requires_items()
+    {
+        var websiteId = Guid.NewGuid();
+        var nav = NavigationConfig.Create(websiteId, ShopId, EmptyNav);
+
+        Assert.Equal(websiteId, nav.Id);
+        Assert.Equal(websiteId, nav.WebsiteId);
+        Assert.Equal(ShopId, nav.ShopId);
+        Assert.Equal(EmptyNav, nav.Items);
+        Assert.True(nav.IsDirty);
+
+        var ex = Assert.Throws<DomainException>(() => nav.Replace(" "));
+        Assert.Equal("NAVIGATION_ITEMS_REQUIRED", ex.ErrorCode);
+        Assert.Equal(EmptyNav, nav.Items);
+    }
+
+    [Fact]
+    public void NavigationConfig_mark_published_clears_dirty_replace_and_mark_dirty_set_it()
+    {
+        var nav = NavigationConfig.Create(Guid.NewGuid(), ShopId, EmptyNav);
+
+        nav.MarkPublished();
+        Assert.False(nav.IsDirty);
+        Assert.Equal(EmptyNav, nav.Items);
+
+        const string next = """{"schemaVersion":1,"items":[{"id":"a"}]}""";
+        nav.Replace(next);
+        Assert.True(nav.IsDirty);
+        Assert.Equal(next, nav.Items);
+
+        nav.MarkPublished();
+        nav.MarkDirty();
+        Assert.True(nav.IsDirty);
+        Assert.Equal(next, nav.Items);
+    }
 }

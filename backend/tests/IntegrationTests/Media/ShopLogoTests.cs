@@ -462,6 +462,7 @@ public sealed class ShopLogoTests
         public DbSet<Vsite.Domain.Website.Entities.Theme> Themes => inner.Themes;
         public DbSet<Vsite.Domain.Website.Entities.Page> Pages => inner.Pages;
         public DbSet<Vsite.Domain.Website.Entities.PageDraft> PageDrafts => inner.PageDrafts;
+        public DbSet<Vsite.Domain.Website.Entities.NavigationConfig> NavigationConfigs => inner.NavigationConfigs;
         public DbSet<Vsite.Domain.Website.Entities.SitePublication> SitePublications => inner.SitePublications;
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
