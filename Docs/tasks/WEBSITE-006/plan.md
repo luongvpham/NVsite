@@ -1,6 +1,6 @@
 # WEBSITE-006 — Publish / rollback website từ Portal (Bước 8e)
 
-> **Đã chốt 2026-11-19 — chưa code** (G1–G6 người đã duyệt)
+> **Đã code 2026-11-20 — chờ Gate 2** (G1–G6 người đã duyệt 2026-11-19). Kết quả, lệch, nợ: [`changelog.md`](changelog.md)
 >
 > **Lane A** (không chạm contract — API publish/rollback/list đã có từ 8b, WEBSITE-004) + `plan.md` gọn vì
 > R9 (version draft đổi sau publish) dễ sai. Cổng: Gate 2. Chỉ FE (`apps/portal`, nhỏ ở `builder-renderer` nếu cần).
@@ -177,10 +177,10 @@ apps/portal/
 ### F1: Kiểu lỗi publish + thông điệp
 `PublishBlockedParams = { errors: { pageId: string|null; pageTitle: string|null; path: string; code: string; message: string }[]; truncated: boolean }`
 theo `Docs/tasks/WEBSITE-004/brief.md` §5, cùng khuôn `DraftConflictParams` (`problem-details.ts:42`).
-- [ ] Test trước: `packages/shared/src/errors/problem-details.test.ts` — guard nhận đúng dạng, `pageId: null`, từ chối thiếu `errors`/`truncated`, phần tử sai kiểu
-- [ ] Test trước: `apps/portal/src/lib/error-messages.test.ts` — có thông điệp cho `PUBLISH_BLOCKED`, `PUBLISH_CONFLICT`, `ROLLBACK_CONFLICT`, `PUBLICATION_NOT_FOUND`, `REQUIRED_PROP_MISSING`
-- [ ] FAIL → hiện thực → PASS (`pnpm --filter @vsite/shared test`, `pnpm --filter @vsite/portal test`)
-- [ ] Commit `feat(shared): params PUBLISH_BLOCKED + thông điệp lỗi publish/rollback (WEBSITE-006)`
+- [x] Test trước: `packages/shared/src/errors/problem-details.test.ts` — guard nhận đúng dạng, `pageId: null`, từ chối thiếu `errors`/`truncated`, phần tử sai kiểu
+- [x] Test trước: `apps/portal/src/lib/error-messages.test.ts` — có thông điệp cho `PUBLISH_BLOCKED`, `PUBLISH_CONFLICT`, `ROLLBACK_CONFLICT`, `PUBLICATION_NOT_FOUND`, `REQUIRED_PROP_MISSING`
+- [x] FAIL → hiện thực → PASS (`pnpm --filter @vsite/shared test`, `pnpm --filter @vsite/portal test`)
+- [x] Commit `feat(shared): params PUBLISH_BLOCKED + thông điệp lỗi publish/rollback (WEBSITE-006)`
 
 ### F2: Autosave nhường chỗ cho publish (R9)
 Thêm vào `AutosaveController` (`apps/portal/src/lib/autosave/autosave-controller.ts`), giữ nguyên các bất biến ở comment `:45–56`:
@@ -191,43 +191,43 @@ prepareForPublish(): Promise<{ ok: true } | { ok: false; reason: 'invalid' | 'co
 finishPublish(): Promise<void>;
 ```
 Trong lúc khoá: `onTreeChanged` chỉ đánh dấu `unsaved`, không hẹn giờ PUT. `finishPublish` lỗi GET ⇒ vẫn mở khoá với `version` cũ (R3).
-- [ ] Test trước (`autosave-controller.test.ts`, fake timer): đang có thay đổi ⇒ `prepareForPublish` PUT đúng một lần rồi `ok`; PUT đang bay ⇒ chờ xong; `invalid`/`conflict`/`blocked` ⇒ `ok:false` kèm lý do, không PUT; gõ trong lúc khoá ⇒ không PUT; `finishPublish` ⇒ dùng `version` từ GET cho PUT kế tiếp và cây local giữ nguyên tham chiếu; gõ trong lúc khoá ⇒ lưu ngay sau `finishPublish`; GET lỗi ⇒ mở khoá, giữ `version` cũ; `dispose` giữa chừng không ném
-- [ ] FAIL → hiện thực → PASS
-- [ ] Commit `feat(portal): autosave khoá + lấy lại version quanh publish (R9, WEBSITE-006)`
+- [x] Test trước (`autosave-controller.test.ts`, fake timer): đang có thay đổi ⇒ `prepareForPublish` PUT đúng một lần rồi `ok`; PUT đang bay ⇒ chờ xong; `invalid`/`conflict`/`blocked` ⇒ `ok:false` kèm lý do, không PUT; gõ trong lúc khoá ⇒ không PUT; `finishPublish` ⇒ dùng `version` từ GET cho PUT kế tiếp và cây local giữ nguyên tham chiếu; gõ trong lúc khoá ⇒ lưu ngay sau `finishPublish`; GET lỗi ⇒ mở khoá, giữ `version` cũ; `dispose` giữa chừng không ném
+- [x] FAIL → hiện thực → PASS
+- [x] Commit `feat(portal): autosave khoá + lấy lại version quanh publish (R9, WEBSITE-006)`
 
 ### F3: Luồng publish dùng chung
 - `src/lib/site-url.ts`: `shopSiteUrl(slug)` thay `{slug}` trong `import.meta.env.VITE_SHOP_SITE_ORIGIN_TEMPLATE`; thiếu/rỗng ⇒ `null`. Ghi giá trị dev `http://{slug}.vsite.local:3000` (`apps/web/package.json:7` chạy cổng 3000).
 - `src/hooks/use-publish-website.ts`: bọc `usePublishWebsite`; `onSettled` invalidate `getWebsite` + `listPages` + `listPublications`; trả lỗi đã phân loại (`blocked` kèm params / `conflict` / thông điệp khác). Không retry.
 - `publish-dialog.tsx`: ô ghi chú (≤ 200, trim), nút Xuất bản disabled khi đang chạy, thành công ⇒ "Đã xuất bản bản vN" + link "Mở site" (nếu có URL).
 - `publish-errors.tsx`: lỗi `pageId: null` đứng đầu, nhóm theo trang, link "Mở trang" (trang đang mở ⇒ "trang này"), `truncated` ⇒ "còn lỗi khác".
-- [ ] Test trước: `site-url.test.ts` (có/không env, slug thay đúng chỗ) · `publish-dialog.test.tsx` với MSW: 201, 422 (lỗi website + 2 trang + truncated), 409 (đúng 1 request, không tự thử lại), note toàn khoảng trắng gửi `null`/bỏ trống
-- [ ] FAIL → hiện thực → PASS
-- [ ] Commit `feat(portal): dialog xuất bản + danh sách lỗi PUBLISH_BLOCKED (WEBSITE-006)`
+- [x] Test trước: `site-url.test.ts` (có/không env, slug thay đúng chỗ) · `publish-dialog.test.tsx` với MSW: 201, 422 (lỗi website + 2 trang + truncated), 409 (đúng 1 request, không tự thử lại), note toàn khoảng trắng gửi `null`/bỏ trống
+- [x] FAIL → hiện thực → PASS
+- [x] Commit `feat(portal): dialog xuất bản + danh sách lỗi PUBLISH_BLOCKED (WEBSITE-006)`
 
 ### F4: Màn tổng quan Website
 `website-overview.tsx`: khối trạng thái ở trên `PageList` — "Chưa xuất bản" / "Đang chạy bản vN" / "Đang bị đình chỉ" (R8), nút Xuất bản (mở dialog F3), link "Mở site" khi `currentPublicationId` khác null. `publication-history.tsx`: bảng bản (vN, thời điểm theo giờ VN, ghi chú, nhãn "Đang chạy"), nút "Quay về bản này" (ẩn ở bản `isCurrent`, R7) + dialog xác nhận; thành công/lỗi ⇒ invalidate như F3.
-- [ ] Test trước (`publication-history.test.tsx`, `routes/-website.test.tsx`): loading · error (Thử lại) · empty ("Chưa có bản nào"); rollback 200 ⇒ nạp lại danh sách và trạng thái; 404/409 ⇒ thông điệp, nạp lại danh sách, đúng 1 request; nút disabled khi đang chạy (R6); trạng thái Suspended
-- [ ] FAIL → hiện thực → PASS
-- [ ] Commit `feat(portal): trạng thái xuất bản, lịch sử bản và rollback ở màn Website (WEBSITE-006)`
+- [x] Test trước (`publication-history.test.tsx`, `routes/-website.test.tsx`): loading · error (Thử lại) · empty ("Chưa có bản nào"); rollback 200 ⇒ nạp lại danh sách và trạng thái; 404/409 ⇒ thông điệp, nạp lại danh sách, đúng 1 request; nút disabled khi đang chạy (R6); trạng thái Suspended
+- [x] FAIL → hiện thực → PASS
+- [x] Commit `feat(portal): trạng thái xuất bản, lịch sử bản và rollback ở màn Website (WEBSITE-006)`
 
 ### F5: Xuất bản từ editor
 `editor-shell.tsx` Toolbar thêm nút Xuất bản. Bấm ⇒ `theme.dirty` ⇒ thông báo chặn (không gọi gì) · không thì `controller.prepareForPublish()` ⇒ `ok:false` ⇒ thông báo theo lý do · `ok` ⇒ mở dialog F3 ⇒ đóng dialog hoặc publish xong/lỗi ⇒ `controller.finishPublish()`.
-- [ ] Test trước (`routes/-editor-publish.test.tsx`, MSW): theme dirty ⇒ không POST; autosave `invalid` ⇒ không POST; có thay đổi chưa lưu ⇒ PUT trước rồi POST; **sau 201 gõ tiếp ⇒ PUT mang `version` của GET mới, không có dialog 409** (R1); 422 ⇒ danh sách lỗi, autosave chạy lại (R2); huỷ dialog ⇒ autosave chạy lại
-- [ ] FAIL → hiện thực → PASS
-- [ ] Commit `feat(portal): nút Xuất bản trong editor (WEBSITE-006)`
+- [x] Test trước (`routes/-editor-publish.test.tsx`, MSW): theme dirty ⇒ không POST; autosave `invalid` ⇒ không POST; có thay đổi chưa lưu ⇒ PUT trước rồi POST; **sau 201 gõ tiếp ⇒ PUT mang `version` của GET mới, không có dialog 409** (R1); 422 ⇒ danh sách lỗi, autosave chạy lại (R2); huỷ dialog ⇒ autosave chạy lại
+- [x] FAIL → hiện thực → PASS
+- [x] Commit `feat(portal): nút Xuất bản trong editor (WEBSITE-006)`
 
 ### F6: Anchor chung trong xem trước
-- [ ] `site-preview.tsx`: import `decorateWithAnchor` từ `@vsite/builder-renderer`, xoá `decorateWithId` (`:37`)
-- [ ] `site-preview.test.tsx` + `routes/-editor-preview.test.tsx` vẫn xanh (thêm ca: node có wrapper `id`)
-- [ ] Commit `refactor(portal): xem trước dùng decorateWithAnchor của builder-renderer (WEBSITE-006)`
+- [x] `site-preview.tsx`: import `decorateWithAnchor` từ `@vsite/builder-renderer`, xoá `decorateWithId` (`:37`)
+- [x] `site-preview.test.tsx` + `routes/-editor-preview.test.tsx` vẫn xanh (thêm ca: node có wrapper `id`)
+- [x] Commit `refactor(portal): xem trước dùng decorateWithAnchor của builder-renderer (WEBSITE-006)`
 
 ### F7: Smoke với BE thật
-- [ ] Bật BE + portal + `apps/web` (tắt MSW). Owner: sửa trang → Xuất bản từ editor → "Mở site" thấy bản mới → gõ tiếp ⇒ lưu được, không 409 → làm một trang lỗi (prop bắt buộc trống) ⇒ publish chỉ ra đúng trang → rollback ở màn tổng quan ⇒ site về bản cũ
-- [ ] Ghi kết quả từng bước vào `changelog.md` (kèm commit đo)
+- [x] Bật BE + portal + `apps/web` (tắt MSW). Owner: sửa trang → Xuất bản từ editor → "Mở site" thấy bản mới → gõ tiếp ⇒ lưu được, không 409 → làm một trang lỗi (prop bắt buộc trống) ⇒ publish chỉ ra đúng trang → rollback ở màn tổng quan ⇒ site về bản cũ
+- [x] Ghi kết quả từng bước vào `changelog.md` (kèm commit đo)
 
 ## 11. Đóng task (trước Gate 2)
-- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` toàn repo; `pnpm check:docs`
-- [ ] `Docs/tasks/WEBSITE-006/changelog.md` (đã làm · lệch · giả định · nợ) · cập nhật `00-INDEX` §3 dòng 8e, §4 dòng WEBSITE-005 (bỏ `decorateWithAnchor`, UI publish)
+- [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` toàn repo; `pnpm check:docs`
+- [x] `Docs/tasks/WEBSITE-006/changelog.md` (đã làm · lệch · giả định · nợ) · cập nhật `00-INDEX` §3 dòng 8e, §4 dòng WEBSITE-005 (bỏ `decorateWithAnchor`, UI publish)
 - [ ] `change-reviewer` (model mạnh nhất không bắt buộc: không chạm tenant/contract — dùng model thường) → `review.md` kèm "Ma sát quy trình"
 
 ## 12. Giả định tôi đã tự đặt (chưa hỏi, cần duyệt)

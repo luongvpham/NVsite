@@ -51,10 +51,20 @@ Lane A, chỉ FE (`apps/portal`, `packages/shared`). Không đổi contract, kh�
   wrapper `#c_hero1` là `div` `display: contents`.
 
 ### Test
-Portal 381 test (35 file) — mới/mở rộng: `autosave-controller.test.ts`, `same-json.test.ts`, `publish-dialog.test.tsx`,
+Portal 385 test (35 file, gồm 4 ca thêm ở "Sửa sau final review") — mới/mở rộng: `autosave-controller.test.ts`, `same-json.test.ts`, `publish-dialog.test.tsx`,
 `publication-history.test.tsx`, `site-url.test.ts`, `routes/-website.test.tsx`, `routes/-editor-publish.test.tsx` (14 ca:
 R1, R2 422/409, R5, theme bẩn, trang lỗi, PUT trước POST, huỷ, gõ khi dialog mở, rời trang, prepare đang chạy),
 `site-preview.test.tsx`, `error-messages.test.ts`. Shared: `problem-details.test.ts` (+`isPublishBlockedParams`).
+
+## Sửa sau final review
+
+| # | Mục | Commit |
+|---|---|---|
+| W1 | `keepMine` ("Giữ bản của tôi") chuyển mốc `savedTree` (và `serverTree`) sang cây của GET — cây server đang giữ ở `version` mới; GET không đọc được cây ⇒ `savedTree = null`, mọi cây local đều bẩn. Trước đây PUT lỗi rồi undo về cây lúc mở phiên báo "Đã lưu" ⇒ publish xuất bản nội dung tab kia. Test: 2 ca `W1 —` ở `autosave-controller.test.ts` (không `saved`; `prepareForPublish` PUT cây A với version của GET trước khi `ok`) | `0f41032` |
+| W2 | `packages/builder-renderer/CLAUDE.md`: Portal (xem trước) đã dùng `decorateWithAnchor` | `38378fe` |
+| W3 | `eslint.config.mjs`: `no-restricted-syntax` chặn `TSEnumDeclaration` (#19) cho mọi file TS. `turbo.json`: `lint` lấy `eslint.config.mjs` gốc làm input — trước đó đổi rule mà turbo vẫn trúng cache (8/11) | `f2ec31e` |
+| S6 | `website-overview.tsx`: `PublishDialog` nhận `siteUrl` bất kể `hasPublication` ⇒ lần xuất bản đầu dialog có "Mở site" ngay. Link ở khối trạng thái giữ điều kiện cũ. Test `S6:` ở `routes/-website.test.tsx` | `f50064f` |
+| F5-S3 | `publish-dialog.test.tsx`: đóng → mở lại ⇒ ghi chú rỗng, không còn "Đã xuất bản bản vN", form hiện lại. Đột biến bỏ `key={session}` ⇒ test FAIL | `df62ac9` |
 
 ## Nghiệm thu với BE thật (F7) — 6/6 ĐẠT
 
@@ -108,8 +118,6 @@ Dọn process: instance BE tạm `:5271` và web `:3001` đã tắt; Edge headle
 
 ## Chưa làm xong / nợ / theo dõi
 
-- **F2 (có từ trước):** sau "Giữ bản của tôi", nếu PUT kế tiếp lỗi rồi undo về đúng `savedTree`, trạng thái báo "Đã lưu"
-  trong khi server giữ cây của tab kia ⇒ publish lúc đó xuất bản nội dung tab kia.
 - F2 nhỏ: undo về đúng cây chưa sanitize đã gửi thì không nạp bản sạch (vô hại); GET nạp bản sanitize lỗi ⇒ 409 giả sau
   publish; `dispose`→`start` bỏ kết quả PUT đang bay (chỉ dev/StrictMode); nhánh nạp bản sanitize nhận `latest.version`
   không đối chiếu (có từ trước).
@@ -118,7 +126,7 @@ Dọn process: instance BE tạm `:5271` và web `:3001` đã tắt; Edge headle
   `Dialog` chưa có focus trap (có từ trước ở `@vsite/ui`); "Mở site" vẫn hiện khi shop Suspended (đúng spec); nhãn tạm
   "Đã xuất bản" khi chưa có số bản; `rel` chưa thống nhất.
 - F5: thông điệp chặn đã ẩn có thể hiện lại ngoài ngữ cảnh; nút submit trong `PublishDialog` không tắt khi một publish
-  khác đang chạy, nút Xuất bản ở tổng quan bỏ qua `isPublishing`; chưa có test "mở lại thì ghi chú/kết quả được reset";
+  khác đang chạy, nút Xuất bản ở tổng quan bỏ qua `isPublishing`;
   "Mở trang" khi đã gõ trong lúc khoá ⇒ LeavePrompt hiện chồng dialog (có cảnh báo, không mất dữ liệu).
 - Môi trường: dev server `apps/web :3000` đang chạy trả 502 mọi shop (cấu hình process của người dùng, chưa điều tra);
   Portal thiếu `favicon.ico`; `getByLabel('Tiêu đề')` không tìm được ô trong Inspector (label không gắn với input —
@@ -126,5 +134,6 @@ Dọn process: instance BE tạm `:5271` và web `:3001` đã tắt; Edge headle
 
 ## Kiểm tra
 
-- `pnpm lint && pnpm typecheck && pnpm test && pnpm build` toàn repo: exit 0 (portal 381, web 17, shared, builder-*).
+- `pnpm lint && pnpm typecheck && pnpm test && pnpm build` toàn repo: exit 0 (sau fix wave, `df62ac9`: portal 385,
+  web 269, builder-components 535, builder-core 137, builder-renderer 36, theme-engine 49, api-sdk 12, shared 10).
 - `pnpm check:docs`: OK.
