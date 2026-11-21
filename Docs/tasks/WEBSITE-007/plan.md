@@ -288,8 +288,8 @@ trang), ẩn/hiện, thêm/xoá `custom`, gắn "trang đang tắt", nút Lưu, 
 `website-overview.tsx` / `publish-dialog.tsx` hiện "Menu có thay đổi chưa publish" theo `isDirty`; sau
 publish/rollback invalidate query menu. [site-preview.tsx:164-167](../../../apps/portal/src/components/website/site-preview.tsx#L164-L167)
 truyền `menuItems` qua `resolveNavigation` (trang đang tắt bị bỏ như site).
-- [ ] Test trước: `publish-dialog.test.tsx` / `site-preview.test.tsx` thêm ca
-- [ ] Commit `feat(portal): nhắc menu chưa publish + preview có menu (WEBSITE-007)`
+- [x] Test trước: `publish-dialog.test.tsx` / `site-preview.test.tsx` thêm ca
+- [x] Commit `feat(portal): nhắc menu chưa publish + preview có menu (WEBSITE-007)` (+ fix review `dc6ad8f`)
 
 ### F6: Nghiệm thu tay với BE thật
 - [ ] Sắp menu (có menu con + link Fanpage) → publish → `{slug}.vsite.local` hiện đúng; dropdown + mobile chạy
