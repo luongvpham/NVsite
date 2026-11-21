@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactN
 import { useStore } from 'zustand';
 import { Button } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
-import { useGetShop, useGetWebsite, useListPages } from '@vsite/api-sdk';
-import { createResolveUrl, matchSiteUrl, type SitePageRef, type SiteUrlOptions } from '@vsite/builder-components';
+import { useGetNavigation, useGetShop, useGetWebsite, useListPages } from '@vsite/api-sdk';
+import { createResolveUrl, matchSiteUrl, resolveNavigation, type NavigationInputItem, type SitePageRef, type SiteUrlOptions } from '@vsite/builder-components';
 import {
   decorateWithAnchor,
   RenderContextProvider,
@@ -26,6 +26,24 @@ const NOTICE_TEXT: Record<Notice, string> = {
   systemMissing: 'Trang hệ thống này chưa được tạo — khách sẽ thấy trang 404',
   deleted: 'Liên kết trỏ tới trang đã xoá',
 };
+
+/** DTO nháp dùng `null` cho label/url; `NavigationInputItem` dùng thiếu-field. */
+interface DraftNavItem {
+  key: string;
+  label: string | null;
+  url: string | null;
+  hidden: boolean;
+  children?: readonly DraftNavItem[];
+}
+function toInput(item: DraftNavItem): NavigationInputItem {
+  return {
+    key: item.key,
+    label: item.label,
+    ...(item.url !== null && { url: item.url }),
+    hidden: item.hidden,
+    children: (item.children ?? []).map(toInput),
+  };
+}
 
 /** Một "màn" đang xem: trang nào + (nếu là NotFound do link hỏng) lý do. */
 interface View {
@@ -52,6 +70,8 @@ export function SitePreview({
   const websiteQuery = useGetWebsite(shopId, { query: { retry: false, staleTime: 0 } });
   const pagesQuery = useListPages(shopId, { query: { retry: false, staleTime: 0 } });
   const shopQuery = useGetShop(shopId);
+  // Menu chỉ trang trí khung: lỗi/chưa tải ⇒ không có menu, không chặn preview.
+  const navigationQuery = useGetNavigation(shopId, { query: { retry: false, staleTime: 0 } });
   const themeDraft = useStore(store, (s) => s.themeDraft);
 
   const [history, setHistory] = useState<View[]>([]);
@@ -81,6 +101,19 @@ export function SitePreview({
         ? { basePath: PREVIEW_BASE, locale: website.defaultLocale, defaultLocale: website.defaultLocale, pages: refs }
         : null,
     [website, refs],
+  );
+  // R-c: menu nháp (có `hidden`) + chỉ trang đang BẬT ⇒ mục ẩn / mục trỏ trang tắt bị bỏ y như site thật.
+  const navItems = navigationQuery.data?.items;
+  const menuItems = useMemo(
+    () =>
+      urlOptions && navItems
+        ? resolveNavigation(
+            navItems.map(toInput),
+            (pages ?? []).filter((p) => p.isEnabled),
+            createResolveUrl(urlOptions),
+          )
+        : [],
+    [urlOptions, navItems, pages],
   );
   const notFoundId = pages?.find((p) => p.systemType === 'NotFound')?.id ?? null;
 
@@ -164,7 +197,7 @@ export function SitePreview({
     const homeHref = homeId ? createResolveUrl(urlOptions)({ kind: 'page', pageId: homeId }) : '#';
     body = (
       <div style={themeStyle(themeDraft)}>
-        <SiteLayout shop={{ name: shop.name, logoUrl: shop.logoUrl }} homeHref={homeHref} year={year}>
+        <SiteLayout shop={{ name: shop.name, logoUrl: shop.logoUrl }} homeHref={homeHref} year={year} menuItems={menuItems}>
           <PreviewBody
             key={view.pageId ?? 'none'}
             shopId={shopId}

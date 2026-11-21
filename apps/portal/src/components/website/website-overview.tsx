@@ -13,6 +13,7 @@ import {
   WebsiteStatus,
   type WebsiteDto,
 } from '@vsite/api-sdk';
+import { useMenuDirty } from '../../hooks/use-menu-dirty';
 import { useIsRollingBack } from '../../hooks/use-publication-mutations';
 import { getErrorMessage } from '../../lib/error-messages';
 import { shopSiteUrl } from '../../lib/site-url';
@@ -84,6 +85,7 @@ function PublishStatus({ shopId, website }: { shopId: string; website: WebsiteDt
   const shopQuery = useGetShop(shopId);
   const publicationsQuery = useListPublications(shopId);
   const isRollingBack = useIsRollingBack(); // R6 chéo
+  const menuDirty = useMenuDirty(shopId);
 
   const hasPublication = website.currentPublicationId !== null;
   const siteUrl = shopQuery.data ? shopSiteUrl(shopQuery.data.slug) : null;
@@ -101,7 +103,10 @@ function PublishStatus({ shopId, website }: { shopId: string; website: WebsiteDt
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-border px-4 py-3">
-      <p className="font-medium text-foreground">{label}</p>
+      <div>
+        <p className="font-medium text-foreground">{label}</p>
+        {menuDirty && <p className="text-sm text-muted-foreground">Menu có thay đổi chưa publish</p>}
+      </div>
       <div className="flex items-center gap-2">
         {siteUrl && hasPublication && (
           <a

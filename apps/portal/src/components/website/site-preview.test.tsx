@@ -73,7 +73,7 @@ const website = {
 
 let writes: string[];
 
-function setup(homeTree: unknown, over: { pagesStatus?: number } = {}) {
+function setup(homeTree: unknown, over: { pagesStatus?: number; navItems?: unknown[] } = {}) {
   const store: EditorStore = createEditorStore();
   store.getState().loadDraft(treeEnvelopeSchema.parse(homeTree), PageKind.Composable);
   server.use(
@@ -108,6 +108,9 @@ function setup(homeTree: unknown, over: { pagesStatus?: number } = {}) {
       }),
     ),
     http.get('*/api/shops/:shopId/media/assets', () => HttpResponse.json([])),
+    http.get('*/api/shops/:shopId/website/navigation', () =>
+      HttpResponse.json({ version: 1, isDirty: false, items: over.navItems ?? [] }),
+    ),
   );
   const onClose = vi.fn();
   const utils = renderWithQuery(<SitePreview shopId="shop-1" pageId="p-home" store={store} onClose={onClose} />);
@@ -135,6 +138,36 @@ describe('SitePreview — xem trước toàn trang (WEBSITE-003 T4)', () => {
     expect(dialog.querySelector('header img')).toHaveAttribute('src', '/media/s/logo.png');
     expect(dialog.querySelector('footer')).toHaveTextContent('Spa ABC');
     expect(writes).toEqual([]);
+  });
+
+  it('F5: menu nháp hiện trong Header — bỏ mục ẩn và mục trỏ trang tắt, giữ mục con', async () => {
+    const navItem = (key: string, over: Record<string, unknown> = {}) => ({
+      key,
+      label: null,
+      url: null,
+      hidden: false,
+      children: [],
+      ...over,
+    });
+    setup(heroTree('Chào khách'), {
+      navItems: [
+        navItem('page:p-about', {
+          children: [navItem('custom', { label: 'Facebook', url: 'https://facebook.com/spa' })],
+        }),
+        navItem('page:p-off'),
+        navItem('custom', { label: 'Ẩn đi', url: 'https://example.com', hidden: true }),
+      ],
+    });
+    const dialog = await screen.findByRole('dialog', { name: 'Xem trước trang' });
+    await within(dialog).findByText('Chào khách');
+    const header = dialog.querySelector('header') as HTMLElement;
+    await waitFor(() => { expect(within(header).getAllByText('Giới thiệu').length).toBeGreaterThan(0); });
+    for (const a of within(header).getAllByRole('link', { name: 'Giới thiệu' })) {
+      expect(a).toHaveAttribute('href', '/__preview/gioi-thieu');
+    }
+    expect(within(header).getAllByText('Facebook').length).toBeGreaterThan(0);
+    expect(within(header).queryByText('Tắt')).not.toBeInTheDocument();
+    expect(within(header).queryByText('Ẩn đi')).not.toBeInTheDocument();
   });
 
   it('đang tải → "Đang tải trang" trong khung', () => {

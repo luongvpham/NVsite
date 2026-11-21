@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  getGetNavigationQueryKey,
   getGetWebsiteQueryKey,
   getListPagesQueryKey,
   getListPublicationsQueryKey,
@@ -118,6 +119,7 @@ describe('PublicationHistory — rollback', () => {
     expect(keys).toContain(JSON.stringify(getGetWebsiteQueryKey('shop-1')));
     expect(keys).toContain(JSON.stringify(getListPagesQueryKey('shop-1')));
     expect(keys).toContain(JSON.stringify(getListPublicationsQueryKey('shop-1')));
+    expect(keys).toContain(JSON.stringify(getGetNavigationQueryKey('shop-1')));
     await waitFor(() => { expect(screen.queryByRole('dialog')).not.toBeInTheDocument(); });
   });
 

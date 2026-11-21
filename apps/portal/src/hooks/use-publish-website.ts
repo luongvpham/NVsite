@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  getGetNavigationQueryKey,
   getGetWebsiteQueryKey,
   getListPagesQueryKey,
   getListPublicationsQueryKey,
@@ -45,6 +46,8 @@ export function usePublishWebsiteFlow(shopId: string, options: { onSettled?: () 
         void queryClient.invalidateQueries({ queryKey: getGetWebsiteQueryKey(shopId) });
         void queryClient.invalidateQueries({ queryKey: getListPagesQueryKey(shopId) });
         void queryClient.invalidateQueries({ queryKey: getListPublicationsQueryKey(shopId) });
+        // Publish lần đầu tạo hàng menu ⇒ tab Menu đang mở với `version: null` sẽ 409 nếu không nạp lại.
+        void queryClient.invalidateQueries({ queryKey: getGetNavigationQueryKey(shopId) });
         onSettledRef.current?.();
       },
     },

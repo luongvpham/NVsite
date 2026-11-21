@@ -5,7 +5,12 @@ import { http, HttpResponse } from 'msw';
 import { useState, type ComponentType } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { server } from '../../test/msw-server';
-import { getGetWebsiteQueryKey, getListPagesQueryKey, getListPublicationsQueryKey } from '@vsite/api-sdk';
+import {
+  getGetNavigationQueryKey,
+  getGetWebsiteQueryKey,
+  getListPagesQueryKey,
+  getListPublicationsQueryKey,
+} from '@vsite/api-sdk';
 import { PublishDialog, type PublishDialogProps } from './publish-dialog';
 
 /** `Root`: thay dialog mặc định (open cố định) bằng component riêng — vd. harness tự đóng/mở. */
@@ -103,6 +108,7 @@ describe('PublishDialog', () => {
       getGetWebsiteQueryKey('shop-1'),
       getListPagesQueryKey('shop-1'),
       getListPublicationsQueryKey('shop-1'),
+      getGetNavigationQueryKey('shop-1'),
     ]);
   });
 
@@ -311,5 +317,49 @@ describe('PublishDialog', () => {
     await openDialog();
     fireEvent.click(screen.getByRole('button', { name: 'Huỷ' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  describe('menu chưa publish (WEBSITE-007 F5)', () => {
+    const NAV_URL = '*/api/shops/:shopId/website/navigation';
+    const nav = (isDirty: boolean) => ({ version: 3, isDirty, items: [] });
+
+    it('isDirty true ⇒ hiện "Menu có thay đổi chưa publish"', async () => {
+      server.use(http.get(NAV_URL, () => HttpResponse.json(nav(true))));
+      renderDialog();
+      await openDialog();
+      expect(await screen.findByText('Menu có thay đổi chưa publish')).toBeInTheDocument();
+    });
+
+    it('isDirty false ⇒ không hiện', async () => {
+      let gets = 0;
+      server.use(
+        http.get(NAV_URL, () => {
+          gets += 1;
+          return HttpResponse.json(nav(false));
+        }),
+      );
+      renderDialog();
+      await openDialog();
+      await waitFor(() => { expect(gets).toBe(1); });
+      expect(screen.queryByText('Menu có thay đổi chưa publish')).not.toBeInTheDocument();
+    });
+
+    it('publish thành công ⇒ GET menu lần nữa, dấu chưa publish biến mất', async () => {
+      let gets = 0;
+      server.use(
+        http.get(NAV_URL, () => {
+          gets += 1;
+          return HttpResponse.json(nav(gets === 1));
+        }),
+        http.post(POST_URL, () => HttpResponse.json(publication, { status: 201 })),
+      );
+      renderDialog();
+      await openDialog();
+      await screen.findByText('Menu có thay đổi chưa publish');
+      fireEvent.click(screen.getByRole('button', { name: 'Xuất bản' }));
+      await screen.findByText('Đã xuất bản bản v7');
+      await waitFor(() => { expect(gets).toBe(2); });
+      await waitFor(() => { expect(screen.queryByText('Menu có thay đổi chưa publish')).not.toBeInTheDocument(); });
+    });
   });
 });
