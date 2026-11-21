@@ -8,6 +8,7 @@ using Vsite.Application.Website.Commands.DeletePage;
 using Vsite.Application.Website.Commands.PublishWebsite;
 using Vsite.Application.Website.Commands.RollbackPublication;
 using Vsite.Application.Website.Queries.ListPublications;
+using Vsite.Application.Website.Commands.SaveNavigation;
 using Vsite.Application.Website.Commands.SavePageDraft;
 using Vsite.Application.Website.Commands.UpdatePage;
 using Vsite.Application.Website.Commands.UpdateTheme;
@@ -172,8 +173,13 @@ internal static class WebsiteHandlerKit
 
         public Task<PublicationDto> Publish(string? note = null, Vsite.Application.Media.Interfaces.IMediaReferenceValidator? media = null) =>
             new PublishWebsiteHandler(
-                    Db, Tenant, S.Validator, S.RequiredProps, media ?? Media, Actor, PointerCache, NullLogger<PublishWebsiteHandler>.Instance)
+                    Db, Tenant, S.Validator, S.RequiredProps, media ?? Media, Actor, PointerCache, S.Versioning,
+                    NullLogger<PublishWebsiteHandler>.Instance)
                 .Handle(new PublishWebsiteCommand(note), default);
+
+        /// <summary>Lưu menu qua handler thật (WEBSITE-007). <paramref name="version"/> null = chưa từng lưu.</summary>
+        public Task<SaveNavigationResultDto> SaveNavigation(long? version, params NavigationItemDto[] items) =>
+            new SaveNavigationHandler(Db, Tenant, S.Versioning).Handle(new SaveNavigationCommand(version, items), default);
 
         public Task<IReadOnlyList<PublicationDto>> ListPublications() =>
             new ListPublicationsHandler(Db, Tenant).Handle(new ListPublicationsQuery(), default);
@@ -326,6 +332,42 @@ internal static class WebsiteHandlerKit
                 await other.SaveChangesAsync(cancellationToken);
             }
 
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// WEBSITE-007: mô phỏng lần PUT menu đầu tiên của tab khác commit ngay TRƯỚC khi handler ghi — chèn sẵn dòng
+    /// <c>navigation_config</c> (một lần) ⇒ INSERT của publish vướng PK (23505).
+    /// </summary>
+    public sealed class InsertNavigationInterceptor(string connectionString, Guid shopId, Guid websiteId) : SaveChangesInterceptor
+    {
+        private bool _done;
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (!_done)
+            {
+                _done = true;
+                await using var other = NewDb(connectionString, shopId);
+                other.NavigationConfigs.Add(NavigationConfig.Create(websiteId, shopId, "{\"schemaVersion\":1,\"items\":[]}"));
+                await other.SaveChangesAsync(cancellationToken);
+            }
+
+            return result;
+        }
+    }
+
+    /// <summary>WEBSITE-007: mô phỏng PUT menu của tab khác commit giữa lúc publish đọc và ghi — chạm dòng menu (đổi <c>xmin</c>).</summary>
+    public sealed class BumpNavigationXminInterceptor(string connectionString, Guid websiteId) : SaveChangesInterceptor
+    {
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            await using var other = NewDb(connectionString, null);
+            await other.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE navigation_config SET is_dirty = is_dirty WHERE website_id = {websiteId}", cancellationToken);
             return result;
         }
     }

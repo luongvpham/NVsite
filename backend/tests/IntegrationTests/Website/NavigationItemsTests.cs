@@ -244,6 +244,21 @@ public sealed class NavigationItemsTests
     }
 
     [Fact]
+    public void Normalize_LowercasesPageKeyAtEveryLevel_T4()
+    {
+        string Upper(Guid id) => "page:" + id.ToString("D").ToUpperInvariant();
+        var items = new[]
+        {
+            new NavItem(Upper(A), null, null, false, [new NavItem(Upper(B), null, null, false, [new NavItem(Upper(C), null, null, false, [])])]),
+        };
+        var n = NavigationItems.Normalize(items);
+        Assert.Equal(NavItem.PageKey(A), n[0].Key);
+        Assert.Equal(NavItem.PageKey(B), n[0].Children[0].Key);
+        Assert.Equal(NavItem.PageKey(C), n[0].Children[0].Children[0].Key);
+        Assert.Empty(NavigationItems.Validate(n, Pages));
+    }
+
+    [Fact]
     public void Validate_TooManyItems()
     {
         var top = Enumerable.Range(0, 13).Select(_ => Custom("x", "/x")).ToArray();

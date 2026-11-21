@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Vsite.Application.Website.Navigation;
 using Vsite.Application.Website.Versioning;
 using Vsite.Domain.Website.Entities;
 using WebsiteEntity = Vsite.Domain.Website.Entities.Website;
@@ -17,6 +18,8 @@ public sealed record SnapshotMedia(Guid Id, string StorageKey, string? Preset);
 /// Dựng JSON vỏ <c>SiteSnapshot</c> v1 (8b, #94, #97, plan §4) — THUẦN, không chạm DB. Caller (PublishWebsiteHandler, T4)
 /// gom entity + cây sạch + bảng ảnh rồi gọi <see cref="Build"/>; kết quả là một chuỗi bất biến lưu vào
 /// <c>site_publication.snapshot</c>. Vỏ khớp <c>generated/site-snapshot.schema.json</c> (test T2 khẳng định).
+/// <c>navigation</c> (WEBSITE-007, #113) là menu ĐÃ lọc bằng <see cref="NavigationItems.ForSnapshot"/> — Build chỉ ghi ra dạng
+/// khoá <c>{ key, label, url?, children? }</c>, không lọc thêm.
 /// </summary>
 public static class SnapshotBuilder
 {
@@ -25,7 +28,8 @@ public static class SnapshotBuilder
         Theme theme,
         int version,
         IReadOnlyList<SnapshotPage> pages,
-        IReadOnlyList<SnapshotMedia> media)
+        IReadOnlyList<SnapshotMedia> media,
+        IReadOnlyList<NavItem> navigation)
     {
         var mediaObj = new JsonObject();
         foreach (var m in media)
@@ -80,7 +84,7 @@ public static class SnapshotBuilder
                 // Nguyên văn tokens đã lưu (đã validate lúc ghi) — không upcast (plan §4).
                 ["tokens"] = JsonNode.Parse(theme.Tokens),
             },
-            ["navigation"] = new JsonObject { ["items"] = new JsonArray() }, // NavigationConfig thật là Bước 7.
+            ["navigation"] = new JsonObject { ["items"] = NavigationItems.ToSnapshotJsonArray(navigation) },
             ["seo"] = new JsonObject
             {
                 ["defaultTitle"] = website.DefaultSeoTitle,

@@ -172,13 +172,79 @@ export function buildThemeTokensJsonSchema(config: ThemeTokensConfig): JsonSchem
 }
 
 // ---------------------------------------------------------------------------
+// Mục menu trong Site Snapshot (WEBSITE-007, #113)
+// ---------------------------------------------------------------------------
+
+/**
+ * `key` của mục menu: `page:{guid}` (GUID dạng "D" chữ thường — khớp `pages[].id`) hoặc `custom`. Chuỗi, không enum (#19).
+ * Một nguồn cho cả Zod lẫn JSON Schema.
+ */
+export const NAV_KEY_PATTERN = '^(custom|page:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$';
+
+export type SiteNavigationKey = `page:${string}` | 'custom';
+
+const navKeyRegex = new RegExp(NAV_KEY_PATTERN);
+
+const navKeySchema = z.custom<SiteNavigationKey>(
+  (value) => typeof value === 'string' && navKeyRegex.test(value),
+  { message: 'key phải là "custom" hoặc "page:{guid}"' },
+);
+
+/** Thân chung của mục mọi cấp: `{ key, label: string|null, url? }`. */
+const navItemBase = {
+  key: navKeySchema,
+  label: z.string().nullable(),
+  url: z.string().optional(),
+};
+
+/** Cấp 3 — không có `children`. */
+const siteNavigationGrandchildItemSchema = z.object(navItemBase).strict();
+/** Cấp 2 — `children` là cấp 3. */
+const siteNavigationChildItemSchema = z
+  .object({ ...navItemBase, children: z.array(siteNavigationGrandchildItemSchema).optional() })
+  .strict();
+/** Cấp 1 — `children` là cấp 2. */
+export const siteNavigationItemSchema = z
+  .object({ ...navItemBase, children: z.array(siteNavigationChildItemSchema).optional() })
+  .strict();
+
+/** Mục menu cấp 3 trong snapshot (không có `children`). */
+export type SiteNavigationGrandchildItem = z.infer<typeof siteNavigationGrandchildItemSchema>;
+/** Mục menu cấp 2 trong snapshot. */
+export type SiteNavigationChildItem = z.infer<typeof siteNavigationChildItemSchema>;
+/** Mục menu cấp 1 của `snapshot.navigation.items` (FE ghép nhãn/URL từ `pages[]` qua `createResolveUrl`, #103). */
+export type SiteNavigationItem = z.infer<typeof siteNavigationItemSchema>;
+
+/** JSON Schema của ba cấp mục menu (`$defs` của snapshot), dựng độc lập với Zod ở trên (#60). */
+function buildNavigationItemDefs(): Record<'navItem' | 'navChildItem' | 'navGrandchildItem', JsonSchemaObject> {
+  const base = {
+    key: { type: 'string', pattern: NAV_KEY_PATTERN },
+    label: { type: ['string', 'null'] },
+    url: { type: 'string' },
+  };
+  const item = (children?: string): JsonSchemaObject => ({
+    type: 'object',
+    properties: children ? { ...base, children: { type: 'array', items: { $ref: `#/$defs/${children}` } } } : base,
+    required: ['key', 'label'],
+    additionalProperties: false,
+  });
+  return {
+    navItem: item('navChildItem'),
+    navChildItem: item('navGrandchildItem'),
+    navGrandchildItem: item(),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Site Snapshot v1 (WEBSITE-004 S0-T2, #94, #97)
 // ---------------------------------------------------------------------------
 //
 // Vỏ của document JSONB bất biến mà publish sinh ra (plan §4). Chỉ kiểm CẤU TRÚC:
 //   - `tree` của từng trang tham chiếu vỏ Tree sẵn có; `theme.tokens` tham chiếu vỏ Tokens sẵn có.
 //   - `media` là map `imageId → { storageKey, preset }`; `preset = null` cho bản Library gốc.
-//   - `navigation.items` để rỗng ở 8b (NavigationConfig thật là Bước 7) nên items chỉ kiểm là mảng.
+//   - `navigation.items` (WEBSITE-007, #113): menu dạng KHOÁ, chỉ mục đang hiện, thứ tự = vị trí mảng, tối đa 3 cấp
+//     (cấp 3 không có `children`), không có `hidden`. Nhãn/URL do FE ghép từ `pages[]` (#103). `items: []` của snapshot cũ
+//     vẫn hợp lệ (R6) — thêm shape mục là additive, `schemaVersion` giữ 1.
 //   - `tracking` là map mở (như `props` của node) — không ép khoá.
 // `additionalProperties: false` ở mọi cấp vỏ; `schemaVersion` chỉ kiểm là số nguyên >= 1 (so phiên bản
 // hiện hành là việc của upcaster BE, #94). Zod (FE) và JSON Schema (BE) dựng ĐỘC LẬP từ cùng config (#60).
@@ -212,7 +278,7 @@ export function buildSiteSnapshotZod(locales: readonly string[], themeConfig: Th
       defaultLocale: localeEnum,
       locales: z.array(localeEnum),
       theme: z.object({ presetKey: nullableString, tokens }).strict(),
-      navigation: z.object({ items: z.array(z.unknown()) }).strict(),
+      navigation: z.object({ items: z.array(siteNavigationItemSchema) }).strict(),
       seo: z
         .object({
           defaultTitle: nullableString,
@@ -259,7 +325,7 @@ export function buildSiteSnapshotJsonSchema(
       defaultLocale: localeEnum,
       locales: { type: 'array', items: localeEnum },
       theme: strictObject({ presetKey: nullableString, tokens: { $ref: '#/$defs/themeTokens' } }),
-      navigation: strictObject({ items: { type: 'array' } }),
+      navigation: strictObject({ items: { type: 'array', items: { $ref: '#/$defs/navItem' } } }),
       seo: strictObject({
         defaultTitle: nullableString,
         defaultDescription: nullableString,
@@ -277,6 +343,7 @@ export function buildSiteSnapshotJsonSchema(
       node,
       treeEnvelope: treeEnvelopeBody,
       themeTokens: themeTokensBody,
+      ...buildNavigationItemDefs(),
       page: strictObject({
         id: { type: 'string', minLength: 1 },
         slug: nullableString,

@@ -191,7 +191,8 @@ public static class NavigationItems
 
     /// <summary>
     /// Mảng <c>items</c> cho <c>snapshot.navigation.items</c> (T4): <c>{ key, label, url?, children? }</c> — KHÔNG có
-    /// <c>hidden</c> (mục ẩn đã bị <see cref="ForSnapshot"/> loại); <c>children</c> bị bỏ khi rỗng; <c>label</c> null vẫn ghi.
+    /// <c>hidden</c>; <c>children</c> bị bỏ khi rỗng; <c>label</c> null vẫn ghi; khoá trang chữ thường. KHÔNG tự lọc: caller
+    /// đưa vào kết quả của <see cref="ForSnapshot"/>.
     /// </summary>
     public static JsonArray ToSnapshotJsonArray(IReadOnlyList<NavItem> items)
     {
@@ -267,7 +268,8 @@ public static class NavigationItems
             label = null;
         }
 
-        return item with { Label = label, Url = item.IsCustom ? item.Url?.Trim() : null };
+        // Khoá trang về GUID "D" chữ thường (TryParseExact nhận cả chữ hoa) — khớp `pages[].id` của snapshot và id trang FE so.
+        return item with { Key = CanonicalKey(item), Label = label, Url = item.IsCustom ? item.Url?.Trim() : null };
     }
 
     private static void ValidateOne(NavItem item, string path, Dictionary<Guid, NavPage> byId, HashSet<Guid> seen, List<NavError> errors)
@@ -303,11 +305,14 @@ public static class NavigationItems
         }
     }
 
+    private static string CanonicalKey(NavItem item) => item.PageId is { } id ? NavItem.PageKey(id) : item.Key;
+
     private static JsonObject ToJson(NavItem item, int depth, bool forSnapshot = false)
     {
         var o = new JsonObject
         {
-            ["key"] = item.Key,
+            // Snapshot: khoá trang luôn chữ thường (vỏ snapshot chỉ nhận `page:{guid chữ thường}`), kể cả dữ liệu lưu trước khi Normalize chuẩn hoá.
+            ["key"] = forSnapshot ? CanonicalKey(item) : item.Key,
             ["label"] = item.Label,
         };
         if (item.Url is not null)

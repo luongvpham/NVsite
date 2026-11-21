@@ -8,8 +8,10 @@ using Vsite.Application.Common.Persistence;
 using Vsite.Application.Media.Interfaces;
 using Vsite.Application.Website.Dtos;
 using Vsite.Application.Website.Interfaces;
+using Vsite.Application.Website.Navigation;
 using Vsite.Application.Website.Publishing;
 using Vsite.Application.Website.Validation;
+using Vsite.Application.Website.Versioning;
 using Vsite.Domain.Abstractions;
 using Vsite.Domain.Exceptions;
 using Vsite.Domain.Website.Entities;
@@ -24,6 +26,9 @@ namespace Vsite.Application.Website.Commands.PublishWebsite;
 /// → <c>Website.Publish</c> → hạ <c>IsDirty</c> CHỈ cho draft đang bẩn (draft sạch không bị ghi nên <c>xmin</c> giữ nguyên, R9)
 /// → MỘT <c>SaveChanges</c>. Race: trùng <c>(website_id, version)</c> (23505) hoặc <c>xmin</c> của draft lệch → 409
 /// <c>PUBLISH_CONFLICT</c> (R10). Sau khi lưu: xoá con trỏ cache (#109).
+/// Menu (WEBSITE-007, #113): <c>snapshot.navigation.items</c> = <c>ForSnapshot(Merge(menu đã lưu?, trang chưa xoá), trang trong snapshot)</c>;
+/// chưa có dòng <c>navigation_config</c> ⇒ tạo từ menu tự sinh, <c>IsDirty = false</c>; có rồi ⇒ hạ <c>IsDirty</c>. Cùng
+/// <c>SaveChanges</c>; PUT menu chen giữa (INSERT 23505 / <c>xmin</c> lệch) cũng → 409 <c>PUBLISH_CONFLICT</c>.
 /// </summary>
 public sealed class PublishWebsiteHandler(
     IAppDbContext db,
@@ -33,6 +38,7 @@ public sealed class PublishWebsiteHandler(
     IMediaReferenceValidator media,
     IAuditActor actor,
     ISitePointerCache pointerCache,
+    DocumentVersioning versioning,
     ILogger<PublishWebsiteHandler> logger)
     : IRequestHandler<PublishWebsiteCommand, PublicationDto>
 {
@@ -148,12 +154,33 @@ public sealed class PublishWebsiteHandler(
             .Where(p => p.ShopId == shopId && p.WebsiteId == website.Id)
             .MaxAsync(p => (int?)p.Version, cancellationToken) ?? 0) + 1;
 
-        var snapshot = SnapshotBuilder.Build(website, theme, version, snapshotPages, mediaRows);
+        // Menu (WEBSITE-007 Flow 4, #113): ghép menu đã lưu (chưa có ⇒ tự sinh) với trang CHƯA XOÁ của website, rồi chỉ giữ mục
+        // đang hiện trỏ trang có trong snapshot (cha bị bỏ ⇒ bỏ cả nhóm, R5). Menu không chặn publish.
+        var nav = await db.NavigationConfigs // tracking: hạ IsDirty, xmin là concurrency token
+            .FirstOrDefaultAsync(n => n.Id == website.Id && n.ShopId == shopId, cancellationToken);
+        var navPages = await NavigationQueries.LoadPagesAsync(db, shopId, website.Id, cancellationToken);
+        var menu = NavigationItems.Merge(nav is null ? null : NavigationItems.Parse(nav.Items, versioning), navPages);
+        var publishedPageIds = snapshotPages.Select(p => p.Page.Id).ToHashSet();
+
+        var snapshot = SnapshotBuilder.Build(
+            website, theme, version, snapshotPages, mediaRows, NavigationItems.ForSnapshot(menu, publishedPageIds));
         var publication = SitePublication.Create(
             shopId, website.Id, version, snapshot, NormalizeNote(request.Note), actor.UserId, DateTimeOffset.UtcNow);
 
         db.SitePublications.Add(publication);
         website.Publish(publication);
+        if (nav is null)
+        {
+            // Chưa từng lưu menu ⇒ ghi luôn menu tự sinh (đúng thứ vừa vào snapshot), sạch ngay. Race với PUT đầu tiên: 23505 ⇒ 409.
+            nav = NavigationConfig.Create(website.Id, shopId, NavigationItems.Serialize(menu, versioning));
+            nav.MarkPublished();
+            db.NavigationConfigs.Add(nav);
+        }
+        else if (nav.IsDirty)
+        {
+            nav.MarkPublished(); // menu sạch không bị ghi ⇒ xmin giữ nguyên (khuôn draft, R9)
+        }
+
         foreach (var page in snapshotPages)
         {
             var draft = drafts[page.Page.Id];
