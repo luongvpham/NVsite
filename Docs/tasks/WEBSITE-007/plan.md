@@ -257,8 +257,8 @@ strict, cả Zod lẫn JSON Schema. Xuất kiểu `SiteNavigationItem`. `Snapsho
 `{ label, href, external, children[] }[]`. `page:{id}` ⇒ `label ?? title`, `href` qua `resolveUrl`
 (link kiểu page — [site-url.ts:44-65](../../../packages/builder-components/src/site-url.ts#L44-L65));
 trang thiếu ⇒ bỏ (cha thiếu ⇒ bỏ nhóm); `custom` ⇒ chỉ khi `isSafeLinkUrl`, `external` = scheme http(s).
-- [ ] Test trước `tests/site-navigation.test.ts`: R3 (lọc lại), R5, nhãn null, thứ tự giữ nguyên · `public-exports.test.ts` có hàm mới
-- [ ] Commit `feat(builder-components): resolveNavigation (WEBSITE-007, #113)`
+- [x] Test trước `tests/site-navigation.test.ts`: R3 (lọc lại), R5, nhãn null, thứ tự giữ nguyên · `public-exports.test.ts` có hàm mới
+- [x] Commit `feat(builder-components): resolveNavigation (WEBSITE-007, #113)`
 
 ### F2: `SiteLayout` — menu con + mobile
 Prop `menuItems` ([site-layout.tsx:12](../../../packages/builder-renderer/src/site-layout.tsx#L12)) thêm
