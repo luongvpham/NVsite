@@ -1,7 +1,8 @@
 # WEBSITE-007 — changelog (Bước 7: `NavigationConfig`, menu website shop)
 
 > **Trạng thái:** S1 (BE) xong T1–T5, Gate 1 đã qua (#89, chỉ `NEW_ENDPOINT`, promote 2026-11-21 —
-> [`contract-diff.md`](contract-diff.md)). S2 (FE, F1–F6) **chưa làm**. Chờ S2 rồi Gate 2.
+> [`contract-diff.md`](contract-diff.md)). S2 (FE) xong F1–F5 (2026-11-21); **F6 nghiệm thu tay với BE thật
+> chưa làm** (cần người). Chờ F6 rồi Gate 2.
 > Nhánh `feature/WEBSITE-007`. Spec: `DesignIdeal/05` §8, §7 · plan [`plan.md`](plan.md) · #113.
 
 ## Đổi phạm vi giữa chừng (người chốt 2026-11-21)
@@ -89,6 +90,55 @@ cho 3 cấp. Giới hạn: ≤ 12 mục cấp 1, ≤ 10 mục mỗi cha ở cấ
 - `website.md` (đã sửa ở đây): workaround "`Vsite.Api.exe` khoá DLL" cũ đặt `OutputPath` **ngoài repo**, làm ~270 test Website đỏ giả
   (`TreeFixtures` đi ngược lên tìm `pnpm-workspace.yaml`). Đã sửa thành `BaseOutputPath` trong repo.
 
+## S2 — Frontend (2026-11-21)
+
+Không sửa `backend/`, `contracts/`, `packages/api-sdk/src/generated/**`. Không có vòng `D{n}`: contract đủ field.
+
+### F1 — `resolveNavigation` (`6812937`)
+- `packages/builder-components/src/site-navigation.ts`, export ở `src/index.ts`. Đầu vào nhận cả mục snapshot
+  (không `hidden`) lẫn mục nháp của GET (có `hidden`): mục `hidden: true` bị bỏ kèm cây con — để preview Portal và
+  site dùng **một** hàm lọc.
+- `page:{id}` so khớp `pages[].id` **không phân biệt hoa thường**, URL chỉ qua `resolveUrl({ kind: 'page', pageId })`
+  (#103). Trang thiếu / slug null ⇒ bỏ, cha thiếu ⇒ bỏ cả nhóm (R5). `custom` chỉ giữ khi `isSafeLinkUrl` (R3),
+  `external` = scheme http(s). Khoá lạ (nguồn tương lai) ⇒ bỏ.
+
+### F2 — `SiteLayout` menu 3 cấp + mobile (`8b6c76f`, `22e81df`)
+- Desktop: dropdown CSS `:hover`/`:focus-within`. Mobile: `<details><summary>` hamburger; mục có con dùng
+  `<summary>` riêng (▸) cạnh link cha — sửa sau review (link nằm trong `summary` thì chạm vào là đi link, không mở được con).
+- Link ngoài `target="_blank" rel="noopener noreferrer"`, nhãn là text (R4). Không JS; `ssr-hydrate` có ca menu (R7).
+- Cả danh sách desktop lẫn mobile cùng nằm trong DOM, CSS ẩn/hiện ở 767px.
+
+### F3 — `apps/web` hiện menu (`5987c9c`)
+- `site-view.tsx` dựng `resolveUrl` một lần, truyền `resolveNavigation(snapshot.navigation.items, snapshot.pages, …)`.
+- **Giữ** workaround `JsonSafe` ở `load-site-core.ts`: bỏ thì `tsc` đỏ vì `snapshot.tracking` (và cây trang) vẫn là
+  `unknown`. Kiểu menu cụ thể chưa đủ.
+
+### F4 — màn Menu Portal (`d5ac764`, `d7c3d97`)
+- Route `/shops/$shopId/website/menu` bọc `OwnerOnlyGate`, lối vào ở `website-overview.tsx`. Thêm `@dnd-kit/sortable`.
+- `navigation-tree.ts` (thao tác cây thuần) + `navigation-editor.tsx`. Kéo-thả nhiều cấp theo mẫu SortableTree của
+  dnd-kit: danh sách phẳng có `depth`, đổi cấp bằng độ lệch ngang; chặn cấp 4 tính cả chiều cao cây con đang kéo.
+  Bàn phím: ↑/↓ đổi chỗ, ←/→ đổi cấp.
+- Gửi đủ `key,label,url,hidden,children` (cấp 3 không `children`, mục `page:` gửi `url: null`), `version` từ GET rồi từ PUT.
+  Chặn giới hạn ở UI. 422 tô dòng theo JSON Pointer; 409 tải lại và báo. Thêm mã lỗi `NAVIGATION_*`/`NAV_*` vào `error-messages.ts`.
+- Sau review: query menu dùng chính sách của editor nháp (`staleTime: Infinity`, `gcTime: 0`, không refetch khi focus,
+  `retry: false`); refetch nền lỗi không còn thay form bằng màn lỗi.
+- Smoke: `vite build` + dev server chạy, route nạp được. **Chưa xem màn có dữ liệu**: Portal không có MSW trên trình
+  duyệt, cần BE ⇒ gộp vào F6.
+
+### F5 — nhắc menu chưa publish + preview (`905077f`, `dc6ad8f`)
+- Hook `use-menu-dirty.ts`; "Menu có thay đổi chưa publish" ở tổng quan website và hộp publish (ẩn sau khi publish xong).
+- Invalidate `getNavigation` sau publish và rollback (`onSettled`).
+- Preview: mục nháp + **chỉ trang đang bật** ⇒ `resolveNavigation`, khớp với site.
+- Sau review: TanStack gộp `gcTime` theo `Math.max`, nên khi tổng quan đã giữ cache thì `gcTime: 0` của editor mất tác
+  dụng ⇒ editor dựng form từ `version` cũ ⇒ 409 giả. Sửa: editor `refetchOnMount: 'always'` và chỉ dựng form sau lần
+  GET của chính nó.
+
+### Kiểm chứng S2
+- `@vsite/builder-components` 573/573 · `@vsite/builder-renderer` 44/44 · `@vsite/web` 272/272 (dòng nhiễu cũ
+  `ReferenceError: module is not defined`, exit 0) · `apps/portal` 415/415. Typecheck + lint sạch ở các gói chạm.
+- Toàn repo `pnpm build && pnpm test`: xem mục "Đóng S2" bên dưới.
+- Nghiệm thu tay F6: **chưa** — xem mục F6.
+
 ## Lệch so với `DesignIdeal/05` §8
 
 - Không có field `order`: thứ tự là vị trí trong mảng (G2).
@@ -100,8 +150,12 @@ cho 3 cấp. Giới hạn: ≤ 12 mục cấp 1, ≤ 10 mục mỗi cha ở cấ
 
 ## Chưa làm xong / theo dõi
 
-- **S2 (FE, F1–F6)** của task này: `resolveNavigation`, Header 3 cấp + mobile, `apps/web`, màn Menu Portal, nhắc
-  chưa publish, nghiệm thu tay.
+- **F6 nghiệm thu tay với BE thật** (4 bước plan §10) + smoke màn Menu có dữ liệu + thử kéo-thả chuột/bàn phím trên
+  trình duyệt thật (test jsdom giả toạ độ) + xem vị trí menu mobile.
+- Việc nhỏ FE còn để ngỏ (review S2, Minor): mở màn Menu mà GET lỗi khi đang có cache cũ thì form dựng từ cache cũ ·
+  `validateMenu` chưa chặn > 12 mục cấp 1 (chỉ xảy ra nếu GET trả > 12) · tràn 10 mục/cha chỉ báo sau khi thả ·
+  xoá mục cha xoá cả con, không hỏi lại (UX — người quyết ở Gate 2) · `navigation-editor.tsx` ~700 dòng ·
+  comment `JsonSafe` ở `load-site-core.ts` còn nhắc `navigation.items` · `href` của `custom` không trim.
 - **Bind body có kiểu trả 500 (Development) / 400 rỗng (Production) không có `error_code`.** Lỗi có từ trước, ảnh hưởng
   mọi route nhận body có kiểu, ngoài phạm vi task. `saveNavigation` đã né bằng cách đọc body thô. Theo dõi ở `00-INDEX` §4.
 - `params` của 422/409 không có type trong OpenAPI (giống các route website hiện có) (A6).
