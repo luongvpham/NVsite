@@ -10,7 +10,7 @@
 > `superpowers:executing-plans`. Mỗi bước có checkbox `- [ ]`.
 
 **Mục tiêu:** Owner sắp menu website shop trên **một** màn kéo-thả ở Portal (trang của site + link tự
-do, menu con một cấp), publish, và site công khai hiện đúng menu đó trên `Header`.
+do, menu lồng tối đa 3 cấp), publish, và site công khai hiện đúng menu đó trên `Header`.
 **Nhu cầu dữ liệu:** [`data-needs.md`](data-needs.md) (chưa viết) · **Spec:** `DesignIdeal/05` §8, §7
 · `step.md` mục 7 · **Quyết định liên quan:** #34, #94, #98, #103, #108, #11, #23
 
@@ -21,7 +21,7 @@ do, menu con một cấp), publish, và site công khai hiện đúng menu đó 
   mang menu) · `Header` trong `SiteLayout` ở `apps/web` và preview Portal.
 - **Nguồn mục menu:** `page:{pageId}` (nhãn mặc định = tiêu đề trang, `label` ghi đè được) và `custom`
   (nhãn + URL tự do).
-- **Menu con:** **có, một cấp** (người chốt) — dropdown trên site.
+- **Menu con:** **có, tối đa 3 cấp** (cấp 1 → con → cháu; người chốt 2026-11-21, thay cho "một cấp" — lý do ở §4) — dropdown lồng trên site.
 - **Menu mặc định:** chưa từng sắp → tự sinh từ các trang đang bật (trừ `NotFound`), hiện hết theo thứ
   tự trang. Đã có menu → trang tạo **sau đó** được thêm vào **cuối, ẩn** (`hidden: true`); Owner tự bật
   (người chốt — đúng `05` §8).
@@ -31,7 +31,7 @@ do, menu con một cấp), publish, và site công khai hiện đúng menu đó 
   trang đã xoá/tắt không hiện ra.
 - **Không làm trong task này:** nguồn `serviceGroup:{id}` (Bước 9) · `sysProductListing` /
   `productCategory:{id}` (10c) · job dọn mục mồ côi (8d — trong lúc chờ, renderer bỏ qua) · nhãn đa ngôn
-  ngữ `labels` (#98, bước L) · menu footer · menu nhiều hơn một cấp.
+  ngữ `labels` (#98, bước L) · menu footer · menu sâu hơn 3 cấp.
 
 ## 2. Hiện trạng (khảo sát 2026-11-20)
 
@@ -76,11 +76,11 @@ Ký hiệu: ✅ có sẵn · 🟡 một phần · ❌ cần làm.
    `version: null`, `isDirty: true`.
 3. Portal ghép nhãn từ danh sách trang (`listPages` có sẵn) ✅ để hiện "Trang chủ", "Liên hệ"…
 
-### Flow 2: Owner sắp / đổi nhãn / ẩn / thêm link / lồng một cấp rồi lưu
+### Flow 2: Owner sắp / đổi nhãn / ẩn / thêm link / lồng (tối đa 3 cấp) rồi lưu
 1. Kéo-thả ❌ (cần `@dnd-kit/sortable`) · đổi nhãn (rỗng = dùng tên trang) · ẩn/hiện · thêm/xoá link `custom`
 2. `PUT …/website/navigation` `{ version, items }` ❌
    - `version` lệch ⇒ `409 NAVIGATION_CONFLICT` (khuôn `DRAFT_CONFLICT`), Portal báo "menu vừa được sửa ở nơi khác, tải lại".
-   - Không hợp lệ ⇒ `422` lỗi theo mục ở `params.errors[]` `{path, code, message}`: sâu quá một cấp, trang
+   - Không hợp lệ ⇒ `422` lỗi theo mục ở `params.errors[]` `{path, code, message}`: trang
      không tồn tại/đã xoá, trùng một trang hai lần, URL `custom` không an toàn (luật
      [LinkUrlRules.cs](../../../backend/src/Vsite.Application/Website/Validation/LinkUrlRules.cs) — http(s)/mailto/tel),
      `custom` thiếu nhãn, nhãn quá dài, quá số mục.
@@ -119,7 +119,7 @@ Ký hiệu: ✅ có sẵn · 🟡 một phần · ❌ cần làm.
 
 | # | Chốt | Ai chốt |
 |---|---|---|
-| — | Menu con một cấp, làm ngay | người |
+| — | Menu lồng **tối đa 3 cấp**, làm ngay trong task này (2026-11-21, thay cho "một cấp"). Contract diễn đạt độ sâu bằng **ba kiểu DTO tường minh** (cấp 1 có `children` cấp 2, cấp 2 có `children` cấp 3, cấp 3 không có `children` và từ chối field lạ ⇒ 400) — vì OpenAPI .NET 9 sinh `items: {}` cho DTO đệ quy (Orval ra `unknown[]`). `NAV_TOO_DEEP` chỉ còn ở `Validate` (phòng dữ liệu lưu hỏng) | người |
 | — | Chưa có menu ⇒ tự sinh từ trang; trang mới ⇒ cuối, ẩn (`05` §8) | người |
 | — | Sửa menu phải publish; rollback trả menu cũ (`05` §8) | người |
 | #113 | Snapshot lưu menu dạng **khoá** (`page:{id}` / `custom` + `label?` + `url?` + `children?`), chỉ mục đang hiện; nhãn và URL do **FE ghép** từ `snapshot.pages` bằng một hàm dùng chung, qua `createResolveUrl` (#103) — BE không dựng URL. Menu ghép lúc đọc (tự sinh / thêm trang mới ẩn / bỏ trang đã xoá) | người |
@@ -208,9 +208,9 @@ apps/portal/
 `IsDirty`, `Version` = `xmin` (khuôn [PageDraft.cs:43-44](../../../backend/src/Vsite.Domain/Website/Entities/PageDraft.cs#L43-L44)).
 Bảng `navigation_config`, FK ghép `(website_id, shop_id) → website (id, shop_id)`.
 Phương thức: `Replace(itemsJson)` (bật dirty), `MarkPublished()`, `MarkDirty()`.
-- [ ] Test trước: `WebsiteDbConstraintTests` (FK ghép chặn `shop_id` lệch website) · `WebsiteTenantIsolationTests` (shop A không thấy menu shop B) · test entity dirty/published
-- [ ] FAIL → hiện thực + migration `AddNavigationConfig` → PASS · không còn pending model changes
-- [ ] Commit `feat(website): NavigationConfig entity + bảng (WEBSITE-007)`
+- [x] Test trước: `WebsiteDbConstraintTests` (FK ghép chặn `shop_id` lệch website) · `WebsiteTenantIsolationTests` (shop A không thấy menu shop B) · test entity dirty/published
+- [x] FAIL → hiện thực + migration `AddNavigationConfig` → PASS · không còn pending model changes
+- [x] Commit `feat(website): NavigationConfig entity + bảng (WEBSITE-007)`
 
 ### T2: Model menu — ghép + kiểm (hàm thuần)
 `NavigationItems.Merge(stored?, pages)` → danh sách đã ghép (Flow 1, 3): chưa có ⇒ tự sinh (trừ
@@ -219,9 +219,9 @@ không còn ⇒ bỏ (kèm con nếu là cha).
 `NavigationItems.Validate(items, pages)` → lỗi `{path, code, message}` (data-needs §Lưu), URL qua
 [LinkUrlRules.cs:24](../../../backend/src/Vsite.Application/Website/Validation/LinkUrlRules.cs#L24) `IsSafe`; trim nhãn.
 `NavigationItems.ForSnapshot(items, publishedPageIds)` → chỉ mục hiện + trang có trong snapshot (Flow 4).
-- [ ] Test trước `NavigationItemsTests`: tự sinh đúng thứ tự, bỏ `NotFound` · trang mới nối cuối ẩn · trang xoá bỏ cả con · mỗi mã lỗi một ca (R3: 4 biến thể URL độc) · nhãn trim/rỗng (R4) · `ForSnapshot` bỏ `hidden`, bỏ trang tắt, cha tắt bỏ nhóm (R5)
-- [ ] FAIL → hiện thực → PASS
-- [ ] Commit `feat(website): ghép và kiểm menu (WEBSITE-007, #113)`
+- [x] Test trước `NavigationItemsTests`: tự sinh đúng thứ tự, bỏ `NotFound` · trang mới nối cuối ẩn · trang xoá bỏ cả con · mỗi mã lỗi một ca (R3: 4 biến thể URL độc) · nhãn trim/rỗng (R4) · `ForSnapshot` bỏ `hidden`, bỏ trang tắt, cha tắt bỏ nhóm (R5)
+- [x] FAIL → hiện thực → PASS
+- [x] Commit `feat(website): ghép và kiểm menu (WEBSITE-007, #113)`
 
 ### T3: `GET` / `PUT …/website/navigation`
 Query `GetNavigation` (đọc dòng + trang chưa xoá của website, `Merge`), command `SaveNavigation`
@@ -235,11 +235,11 @@ Request là DTO có kiểu (không raw `JsonElement`) để Orval sinh type. Rou
 
 ### T4: Publish / rollback mang menu + shape snapshot
 `envelope-schema.ts`: thay `items: z.array(z.unknown())` ([:215](../../../packages/builder-components/meta/envelope-schema.ts#L215))
-và `{ type: 'array' }` (:262) bằng shape mục `{ key, label: string|null, url?, children? }` một cấp,
+và `{ type: 'array' }` (:262) bằng shape mục `{ key, label: string|null, url?, children? }` tối đa 3 cấp (cấp 3 không có `children`),
 strict, cả Zod lẫn JSON Schema. Xuất kiểu `SiteNavigationItem`. `SnapshotBuilder.Build` nhận thêm items
 (thay dòng :83). `PublishWebsiteHandler`: `Merge` → `ForSnapshot` → build; upsert `NavigationConfig` +
 `MarkPublished()` trong cùng `SaveChanges`. `RollbackPublicationHandler`: `MarkDirty()` menu nếu có dòng.
-- [ ] Test trước: `site-snapshot-schema.test.ts` (snapshot `items: []` cũ vẫn hợp lệ — R6; mục lồng 2 cấp bị từ chối) · `schema-equivalence` / `envelope-schema` Zod ≡ JSON Schema · `SnapshotBuilderTests` · `PublishWebsiteHandlerTests` (chưa có menu ⇒ snapshot có menu tự sinh + dòng được tạo, `isDirty=false`; R5) · rollback ⇒ `isDirty=true`
+- [ ] Test trước: `site-snapshot-schema.test.ts` (snapshot `items: []` cũ vẫn hợp lệ — R6; mục 3 cấp hợp lệ, mục cấp 4 bị từ chối) · `schema-equivalence` / `envelope-schema` Zod ≡ JSON Schema · `SnapshotBuilderTests` · `PublishWebsiteHandlerTests` (chưa có menu ⇒ snapshot có menu tự sinh + dòng được tạo, `isDirty=false`; R5) · rollback ⇒ `isDirty=true`
 - [ ] `pnpm gen:registry` → FAIL → hiện thực → PASS · `PublishedSiteBoundaryTests` xanh không sửa
 - [ ] Commit `feat(website): snapshot mang menu thật (WEBSITE-007, #113)`
 
@@ -277,10 +277,10 @@ Prop `menuItems` ([site-layout.tsx:12](../../../packages/builder-renderer/src/si
 ### F4: Portal — màn Menu
 `pnpm gen:api` (sau Gate 1). Thêm `@dnd-kit/sortable`. Route `website.menu` bọc `OwnerOnlyGate`, lối vào ở
 [website-overview.tsx:49-64](../../../apps/portal/src/components/website/website-overview.tsx#L49-L64).
-`navigation-editor.tsx`: danh sách sắp được (cấp 1 + con), kéo vào/ra một cấp, đổi nhãn (để trống = tên
+`navigation-editor.tsx`: danh sách sắp được (tối đa 3 cấp), kéo vào/ra giữa các cấp, đổi nhãn (để trống = tên
 trang), ẩn/hiện, thêm/xoá `custom`, gắn "trang đang tắt", nút Lưu, lỗi 422 tô đúng dòng theo `path`,
 409 ⇒ thông báo + tải lại.
-- [ ] Test trước (MSW) `navigation-editor.test.tsx`: loading · error · menu tự sinh (`version: null`) · sắp bằng bàn phím (dnd-kit keyboard sensor) · lưu gửi đúng body · 422 tô dòng · 409 · chặn lồng cấp 2
+- [ ] Test trước (MSW) `navigation-editor.test.tsx`: loading · error · menu tự sinh (`version: null`) · sắp bằng bàn phím (dnd-kit keyboard sensor) · lưu gửi đúng body · 422 tô dòng · 409 · chặn lồng cấp 4
 - [ ] Smoke chạy app thật sau F4 (workflow §8)
 - [ ] Commit `feat(portal): màn sắp menu website (WEBSITE-007)`
 
@@ -308,7 +308,7 @@ truyền `menuItems` qua `resolveNavigation` (trang đang tắt bị bỏ như s
 | G1 | Một trang chỉ một lần trong menu | Đơn giản hoá ghép "trang chưa có ⇒ nối cuối" | Bỏ `NAV_PAGE_DUPLICATE`, ghép theo id + vị trí |
 | G2 | Thứ tự = vị trí mảng, bỏ field `order` của `05` §8 | Một nguồn sự thật, không lệch số | Thêm `order` additive |
 | G3 | Trang đã xoá bị bỏ lúc đọc; trang tắt giữ lại | Lưu lần sau tự sạch; bật lại trang thì menu có ngay | Job 8d phải dọn |
-| G4 | Giới hạn 12 cấp 1 / 10 con / nhãn 60 / URL 2048 | Header shop nhỏ; chặn payload phình | Đổi hằng số |
+| G4 | Giới hạn 12 mục cấp 1 / 10 mục con mỗi cha (cấp 2 và cấp 3) / nhãn 60 / URL 2048 | Header shop nhỏ; chặn payload phình | Đổi hằng số |
 | G5 | Lưu menu có `version` + 409 (khác theme last-write-wins) | Menu là danh sách, dễ ghi đè mất | — |
 | G6 | Chưa từng lưu ⇒ `isDirty = true` | Website đang chạy có snapshot `items: []`, menu tự sinh chưa lên site | Owner không được nhắc publish lần đầu |
 | G7 | Trang hệ thống được vào menu, trừ `NotFound` (vd. `Contact`) | `NotFound` không có URL (slug null) | — |
