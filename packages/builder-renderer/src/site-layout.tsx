@@ -93,6 +93,9 @@ const NAV_CSS = `
 .vs-nav-mobile>ul{position:absolute;left:0;right:0;z-index:10;padding:.5rem 1.5rem;background-color:${colorVar('surface')};border-bottom:1px solid ${colorVar('border')}}
 .vs-nav-mobile li{padding:.25rem 0}
 .vs-nav-mobile li ul{padding-left:1rem}
+.vs-nav-mobile li.vs-has-sub{position:relative}
+.vs-nav-mobile li.vs-has-sub>details>summary{position:absolute;right:0;top:.25rem;padding:.25rem .75rem}
+.vs-nav-mobile li.vs-has-sub>details[open]>summary{transform:rotate(90deg)}
 @media (max-width:767px){.vs-nav-desktop{display:none}.vs-nav-mobile{display:block}}
 `;
 
@@ -132,11 +135,10 @@ function MobileItem({ item }: { item: SiteMenuItem }) {
     );
   }
   return (
-    <li>
+    <li className="vs-has-sub">
+      <ItemLink item={item} />
       <details>
-        <summary>
-          <ItemLink item={item} />
-        </summary>
+        <summary aria-label={`Mở menu con ${item.label}`}>▸</summary>
         <ul>
           {kids.map((c, i) => (
             <MobileItem key={`${c.href}|${c.label}|${i}`} item={c} />

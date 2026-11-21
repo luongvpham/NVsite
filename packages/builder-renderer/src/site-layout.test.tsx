@@ -92,6 +92,19 @@ describe('SiteLayout — Header/Footer ngoài Component Tree (WEBSITE-003 T2)', 
       }
     });
 
+    it('mobile: summary con là nút bật riêng (không chứa <a>, có tên truy cập); link cha vẫn có', () => {
+      const { container } = render(<SiteLayout {...base} menuItems={nested}>x</SiteLayout>);
+      const subs = container.querySelectorAll('.vs-nav-mobile li details > summary');
+      expect(subs.length).toBe(2);
+      for (const sm of subs) {
+        expect(sm.querySelector('a')).toBeNull();
+        expect(sm.getAttribute('aria-label')).toMatch(/^Mở menu con /);
+        expect(sm.textContent).toBe('▸');
+      }
+      const parent = container.querySelector('.vs-nav-mobile li.vs-has-sub > a');
+      expect(parent).toHaveAttribute('href', '/dich-vu');
+    });
+
     it('nhãn HTML hiện dạng text (R4)', () => {
       const { container } = render(
         <SiteLayout {...base} menuItems={[{ label: '<b>in đậm</b>', href: '/x' }]}>x</SiteLayout>,
