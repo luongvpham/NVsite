@@ -18,6 +18,7 @@ import { Route as AuthenticatedShopsShopIdRouteImport } from './routes/_authenti
 import { Route as AuthenticatedShopsNewRouteImport } from './routes/_authenticated.shops.new'
 import { Route as AuthenticatedShopsShopIdIndexRouteImport } from './routes/_authenticated.shops.$shopId.index'
 import { Route as AuthenticatedShopsShopIdWebsiteIndexRouteImport } from './routes/_authenticated.shops.$shopId.website.index'
+import { Route as AuthenticatedShopsShopIdWebsiteMenuRouteImport } from './routes/_authenticated.shops.$shopId.website.menu'
 import { Route as AuthenticatedShopsShopIdWebsitePagesPageIdRouteImport } from './routes/_authenticated.shops.$shopId.website.pages.$pageId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -67,6 +68,12 @@ const AuthenticatedShopsShopIdWebsiteIndexRoute =
     path: '/website/',
     getParentRoute: () => AuthenticatedShopsShopIdRoute,
   } as any)
+const AuthenticatedShopsShopIdWebsiteMenuRoute =
+  AuthenticatedShopsShopIdWebsiteMenuRouteImport.update({
+    id: '/website/menu',
+    path: '/website/menu',
+    getParentRoute: () => AuthenticatedShopsShopIdRoute,
+  } as any)
 const AuthenticatedShopsShopIdWebsitePagesPageIdRoute =
   AuthenticatedShopsShopIdWebsitePagesPageIdRouteImport.update({
     id: '/website/pages/$pageId',
@@ -82,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/shops/new': typeof AuthenticatedShopsNewRoute
   '/shops/': typeof AuthenticatedShopsIndexRoute
   '/shops/$shopId/': typeof AuthenticatedShopsShopIdIndexRoute
+  '/shops/$shopId/website/menu': typeof AuthenticatedShopsShopIdWebsiteMenuRoute
   '/shops/$shopId/website/': typeof AuthenticatedShopsShopIdWebsiteIndexRoute
   '/shops/$shopId/website/pages/$pageId': typeof AuthenticatedShopsShopIdWebsitePagesPageIdRoute
 }
@@ -92,6 +100,7 @@ export interface FileRoutesByTo {
   '/shops/new': typeof AuthenticatedShopsNewRoute
   '/shops': typeof AuthenticatedShopsIndexRoute
   '/shops/$shopId': typeof AuthenticatedShopsShopIdIndexRoute
+  '/shops/$shopId/website/menu': typeof AuthenticatedShopsShopIdWebsiteMenuRoute
   '/shops/$shopId/website': typeof AuthenticatedShopsShopIdWebsiteIndexRoute
   '/shops/$shopId/website/pages/$pageId': typeof AuthenticatedShopsShopIdWebsitePagesPageIdRoute
 }
@@ -105,6 +114,7 @@ export interface FileRoutesById {
   '/_authenticated/shops/new': typeof AuthenticatedShopsNewRoute
   '/_authenticated/shops/': typeof AuthenticatedShopsIndexRoute
   '/_authenticated/shops/$shopId/': typeof AuthenticatedShopsShopIdIndexRoute
+  '/_authenticated/shops/$shopId/website/menu': typeof AuthenticatedShopsShopIdWebsiteMenuRoute
   '/_authenticated/shops/$shopId/website/': typeof AuthenticatedShopsShopIdWebsiteIndexRoute
   '/_authenticated/shops/$shopId/website/pages/$pageId': typeof AuthenticatedShopsShopIdWebsitePagesPageIdRoute
 }
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/shops/new'
     | '/shops/'
     | '/shops/$shopId/'
+    | '/shops/$shopId/website/menu'
     | '/shops/$shopId/website/'
     | '/shops/$shopId/website/pages/$pageId'
   fileRoutesByTo: FileRoutesByTo
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/shops/new'
     | '/shops'
     | '/shops/$shopId'
+    | '/shops/$shopId/website/menu'
     | '/shops/$shopId/website'
     | '/shops/$shopId/website/pages/$pageId'
   id:
@@ -140,6 +152,7 @@ export interface FileRouteTypes {
     | '/_authenticated/shops/new'
     | '/_authenticated/shops/'
     | '/_authenticated/shops/$shopId/'
+    | '/_authenticated/shops/$shopId/website/menu'
     | '/_authenticated/shops/$shopId/website/'
     | '/_authenticated/shops/$shopId/website/pages/$pageId'
   fileRoutesById: FileRoutesById
@@ -216,6 +229,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedShopsShopIdWebsiteIndexRouteImport
       parentRoute: typeof AuthenticatedShopsShopIdRoute
     }
+    '/_authenticated/shops/$shopId/website/menu': {
+      id: '/_authenticated/shops/$shopId/website/menu'
+      path: '/website/menu'
+      fullPath: '/shops/$shopId/website/menu'
+      preLoaderRoute: typeof AuthenticatedShopsShopIdWebsiteMenuRouteImport
+      parentRoute: typeof AuthenticatedShopsShopIdRoute
+    }
     '/_authenticated/shops/$shopId/website/pages/$pageId': {
       id: '/_authenticated/shops/$shopId/website/pages/$pageId'
       path: '/website/pages/$pageId'
@@ -228,6 +248,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedShopsShopIdRouteChildren {
   AuthenticatedShopsShopIdIndexRoute: typeof AuthenticatedShopsShopIdIndexRoute
+  AuthenticatedShopsShopIdWebsiteMenuRoute: typeof AuthenticatedShopsShopIdWebsiteMenuRoute
   AuthenticatedShopsShopIdWebsiteIndexRoute: typeof AuthenticatedShopsShopIdWebsiteIndexRoute
   AuthenticatedShopsShopIdWebsitePagesPageIdRoute: typeof AuthenticatedShopsShopIdWebsitePagesPageIdRoute
 }
@@ -235,6 +256,8 @@ interface AuthenticatedShopsShopIdRouteChildren {
 const AuthenticatedShopsShopIdRouteChildren: AuthenticatedShopsShopIdRouteChildren =
   {
     AuthenticatedShopsShopIdIndexRoute: AuthenticatedShopsShopIdIndexRoute,
+    AuthenticatedShopsShopIdWebsiteMenuRoute:
+      AuthenticatedShopsShopIdWebsiteMenuRoute,
     AuthenticatedShopsShopIdWebsiteIndexRoute:
       AuthenticatedShopsShopIdWebsiteIndexRoute,
     AuthenticatedShopsShopIdWebsitePagesPageIdRoute:

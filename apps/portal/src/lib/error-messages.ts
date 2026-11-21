@@ -57,6 +57,19 @@ const ERROR_MESSAGES: Record<string, string> = {
   ROLLBACK_CONFLICT: 'Có thao tác khác vừa chạy trên website. Danh sách bản đã được tải lại, hãy bấm lại.',
   PUBLICATION_NOT_FOUND: 'Không tìm thấy bản xuất bản này (có thể đã bị xoá). Danh sách bản đã được tải lại.',
   REQUIRED_PROP_MISSING: 'Khối còn thiếu nội dung bắt buộc.',
+  // Menu website (WEBSITE-007/brief.md "Màn Menu (F4)" — bảng mã lỗi)
+  NAVIGATION_INVALID: 'Menu còn chỗ chưa hợp lệ — xem các dòng được tô đỏ.',
+  NAVIGATION_CONFLICT: 'Menu vừa được sửa ở nơi khác. Đã tải lại bản mới nhất.',
+  NAVIGATION_BODY_INVALID: 'Không lưu được menu do dữ liệu gửi lên sai cấu trúc. Tải lại trang rồi thử lại.',
+  NAVIGATION_BODY_TOO_LARGE: 'Menu quá lớn để lưu. Bớt mục rồi thử lại.',
+  NAV_PAGE_NOT_FOUND: 'Trang này không còn tồn tại — xoá mục khỏi menu.',
+  NAV_PAGE_DUPLICATE: 'Trang này đã có trong menu (mỗi trang chỉ xuất hiện một lần).',
+  NAV_PAGE_NOT_ALLOWED: 'Trang "Không tìm thấy" không đưa vào menu được.',
+  NAV_URL_UNSAFE: 'Địa chỉ liên kết không hợp lệ. Chỉ nhận https, http, mailto, tel, đường dẫn nội bộ hoặc #neo.',
+  NAV_LABEL_REQUIRED: 'Liên kết cần có nhãn.',
+  NAV_LABEL_TOO_LONG: 'Nhãn tối đa 60 ký tự.',
+  NAV_TOO_MANY_ITEMS: 'Quá nhiều mục: tối đa 12 mục cấp 1 và 10 mục mỗi nhóm con.',
+  NAV_TOO_DEEP: 'Menu tối đa 3 cấp.',
 };
 
 const FALLBACK_MESSAGE = 'Có lỗi xảy ra, vui lòng thử lại.';

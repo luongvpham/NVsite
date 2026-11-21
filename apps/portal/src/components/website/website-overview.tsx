@@ -48,6 +48,19 @@ export function WebsiteOverview({ shopId }: { shopId: string }) {
   return (
     <div className="space-y-6">
       <PublishStatus shopId={shopId} website={websiteQuery.data} />
+      <div className="flex items-center justify-between gap-3 rounded-md border border-border px-4 py-3">
+        <div>
+          <p className="font-medium text-foreground">Menu</p>
+          <p className="text-sm text-muted-foreground">Sắp xếp các mục trên thanh menu của website (tối đa 3 cấp).</p>
+        </div>
+        <Link
+          to="/shops/$shopId/website/menu"
+          params={{ shopId }}
+          className="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted"
+        >
+          Sắp menu
+        </Link>
+      </div>
       <PageList
         shopId={shopId}
         renderOpenEditor={(page) => (
