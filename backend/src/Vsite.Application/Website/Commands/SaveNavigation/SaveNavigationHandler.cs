@@ -74,6 +74,10 @@ public sealed class SaveNavigationHandler(IAppDbContext db, ITenantContext tenan
         {
             await db.SaveChangesAsync(cancellationToken);
         }
+        // Không lọc 23505 theo tên constraint (`pk_navigation_config`): Application không tham chiếu Npgsql nên không đọc được
+        // PostgresException.ConstraintName (UniqueViolation chỉ thấy DbException.SqlState — cùng khuôn CreatePage/PublishWebsite).
+        // Không cần: SaveChanges này chỉ ghi đúng MỘT dòng navigation_config, và unique duy nhất của bảng là PK website_id
+        // (ix_navigation_config_website_id_shop_id không unique) ⇒ 23505 ở đây chỉ có thể là hai INSERT cùng website.
         catch (DbUpdateException ex) when (ex is DbUpdateConcurrencyException || UniqueViolation.IsUniqueViolation(ex))
         {
             // Tab khác đã INSERT/UPDATE trước: đọc lại trạng thái thật (AsNoTracking — bỏ qua entity đang track) để FE hoà giải.

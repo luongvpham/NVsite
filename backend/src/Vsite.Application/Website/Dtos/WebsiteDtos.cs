@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Vsite.Domain.Website.Enums;
 
 namespace Vsite.Application.Website.Dtos;
@@ -71,21 +72,40 @@ public sealed record PublicationDto(
     bool IsCurrent);
 
 /// <summary>
-/// `data-needs` WEBSITE-007 — một mục menu cấp 1 (#113), dùng cho cả <c>getNavigation</c> lẫn body <c>saveNavigation</c>.
-/// <paramref name="Key"/> = <c>"page:{pageId}"</c> | <c>"custom"</c> (chuỗi, không enum — #19). <paramref name="Label"/> null = dùng tên
-/// trang (<c>custom</c> bắt buộc có). <paramref name="Url"/> chỉ có giá trị ở <c>custom</c> (<c>null</c> với mục trang).
-/// <paramref name="Children"/>: mục con MỘT cấp, kiểu riêng <see cref="NavigationChildItemDto"/> không có <c>children</c> — không dùng kiểu
-/// tự tham chiếu vì Microsoft.AspNetCore.OpenApi (9.0) sinh <c>items: {}</c> cho nó (Orval ra <c>unknown[]</c>). Trả về luôn là mảng.
+/// `data-needs` WEBSITE-007 — mục menu **cấp 1** (#113), dùng cho cả <c>getNavigation</c> lẫn body <c>saveNavigation</c>.
+/// Menu lồng tối đa 3 cấp, diễn đạt bằng BA kiểu tường minh — <see cref="NavigationItemDto"/> → <see cref="NavigationChildItemDto"/> →
+/// <see cref="NavigationGrandchildItemDto"/> — vì Microsoft.AspNetCore.OpenApi (9.0) sinh <c>items: {}</c> cho kiểu tự tham chiếu
+/// (Orval ra <c>unknown[]</c>). Field giống nhau ở mọi cấp:
+/// <c>Key</c> = <c>"page:{pageId}"</c> | <c>"custom"</c> (chuỗi, không enum — #19), <b>bắt buộc</b> trong body;
+/// <c>Label</c> null = dùng tên trang (<c>custom</c> bắt buộc có); <c>Url</c> chỉ có giá trị ở <c>custom</c> (<c>null</c> với mục trang);
+/// <c>Hidden</c> <b>bắt buộc</b> trong body (thiếu ⇒ 400, không âm thầm thành <c>false</c> làm hiện lại mục đang ẩn);
+/// <c>Children</c> trả về luôn là mảng; thiếu trong body ⇒ rỗng.
 /// </summary>
 public sealed record NavigationItemDto(
-    string Key,
+    [property: JsonRequired] string Key,
     string? Label,
     string? Url,
-    bool Hidden,
+    [property: JsonRequired] bool Hidden,
     IReadOnlyList<NavigationChildItemDto> Children);
 
-/// <summary>Mục con của <see cref="NavigationItemDto"/> — cùng nghĩa các field, không lồng tiếp (#113: menu một cấp).</summary>
-public sealed record NavigationChildItemDto(string Key, string? Label, string? Url, bool Hidden);
+/// <summary>Mục menu <b>cấp 2</b> — field như <see cref="NavigationItemDto"/>; <c>Children</c> là mục cấp 3.</summary>
+public sealed record NavigationChildItemDto(
+    [property: JsonRequired] string Key,
+    string? Label,
+    string? Url,
+    [property: JsonRequired] bool Hidden,
+    IReadOnlyList<NavigationGrandchildItemDto> Children);
+
+/// <summary>
+/// Mục menu <b>cấp 3</b> (cuối) — không có <c>children</c>. Từ chối thuộc tính lạ: body gửi <c>children</c> (cấp 4) hay field khác ở
+/// cấp này ⇒ 400 thay vì âm thầm mất dữ liệu (#113).
+/// </summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record NavigationGrandchildItemDto(
+    [property: JsonRequired] string Key,
+    string? Label,
+    string? Url,
+    [property: JsonRequired] bool Hidden);
 
 /// <summary>
 /// `data-needs` WEBSITE-007 — màn "Menu". <paramref name="Items"/> ĐÃ GHÉP (#113): tự sinh nếu chưa lưu; trang chưa có nối cuối,

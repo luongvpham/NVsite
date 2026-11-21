@@ -38,9 +38,15 @@ public sealed class NavigationHandlerTests(PostgresFixture postgres) : IAsyncLif
     private static NavigationItemDto PageItem(Guid pageId, string? label = null, bool hidden = false, params NavigationChildItemDto[] children) =>
         new(NavItem.PageKey(pageId), label, null, hidden, children);
 
-    private static NavigationChildItemDto ChildPage(Guid pageId) => new(NavItem.PageKey(pageId), null, null, false);
+    private static NavigationChildItemDto ChildPage(Guid pageId, params NavigationGrandchildItemDto[] children) =>
+        new(NavItem.PageKey(pageId), null, null, false, children);
 
-    private static NavigationChildItemDto ChildCustom(string? label, string url) => new(NavItem.CustomKey, label, url, false);
+    private static NavigationChildItemDto ChildCustom(string? label, string url, params NavigationGrandchildItemDto[] children) =>
+        new(NavItem.CustomKey, label, url, false, children);
+
+    private static NavigationGrandchildItemDto GrandPage(Guid pageId) => new(NavItem.PageKey(pageId), null, null, false);
+
+    private static NavigationGrandchildItemDto GrandCustom(string? label, string url) => new(NavItem.CustomKey, label, url, false);
 
     private static NavigationItemDto Custom(string label, string url) => new(NavItem.CustomKey, label, url, false, []);
 
@@ -136,6 +142,41 @@ public sealed class NavigationHandlerTests(PostgresFixture postgres) : IAsyncLif
         Assert.Equal(NavItem.PageKey(seeded.Home.Id), nav.Items[1].Key);
         Assert.Null(nav.Items[1].Label); // nhãn rỗng ⇒ null (dùng tên trang)
         Assert.True(nav.Items[1].Hidden);
+    }
+
+    [Fact]
+    public async Task Three_levels_round_trip_through_save_and_get()
+    {
+        var seeded = await AddWebsiteAsync(Cs);
+        await using var request = new Request(Cs, seeded.ShopId);
+
+        await Save(request, null,
+            PageItem(seeded.Home.Id, children: ChildCustom("Dịch vụ", "https://a.vn",
+                GrandPage(seeded.Contact.Id), GrandCustom("  Zalo  ", "https://zalo.me/1"))));
+
+        await using var reader = new Request(Cs, seeded.ShopId);
+        var nav = await Get(reader);
+        var child = Assert.Single(nav.Items[0].Children);
+        Assert.Equal("Dịch vụ", child.Label);
+        Assert.Equal(2, child.Children.Count);
+        Assert.Equal(NavItem.PageKey(seeded.Contact.Id), child.Children[0].Key);
+        Assert.Equal("Zalo", child.Children[1].Label);
+        Assert.Equal("https://zalo.me/1", child.Children[1].Url);
+        // Contact nằm ở cấp 3 ⇒ đã "có trong menu", không bị nối cuối.
+        Assert.DoesNotContain(nav.Items.Skip(1), i => i.Key == NavItem.PageKey(seeded.Contact.Id));
+    }
+
+    [Fact]
+    public async Task More_than_ten_grandchildren_is_422_NAV_TOO_MANY_ITEMS_at_level_2_children_path()
+    {
+        var seeded = await AddWebsiteAsync(Cs);
+        await using var request = new Request(Cs, seeded.ShopId);
+        var grandchildren = Enumerable.Range(0, 11).Select(i => GrandCustom($"L{i}", "https://a.vn")).ToArray();
+
+        var ex = await Assert.ThrowsAsync<DocumentInvalidException>(() => Save(request, null,
+            PageItem(seeded.Home.Id, children: ChildCustom("Nhóm", "https://a.vn", grandchildren))));
+
+        Assert.Contains(new TreeErrorView("/items/0/children/0/children", NavigationErrorCodes.TooManyItems), Errors(ex));
     }
 
     [Fact]
@@ -246,7 +287,8 @@ public sealed class NavigationHandlerTests(PostgresFixture postgres) : IAsyncLif
             PageItem(seeded.NotFound.Id),
             new NavigationItemDto(NavItem.CustomKey, null, "https://a.vn", false, []),
             new NavigationItemDto(NavItem.CustomKey, "Nhóm", "https://a.vn", false,
-                [ChildCustom(null, "https://a.vn"), ChildCustom(new string('x', 61), "https://a.vn")])));
+                [ChildCustom(null, "https://a.vn"), ChildCustom(new string('x', 61), "https://a.vn"),
+                 ChildCustom("Nhóm 2", "https://a.vn", GrandCustom("Cháu", "ftp://x.vn"), GrandPage(seeded.Contact.Id), GrandPage(seeded.Contact.Id))])));
 
         var errors = Errors(ex);
         Assert.Contains(new TreeErrorView("/items/0/children/0/url", NavigationErrorCodes.UrlUnsafe), errors);
@@ -255,6 +297,8 @@ public sealed class NavigationHandlerTests(PostgresFixture postgres) : IAsyncLif
         Assert.Contains(new TreeErrorView("/items/3/label", NavigationErrorCodes.LabelRequired), errors);
         Assert.Contains(new TreeErrorView("/items/4/children/0/label", NavigationErrorCodes.LabelRequired), errors);
         Assert.Contains(new TreeErrorView("/items/4/children/1/label", NavigationErrorCodes.LabelTooLong), errors);
+        Assert.Contains(new TreeErrorView("/items/4/children/2/children/0/url", NavigationErrorCodes.UrlUnsafe), errors);
+        Assert.Contains(new TreeErrorView("/items/4/children/2/children/2/key", NavigationErrorCodes.PageDuplicate), errors);
         var info = Assert.IsType<DocumentInvalidParams>(ex.ErrorParams);
         Assert.False(info.Truncated);
     }

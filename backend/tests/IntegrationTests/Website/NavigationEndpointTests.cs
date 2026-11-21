@@ -93,35 +93,55 @@ public sealed class NavigationEndpointTests
     }
 
     [Fact]
-    public async Task Child_custom_item_comes_back_with_url_and_without_nested_children()
+    public async Task Three_levels_round_trip_and_level_3_has_no_children_property()
     {
-        var (owner, shopId, website, _) = await OwnerWithWebsiteAsync();
+        var (owner, shopId, website, pages) = await OwnerWithWebsiteAsync();
         var home = PageKey(website.HomePageId);
+        var contact = PageKey(pages.Single(p => p.SystemType == Vsite.Domain.Website.Enums.SystemType.Contact).Id);
         var put = await PutAsync(owner.Token, shopId, "null",
-            $$"""[{"key":"{{home}}","hidden":false,"children":[{"key":"custom","label":"Gọi","url":"tel:0900000000","hidden":false}]}]""");
+            $$"""[{"key":"{{home}}","hidden":false,"children":[{"key":"custom","label":"Gọi","url":"tel:0900000000","hidden":false,"children":[{"key":"{{contact}}","label":null,"hidden":true},{"key":"custom","label":"Zalo","url":"https://zalo.me/1","hidden":false}]}]}]""");
         Assert.Equal(HttpStatusCode.OK, put.StatusCode);
 
         var get = await JsonOf(await _h.SendAsync(HttpMethod.Get, Nav(shopId), owner.Token));
         var child = get.GetProperty("items")[0].GetProperty("children")[0];
-
         Assert.Equal("custom", child.GetProperty("key").GetString());
         Assert.Equal("tel:0900000000", child.GetProperty("url").GetString());
-        Assert.False(child.TryGetProperty("children", out _));
+        var grandchildren = child.GetProperty("children").EnumerateArray().ToList();
+        Assert.Equal(2, grandchildren.Count);
+        Assert.Equal(contact, grandchildren[0].GetProperty("key").GetString());
+        Assert.True(grandchildren[0].GetProperty("hidden").GetBoolean());
+        Assert.Equal("https://zalo.me/1", grandchildren[1].GetProperty("url").GetString());
+        Assert.All(grandchildren, g => Assert.False(g.TryGetProperty("children", out _)));
     }
 
-    // Mục con không có `children` trong kiểu (menu một cấp, #113): cháu gửi lên bị bỏ qua như mọi thuộc tính lạ, không 500.
+    // Cấp 3 từ chối field lạ (#113): gửi cấp 4 ⇒ 400, không âm thầm mất dữ liệu.
     [Fact]
-    public async Task Grandchildren_in_body_are_ignored_not_stored()
+    public async Task Fourth_level_in_body_is_400_and_nothing_is_written()
     {
         var (owner, shopId, website, _) = await OwnerWithWebsiteAsync();
-        var put = await PutAsync(owner.Token, shopId, "null",
-            $$"""[{"key":"{{PageKey(website.HomePageId)}}","hidden":false,"children":[{"key":"custom","label":"A","url":"https://a.vn","hidden":false,"children":[{"key":"custom","label":"B","url":"https://b.vn","hidden":false}]}]}]""");
-        Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+        var response = await PutAsync(owner.Token, shopId, "null",
+            $$"""[{"key":"{{PageKey(website.HomePageId)}}","hidden":false,"children":[{"key":"custom","label":"A","url":"https://a.vn","hidden":false,"children":[{"key":"custom","label":"B","url":"https://b.vn","hidden":false,"children":[{"key":"custom","label":"C","url":"https://c.vn","hidden":false}]}]}]}]""");
 
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("NAVIGATION_BODY_INVALID", (await JsonOf(response)).GetProperty("error_code").GetString());
         var get = await JsonOf(await _h.SendAsync(HttpMethod.Get, Nav(shopId), owner.Token));
-        var child = Assert.Single(get.GetProperty("items")[0].GetProperty("children").EnumerateArray());
-        Assert.False(child.TryGetProperty("children", out _));
-        Assert.DoesNotContain("b.vn", get.GetRawText());
+        Assert.Equal(JsonValueKind.Null, get.GetProperty("version").ValueKind);
+    }
+
+    // W2: `key` và `hidden` bắt buộc ở mọi cấp — thiếu `hidden` không được âm thầm thành false (hiện lại mục đang ẩn).
+    [Theory]
+    [InlineData("""{"key":"custom","label":"A","url":"https://a.vn","children":[]}""")]
+    [InlineData("""{"label":"A","url":"https://a.vn","hidden":false,"children":[]}""")]
+    [InlineData("""{"key":"custom","label":"A","url":"https://a.vn","hidden":false,"children":[{"key":"custom","label":"B","url":"https://b.vn"}]}""")]
+    [InlineData("""{"key":"custom","label":"A","url":"https://a.vn","hidden":false,"children":[{"key":"custom","label":"B","url":"https://b.vn","hidden":false,"children":[{"label":"C","url":"https://c.vn","hidden":false}]}]}""")]
+    public async Task Missing_key_or_hidden_at_any_level_is_400(string item)
+    {
+        var (owner, shopId, _, _) = await OwnerWithWebsiteAsync();
+
+        var response = await PutAsync(owner.Token, shopId, "null", $"[{item}]");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("NAVIGATION_BODY_INVALID", (await JsonOf(response)).GetProperty("error_code").GetString());
     }
 
     // R2 qua HTTP.

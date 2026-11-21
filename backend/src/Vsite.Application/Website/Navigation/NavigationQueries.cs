@@ -31,27 +31,38 @@ internal static class NavigationQueries
             .Select(p => new NavPage(p.Id, p.Title, p.SystemType, p.IsEnabled, p.SortOrder))
             .ToListAsync(ct);
 
-    /// <summary>Model → DTO (mục cấp 1 luôn có mảng <c>children</c>).</summary>
+    /// <summary>Model → DTO ba cấp (mỗi cấp 1/2 luôn có mảng <c>children</c>). Model đã cắt ở 3 cấp (Parse/Merge của T2).</summary>
     public static IReadOnlyList<NavigationItemDto> ToDtos(IReadOnlyList<NavItem> items) =>
         items.Select(i => new NavigationItemDto(
                 i.Key,
                 i.Label,
                 i.Url,
                 i.Hidden,
-                i.Children.Select(c => new NavigationChildItemDto(c.Key, c.Label, c.Url, c.Hidden)).ToList()))
+                i.Children.Select(c => new NavigationChildItemDto(
+                        c.Key,
+                        c.Label,
+                        c.Url,
+                        c.Hidden,
+                        c.Children.Select(g => new NavigationGrandchildItemDto(g.Key, g.Label, g.Url, g.Hidden)).ToList()))
+                    .ToList()))
             .ToList();
 
-    /// <summary>Body → model thuần. <c>key</c> thiếu (hoặc phần tử <c>null</c>) ⇒ <c>""</c>: Validate báo <c>NAV_PAGE_NOT_FOUND</c> tại
-    /// <c>/…/key</c>, không 500; <c>children</c> thiếu ⇒ rỗng. Mục con không có <c>children</c> trong kiểu nên không lồng sâu hơn được
-    /// (thuộc tính lạ trong JSON bị bỏ qua như mọi body khác).</summary>
+    /// <summary>
+    /// Body → model thuần. Binding đã bắt buộc <c>key</c>/<c>hidden</c> (400) và chặn cấp 4 (cấp 3 từ chối field lạ ⇒ 400); ở đây vẫn
+    /// phòng thủ cho caller không qua HTTP: phần tử/khoá <c>null</c> ⇒ <c>key ""</c> (Validate báo <c>NAV_PAGE_NOT_FOUND</c> tại
+    /// <c>/…/key</c>, không 500), <c>children</c> thiếu ⇒ rỗng.
+    /// </summary>
     public static IReadOnlyList<NavItem> FromDtos(IReadOnlyList<NavigationItemDto?> items) =>
         items.Select(d => d is null
                 ? Empty
-                : new NavItem(
-                    d.Key ?? string.Empty,
-                    d.Label,
-                    d.Url,
-                    d.Hidden,
-                    d.Children?.Select(c => c is null ? Empty : new NavItem(c.Key ?? string.Empty, c.Label, c.Url, c.Hidden, [])).ToList() ?? []))
+                : new NavItem(d.Key ?? string.Empty, d.Label, d.Url, d.Hidden, d.Children?.Select(FromChild).ToList() ?? []))
             .ToList();
+
+    private static NavItem FromChild(NavigationChildItemDto? c) =>
+        c is null
+            ? Empty
+            : new NavItem(c.Key ?? string.Empty, c.Label, c.Url, c.Hidden, c.Children?.Select(FromGrandchild).ToList() ?? []);
+
+    private static NavItem FromGrandchild(NavigationGrandchildItemDto? g) =>
+        g is null ? Empty : new NavItem(g.Key ?? string.Empty, g.Label, g.Url, g.Hidden, []);
 }

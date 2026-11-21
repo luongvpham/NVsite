@@ -64,3 +64,10 @@ public sealed class NavigationConflictException(NavigationConflictParams info)
 {
     public NavigationConflictParams Info { get; } = info;
 }
+
+/// <summary>
+/// 400 <c>NAVIGATION_BODY_INVALID</c> — body <c>saveNavigation</c> không đọc được theo kiểu: JSON hỏng, thiếu <c>key</c>/<c>hidden</c> ở
+/// bất kỳ cấp nào, sai kiểu, hoặc có thuộc tính lạ ở cấp 3 (vd. <c>children</c> cấp 4 — #113). Lỗi theo mục (nội dung) vẫn là 422.
+/// </summary>
+public sealed class NavigationBodyInvalidException(string detail)
+    : AppException("NAVIGATION_BODY_INVALID", detail, statusCode: 400);

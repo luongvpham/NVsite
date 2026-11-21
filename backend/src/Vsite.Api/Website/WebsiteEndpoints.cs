@@ -3,7 +3,9 @@ using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
 using Vsite.Api.ExceptionHandling;
 using Vsite.Api.Tenancy;
 using Vsite.Application.Website.Commands.CreatePage;
@@ -16,6 +18,7 @@ using Vsite.Application.Website.Commands.SavePageDraft;
 using Vsite.Application.Website.Commands.UpdatePage;
 using Vsite.Application.Website.Commands.UpdateTheme;
 using Vsite.Application.Website.Dtos;
+using Vsite.Application.Website.Exceptions;
 using Vsite.Application.Website.Options;
 using Vsite.Application.Website.Queries.GetNavigation;
 using Vsite.Application.Website.Queries.GetPageDraft;
@@ -235,12 +238,22 @@ public static class WebsiteEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        website.MapPut("/navigation", async (Guid shopId, SaveNavigationRequest body, ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new SaveNavigationCommand(body.Version, body.Items), ct)))
+        // Body đọc trong handler (không để Minimal API bind): lỗi binding của framework là 500 ở Development (ThrowOnBadRequest, không
+        // handler nào nhận BadHttpRequestException 400) và 400 rỗng body ở Production — cả hai trái #19. Tự deserialize với CÙNG
+        // JsonOptions của host ⇒ JSON hỏng / thiếu key|hidden / field lạ ở cấp 3 luôn là 400 NAVIGATION_BODY_INVALID có error_code.
+        // Accepts<T> giữ requestBody có kiểu trong OpenAPI (Orval).
+        website.MapPut("/navigation", async (
+            Guid shopId, HttpRequest request, IOptions<JsonOptions> json, ISender sender, CancellationToken ct) =>
+        {
+            var body = await ReadNavigationBodyAsync(request, json.Value.SerializerOptions, ct);
+            return Results.Ok(await sender.Send(new SaveNavigationCommand(body.Version, body.Items), ct));
+        })
             .WithName("saveNavigation")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireOwner()
+            .Accepts<SaveNavigationRequest>("application/json")
             .Produces<SaveNavigationResultDto>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -283,6 +296,20 @@ public static class WebsiteEndpoints
         }
 
         return buffer.ToArray();
+    }
+
+    private static async Task<SaveNavigationRequest> ReadNavigationBodyAsync(HttpRequest request, JsonSerializerOptions options, CancellationToken ct)
+    {
+        try
+        {
+            return await JsonSerializer.DeserializeAsync<SaveNavigationRequest>(request.Body, options, ct)
+                ?? throw new NavigationBodyInvalidException("Body phải là object { version, items }.");
+        }
+        catch (JsonException ex)
+        {
+            // Chỉ trả đường dẫn JSON (vd. $.items[0].children[1].children[0]) — ex.Message có tên kiểu .NET nội bộ, không đưa ra client.
+            throw new NavigationBodyInvalidException($"Body không hợp lệ (thiếu key/hidden, sai kiểu, hoặc lồng quá 3 cấp) tại '{ex.Path}'.");
+        }
     }
 
     private static JsonDocument ParseObject(byte[] bytes, string errorCode)
