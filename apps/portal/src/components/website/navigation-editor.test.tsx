@@ -338,6 +338,26 @@ describe('NavigationEditor — lưu', () => {
     expect(screen.getByText(/tối đa 12 mục cấp 1/)).toBeInTheDocument();
   });
 
+  it('W1: GET trả 13 mục cấp 1 → Lưu bị chặn ở client, báo quá giới hạn, không gửi PUT', async () => {
+    const thirteen: NavigationDto = {
+      version: 1,
+      isDirty: false,
+      items: Array.from({ length: 13 }, (_, i) =>
+        item('custom', { label: `L${String(i)}`, url: `/l${String(i)}`, hidden: i === 12 }),
+      ),
+    };
+    const { bodies } = setup({ menus: [thirteen] });
+    await screen.findByText('L0');
+    expect(screen.getByText(/đang có 13 mục cấp 1, tối đa 12/)).toBeInTheDocument();
+
+    save();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/Menu đang có 13 mục cấp 1, tối đa 12/);
+    expect(alert).toHaveTextContent(/kể cả mục đang ẩn/);
+    expect(bodies).toHaveLength(0);
+  });
+
   it('422 NAVIGATION_INVALID: tô đúng dòng theo `path` (JSON Pointer)', async () => {
     setup({
       menus: [nestedMenu],

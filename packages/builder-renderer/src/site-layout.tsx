@@ -1,11 +1,6 @@
 import type { ReactNode } from 'react';
 import { bodyFontVar, colorVar, headingFontVar, radiusVar, shadowVar } from '@vsite/theme-engine';
 
-/**
- * Khung trang Header/Footer của renderer — NẰM NGOÀI Component Tree (05 §8), không có manifest trong Registry.
- * Style chỉ qua `var(--vs-*)` (theme bọc ở người gọi). Isomorphic (#23): không window/document, không đọc đồng hồ —
- * năm © do người gọi truyền (tránh lệch SSR↔CSR).
- */
 /** Mục menu (đệ quy, tới 3 cấp) — tương thích đầu ra `resolveNavigation` (builder-components). */
 export interface SiteMenuItem {
   label: string;
@@ -26,6 +21,11 @@ export interface SiteLayoutProps {
   children: ReactNode;
 }
 
+/**
+ * Khung trang Header/Footer của renderer — NẰM NGOÀI Component Tree (05 §8), không có manifest trong Registry.
+ * Style chỉ qua `var(--vs-*)` (theme bọc ở người gọi). Isomorphic (#23): không window/document, không đọc đồng hồ —
+ * năm © do người gọi truyền (tránh lệch SSR↔CSR).
+ */
 export function SiteLayout({ shop, homeHref, menuItems, contact, year, children }: SiteLayoutProps) {
   const hasContact = Boolean(contact?.address || contact?.phone);
   return (

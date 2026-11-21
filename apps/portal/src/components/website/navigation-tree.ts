@@ -305,6 +305,11 @@ function addError(errors: RowErrors, uid: string, message: string) {
   } else errors.set(uid, [message]);
 }
 
+/** Khoá đặc biệt trong `RowErrors` cho lỗi chung của cả menu (không thuộc dòng nào). */
+export const MENU_ERROR_KEY = '__menu__';
+/** Mã lỗi chung: quá 12 mục cấp 1 (đếm cả mục đang ẩn, như BE). */
+export const NAV_TOP_LEVEL_TOO_MANY = 'NAV_TOP_LEVEL_TOO_MANY';
+
 /** Kiểm như BE (phần làm được ở client). Trả mã lỗi `NAV_*` theo dòng; rỗng = gửi được. */
 export function validateMenu(
   items: readonly NavItem[],
@@ -312,6 +317,7 @@ export function validateMenu(
 ): RowErrors {
   const errors: RowErrors = new Map();
   const seenPages = new Set<string>();
+  if (items.length > NAV_LIMITS.topLevel) addError(errors, MENU_ERROR_KEY, NAV_TOP_LEVEL_TOO_MANY);
 
   const walk = (list: readonly NavItem[], depth: number) => {
     for (const item of list) {

@@ -7,6 +7,7 @@ import {
   getListPagesQueryKey,
   getListPublicationsQueryKey,
   getPublishWebsiteMutationOptions,
+  useGetNavigation,
   publishWebsite,
   type PublicationDto,
 } from '@vsite/api-sdk';
@@ -121,6 +122,38 @@ describe('PublicationHistory — rollback', () => {
     expect(keys).toContain(JSON.stringify(getListPublicationsQueryKey('shop-1')));
     expect(keys).toContain(JSON.stringify(getGetNavigationQueryKey('shop-1')));
     await waitFor(() => { expect(screen.queryByRole('dialog')).not.toBeInTheDocument(); });
+  });
+
+  it('S5: rollback → GET navigation được tải lại (menu đổi theo bản quay về)', async () => {
+    serveList();
+    let navGets = 0;
+    server.use(
+      http.get('*/api/shops/:shopId/website/navigation', () => {
+        navGets += 1;
+        return HttpResponse.json({ version: navGets, isDirty: false, items: [] });
+      }),
+      http.post('*/api/shops/:shopId/website/publications/:publicationId/rollback', () =>
+        HttpResponse.json(list[1]),
+      ),
+    );
+    // Một observer đang mở màn Menu (query active) — invalidate chỉ refetch query đang active.
+    function NavObserver() {
+      useGetNavigation('shop-1');
+      return null;
+    }
+    renderWithQuery(
+      <>
+        <NavObserver />
+        <PublicationHistory shopId="shop-1" />
+      </>,
+    );
+    await screen.findByText('v2');
+    await waitFor(() => { expect(navGets).toBe(1); });
+
+    fireEvent.click(within(row(2)).getByRole('button', { name: 'Quay về bản này' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận quay về' }));
+
+    await waitFor(() => { expect(navGets).toBe(2); });
   });
 
   it('Huỷ → không gọi POST', async () => {

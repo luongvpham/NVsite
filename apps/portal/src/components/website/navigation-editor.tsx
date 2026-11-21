@@ -50,6 +50,7 @@ import {
   uidAtPointer,
   updateItem,
   validateMenu,
+  MENU_ERROR_KEY,
   type FlatNavItem,
   type NavItem,
 } from './navigation-tree';
@@ -61,6 +62,10 @@ const INDENT = 24;
  * Màn Menu (WEBSITE-007 F4): sắp menu website tối đa 3 cấp. Tải menu (GET) + danh sách trang (tên trang, trạng
  * thái bật/tắt); khi 409 thì tải lại và dựng lại form từ bản mới (đổi `key` ⇒ bỏ mọi thay đổi chưa lưu).
  */
+function topLevelOverMessage(n: number): string {
+  return `Menu đang có ${String(n)} mục cấp 1, tối đa ${String(NAV_LIMITS.topLevel)} — xoá bớt mục (kể cả mục đang ẩn) hoặc kéo vào nhóm.`;
+}
+
 export function NavigationEditor({ shopId }: { shopId: string }) {
   // Cùng chính sách với các editor nháp khác (editor-shell, use-theme-draft): bản trong cache chỉ đúng lúc mở màn
   // (sau đó version đổi theo mỗi lần lưu). Không tự refetch đè lên form; bỏ cache ngay khi rời màn để lần mở sau
@@ -227,6 +232,7 @@ function NavigationForm({ shopId, initial, pages, notice, onSaved, onConflict }:
   const itemsRef = useRef(items);
   itemsRef.current = items;
   const topLevelFull = items.length >= NAV_LIMITS.topLevel;
+  const topLevelOver = items.length > NAV_LIMITS.topLevel;
   const usedPageIds = pageIdsInMenu(items);
   const addablePages = pages.filter(
     (p) => isPageAllowedInMenu(p) && !usedPageIds.has(p.id.toLowerCase()),
@@ -256,10 +262,15 @@ function NavigationForm({ shopId, initial, pages, notice, onSaved, onConflict }:
     if (clientErrors.size > 0) {
       setRowErrors(
         new Map(
-          [...clientErrors].map(([uid, codes]) => [uid, codes.map((c) => getErrorMessage(c))]),
+          [...clientErrors]
+            .filter(([uid]) => uid !== MENU_ERROR_KEY)
+            .map(([uid, codes]) => [uid, codes.map((c) => getErrorMessage(c))]),
         ),
       );
-      setGeneralError({ message: getErrorMessage('NAVIGATION_INVALID'), details: [] });
+      setGeneralError({
+        message: getErrorMessage('NAVIGATION_INVALID'),
+        details: clientErrors.has(MENU_ERROR_KEY) ? [topLevelOverMessage(items.length)] : [],
+      });
       return;
     }
     setRowErrors(new Map());
@@ -485,7 +496,10 @@ function NavigationForm({ shopId, initial, pages, notice, onSaved, onConflict }:
           Thêm liên kết
         </Button>
       </div>
-      {topLevelFull && (
+      {topLevelOver && (
+        <p className="text-sm text-destructive">{topLevelOverMessage(items.length)}</p>
+      )}
+      {topLevelFull && !topLevelOver && (
         <p className="text-sm text-muted-foreground">
           Đã đủ tối đa {NAV_LIMITS.topLevel} mục cấp 1 — muốn thêm thì xoá bớt hoặc kéo mục vào
           trong một nhóm.

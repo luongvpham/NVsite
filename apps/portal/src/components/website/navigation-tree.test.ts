@@ -6,6 +6,8 @@ import {
   getProjection,
   removeDescendants,
   uidAtPointer,
+  validateMenu,
+  MENU_ERROR_KEY,
   type NavItem,
 } from './navigation-tree';
 
@@ -119,5 +121,25 @@ describe('getProjection / applyMove', () => {
     if (!result.ok) throw new Error(result.message);
     expect(result.items.map((i) => i.key)).toEqual(['page:b', 'page:a']);
     expect(at(result.items, 1).children.map((c) => c.key)).toEqual(['page:a1', 'page:a2']);
+  });
+});
+
+describe('validateMenu — giới hạn cấp 1 (W1)', () => {
+  const many = (n: number) =>
+    fromDto(
+      Array.from({ length: n }, (_, i) => ({
+        key: 'custom',
+        label: `L${String(i)}`,
+        url: `/l${String(i)}`,
+        hidden: i === n - 1,
+        children: [],
+      })),
+    );
+
+  it('12 mục: không lỗi chung', () => {
+    expect(validateMenu(many(12), new Map()).has(MENU_ERROR_KEY)).toBe(false);
+  });
+  it('13 mục (kể cả mục ẩn): có lỗi chung', () => {
+    expect(validateMenu(many(13), new Map()).get(MENU_ERROR_KEY)).toEqual(['NAV_TOP_LEVEL_TOO_MANY']);
   });
 });
