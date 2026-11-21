@@ -280,9 +280,9 @@ Prop `menuItems` ([site-layout.tsx:12](../../../packages/builder-renderer/src/si
 `navigation-editor.tsx`: danh sách sắp được (tối đa 3 cấp), kéo vào/ra giữa các cấp, đổi nhãn (để trống = tên
 trang), ẩn/hiện, thêm/xoá `custom`, gắn "trang đang tắt", nút Lưu, lỗi 422 tô đúng dòng theo `path`,
 409 ⇒ thông báo + tải lại.
-- [ ] Test trước (MSW) `navigation-editor.test.tsx`: loading · error · menu tự sinh (`version: null`) · sắp bằng bàn phím (dnd-kit keyboard sensor) · lưu gửi đúng body · 422 tô dòng · 409 · chặn lồng cấp 4
-- [ ] Smoke chạy app thật sau F4 (workflow §8)
-- [ ] Commit `feat(portal): màn sắp menu website (WEBSITE-007)`
+- [x] Test trước (MSW) `navigation-editor.test.tsx`: loading · error · menu tự sinh (`version: null`) · sắp bằng bàn phím (dnd-kit keyboard sensor) · lưu gửi đúng body · 422 tô dòng · 409 · chặn lồng cấp 4
+- [ ] Smoke chạy app thật sau F4 (workflow §8) — S2: `vite build` + dev server khởi động, route nạp 200; chưa xem được màn có dữ liệu (Portal không có MSW trên trình duyệt, cần BE) ⇒ gộp vào F6
+- [x] Commit `feat(portal): màn sắp menu website (WEBSITE-007)` (+ fix review `d7c3d97`)
 
 ### F5: Portal — dấu "menu chưa publish" + preview
 `website-overview.tsx` / `publish-dialog.tsx` hiện "Menu có thay đổi chưa publish" theo `isDirty`; sau
