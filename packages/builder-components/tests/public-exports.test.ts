@@ -7,6 +7,7 @@ import {
   getPropsSchema,
   isSafeLinkUrl,
   opRules,
+  resolveNavigation,
   sanitizeRichText,
   themeTokensSchema,
   treeEnvelopeSchema,
@@ -175,5 +176,11 @@ describe('isSafeLinkUrl', () => {
       expect(urls.length, name).toBeGreaterThan(0);
       for (const url of urls) expect(isSafeLinkUrl(url), `${name}: ${String(url)}`).toBe(false);
     }
+  });
+});
+
+describe('resolveNavigation (export công khai)', () => {
+  it('là hàm; danh sách rỗng ⇒ rỗng', () => {
+    expect(resolveNavigation([], [], () => '#')).toEqual([]);
   });
 });
