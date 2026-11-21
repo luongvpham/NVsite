@@ -48,6 +48,21 @@ public static class WebsiteEndpoints
     /// <summary>Body theme nhỏ (validator tự giới hạn tokens 16 KB) — 64 KB là biên rộng cho phần bọc.</summary>
     private const int MaxThemeBodyBytes = 64 * 1024;
 
+    /// <summary>Body menu (WEBSITE-007): menu thật cỡ vài KB; 256 KB đủ rộng mà vẫn chặn việc dựng đồ thị object khổng lồ trước khi
+    /// <c>Validate</c> cắt số mục (review W-A).</summary>
+    private const int MaxNavigationBodyBytes = 256 * 1024;
+
+    /// <summary>Trần độ dài đường dẫn JSON đưa vào <c>detail</c> của 400 <c>NAVIGATION_BODY_INVALID</c> (review S-A).</summary>
+    private const int MaxReportedPathLength = 200;
+
+    /// <summary>Tên thuộc tính được phép xuất hiện trong đường dẫn báo lỗi — tên lạ client gửi bị thay bằng <c>?</c>, không dội lại.</summary>
+    private static readonly HashSet<string> KnownNavigationMembers =
+        new(["version", "items", "children", "key", "label", "url", "hidden"], StringComparer.Ordinal);
+
+    private static readonly System.Text.RegularExpressions.Regex PathSegment = new(
+        @"\G(?:\[(?<index>\d+)\]|\.(?<name>[A-Za-z0-9_]+)|\['(?<quoted>(?:[^'\\]|\\.)*)'\])",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
     public static IEndpointRouteBuilder MapWebsiteEndpoints(this IEndpointRouteBuilder app)
     {
         var website = app.MapGroup("/shops/{shopId:guid}/website").WithTags("Website").WithGroupName("website");
@@ -227,7 +242,7 @@ public static class WebsiteEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-        // WEBSITE-007 T3 — menu website (#113). Body là DTO có kiểu (Orval sinh type); ShopId chỉ từ route/ITenantContext (#99).
+        // WEBSITE-007 T3 — menu website (#113). ShopId chỉ từ route/ITenantContext (#99).
         website.MapGet("/navigation", async (Guid shopId, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetNavigationQuery(), ct)))
             .WithName("getNavigation")
@@ -238,19 +253,22 @@ public static class WebsiteEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        // Body đọc trong handler (không để Minimal API bind): lỗi binding của framework là 500 ở Development (ThrowOnBadRequest, không
-        // handler nào nhận BadHttpRequestException 400) và 400 rỗng body ở Production — cả hai trái #19. Tự deserialize với CÙNG
-        // JsonOptions của host ⇒ JSON hỏng / thiếu key|hidden / field lạ ở cấp 3 luôn là 400 NAVIGATION_BODY_INVALID có error_code.
-        // Accepts<T> giữ requestBody có kiểu trong OpenAPI (Orval).
+        // PUT đọc body THÔ có trần (ReadBoundedBodyAsync, như savePageDraft/updateTheme; vượt ⇒ 413 NAVIGATION_BODY_TOO_LARGE) rồi tự
+        // deserialize từ byte với CÙNG JsonOptions của host thành DTO có kiểu. Không để Minimal API bind: lỗi binding của framework là 500
+        // ở Development (ThrowOnBadRequest, không handler nào nhận BadHttpRequestException 400) và 400 rỗng body ở Production — cả hai
+        // trái #19; ở đây JSON hỏng / thiếu key|hidden / field lạ ở cấp 3 luôn là 400 NAVIGATION_BODY_INVALID có error_code.
+        // `.Accepts<SaveNavigationRequest>` giữ requestBody có kiểu trong OpenAPI (Orval).
         website.MapPut("/navigation", async (
             Guid shopId, HttpRequest request, IOptions<JsonOptions> json, ISender sender, CancellationToken ct) =>
         {
-            var body = await ReadNavigationBodyAsync(request, json.Value.SerializerOptions, ct);
+            var bytes = await ReadBoundedBodyAsync(request, MaxNavigationBodyBytes, ct);
+            var body = ParseNavigationBody(bytes, json.Value.SerializerOptions);
             return Results.Ok(await sender.Send(new SaveNavigationCommand(body.Version, body.Items), ct));
         })
             .WithName("saveNavigation")
             .RequireAuthorization(AuthPolicies.RequireGlobalScope)
             .RequireOwner()
+            .WithMetadata(new RequestBodyTooLargeErrorMetadata("NAVIGATION_BODY_TOO_LARGE", "Nội dung menu vượt quá giới hạn dung lượng cho phép."))
             .Accepts<SaveNavigationRequest>("application/json")
             .Produces<SaveNavigationResultDto>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -258,6 +276,7 @@ public static class WebsiteEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
         return app;
@@ -298,18 +317,57 @@ public static class WebsiteEndpoints
         return buffer.ToArray();
     }
 
-    private static async Task<SaveNavigationRequest> ReadNavigationBodyAsync(HttpRequest request, JsonSerializerOptions options, CancellationToken ct)
+    private static SaveNavigationRequest ParseNavigationBody(byte[] bytes, JsonSerializerOptions options)
     {
         try
         {
-            return await JsonSerializer.DeserializeAsync<SaveNavigationRequest>(request.Body, options, ct)
+            return JsonSerializer.Deserialize<SaveNavigationRequest>(bytes, options)
                 ?? throw new NavigationBodyInvalidException("Body phải là object { version, items }.");
         }
         catch (JsonException ex)
         {
-            // Chỉ trả đường dẫn JSON (vd. $.items[0].children[1].children[0]) — ex.Message có tên kiểu .NET nội bộ, không đưa ra client.
-            throw new NavigationBodyInvalidException($"Body không hợp lệ (thiếu key/hidden, sai kiểu, hoặc lồng quá 3 cấp) tại '{ex.Path}'.");
+            // ex.Message có tên kiểu .NET nội bộ — không đưa ra client; chỉ đưa đường dẫn cấu trúc đã lọc (S-A).
+            throw new NavigationBodyInvalidException(
+                $"Body không hợp lệ (thiếu key/hidden, sai kiểu, hoặc lồng quá 3 cấp) tại '{SafeJsonPath(ex.Path)}'.");
         }
+    }
+
+    /// <summary>
+    /// Đường dẫn JSON chỉ gồm chỉ số mảng và tên thuộc tính đã biết của body menu; tên lạ (do client đặt, dài tuỳ ý) thành <c>?</c>,
+    /// đoạn không nhận ra thì dừng (<c>…</c>), và cắt ở <see cref="MaxReportedPathLength"/> ký tự — không dội lại input (review S-A).
+    /// </summary>
+    private static string SafeJsonPath(string? path)
+    {
+        if (string.IsNullOrEmpty(path) || path[0] != '$')
+        {
+            return "$";
+        }
+
+        var result = new System.Text.StringBuilder("$");
+        var position = 1;
+        while (position < path.Length)
+        {
+            var match = PathSegment.Match(path, position);
+            if (!match.Success || match.Length == 0)
+            {
+                result.Append('…');
+                break;
+            }
+
+            if (match.Groups["index"].Success)
+            {
+                result.Append('[').Append(match.Groups["index"].Value).Append(']');
+            }
+            else
+            {
+                var name = match.Groups["name"].Success ? match.Groups["name"].Value : match.Groups["quoted"].Value;
+                result.Append('.').Append(KnownNavigationMembers.Contains(name) ? name : "?");
+            }
+
+            position += match.Length;
+        }
+
+        return result.Length <= MaxReportedPathLength ? result.ToString() : result.ToString(0, MaxReportedPathLength) + "…";
     }
 
     private static JsonDocument ParseObject(byte[] bytes, string errorCode)

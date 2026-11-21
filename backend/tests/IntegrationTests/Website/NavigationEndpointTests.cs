@@ -144,6 +144,41 @@ public sealed class NavigationEndpointTests
         Assert.Equal("NAVIGATION_BODY_INVALID", (await JsonOf(response)).GetProperty("error_code").GetString());
     }
 
+    // W-A: body có trần (256 KB) như savePageDraft/updateTheme — vượt ⇒ 413 có error_code, không dựng đồ thị object khổng lồ.
+    [Fact]
+    public async Task Oversized_body_is_413_NAVIGATION_BODY_TOO_LARGE_and_nothing_is_written()
+    {
+        var (owner, shopId, website, _) = await OwnerWithWebsiteAsync();
+        var padding = new string('a', 300 * 1024);
+
+        var response = await PutAsync(owner.Token, shopId, "null",
+            $$"""[{"key":"{{PageKey(website.HomePageId)}}","label":"{{padding}}","hidden":false,"children":[]}]""");
+
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+        Assert.Equal("NAVIGATION_BODY_TOO_LARGE", (await JsonOf(response)).GetProperty("error_code").GetString());
+        var get = await JsonOf(await _h.SendAsync(HttpMethod.Get, Nav(shopId), owner.Token));
+        Assert.Equal(JsonValueKind.Null, get.GetProperty("version").ValueKind);
+    }
+
+    // S-A: detail chỉ nêu đường dẫn cấu trúc — không dội lại tên thuộc tính lạ client gửi (có thể dài/tuỳ ý).
+    [Fact]
+    public async Task Invalid_body_detail_does_not_echo_unknown_property_names()
+    {
+        var (owner, shopId, website, _) = await OwnerWithWebsiteAsync();
+        var junk = "zz" + new string('q', 5000);
+
+        var response = await PutAsync(owner.Token, shopId, "null",
+            $$"""[{"key":"{{PageKey(website.HomePageId)}}","hidden":false,"children":[{"key":"custom","label":"A","url":"https://a.vn","hidden":false,"children":[{"key":"custom","label":"B","url":"https://b.vn","hidden":false,"{{junk}}":1}]}]}]""");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await JsonOf(response);
+        Assert.Equal("NAVIGATION_BODY_INVALID", problem.GetProperty("error_code").GetString());
+        var detail = problem.GetProperty("detail").GetString()!;
+        Assert.DoesNotContain("zzq", detail, StringComparison.Ordinal);
+        Assert.True(detail.Length <= 400, $"detail dài {detail.Length}");
+        Assert.Contains("$.items[0].children[0].children[0]", detail, StringComparison.Ordinal);
+    }
+
     // R2 qua HTTP.
     [Fact]
     public async Task Second_first_save_is_409_NAVIGATION_CONFLICT_with_currentVersion_and_updatedAt()
