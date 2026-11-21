@@ -59,7 +59,7 @@ function PublishDialogBody({ shopId, open, onOpenChange, currentPageId, onSettle
   return (
     <Dialog open={open} onClose={close} title="Xuất bản website" dismissible={!isPending}>
       {notice && <p className="mb-3 text-sm text-muted-foreground">{notice}</p>}
-      {menuDirty && <p className="mb-3 text-sm text-foreground">Menu có thay đổi chưa publish</p>}
+      {menuDirty && !result && <p className="mb-3 text-sm text-foreground">Menu có thay đổi chưa publish</p>}
       {result ? (
         <div className="space-y-4">
           <p className="text-sm text-foreground">Đã xuất bản bản v{result.version}</p>

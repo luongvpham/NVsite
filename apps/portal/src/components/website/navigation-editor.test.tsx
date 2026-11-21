@@ -594,4 +594,42 @@ describe('NavigationEditor — sắp xếp bằng bàn phím (dnd-kit KeyboardSe
     ]);
     expect(home?.children[0]?.children.map((c) => c.key)).toEqual(['page:p-contact']);
   });
+
+  it('F5 fix: cache của observer khác (tổng quan) không làm màn Menu bỏ qua GET mới — form dựng từ bản mới, lưu bằng version mới', async () => {
+    const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
+    const { render } = await import('@testing-library/react');
+    const { useGetNavigation } = await import('@vsite/api-sdk');
+    const stale: NavigationDto = { version: 1, isDirty: false, items: [item('page:p-home')] };
+    const fresh: NavigationDto = { version: 9, isDirty: true, items: [item('page:p-about')] };
+    let current = stale;
+    const bodies: SaveNavigationRequest[] = [];
+    server.use(
+      http.get('*/api/shops/:shopId/website/pages', () => HttpResponse.json(pages)),
+      http.get('*/api/shops/:shopId/website/navigation', () => HttpResponse.json(current)),
+      http.put('*/api/shops/:shopId/website/navigation', async ({ request }) => {
+        bodies.push((await request.json()) as SaveNavigationRequest);
+        return HttpResponse.json({ version: 10, isDirty: true });
+      }),
+    );
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    function Reader() {
+      useGetNavigation('shop-1');
+      return null;
+    }
+    const first = render(
+      <QueryClientProvider client={queryClient}>
+        <Reader />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => { expect(queryClient.getQueryData(getGetNavigationQueryKey('shop-1'))).toEqual(stale); });
+    first.unmount();
+    current = fresh; // menu đổi ở nơi khác sau khi tổng quan đã tải
+    renderWithQuery(<NavigationEditor shopId="shop-1" />, { queryClient });
+
+    await screen.findByTestId('nav-row');
+    expect(rowNames()).toEqual(['Giới thiệu']); // không lọt bản cache cũ (Trang chủ)
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu menu' }));
+    await waitFor(() => { expect(bodies).toHaveLength(1); });
+    expect(bodies[0]?.version).toBe(9);
+  });
 });

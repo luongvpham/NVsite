@@ -73,6 +73,8 @@ export function NavigationEditor({ shopId }: { shopId: string }) {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       gcTime: 0,
+      // `gcTime` của các observer cùng key (tổng quan, preview) được gộp bằng max ⇒ `gcTime: 0` không đủ để bỏ cache.
+      refetchOnMount: 'always',
     },
   });
   const pagesQuery = useListPages(shopId);
@@ -84,7 +86,8 @@ export function NavigationEditor({ shopId }: { shopId: string }) {
 
   // Màn lỗi / đang tải chỉ khi CHƯA có dữ liệu (lần tải đầu). Refetch nền lỗi (TanStack v5 giữ `data` và bật
   // `isError`) không được thay form bằng màn lỗi — sẽ mất bản đang sửa.
-  if (navigation === undefined || pageList === undefined) {
+  // Form seed một lần từ `initial` ⇒ chỉ dựng sau lần GET khi mở màn, không dựng từ cache cũ của observer khác.
+  if (navigation === undefined || !navigationQuery.isFetchedAfterMount || pageList === undefined) {
     if (!navigationQuery.isError && !pagesQuery.isError) {
       return <p className="text-muted-foreground">Đang tải menu...</p>;
     }
