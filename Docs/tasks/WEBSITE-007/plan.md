@@ -264,8 +264,8 @@ trang thiếu ⇒ bỏ (cha thiếu ⇒ bỏ nhóm); `custom` ⇒ chỉ khi `isS
 Prop `menuItems` ([site-layout.tsx:12](../../../packages/builder-renderer/src/site-layout.tsx#L12)) thêm
 `children?`, `external?`. Desktop: dropdown mở bằng `:hover`/`:focus-within` (CSS). Mobile:
 `<details><summary>` hamburger. Link ngoài `target="_blank" rel="noopener noreferrer"`. Style chỉ `var(--vs-*)`.
-- [ ] Test trước `site-layout.test.tsx` (con render, link ngoài có `rel`, nhãn HTML hiện dạng text — R4) · `ssr-hydrate.node.test.tsx` ca có menu (R7)
-- [ ] Commit `feat(builder-renderer): Header có menu con + mobile (WEBSITE-007)`
+- [x] Test trước `site-layout.test.tsx` (con render, link ngoài có `rel`, nhãn HTML hiện dạng text — R4) · `ssr-hydrate.node.test.tsx` ca có menu (R7)
+- [x] Commit `feat(builder-renderer): Header có menu con + mobile (WEBSITE-007)`
 
 ### F3: `apps/web` truyền menu
 [site-view.tsx:23-25](../../../apps/web/src/components/site-view.tsx#L23-L25): dựng `resolveUrl` một lần,
