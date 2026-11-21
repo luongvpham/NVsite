@@ -271,8 +271,8 @@ Prop `menuItems` ([site-layout.tsx:12](../../../packages/builder-renderer/src/si
 [site-view.tsx:23-25](../../../apps/web/src/components/site-view.tsx#L23-L25): dựng `resolveUrl` một lần,
 `resolveNavigation(snapshot.navigation.items, snapshot.pages, …)` → `SiteLayout menuItems`. Dọn workaround
 `JsonSafe` ở [load-site-core.ts:25-36](../../../apps/web/src/server/load-site-core.ts#L25-L36) nếu kiểu đã cụ thể.
-- [ ] Test trước `site-view.test.tsx`: có menu · snapshot `items: []` (R6) · mục mồ côi
-- [ ] Commit `feat(web): Shop Site hiện menu (WEBSITE-007)`
+- [x] Test trước `site-view.test.tsx`: có menu · snapshot `items: []` (R6) · mục mồ côi
+- [x] Commit `feat(web): Shop Site hiện menu (WEBSITE-007)`
 
 ### F4: Portal — màn Menu
 `pnpm gen:api` (sau Gate 1). Thêm `@dnd-kit/sortable`. Route `website.menu` bọc `OwnerOnlyGate`, lối vào ở
