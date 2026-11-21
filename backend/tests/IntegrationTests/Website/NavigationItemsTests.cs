@@ -79,11 +79,102 @@ public sealed class NavigationItemsTests
         Assert.Empty(NavigationItems.Validate(items, Pages));
     }
 
+    private static readonly Guid D = Guid.NewGuid(), E = Guid.NewGuid();
+
+    private static readonly NavPage[] Pages5 = [.. Pages, P(D, "Dd", 4), P(E, "Ee", 5)];
+
     [Fact]
-    public void Validate_TooDeep_PathPointsAtGrandchildren()
+    public void Validate_ThreeLevels_Valid()
+    {
+        var items = new[] { Pg(A, children: Pg(B, children: [Pg(C), Custom("x", "https://x.vn")])) };
+        Assert.Empty(NavigationItems.Validate(items, Pages));
+    }
+
+    [Fact]
+    public void Validate_FourthLevel_TooDeep_PathPointsAtLevel3Children()
+    {
+        var items = new[] { Pg(A, children: Pg(B, children: Pg(C, children: Pg(D)))) };
+        Assert.Equal(["/items/0/children/0/children/0/children NAV_TOO_DEEP"], Errs(NavigationItems.Validate(items, Pages5)));
+    }
+
+    [Fact]
+    public void Validate_ElevenGrandchildren_TooMany()
+    {
+        var kids = Enumerable.Range(0, 11).Select(_ => Custom("x", "/x")).ToArray();
+        var items = new[] { Pg(A, children: Pg(B, children: kids)) };
+        Assert.Equal(["/items/0/children/0/children NAV_TOO_MANY_ITEMS"], Errs(NavigationItems.Validate(items, Pages)));
+    }
+
+    [Fact]
+    public void Validate_DuplicateAtLevel3AgainstLevel1()
+    {
+        var items = new[] { Pg(A), Pg(B, children: Pg(C, children: Pg(A))) };
+        Assert.Equal(["/items/1/children/0/children/0/key NAV_PAGE_DUPLICATE"], Errs(NavigationItems.Validate(items, Pages)));
+    }
+
+    [Fact]
+    public void Validate_UnsafeUrlAtLevel3_ExactPath()
+    {
+        var items = new[] { Pg(A, children: [Pg(B), Pg(C, children: [Custom("a", "/ok"), Custom("b", "/ok"), Custom("c", "javascript:alert(1)")])]) };
+        Assert.Equal(["/items/0/children/1/children/2/url NAV_URL_UNSAFE"], Errs(NavigationItems.Validate(items, Pages)));
+    }
+
+    [Fact]
+    public void Merge_DeletedLevel2Parent_DropsLevel3Subtree_LivePagesReAppendedHiddenAtLevel1()
+    {
+        var gone = Guid.NewGuid();
+        var stored = new[] { Pg(A, children: Pg(gone, children: [Pg(B), Custom("x", "/x")])) };
+        var merged = NavigationItems.Merge(stored, Pages);
+        Assert.Equal([NavItem.PageKey(A), NavItem.PageKey(B), NavItem.PageKey(C)], Keys(merged));
+        Assert.Empty(merged[0].Children);
+        Assert.True(merged[1].Hidden && merged[2].Hidden);
+    }
+
+    [Fact]
+    public void Merge_DeletedLevel3Page_DroppedOnly_SiblingsKept_PageNotReAppendedWhenLive()
+    {
+        var stored = new[] { Pg(A, children: Pg(B, children: [Pg(Guid.NewGuid()), Pg(C)])) };
+        var merged = NavigationItems.Merge(stored, Pages);
+        Assert.Equal([NavItem.PageKey(A)], Keys(merged));
+        Assert.Equal([NavItem.PageKey(C)], Keys(merged[0].Children[0].Children));
+    }
+
+    [Fact]
+    public void ForSnapshot_HiddenLevel2Parent_DropsItsLevel3Subtree()
+    {
+        var published = new HashSet<Guid> { A, B, C, D, E };
+        var items = new[]
+        {
+            Pg(A, children: [Pg(B, hidden: true, children: Pg(C)), Pg(D, children: [Pg(E), Pg(C, hidden: true)])]),
+        };
+        var snap = NavigationItems.ForSnapshot(items, published);
+        Assert.Equal([NavItem.PageKey(D)], Keys(snap[0].Children));
+        Assert.Equal([NavItem.PageKey(E)], Keys(snap[0].Children[0].Children));
+    }
+
+    [Fact]
+    public void ForSnapshot_UnpublishedLevel2Parent_DropsSubtree()
     {
         var items = new[] { Pg(A, children: Pg(B, children: Pg(C))) };
-        Assert.Equal(["/items/0/children/0/children NAV_TOO_DEEP"], Errs(NavigationItems.Validate(items, Pages)));
+        var snap = NavigationItems.ForSnapshot(items, new HashSet<Guid> { A, C });
+        Assert.Empty(snap[0].Children);
+    }
+
+    [Fact]
+    public void ThreeLevels_StoredRoundTrip_AndSnapshotJson_NoHidden_ChildrenOnlyWhenNonEmpty_NeverLevel3()
+    {
+        var items = new[] { Pg(A, children: [Pg(B, hidden: true, children: [Pg(C), Custom("x", "/x")]), Pg(D)]) };
+        var back = NavigationItems.Parse(NavigationItems.Serialize(items, Versioning), Versioning);
+        Assert.Equal(2, back[0].Children[0].Children.Count);
+        Assert.True(back[0].Children[0].Hidden);
+        Assert.Equal("/x", back[0].Children[0].Children[1].Url);
+
+        var snap = NavigationItems.ToSnapshotJsonArray(items);
+        Assert.DoesNotContain("hidden", snap.ToJsonString());
+        var l2 = snap[0]!["children"]!.AsArray();
+        Assert.Equal(2, l2[0]!["children"]!.AsArray().Count);
+        Assert.Null(l2[1]!.AsObject()["children"]);
+        Assert.Null(l2[0]!["children"]![0]!.AsObject()["children"]);
     }
 
     [Fact]

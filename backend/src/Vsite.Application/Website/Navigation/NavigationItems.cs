@@ -10,7 +10,7 @@ namespace Vsite.Application.Website.Navigation;
 /// <summary>
 /// Một mục menu (WEBSITE-007, #113). <see cref="Key"/> là <c>"page:{pageId}"</c> hoặc <c>"custom"</c> (chuỗi, không enum — #19).
 /// <see cref="Label"/> null = dùng tên trang (<c>custom</c> bắt buộc có). <see cref="Url"/> chỉ có ở <c>custom</c>.
-/// <see cref="Children"/> chỉ một cấp: mục con luôn có <c>Children</c> rỗng.
+/// <see cref="Children"/> lồng tối đa 3 cấp (cấp 1 → con → cháu); mục cấp 3 có <c>Children</c> rỗng.
 /// </summary>
 public sealed record NavItem(string Key, string? Label, string? Url, bool Hidden, IReadOnlyList<NavItem> Children)
 {
@@ -58,6 +58,7 @@ public static class NavigationItems
 {
     public const int MaxTopLevel = 12;
     public const int MaxChildren = 10;
+    public const int MaxDepth = 3;
     public const int MaxLabelLength = 60;
     public const int MaxUrlLength = 2048;
 
@@ -86,19 +87,10 @@ public static class NavigationItems
         var result = new List<NavItem>();
         foreach (var item in stored)
         {
-            if (!IsLive(item, existing))
+            if (MergeItem(item, existing, inMenu, depth: 1) is { } merged)
             {
-                continue;
+                result.Add(merged);
             }
-
-            var children = item.Children.Where(c => IsLive(c, existing)).ToList();
-            Track(item, inMenu);
-            foreach (var c in children)
-            {
-                Track(c, inMenu);
-            }
-
-            result.Add(item with { Children = children });
         }
 
         foreach (var p in ordered.Where(p => !inMenu.Contains(p.Id)))
@@ -111,7 +103,7 @@ public static class NavigationItems
 
     /// <summary>Trim nhãn/url; nhãn rỗng sau trim ⇒ null; <c>page</c> không mang url. Dùng TRƯỚC khi lưu (R4).</summary>
     public static IReadOnlyList<NavItem> Normalize(IReadOnlyList<NavItem> items) =>
-        items.Select(i => NormalizeItem(i, depth: 0)).ToList();
+        items.Select(NormalizeItem).ToList();
 
     /// <summary>Kiểm menu (đã hoặc chưa <see cref="Normalize"/>) — rỗng nghĩa là hợp lệ. Thứ tự lỗi theo thứ tự duyệt.</summary>
     public static IReadOnlyList<NavError> Validate(IReadOnlyList<NavItem> items, IReadOnlyList<NavPage> pages)
@@ -125,29 +117,36 @@ public static class NavigationItems
             errors.Add(new NavError("/items", NavigationErrorCodes.TooManyItems, $"Tối đa {MaxTopLevel} mục ở cấp 1."));
         }
 
+        ValidateLevel(items, "/items", depth: 1, byId, seen, errors);
+        return errors;
+    }
+
+    private static void ValidateLevel(
+        IReadOnlyList<NavItem> items, string basePath, int depth, Dictionary<Guid, NavPage> byId, HashSet<Guid> seen, List<NavError> errors)
+    {
         for (var i = 0; i < items.Count; i++)
         {
-            var path = $"/items/{i.ToString(CultureInfo.InvariantCulture)}";
-            ValidateOne(NormalizeItem(items[i], depth: 1), path, byId, seen, errors);
+            var path = $"{basePath}/{i.ToString(CultureInfo.InvariantCulture)}";
+            ValidateOne(NormalizeOne(items[i]), path, byId, seen, errors);
 
             var children = items[i].Children;
+            if (depth >= MaxDepth)
+            {
+                if (children.Count > 0)
+                {
+                    errors.Add(new NavError(path + "/children", NavigationErrorCodes.TooDeep, $"Menu chỉ lồng tối đa {MaxDepth} cấp."));
+                }
+
+                continue;
+            }
+
             if (children.Count > MaxChildren)
             {
                 errors.Add(new NavError(path + "/children", NavigationErrorCodes.TooManyItems, $"Tối đa {MaxChildren} mục con mỗi mục."));
             }
 
-            for (var j = 0; j < children.Count; j++)
-            {
-                var childPath = $"{path}/children/{j.ToString(CultureInfo.InvariantCulture)}";
-                ValidateOne(NormalizeItem(children[j], depth: 1), childPath, byId, seen, errors);
-                if (children[j].Children.Count > 0)
-                {
-                    errors.Add(new NavError(childPath + "/children", NavigationErrorCodes.TooDeep, "Menu chỉ lồng một cấp."));
-                }
-            }
+            ValidateLevel(children, path + "/children", depth + 1, byId, seen, errors);
         }
-
-        return errors;
     }
 
     /// <summary>
@@ -156,18 +155,10 @@ public static class NavigationItems
     /// </summary>
     public static IReadOnlyList<NavItem> ForSnapshot(IReadOnlyList<NavItem> items, IReadOnlySet<Guid> publishedPageIds)
     {
-        var result = new List<NavItem>();
-        foreach (var item in items)
-        {
-            if (!Visible(item, publishedPageIds))
-            {
-                continue;
-            }
-
-            result.Add(item with { Children = item.Children.Where(c => Visible(c, publishedPageIds)).ToList() });
-        }
-
-        return result;
+        return items
+            .Where(i => Visible(i, publishedPageIds))
+            .Select(i => i with { Children = ForSnapshot(i.Children, publishedPageIds) })
+            .ToList();
     }
 
     /// <summary>Đọc <c>NavigationConfig.Items</c> (nâng schemaVersion nếu cần). Dữ liệu do chính ta ghi nên hỏng ⇒ ném.</summary>
@@ -184,7 +175,7 @@ public static class NavigationItems
             throw new InvalidOperationException("Tài liệu menu thiếu mảng 'items'.");
         }
 
-        return ReadArray(arr, topLevel: true);
+        return ReadArray(arr, depth: 1);
     }
 
     /// <summary>Ghi tài liệu <c>{ schemaVersion, items }</c> (camelCase) ở schemaVersion hiện hành.</summary>
@@ -207,7 +198,7 @@ public static class NavigationItems
         var arr = new JsonArray();
         foreach (var item in items)
         {
-            arr.Add(ToJson(item, topLevel: true, forSnapshot: true));
+            arr.Add(ToJson(item, depth: 1, forSnapshot: true));
         }
 
         return arr;
@@ -219,7 +210,7 @@ public static class NavigationItems
         var arr = new JsonArray();
         foreach (var item in items)
         {
-            arr.Add(ToJson(item, topLevel: true));
+            arr.Add(ToJson(item, depth: 1));
         }
 
         return arr;
@@ -241,7 +232,34 @@ public static class NavigationItems
     private static bool Visible(NavItem item, IReadOnlySet<Guid> published) =>
         !item.Hidden && (item.IsCustom || (item.PageId is { } id && published.Contains(id)));
 
-    private static NavItem NormalizeItem(NavItem item, int depth)
+    /// <summary>Đệ quy mọi cấp: bỏ mục (cùng cả cây con) trỏ trang không còn; ghi nhận trang còn trong menu.</summary>
+    private static NavItem? MergeItem(NavItem item, HashSet<Guid> existing, HashSet<Guid> inMenu, int depth)
+    {
+        if (!IsLive(item, existing))
+        {
+            return null;
+        }
+
+        Track(item, inMenu);
+        var children = new List<NavItem>();
+        if (depth < MaxDepth)
+        {
+            foreach (var c in item.Children)
+            {
+                if (MergeItem(c, existing, inMenu, depth + 1) is { } m)
+                {
+                    children.Add(m);
+                }
+            }
+        }
+
+        // Cấp sâu hơn MaxDepth (chỉ có thể do dữ liệu lưu hỏng) bị bỏ khi đọc: Children của cấp 3 luôn rỗng.
+        return item with { Children = children };
+    }
+
+    private static NavItem NormalizeItem(NavItem item) => NormalizeOne(item) with { Children = item.Children.Select(NormalizeItem).ToList() };
+
+    private static NavItem NormalizeOne(NavItem item)
     {
         var label = item.Label?.Trim();
         if (string.IsNullOrEmpty(label))
@@ -249,12 +267,7 @@ public static class NavigationItems
             label = null;
         }
 
-        return item with
-        {
-            Label = label,
-            Url = item.IsCustom ? item.Url?.Trim() : null,
-            Children = depth == 0 ? item.Children.Select(c => NormalizeItem(c, 1)).ToList() : item.Children,
-        };
+        return item with { Label = label, Url = item.IsCustom ? item.Url?.Trim() : null };
     }
 
     private static void ValidateOne(NavItem item, string path, Dictionary<Guid, NavPage> byId, HashSet<Guid> seen, List<NavError> errors)
@@ -290,7 +303,7 @@ public static class NavigationItems
         }
     }
 
-    private static JsonObject ToJson(NavItem item, bool topLevel, bool forSnapshot = false)
+    private static JsonObject ToJson(NavItem item, int depth, bool forSnapshot = false)
     {
         var o = new JsonObject
         {
@@ -307,12 +320,12 @@ public static class NavigationItems
             o["hidden"] = item.Hidden;
         }
 
-        if (topLevel && (!forSnapshot || item.Children.Count > 0))
+        if (depth < MaxDepth && (!forSnapshot || item.Children.Count > 0))
         {
             var children = new JsonArray();
             foreach (var c in item.Children)
             {
-                children.Add(ToJson(c, topLevel: false, forSnapshot));
+                children.Add(ToJson(c, depth + 1, forSnapshot));
             }
 
             o["children"] = children;
@@ -321,7 +334,7 @@ public static class NavigationItems
         return o;
     }
 
-    private static List<NavItem> ReadArray(JsonArray arr, bool topLevel)
+    private static List<NavItem> ReadArray(JsonArray arr, int depth)
     {
         var list = new List<NavItem>();
         foreach (var node in arr)
@@ -331,7 +344,8 @@ public static class NavigationItems
                 throw new InvalidOperationException("Mục menu hỏng: thiếu 'key'.");
             }
 
-            var children = topLevel && o["children"] is JsonArray c ? ReadArray(c, topLevel: false) : [];
+            // Cấp 3 không có children; thứ gì sâu hơn trong tài liệu lưu hỏng bị bỏ khi đọc (không ném).
+            var children = depth < MaxDepth && o["children"] is JsonArray c ? ReadArray(c, depth + 1) : [];
             list.Add(new NavItem(
                 o["key"]!.GetValue<string>(),
                 o["label"]?.GetValueKind() == JsonValueKind.String ? o["label"]!.GetValue<string>() : null,
