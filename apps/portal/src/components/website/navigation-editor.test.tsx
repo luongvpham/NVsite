@@ -1,11 +1,12 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  NavigationDto,
-  NavigationItemDto,
-  PageDto,
-  SaveNavigationRequest,
+import {
+  getGetNavigationQueryKey,
+  type NavigationDto,
+  type NavigationItemDto,
+  type PageDto,
+  type SaveNavigationRequest,
 } from '@vsite/api-sdk';
 import { getErrorMessage } from '../../lib/error-messages';
 import { server } from '../../test/msw-server';
@@ -405,6 +406,96 @@ describe('NavigationEditor — lưu', () => {
       version: 3,
       items: [{ key: 'page:p-contact', label: null, url: null, hidden: false, children: [] }],
     });
+  });
+});
+
+describe('NavigationEditor — chính sách query của bản nháp', () => {
+  it('refetch nền sau khi lưu bị lỗi: bản đang sửa vẫn còn, không thay bằng màn lỗi', async () => {
+    let gets = 0;
+    server.use(
+      http.get('*/api/shops/:shopId/website/pages', () => HttpResponse.json(pages)),
+      http.get('*/api/shops/:shopId/website/navigation', () => {
+        gets += 1;
+        return gets === 1
+          ? HttpResponse.json(autoMenu)
+          : HttpResponse.json({ status: 500, title: 'x', error_code: 'X' }, { status: 500 });
+      }),
+      http.put('*/api/shops/:shopId/website/navigation', () =>
+        HttpResponse.json({ version: 1, isDirty: true }),
+      ),
+    );
+    renderWithQuery(<NavigationEditor shopId="shop-1" />);
+    await screen.findByText('Trang chủ');
+
+    fireEvent.change(within(row('Trang chủ')).getByRole('textbox', { name: 'Nhãn hiển thị' }), {
+      target: { value: 'Nhà' },
+    });
+    save();
+    await screen.findByText('Đã lưu menu.');
+    // Lưu xong invalidate getNavigation ⇒ refetch (lỗi 500).
+    await waitFor(() => {
+      expect(gets).toBe(2);
+    });
+    fireEvent.change(within(row('Giới thiệu')).getByRole('textbox', { name: 'Nhãn hiển thị' }), {
+      target: { value: 'Về' },
+    });
+
+    expect(screen.queryByRole('button', { name: 'Thử lại' })).not.toBeInTheDocument();
+    expect(within(row('Trang chủ')).getByRole('textbox', { name: 'Nhãn hiển thị' })).toHaveValue(
+      'Nhà',
+    );
+    expect(within(row('Giới thiệu')).getByRole('textbox', { name: 'Nhãn hiển thị' })).toHaveValue(
+      'Về',
+    );
+  });
+
+  it('mở lại màn: luôn GET bản mới (không dùng cache có version cũ)', async () => {
+    const { bodies, getCount, queryClient, unmount } = setup({
+      menus: [autoMenu, { version: 9, isDirty: true, items: [item('page:p-contact')] }],
+    });
+    await screen.findByText('Trang chủ');
+    unmount();
+    // gcTime 0: cache bị bỏ ngay sau khi rời màn (GC chạy ở nhịp timer kế tiếp).
+    await waitFor(() => {
+      expect(
+        queryClient.getQueryCache().find({ queryKey: getGetNavigationQueryKey('shop-1') }),
+      ).toBeUndefined();
+    });
+
+    renderWithQuery(<NavigationEditor shopId="shop-1" />, { queryClient });
+    await waitFor(() => {
+      expect(rowNames()).toEqual(['Liên hệ']);
+    });
+    expect(getCount()).toBe(2);
+    save();
+    await waitFor(() => {
+      expect(bodies).toHaveLength(1);
+    });
+    expect(bodies[0]?.version).toBe(9);
+  });
+
+  it('thay đổi trong lúc đang lưu: không báo "Đã lưu menu."', async () => {
+    let release: () => void = () => undefined;
+    setup();
+    server.use(
+      http.put('*/api/shops/:shopId/website/navigation', async () => {
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        return HttpResponse.json({ version: 1, isDirty: true });
+      }),
+    );
+    await screen.findByText('Trang chủ');
+
+    save();
+    await screen.findByRole('button', { name: 'Đang lưu...' });
+    fireEvent.change(within(row('Trang chủ')).getByRole('textbox', { name: 'Nhãn hiển thị' }), {
+      target: { value: 'Nhà' },
+    });
+    release();
+
+    await screen.findByRole('button', { name: 'Lưu menu' });
+    expect(screen.queryByText('Đã lưu menu.')).not.toBeInTheDocument();
   });
 });
 

@@ -33,6 +33,7 @@ import { Button } from '@vsite/ui';
 import { getErrorMessage } from '../../lib/error-messages';
 import {
   applyMove,
+  findItem,
   flatten,
   fromDto,
   getProjection,
@@ -61,16 +62,32 @@ const INDENT = 24;
  * thái bật/tắt); khi 409 thì tải lại và dựng lại form từ bản mới (đổi `key` ⇒ bỏ mọi thay đổi chưa lưu).
  */
 export function NavigationEditor({ shopId }: { shopId: string }) {
-  const navigationQuery = useGetNavigation(shopId);
+  // Cùng chính sách với các editor nháp khác (editor-shell, use-theme-draft): bản trong cache chỉ đúng lúc mở màn
+  // (sau đó version đổi theo mỗi lần lưu). Không tự refetch đè lên form; bỏ cache ngay khi rời màn để lần mở sau
+  // GET lại — không thì mở lại với `version` cũ ⇒ 409 giả và mất thay đổi. `invalidateQueries` (sau lưu, F5 sau
+  // publish/rollback) và `refetch()` khi 409 vẫn chạy bình thường.
+  const navigationQuery = useGetNavigation(shopId, {
+    query: {
+      retry: false,
+      staleTime: Infinity,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      gcTime: 0,
+    },
+  });
   const pagesQuery = useListPages(shopId);
   const [loadKey, setLoadKey] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
 
-  if (navigationQuery.isPending || pagesQuery.isPending) {
-    return <p className="text-muted-foreground">Đang tải menu...</p>;
-  }
+  const navigation = navigationQuery.data;
+  const pageList = pagesQuery.data;
 
-  if (navigationQuery.isError || pagesQuery.isError) {
+  // Màn lỗi / đang tải chỉ khi CHƯA có dữ liệu (lần tải đầu). Refetch nền lỗi (TanStack v5 giữ `data` và bật
+  // `isError`) không được thay form bằng màn lỗi — sẽ mất bản đang sửa.
+  if (navigation === undefined || pageList === undefined) {
+    if (!navigationQuery.isError && !pagesQuery.isError) {
+      return <p className="text-muted-foreground">Đang tải menu...</p>;
+    }
     const error = navigationQuery.isError ? navigationQuery.error : pagesQuery.error;
     return (
       <div className="space-y-3">
@@ -93,7 +110,14 @@ export function NavigationEditor({ shopId }: { shopId: string }) {
   }
 
   const reloadAfterConflict = async () => {
-    await navigationQuery.refetch();
+    const result = await navigationQuery.refetch();
+    if (result.isError) {
+      // Không tải được bản mới: giữ form (version cũ sẽ lại 409), báo để người dùng tải lại trang.
+      setNotice(
+        `Menu vừa được sửa ở nơi khác, nhưng chưa tải lại được bản mới nhất: ${getErrorMessage(getErrorCode(result.error))}`,
+      );
+      return;
+    }
     setNotice(
       'Menu vừa được sửa ở nơi khác. Đã tải lại bản mới nhất — thay đổi chưa lưu của bạn đã bị bỏ.',
     );
@@ -104,8 +128,8 @@ export function NavigationEditor({ shopId }: { shopId: string }) {
     <NavigationForm
       key={loadKey}
       shopId={shopId}
-      initial={navigationQuery.data}
-      pages={pagesQuery.data}
+      initial={navigation}
+      pages={pageList}
       notice={notice}
       onSaved={() => {
         setNotice(null);
@@ -195,6 +219,10 @@ function NavigationForm({ shopId, initial, pages, notice, onSaved, onConflict }:
   );
 
   const saveMutation = useSaveNavigation();
+  // Đếm số lần sửa: lưu xong chỉ báo "Đã lưu" nếu không có thay đổi nào sau lúc gửi.
+  const editSeq = useRef(0);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
   const topLevelFull = items.length >= NAV_LIMITS.topLevel;
   const usedPageIds = pageIdsInMenu(items);
   const addablePages = pages.filter(
@@ -208,6 +236,7 @@ function NavigationForm({ shopId, initial, pages, notice, onSaved, onConflict }:
   };
 
   const edit = (next: NavItem[], touchedUid?: string) => {
+    editSeq.current += 1;
     setItems(next);
     setSaved(false);
     if (touchedUid && rowErrors.has(touchedUid)) {
@@ -234,12 +263,13 @@ function NavigationForm({ shopId, initial, pages, notice, onSaved, onConflict }:
     setGeneralError(null);
     // Giữ đúng mảng đã gửi: JSON Pointer của 422 trỏ vào body này, không phải cây đang sửa tiếp.
     const sent = items;
+    const seqAtSend = editSeq.current;
     saveMutation.mutate(
       { shopId, data: { version, items: toRequestItems(sent) } },
       {
         onSuccess: (result) => {
           setVersion(result.version);
-          setSaved(true);
+          setSaved(editSeq.current === seqAtSend);
           onSaved();
           void queryClient.invalidateQueries({ queryKey: getGetNavigationQueryKey(shopId) });
         },
@@ -256,7 +286,9 @@ function NavigationForm({ shopId, initial, pages, notice, onSaved, onConflict }:
             for (const e of parsed?.errors ?? []) {
               const uid = uidAtPointer(sent, e.path);
               const text = messageOf(e.code, e.message);
-              if (uid) byRow.set(uid, [...(byRow.get(uid) ?? []), text]);
+              // Dòng đã bị xoá trong lúc chờ phản hồi ⇒ không còn chỗ tô, đưa về danh sách lỗi chung.
+              if (uid && findItem(itemsRef.current, uid))
+                byRow.set(uid, [...(byRow.get(uid) ?? []), text]);
               else details.push(text);
             }
             if (parsed?.truncated)

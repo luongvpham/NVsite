@@ -8,13 +8,22 @@ import { render } from '@testing-library/react';
  *
  * `mutationRetry`: mặc định `false`. Test "không tự thử lại" truyền số > 0 để hook thiếu `retry: false` bị lộ.
  */
-export function renderWithQuery(ui: ReactElement, options: { mutationRetry?: number | false } = {}) {
+export function renderWithQuery(
+  ui: ReactElement,
+  options: { mutationRetry?: number | false; queryClient?: QueryClient } = {},
+) {
   const mutationRetry = options.mutationRetry ?? false;
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: mutationRetry, retryDelay: 0 },
-    },
-  });
-  return { ...render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>), queryClient };
+  // `queryClient`: dùng lại client của lần render trước (test "mở lại màn" — kiểm chính sách cache).
+  const queryClient =
+    options.queryClient ??
+    new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: mutationRetry, retryDelay: 0 },
+      },
+    });
+  return {
+    ...render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>),
+    queryClient,
+  };
 }
