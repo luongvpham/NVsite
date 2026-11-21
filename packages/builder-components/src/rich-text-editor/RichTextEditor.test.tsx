@@ -92,7 +92,10 @@ describe('RichTextEditor — nạp + phát thay đổi', () => {
     fireEvent.click(within(toolbar()).getByRole('button', { name: 'In đậm' }));
     await waitFor(() => { expect(onChange).toHaveBeenCalled(); });
     expect(lastHtml(onChange)).toBe('<p><strong>Xin chào</strong></p>');
-    expect(within(toolbar()).getByRole('button', { name: 'In đậm' })).toHaveAttribute('aria-pressed', 'true');
+    // Toolbar đọc trạng thái định dạng ở một lượt cập nhật Lexical sau `onChange` — chờ, đừng giả định cùng nhịp.
+    await waitFor(() => {
+      expect(within(toolbar()).getByRole('button', { name: 'In đậm' })).toHaveAttribute('aria-pressed', 'true');
+    });
   });
 
   it('chọn "Tiêu đề 2" → <h2>; chọn "Danh sách chấm" → <ul>', async () => {
