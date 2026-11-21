@@ -137,7 +137,25 @@ Không sửa `backend/`, `contracts/`, `packages/api-sdk/src/generated/**`. Khô
 - `@vsite/builder-components` 573/573 · `@vsite/builder-renderer` 44/44 · `@vsite/web` 272/272 (dòng nhiễu cũ
   `ReferenceError: module is not defined`, exit 0) · `apps/portal` 415/415. Typecheck + lint sạch ở các gói chạm.
 - Toàn repo `pnpm build && pnpm test`: xem mục "Đóng S2" bên dưới.
-- Nghiệm thu tay F6: **chưa** — xem mục F6.
+- Nghiệm thu tay F6: **chưa** — xem mục "F6" bên dưới.
+
+### Đóng S2 (2026-11-21)
+- `change-reviewer` toàn nhánh ([`review.md`](review.md)): 0 Critical, W1–W6. Sửa trong nhánh (`8997a49`):
+  `validateMenu` chặn > 12 mục cấp 1 (tính cả mục ẩn, như BE) và không gửi PUT (W1 phần FE) · thêm mọi export menu của
+  SDK/zod/MSW vào danh sách cấm import của `apps/web` (W2 — đã thử import tạm `useGetNavigation` để thấy lint đỏ) ·
+  comment `JsonSafe` (W5) · doc comment `SiteLayout` (S1) · test rollback refetch `getNavigation` (S5, chỉ thiếu test).
+  Tài liệu: #113, banner plan, `brief.md` (W4 — 409 sau mọi publish/rollback chạm dòng menu) (W3).
+- Flake có từ trước, sửa gốc (`68e2ed3`): test `RichTextEditor` khẳng định `aria-pressed` ngay sau `onChange`, trong khi
+  toolbar cập nhật ở lượt render sau (`registerUpdateListener` → `setState`) ⇒ đỏ ngẫu nhiên khi `pnpm test` chạy song song.
+  Còn flake `gen-registry` "byte-identical" > 60 s khi tải nặng (đã biết từ TOOLING-004) — không sửa ở đây.
+- `pnpm build` 10/10 task (exit 0). `pnpm test` toàn repo lần 3 (sau `68e2ed3`): **10/10 task xanh**, exit 0 —
+  builder-components 573 · builder-core 137 · builder-renderer 44 · web 272 · portal 415 · api-sdk 12 · shared 10 ·
+  theme-engine 49. Sau `8997a49`: portal 419, web 272, builder-renderer 44 (chạy riêng từng gói). `pnpm check:docs` xanh.
+- **Không sửa** `backend/docs/modules/website.md:141` (cùng nội dung W4) — người dặn S2 không sửa `backend/`.
+
+### F6 — nghiệm thu tay với BE thật
+**Chưa làm** — cần người cùng làm. Danh sách cần kiểm: plan §10 F6 (4 bước) + `review.md` mục "F6 phải kiểm cụ thể"
+(gồm smoke màn Menu có dữ liệu, kéo-thả trên trình duyệt thật, CSS mobile, ca 409 sau publish/rollback, integration tắt MSW).
 
 ## Lệch so với `DesignIdeal/05` §8
 
@@ -153,9 +171,13 @@ Không sửa `backend/`, `contracts/`, `packages/api-sdk/src/generated/**`. Khô
 - **F6 nghiệm thu tay với BE thật** (4 bước plan §10) + smoke màn Menu có dữ liệu + thử kéo-thả chuột/bàn phím trên
   trình duyệt thật (test jsdom giả toạ độ) + xem vị trí menu mobile.
 - Việc nhỏ FE còn để ngỏ (review S2, Minor): mở màn Menu mà GET lỗi khi đang có cache cũ thì form dựng từ cache cũ ·
-  `validateMenu` chưa chặn > 12 mục cấp 1 (chỉ xảy ra nếu GET trả > 12) · tràn 10 mục/cha chỉ báo sau khi thả ·
-  xoá mục cha xoá cả con, không hỏi lại (UX — người quyết ở Gate 2) · `navigation-editor.tsx` ~700 dòng ·
-  comment `JsonSafe` ở `load-site-core.ts` còn nhắc `navigation.items` · `href` của `custom` không trim.
+  tràn 10 mục/cha chỉ báo sau khi thả · `navigation-editor.tsx` ~750 dòng · `href` của `custom` không trim.
+  (Chặn > 12 mục cấp 1 và comment `JsonSafe` đã sửa ở `8997a49`.)
+- Từ review toàn nhánh (theo dõi): link `custom` tương đối trong preview hiện dải "trang đã xoá" (S2) · dấu "chưa
+  publish" hiện cả với website chưa publish lần nào (S3) · gom chính sách query "editor nháp" thành helper dùng chung (S4) ·
+  `backend/docs/modules/website.md:141` chưa ghi 409 sau mọi publish/rollback (W4).
+- **Chờ người quyết ở Gate 2:** mục ẩn có tính vào giới hạn 12 mục cấp 1 không / tự sinh có cắt ở 12 không (W1, BE) ·
+  thêm "Giữ bản của tôi" khi 409 ở màn Menu (W4) · xoá mục cha có hỏi lại / giữ con không.
 - **Bind body có kiểu trả 500 (Development) / 400 rỗng (Production) không có `error_code`.** Lỗi có từ trước, ảnh hưởng
   mọi route nhận body có kiểu, ngoài phạm vi task. `saveNavigation` đã né bằng cách đọc body thô. Theo dõi ở `00-INDEX` §4.
 - `params` của 422/409 không có type trong OpenAPI (giống các route website hiện có) (A6).

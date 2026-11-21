@@ -1,6 +1,6 @@
 # WEBSITE-007 — `NavigationConfig`: menu website shop (Bước 7)
 
-> **Đã chốt 2026-11-20 — S1 (BE) đã code 2026-11-21, Gate 1 qua; S2 (FE) chưa**
+> **Đã chốt 2026-11-20 — S1 (BE) đã code 2026-11-21, Gate 1 qua; S2 (FE) F1–F5 đã code 2026-11-21, F6 (nghiệm thu tay) chưa**
 >
 > **Lane C.** Entity + bảng mới, endpoint mới (chạm contract `website.v1`), đổi shape snapshot
 > (`navigation.items`), màn hình Portal mới, đổi `SiteLayout` của renderer.
@@ -298,8 +298,8 @@ truyền `menuItems` qua `resolveNavigation` (trang đang tắt bị bỏ như s
 - [ ] Hai tab cùng sửa menu → tab sau nhận 409 có thông báo
 
 ## 11. Đóng task (trước Gate 2)
-- [ ] Integration tắt MSW · `change-reviewer` (chạm tenant + contract ⇒ model mạnh nhất) · `review.md` (kèm "Ma sát quy trình")
-- [ ] `changelog.md` thêm phần FE · `00-INDEX` §3 dòng Bước 7
+- [ ] Integration tắt MSW (cần BE thật — làm cùng F6) · [x] `change-reviewer` (model mạnh nhất) · [x] `review.md` (kèm "Ma sát quy trình")
+- [x] `changelog.md` thêm phần FE · `00-INDEX` §3 dòng Bước 7 (cập nhật lại sau F6)
 
 ## 12. Giả định tôi đã tự đặt (người đã duyệt 2026-11-20)
 

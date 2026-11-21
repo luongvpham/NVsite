@@ -51,6 +51,9 @@ Làm đúng F1 → F6 của plan §10. Những điểm plan chưa nói, hoặc S
 **Publish / rollback (F5)**
 - ⚠️ **Publish khi menu chưa từng lưu sẽ tạo dòng menu.** Tab nào đang mở màn Menu với `version: null` mà
   bấm Lưu sau đó sẽ nhận `409`. Sau publish **và** rollback, phải invalidate query `getNavigation`.
+  _(Bổ sung sau review toàn nhánh, W4 ở [`review.md`](review.md):)_ không chỉ ca "chưa từng lưu" — publish khi menu
+  đang dirty (`MarkPublished()`) và rollback (`MarkDirty()`) đều ghi dòng menu nên `version` (`xmin`) đổi. Tab nào đang
+  mở màn Menu từ trước đó sẽ nhận `409` khi Lưu, dù `Items` không đổi.
 - `isDirty` trong `NavigationDto`: `true` khi chưa từng lưu, sau khi lưu, hoặc sau rollback; `false` sau publish.
   Đây là nguồn cho dấu "Menu có thay đổi chưa publish".
 
