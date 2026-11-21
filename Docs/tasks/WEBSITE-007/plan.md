@@ -1,6 +1,6 @@
 # WEBSITE-007 — `NavigationConfig`: menu website shop (Bước 7)
 
-> **Đã chốt 2026-11-20 — chưa code**
+> **Đã chốt 2026-11-20 — S1 (BE) đã code 2026-11-21, Gate 1 qua; S2 (FE) chưa**
 >
 > **Lane C.** Entity + bảng mới, endpoint mới (chạm contract `website.v1`), đổi shape snapshot
 > (`navigation.items`), màn hình Portal mới, đổi `SiteLayout` của renderer.
@@ -229,9 +229,9 @@ Query `GetNavigation` (đọc dòng + trang chưa xoá của website, `Merge`), 
 NAVIGATION_CONFLICT` theo khuôn [SavePageDraftHandler.cs](../../../backend/src/Vsite.Application/Website/Commands/SavePageDraft/SavePageDraftHandler.cs)).
 Request là DTO có kiểu (không raw `JsonElement`) để Orval sinh type. Route `.WithName("getNavigation")`,
 `.WithName("saveNavigation")`, `RequireOwner()`.
-- [ ] Test trước `NavigationHandlerTests` + `NavigationEndpointTests`: R1, R2, 422 có `params.errors[].path`, `isDirty` sau lưu, `version` mới khác cũ, không phải Owner ⇒ 403
-- [ ] FAIL → hiện thực → PASS · `ShopScopedRouteFilterTests` xanh
-- [ ] Commit `feat(website): API đọc/ghi menu (WEBSITE-007)`
+- [x] Test trước `NavigationHandlerTests` + `NavigationEndpointTests`: R1, R2, 422 có `params.errors[].path`, `isDirty` sau lưu, `version` mới khác cũ, không phải Owner ⇒ 403
+- [x] FAIL → hiện thực → PASS · `ShopScopedRouteFilterTests` xanh
+- [x] Commit `feat(website): API đọc/ghi menu (WEBSITE-007)`
 
 ### T4: Publish / rollback mang menu + shape snapshot
 `envelope-schema.ts`: thay `items: z.array(z.unknown())` ([:215](../../../packages/builder-components/meta/envelope-schema.ts#L215))
@@ -239,16 +239,16 @@ và `{ type: 'array' }` (:262) bằng shape mục `{ key, label: string|null, ur
 strict, cả Zod lẫn JSON Schema. Xuất kiểu `SiteNavigationItem`. `SnapshotBuilder.Build` nhận thêm items
 (thay dòng :83). `PublishWebsiteHandler`: `Merge` → `ForSnapshot` → build; upsert `NavigationConfig` +
 `MarkPublished()` trong cùng `SaveChanges`. `RollbackPublicationHandler`: `MarkDirty()` menu nếu có dòng.
-- [ ] Test trước: `site-snapshot-schema.test.ts` (snapshot `items: []` cũ vẫn hợp lệ — R6; mục 3 cấp hợp lệ, mục cấp 4 bị từ chối) · `schema-equivalence` / `envelope-schema` Zod ≡ JSON Schema · `SnapshotBuilderTests` · `PublishWebsiteHandlerTests` (chưa có menu ⇒ snapshot có menu tự sinh + dòng được tạo, `isDirty=false`; R5) · rollback ⇒ `isDirty=true`
-- [ ] `pnpm gen:registry` → FAIL → hiện thực → PASS · `PublishedSiteBoundaryTests` xanh không sửa
-- [ ] Commit `feat(website): snapshot mang menu thật (WEBSITE-007, #113)`
+- [x] Test trước: `site-snapshot-schema.test.ts` (snapshot `items: []` cũ vẫn hợp lệ — R6; mục 3 cấp hợp lệ, mục cấp 4 bị từ chối) · `schema-equivalence` / `envelope-schema` Zod ≡ JSON Schema · `SnapshotBuilderTests` · `PublishWebsiteHandlerTests` (chưa có menu ⇒ snapshot có menu tự sinh + dòng được tạo, `isDirty=false`; R5) · rollback ⇒ `isDirty=true`
+- [x] `pnpm gen:registry` → FAIL → hiện thực → PASS · `PublishedSiteBoundaryTests` xanh không sửa
+- [x] Commit `feat(website): snapshot mang menu thật (WEBSITE-007, #113)`
 
 ### T5: Kết thúc S1
-- [ ] `dotnet test` toàn bộ (cần Docker — không có thì ghi `Docs/DOCKER-TEST-DEBT.md`)
-- [ ] `pnpm contract:export` → skill `contract-sync` → `contract-diff.md` → Gate 1 (#89)
-- [ ] `backend/docs/modules/website.md`: mục `NavigationConfig`, bỏ câu "Chưa có NavigationConfig (7)" (:9), shape snapshot (:106)
-- [ ] `00-INDEX.md` §1 dòng "Quyết định `#N` nằm ở đâu" thêm `#113`; banner STATUS `05` (§8 đã code; lệch: thứ tự = vị trí mảng, không field `order`; cấm trùng trang) → `pnpm gen:doc-index`
-- [ ] `DECISIONS.md` #113 → ✅ đã code · `changelog.md` (DoD) · `pnpm check:docs`
+- [x] `dotnet test` toàn bộ (cần Docker — không có thì ghi `Docs/DOCKER-TEST-DEBT.md`)
+- [x] `pnpm contract:export` → skill `contract-sync` → `contract-diff.md` → Gate 1 (#89)
+- [x] `backend/docs/modules/website.md`: mục `NavigationConfig`, bỏ câu "Chưa có NavigationConfig (7)" (:9), shape snapshot (:106)
+- [x] `00-INDEX.md` §1 dòng "Quyết định `#N` nằm ở đâu" thêm `#113`; banner STATUS `05` (§8 đã code; lệch: thứ tự = vị trí mảng, không field `order`; cấm trùng trang) → `pnpm gen:doc-index`
+- [x] `DECISIONS.md` #113 → ✅ đã code · `changelog.md` (DoD) · `pnpm check:docs`
 
 ## 10. Session S2: Frontend (mở SAU Gate 1)
 
