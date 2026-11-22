@@ -1,6 +1,6 @@
 # WEBSITE-007 — `NavigationConfig`: menu website shop (Bước 7)
 
-> **Đã chốt 2026-11-20 — S1 (BE) đã code 2026-11-21, Gate 1 qua; S2 (FE) F1–F5 đã code 2026-11-21, F6 (nghiệm thu tay) chưa**
+> **Đã chốt 2026-11-20 — S1 (BE) đã code 2026-11-21, Gate 1 qua; S2 (FE) F1–F5 đã code 2026-11-21, F6 nghiệm thu tay 4/4 ĐẠT + Gate 2 đóng 2026-11-22**
 >
 > **Lane C.** Entity + bảng mới, endpoint mới (chạm contract `website.v1`), đổi shape snapshot
 > (`navigation.items`), màn hình Portal mới, đổi `SiteLayout` của renderer.
@@ -281,7 +281,7 @@ Prop `menuItems` ([site-layout.tsx:12](../../../packages/builder-renderer/src/si
 trang), ẩn/hiện, thêm/xoá `custom`, gắn "trang đang tắt", nút Lưu, lỗi 422 tô đúng dòng theo `path`,
 409 ⇒ thông báo + tải lại.
 - [x] Test trước (MSW) `navigation-editor.test.tsx`: loading · error · menu tự sinh (`version: null`) · sắp bằng bàn phím (dnd-kit keyboard sensor) · lưu gửi đúng body · 422 tô dòng · 409 · chặn lồng cấp 4
-- [ ] Smoke chạy app thật sau F4 (workflow §8) — S2: `vite build` + dev server khởi động, route nạp 200; chưa xem được màn có dữ liệu (Portal không có MSW trên trình duyệt, cần BE) ⇒ gộp vào F6
+- [x] Smoke chạy app thật sau F4 (workflow §8) — S2: `vite build` + dev server khởi động, route nạp 200; màn có dữ liệu xem ở F6 với BE thật (2026-11-22)
 - [x] Commit `feat(portal): màn sắp menu website (WEBSITE-007)` (+ fix review `d7c3d97`)
 
 ### F5: Portal — dấu "menu chưa publish" + preview
@@ -292,14 +292,14 @@ truyền `menuItems` qua `resolveNavigation` (trang đang tắt bị bỏ như s
 - [x] Commit `feat(portal): nhắc menu chưa publish + preview có menu (WEBSITE-007)` (+ fix review `dc6ad8f`)
 
 ### F6: Nghiệm thu tay với BE thật
-- [ ] Sắp menu (có menu con + link Fanpage) → publish → `{slug}.vsite.local` hiện đúng; dropdown + mobile chạy
-- [ ] Tạo trang mới → màn Menu thấy ở cuối, ẩn · xoá trang có trong menu → site sau publish không còn mục
-- [ ] Rollback → site về menu cũ, màn Menu báo chưa publish
-- [ ] Hai tab cùng sửa menu → tab sau nhận 409 có thông báo
+- [x] Sắp menu (có menu con + link Fanpage) → publish → `{slug}.vsite.local` hiện đúng; dropdown + mobile chạy
+- [x] Tạo trang mới → màn Menu thấy ở cuối, ẩn · xoá trang có trong menu → site sau publish không còn mục
+- [x] Rollback → site về menu cũ, màn Menu báo chưa publish
+- [x] Hai tab cùng sửa menu → tab sau nhận 409 có thông báo
 
 ## 11. Đóng task (trước Gate 2)
-- [ ] Integration tắt MSW (cần BE thật — làm cùng F6) · [x] `change-reviewer` (model mạnh nhất) · [x] `review.md` (kèm "Ma sát quy trình")
-- [x] `changelog.md` thêm phần FE · `00-INDEX` §3 dòng Bước 7 (cập nhật lại sau F6)
+- [x] Integration tắt MSW (làm cùng F6, 2026-11-22) · [x] `change-reviewer` (model mạnh nhất) · [x] `review.md` (kèm "Ma sát quy trình")
+- [x] `changelog.md` thêm phần FE · `00-INDEX` §3 dòng Bước 7 (cập nhật sau F6 + Gate 2, 2026-11-22)
 
 ## 12. Giả định tôi đã tự đặt (người đã duyệt 2026-11-20)
 

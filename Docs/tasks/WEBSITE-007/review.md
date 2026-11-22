@@ -11,6 +11,9 @@
 **Đạt Gate 2 sau F6**, với điều kiện xử lý W1 (phần FE), W2, W3, W5, W6. W4 (409 làm mất bản đang sửa) và phần BE của W1
 là việc người quyết ở Gate 2.
 
+> **Cập nhật 2026-11-22:** W1 (FE), W2, W3, W5, W6 đã xử lý (`8997a49`). F6 nghiệm thu 4/4 ĐẠT. **Gate 2 đóng** — W4, W1
+> phần BE và "xoá mục cha" người chấp nhận như hiện tại, đưa vào feedback sau merge (`changelog.md` mục "F6").
+
 ## Critical
 
 Không có. Đã kiểm:

@@ -1,8 +1,8 @@
 # WEBSITE-007 — changelog (Bước 7: `NavigationConfig`, menu website shop)
 
 > **Trạng thái:** S1 (BE) xong T1–T5, Gate 1 đã qua (#89, chỉ `NEW_ENDPOINT`, promote 2026-11-21 —
-> [`contract-diff.md`](contract-diff.md)). S2 (FE) xong F1–F5 (2026-11-21); **F6 nghiệm thu tay với BE thật
-> chưa làm** (cần người). Chờ F6 rồi Gate 2.
+> [`contract-diff.md`](contract-diff.md)). S2 (FE) xong F1–F5 (2026-11-21). F6 nghiệm thu tay với BE thật **4/4 ĐẠT**
+> (2026-11-22). **Gate 2 đóng 2026-11-22** — câu hỏi còn mở chuyển sang danh sách feedback sau merge (mục "F6").
 > Nhánh `feature/WEBSITE-007`. Spec: `DesignIdeal/05` §8, §7 · plan [`plan.md`](plan.md) · #113.
 
 ## Đổi phạm vi giữa chừng (người chốt 2026-11-21)
@@ -137,7 +137,7 @@ Không sửa `backend/`, `contracts/`, `packages/api-sdk/src/generated/**`. Khô
 - `@vsite/builder-components` 573/573 · `@vsite/builder-renderer` 44/44 · `@vsite/web` 272/272 (dòng nhiễu cũ
   `ReferenceError: module is not defined`, exit 0) · `apps/portal` 415/415. Typecheck + lint sạch ở các gói chạm.
 - Toàn repo `pnpm build && pnpm test`: xem mục "Đóng S2" bên dưới.
-- Nghiệm thu tay F6: **chưa** — xem mục "F6" bên dưới.
+- Nghiệm thu tay F6: **4/4 ĐẠT** (2026-11-22) — xem mục "F6" bên dưới.
 
 ### Đóng S2 (2026-11-21)
 - `change-reviewer` toàn nhánh ([`review.md`](review.md)): 0 Critical, W1–W6. Sửa trong nhánh (`8997a49`):
@@ -153,9 +153,39 @@ Không sửa `backend/`, `contracts/`, `packages/api-sdk/src/generated/**`. Khô
   theme-engine 49. Sau `8997a49`: portal 419, web 272, builder-renderer 44 (chạy riêng từng gói). `pnpm check:docs` xanh.
 - **Không sửa** `backend/docs/modules/website.md:141` (cùng nội dung W4) — người dặn S2 không sửa `backend/`.
 
-### F6 — nghiệm thu tay với BE thật
-**Chưa làm** — cần người cùng làm. Danh sách cần kiểm: plan §10 F6 (4 bước) + `review.md` mục "F6 phải kiểm cụ thể"
-(gồm smoke màn Menu có dữ liệu, kéo-thả trên trình duyệt thật, CSS mobile, ca 409 sau publish/rollback, integration tắt MSW).
+### F6 — nghiệm thu tay với BE thật (2026-11-22): 4/4 ĐẠT
+
+> Nhánh `feature/WEBSITE-007` @ `8462a2c`. Người nghiệm thu thao tác trên trình duyệt thật; agent đối chiếu DB
+> (`navigation_config`) và HTML site qua Host header.
+> - BE: `Vsite.Api` build lại từ nhánh (`:5270`) — process cũ (build 2026-11-19, chưa có endpoint menu) trả 404 cho
+>   `…/website/navigation`. DB dev: người chạy migration `WebsiteRowVersion` + `AddNavigationConfig`.
+> - Portal dev `admin.vsite.local:5173`, không MSW — `getNavigation`/`saveNavigation` qua proxy `/api` (plan §11
+>   "integration tắt MSW"). Web dev `:3000` với `API_ORIGIN=http://localhost:5270 ROOT_DOMAIN=vsite.local`.
+> - Shop `smokef21793979477503` (`2b250e9b-…`). Để publish được, agent xoá thẳng trong DB 11 khối rỗng (7 Gallery ở
+>   "Trang blog"; 3 Gallery + 1 RichText ở "Trang about") — chúng cao 0px nên không chọn được trên canvas (feedback 2
+>   bên dưới); bản sao cây cũ ở scratchpad của session. Người tự xoá khối ServiceGrid thiếu `source` (feedback 3).
+
+| # | Bước (plan §10 F6) | Kết quả |
+|---|---|---|
+| 1 | Sắp menu 3 cấp (menu con + link custom) → publish → site hiện đúng; dropdown + mobile | **ĐẠT** — agent đối chiếu: thứ tự site khớp `navigation_config`, nhãn `null` ⇒ tên trang, trang đang tắt ("Liên hệ mới") bị bỏ khỏi site (R5), URL qua `createResolveUrl`, `isDirty` hạ sau publish. Người kiểm menu 3 cấp, dropdown, mobile: ổn; CSS/giao diện để feedback 4 |
+| 2 | Trang mới ⇒ cuối, ẩn · xoá trang trong menu ⇒ site sau publish không còn | **ĐẠT** (người kiểm) |
+| 3 | Rollback ⇒ site về menu cũ, màn Menu báo chưa publish | **ĐẠT** (người kiểm) |
+| 4 | Hai tab cùng sửa ⇒ tab sau 409 có thông báo | **ĐẠT** (người kiểm) |
+
+Smoke màn Menu có dữ liệu (checkbox F4 dồn sang đây) và integration tắt MSW (plan §11) đạt cùng các bước trên.
+
+**Gate 2 — đóng 2026-11-22.** Người duyệt chấp nhận hành vi hiện tại cho ba câu hỏi còn mở (W1 phần BE, W4 "Giữ bản của
+tôi", xoá mục cha không hỏi lại) và đưa chúng vào danh sách feedback sau merge.
+
+**Feedback sau merge** (người sẽ mở task fix riêng từ `master` sau khi merge nhánh này):
+
+| # | Vấn đề | Thuộc | Ghi chú |
+|---|---|---|---|
+| 1 | Lỗi publish chỉ in `message` ("Prop bắt buộc 'items' bị thiếu." × n), không nói khối nào | Portal, có từ WEBSITE-006 | BE đã trả `path` JSON Pointer; `publish-errors.tsx` bỏ qua. Dò `path` trên cây ⇒ "Khối n · {nhãn manifest} — thiếu “{nhãn prop}”" + nút "Chọn khối". Không chạm contract |
+| 2 | Khối rỗng (Gallery không ảnh/tiêu đề, RichText trống) cao 0px trên canvas ⇒ không thấy, không chọn, không xoá được | Portal editor + component | Khung khối cần chiều cao tối thiểu + placeholder; cân nhắc bảng cấu trúc trang |
+| 3 | ServiceGrid bắt buộc `source` nhưng ô `binding` ở Inspector là stub (Bước 9) ⇒ mọi Lưới dịch vụ chặn publish | builder-components | Đề xuất: ẩn ServiceGrid khỏi palette tới Bước 9 |
+| 4 | CSS/giao diện menu (typography, kiểu dropdown, mobile) | builder-renderer | Nội dung đúng, chỉ trau chuốt |
+| 5 | Gate 2 còn mở: mục ẩn tính vào giới hạn 12 + tự sinh không cắt ở 12 (W1, BE) · "Giữ bản của tôi" khi 409 (W4) · xoá mục cha có hỏi lại / giữ con | BE + Portal | Hiện chấp nhận như đang chạy |
 
 ## Lệch so với `DesignIdeal/05` §8
 
@@ -168,16 +198,14 @@ Không sửa `backend/`, `contracts/`, `packages/api-sdk/src/generated/**`. Khô
 
 ## Chưa làm xong / theo dõi
 
-- **F6 nghiệm thu tay với BE thật** (4 bước plan §10) + smoke màn Menu có dữ liệu + thử kéo-thả chuột/bàn phím trên
-  trình duyệt thật (test jsdom giả toạ độ) + xem vị trí menu mobile.
+- Feedback sau merge 1–5: xem mục "F6".
 - Việc nhỏ FE còn để ngỏ (review S2, Minor): mở màn Menu mà GET lỗi khi đang có cache cũ thì form dựng từ cache cũ ·
   tràn 10 mục/cha chỉ báo sau khi thả · `navigation-editor.tsx` ~750 dòng · `href` của `custom` không trim.
   (Chặn > 12 mục cấp 1 và comment `JsonSafe` đã sửa ở `8997a49`.)
 - Từ review toàn nhánh (theo dõi): link `custom` tương đối trong preview hiện dải "trang đã xoá" (S2) · dấu "chưa
   publish" hiện cả với website chưa publish lần nào (S3) · gom chính sách query "editor nháp" thành helper dùng chung (S4) ·
   `backend/docs/modules/website.md:141` chưa ghi 409 sau mọi publish/rollback (W4).
-- **Chờ người quyết ở Gate 2:** mục ẩn có tính vào giới hạn 12 mục cấp 1 không / tự sinh có cắt ở 12 không (W1, BE) ·
-  thêm "Giữ bản của tôi" khi 409 ở màn Menu (W4) · xoá mục cha có hỏi lại / giữ con không.
+- Câu hỏi Gate 2 (W1 phần BE, W4, xoá mục cha): người chấp nhận hành vi hiện tại 2026-11-22, chuyển thành feedback 5.
 - **Bind body có kiểu trả 500 (Development) / 400 rỗng (Production) không có `error_code`.** Lỗi có từ trước, ảnh hưởng
   mọi route nhận body có kiểu, ngoài phạm vi task. `saveNavigation` đã né bằng cách đọc body thô. Theo dõi ở `00-INDEX` §4.
 - `params` của 422/409 không có type trong OpenAPI (giống các route website hiện có) (A6).
