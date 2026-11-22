@@ -16,16 +16,19 @@ const WEBSITE_DRAFT_SDK_NAMES = [
   // website.ts — hàm gọi API
   'createWebsite', 'getWebsite', 'listPages', 'createPage', 'updatePage', 'deletePage', 'getPageDraft', 'savePageDraft',
   'getTheme', 'updateTheme', 'publishWebsite', 'listPublications', 'rollbackPublication',
+  'getNavigation', 'saveNavigation',
   // website.ts — hook React Query
   'useCreateWebsite', 'useGetWebsite', 'useListPages', 'useCreatePage', 'useUpdatePage', 'useDeletePage', 'useGetPageDraft',
   'useSavePageDraft', 'useGetTheme', 'useUpdateTheme', 'usePublishWebsite', 'useListPublications', 'useRollbackPublication',
+  'useGetNavigation', 'useSaveNavigation',
   // website.ts — query key/options, mutation options
   'getGetWebsiteQueryKey', 'getGetWebsiteQueryOptions', 'getListPagesQueryKey', 'getListPagesQueryOptions',
   'getGetPageDraftQueryKey', 'getGetPageDraftQueryOptions', 'getGetThemeQueryKey', 'getGetThemeQueryOptions',
   'getListPublicationsQueryKey', 'getListPublicationsQueryOptions', 'getCreateWebsiteMutationOptions',
   'getCreatePageMutationOptions', 'getUpdatePageMutationOptions', 'getDeletePageMutationOptions',
   'getSavePageDraftMutationOptions', 'getUpdateThemeMutationOptions', 'getPublishWebsiteMutationOptions',
-  'getRollbackPublicationMutationOptions',
+  'getRollbackPublicationMutationOptions', 'getGetNavigationQueryKey', 'getGetNavigationQueryOptions',
+  'getSaveNavigationMutationOptions',
   // website.zod.ts — schema của các endpoint draft
   'createWebsiteParams', 'getWebsiteParams', 'getWebsiteResponse', 'listPagesParams', 'listPagesResponseItem',
   'listPagesResponse', 'createPageParams', 'createPageBodyNoIndexDefault', 'createPageBodyIsEnabledDefault', 'createPageBody', 'updatePageParams',
@@ -33,7 +36,8 @@ const WEBSITE_DRAFT_SDK_NAMES = [
   'savePageDraftParams', 'savePageDraftBody', 'savePageDraftResponse', 'getThemeParams', 'getThemeResponse',
   'updateThemeParams', 'updateThemeBody', 'updateThemeResponse', 'publishWebsiteParams', 'publishWebsiteBody',
   'listPublicationsParams', 'listPublicationsResponseItem', 'listPublicationsResponse', 'rollbackPublicationParams',
-  'rollbackPublicationResponse',
+  'rollbackPublicationResponse', 'getNavigationParams', 'getNavigationResponse', 'saveNavigationParams',
+  'saveNavigationBody', 'saveNavigationResponse',
 ];
 const WEBSITE_DRAFT_MSW_NAMES = [
   'getWebsiteMock', 'getCreateWebsiteResponseMock', 'getGetWebsiteResponseMock', 'getListPagesResponseMock',
@@ -43,7 +47,8 @@ const WEBSITE_DRAFT_MSW_NAMES = [
   'getGetWebsiteMockHandler', 'getListPagesMockHandler', 'getCreatePageMockHandler', 'getUpdatePageMockHandler',
   'getDeletePageMockHandler', 'getGetPageDraftMockHandler', 'getSavePageDraftMockHandler', 'getGetThemeMockHandler',
   'getUpdateThemeMockHandler', 'getPublishWebsiteMockHandler', 'getListPublicationsMockHandler',
-  'getRollbackPublicationMockHandler',
+  'getRollbackPublicationMockHandler', 'getGetNavigationResponseMock', 'getSaveNavigationResponseMock',
+  'getGetNavigationMockHandler', 'getSaveNavigationMockHandler',
 ];
 const NO_DRAFT_MESSAGE =
   'apps/web chỉ đọc site đã publish (GET /api/site, 05 §7, #108) — không import API draft/website editing (review I2, WEBSITE-005).';

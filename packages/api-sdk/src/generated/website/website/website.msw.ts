@@ -19,9 +19,11 @@ import {
   WebsiteStatus
 } from '.././model';
 import type {
+  NavigationDto,
   PageDraftDto,
   PageDto,
   PublicationDto,
+  SaveNavigationResultDto,
   SavePageDraftResultDto,
   ThemeDto,
   WebsiteDto
@@ -51,6 +53,10 @@ export const getPublishWebsiteResponseMock = (overrideResponse: Partial< Publica
 export const getListPublicationsResponseMock = (): PublicationDto[] => (Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({id: faker.string.uuid(), version: faker.number.int({min: undefined, max: undefined}), publishedAt: `${faker.date.past().toISOString().split('.')[0]}Z`, publishedByUserId: faker.helpers.arrayElement([faker.string.uuid(), null]), note: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), isCurrent: faker.datatype.boolean()})))
 
 export const getRollbackPublicationResponseMock = (overrideResponse: Partial< PublicationDto > = {}): PublicationDto => ({id: faker.string.uuid(), version: faker.number.int({min: undefined, max: undefined}), publishedAt: `${faker.date.past().toISOString().split('.')[0]}Z`, publishedByUserId: faker.helpers.arrayElement([faker.string.uuid(), null]), note: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), isCurrent: faker.datatype.boolean(), ...overrideResponse})
+
+export const getGetNavigationResponseMock = (overrideResponse: Partial< NavigationDto > = {}): NavigationDto => ({version: faker.helpers.arrayElement([faker.number.int({min: undefined, max: undefined}), null]), isDirty: faker.datatype.boolean(), items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({key: faker.string.alpha({length: {min: 10, max: 20}}), label: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), url: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), hidden: faker.datatype.boolean(), children: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({key: faker.string.alpha({length: {min: 10, max: 20}}), label: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), url: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), hidden: faker.datatype.boolean(), children: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({key: faker.string.alpha({length: {min: 10, max: 20}}), label: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), url: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), hidden: faker.datatype.boolean()}))}))})), ...overrideResponse})
+
+export const getSaveNavigationResponseMock = (overrideResponse: Partial< SaveNavigationResultDto > = {}): SaveNavigationResultDto => ({version: faker.number.int({min: undefined, max: undefined}), isDirty: faker.datatype.boolean(), ...overrideResponse})
 
 
 export const getCreateWebsiteMockHandler = (overrideResponse?: WebsiteDto | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<WebsiteDto> | WebsiteDto), options?: RequestHandlerOptions) => {
@@ -206,6 +212,30 @@ export const getRollbackPublicationMockHandler = (overrideResponse?: Publication
       })
   }, options)
 }
+
+export const getGetNavigationMockHandler = (overrideResponse?: NavigationDto | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<NavigationDto> | NavigationDto), options?: RequestHandlerOptions) => {
+  return http.get('*/api/shops/:shopId/website/navigation', async (info) => {await delay(1000);
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetNavigationResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getSaveNavigationMockHandler = (overrideResponse?: SaveNavigationResultDto | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<SaveNavigationResultDto> | SaveNavigationResultDto), options?: RequestHandlerOptions) => {
+  return http.put('*/api/shops/:shopId/website/navigation', async (info) => {await delay(1000);
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getSaveNavigationResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
 export const getWebsiteMock = () => [
   getCreateWebsiteMockHandler(),
   getGetWebsiteMockHandler(),
@@ -219,5 +249,7 @@ export const getWebsiteMock = () => [
   getUpdateThemeMockHandler(),
   getPublishWebsiteMockHandler(),
   getListPublicationsMockHandler(),
-  getRollbackPublicationMockHandler()
+  getRollbackPublicationMockHandler(),
+  getGetNavigationMockHandler(),
+  getSaveNavigationMockHandler()
 ]

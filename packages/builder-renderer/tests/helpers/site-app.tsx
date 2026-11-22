@@ -7,7 +7,7 @@ import type { ComponentNode } from '@vsite/builder-components';
 import { themeStyle } from '@vsite/theme-engine';
 import { RenderContextProvider } from '../../src/context';
 import { RenderTree, type PageRoot } from '../../src/renderTree';
-import { SiteLayout } from '../../src/site-layout';
+import { SiteLayout, type SiteMenuItem } from '../../src/site-layout';
 
 type TreeFixture = { tree?: ComponentNode | PageRoot };
 
@@ -33,11 +33,20 @@ const pages = [
 ];
 
 /** Đúng cấu trúc preview/8b: theme → SiteLayout → RenderTree. */
-export function SiteApp({ tree }: { tree: ComponentNode | PageRoot }) {
+export const menuItems: SiteMenuItem[] = [
+  {
+    label: 'Dịch vụ',
+    href: '/dich-vu',
+    children: [{ label: 'Massage', href: '/massage', children: [{ label: 'Massage đá nóng', href: '/da-nong' }] }],
+  },
+  { label: 'Facebook', href: 'https://fb.com/spa', external: true },
+];
+
+export function SiteApp({ tree, menu }: { tree: ComponentNode | PageRoot; menu?: readonly SiteMenuItem[] }) {
   return (
     <div style={themeStyle()}>
       <RenderContextProvider>
-        <SiteLayout shop={{ name: 'Spa ABC', logoUrl: '/media/s/logo.png' }} homeHref="/" year={2026}>
+        <SiteLayout shop={{ name: 'Spa ABC', logoUrl: '/media/s/logo.png' }} homeHref="/" year={2026} menuItems={menu}>
           <RenderTree tree={tree} basePath="" locale="vi" defaultLocale="vi" pages={pages} />
         </SiteLayout>
       </RenderContextProvider>

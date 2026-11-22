@@ -29,7 +29,7 @@ describe('SiteLayout — Header/Footer ngoài Component Tree (WEBSITE-003 T2)', 
     expect(empty.container.querySelector('nav')).toBeNull();
     empty.unmount();
     render(<SiteLayout {...base} menuItems={[{ label: 'Liên hệ', href: '/lien-he' }]}>x</SiteLayout>);
-    expect(screen.getByText('Liên hệ').closest('a')).toHaveAttribute('href', '/lien-he');
+    for (const el of screen.getAllByText('Liên hệ')) expect(el.closest('a')).toHaveAttribute('href', '/lien-he');
   });
 
   it('Footer: tên + © năm lấy từ props; contact trống → không có vùng liên hệ', () => {
@@ -46,5 +46,77 @@ describe('SiteLayout — Header/Footer ngoài Component Tree (WEBSITE-003 T2)', 
     const addr = container.querySelector('footer address');
     expect(addr).toHaveTextContent('1 Lê Lợi');
     expect(addr).toHaveTextContent('0900000000');
+  });
+
+  describe('menu con + mobile (WEBSITE-007 F2)', () => {
+    const nested = [
+      {
+        label: 'Dịch vụ',
+        href: '/dich-vu',
+        external: false,
+        children: [
+          {
+            label: 'Massage',
+            href: '/massage',
+            external: false,
+            children: [{ label: 'Massage đá nóng', href: '/da-nong', external: false, children: [] }],
+          },
+        ],
+      },
+      { label: 'Facebook', href: 'https://fb.com/spa', external: true, children: [] },
+    ];
+
+    it('render con và cấp thứ 3 (desktop + mobile)', () => {
+      render(<SiteLayout {...base} menuItems={nested}>x</SiteLayout>);
+      expect(screen.getAllByText('Massage').length).toBeGreaterThan(0);
+      const deep = screen.getAllByText('Massage đá nóng');
+      expect(deep.length).toBeGreaterThan(0);
+      expect(deep[0]?.closest('a')).toHaveAttribute('href', '/da-nong');
+    });
+
+    it('nav có aria-label; mobile dùng <details><summary>', () => {
+      const { container } = render(<SiteLayout {...base} menuItems={nested}>x</SiteLayout>);
+      expect(container.querySelector('nav')).toHaveAttribute('aria-label');
+      expect(container.querySelector('nav details > summary')).not.toBeNull();
+    });
+
+    it('link ngoài có target + rel; link nội bộ không', () => {
+      render(<SiteLayout {...base} menuItems={nested}>x</SiteLayout>);
+      for (const a of screen.getAllByText('Facebook').map((e) => e.closest('a'))) {
+        expect(a).toHaveAttribute('target', '_blank');
+        expect(a).toHaveAttribute('rel', 'noopener noreferrer');
+      }
+      for (const a of screen.getAllByText('Massage').map((e) => e.closest('a'))) {
+        expect(a).not.toHaveAttribute('target');
+        expect(a).not.toHaveAttribute('rel');
+      }
+    });
+
+    it('mobile: summary con là nút bật riêng (không chứa <a>, có tên truy cập); link cha vẫn có', () => {
+      const { container } = render(<SiteLayout {...base} menuItems={nested}>x</SiteLayout>);
+      const subs = container.querySelectorAll('.vs-nav-mobile li details > summary');
+      expect(subs.length).toBe(2);
+      for (const sm of subs) {
+        expect(sm.querySelector('a')).toBeNull();
+        expect(sm.getAttribute('aria-label')).toMatch(/^Mở menu con /);
+        expect(sm.textContent).toBe('▸');
+      }
+      const parent = container.querySelector('.vs-nav-mobile li.vs-has-sub > a');
+      expect(parent).toHaveAttribute('href', '/dich-vu');
+    });
+
+    it('nhãn HTML hiện dạng text (R4)', () => {
+      const { container } = render(
+        <SiteLayout {...base} menuItems={[{ label: '<b>in đậm</b>', href: '/x' }]}>x</SiteLayout>,
+      );
+      expect(container.querySelector('nav b')).toBeNull();
+      expect(screen.getAllByText('<b>in đậm</b>').length).toBeGreaterThan(0);
+    });
+
+    it('menu rỗng → không có nav/list', () => {
+      const { container } = render(<SiteLayout {...base} menuItems={[]}>x</SiteLayout>);
+      expect(container.querySelector('nav')).toBeNull();
+      expect(container.querySelector('header ul')).toBeNull();
+    });
   });
 });

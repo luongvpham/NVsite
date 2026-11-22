@@ -796,6 +796,64 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Vsite.Domain.Website.Entities.NavigationConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("website_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsDirty")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_dirty");
+
+                    b.Property<string>("Items")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("items");
+
+                    b.Property<Guid>("ShopId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shop_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_navigation_config");
+
+                    b.HasIndex("Id", "ShopId")
+                        .HasDatabaseName("ix_navigation_config_website_id_shop_id");
+
+                    b.ToTable("navigation_config", (string)null);
+                });
+
             modelBuilder.Entity("Vsite.Domain.Website.Entities.Page", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1288,6 +1346,17 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("Id", "ShopId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_shop_media_asset_logo_id_id");
+                });
+
+            modelBuilder.Entity("Vsite.Domain.Website.Entities.NavigationConfig", b =>
+                {
+                    b.HasOne("Vsite.Domain.Website.Entities.Website", null)
+                        .WithMany()
+                        .HasForeignKey("Id", "ShopId")
+                        .HasPrincipalKey("Id", "ShopId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_navigation_config_website");
                 });
 
             modelBuilder.Entity("Vsite.Domain.Website.Entities.Page", b =>

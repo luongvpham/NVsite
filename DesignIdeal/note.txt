@@ -49,6 +49,9 @@ thêm dòng vào bảng "Đã promote — theo dõi hiệu quả"   ← chỗ ha
 C:\Windows\System32\drivers\etc\hosts
 Add 127.0.0.1  admin.vsite.local
 
+BE API
+dotnet ef migrations list --project backend/src/Vsite.Infrastructure --startup-project backend/src/Vsite.Api
+
 cd D:\WorkSpace\MyProject\NVsite\apps\portal
 npx pnpm@9.15.0 dev
 

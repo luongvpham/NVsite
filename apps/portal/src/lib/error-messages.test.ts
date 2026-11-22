@@ -61,6 +61,25 @@ describe('getErrorMessage', () => {
     expect(getErrorMessage('PUBLISH_CONFLICT')).not.toBe(getErrorMessage('ROLLBACK_CONFLICT'));
   });
 
+  it('mã lỗi menu trong WEBSITE-007/brief.md (F4) có thông báo riêng', () => {
+    const fallback = getErrorMessage(undefined);
+    for (const code of [
+      'NAVIGATION_INVALID',
+      'NAVIGATION_CONFLICT',
+      'NAVIGATION_BODY_INVALID',
+      'NAVIGATION_BODY_TOO_LARGE',
+      'NAV_PAGE_NOT_FOUND',
+      'NAV_PAGE_DUPLICATE',
+      'NAV_PAGE_NOT_ALLOWED',
+      'NAV_URL_UNSAFE',
+      'NAV_LABEL_REQUIRED',
+      'NAV_LABEL_TOO_LONG',
+      'NAV_TOO_MANY_ITEMS',
+    ]) {
+      expect(getErrorMessage(code), code).not.toBe(fallback);
+    }
+  });
+
   it('trả fallback message cho error_code không nhận diện được hoặc undefined', () => {
     expect(getErrorMessage(undefined)).toBe('Có lỗi xảy ra, vui lòng thử lại.');
     expect(getErrorMessage('SOME_UNKNOWN_CODE')).toBe('Có lỗi xảy ra, vui lòng thử lại.');

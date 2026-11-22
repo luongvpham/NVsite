@@ -3,10 +3,10 @@
 > 📌 **Mọi đường dẫn endpoint trong tài liệu này tương đối với prefix `/api`** (Quyết định #91) — vd.
 > `/shops/{shopId}/website` nghĩa là `/api/shops/{shopId}/website`.
 
-## Trạng thái (WEBSITE-001, Bước 5a; WEBSITE-004, Bước 8b)
+## Trạng thái (WEBSITE-001, Bước 5a; WEBSITE-004, Bước 8b; WEBSITE-007, Bước 7)
 
 `Website` → `Theme` → `Page` → `PageDraft` (backend) đã code: tạo website trắng, API metadata trang, `GET`/`PUT`
-draft có `version`, validate **toàn tree** mỗi lần `PUT`. **8b (WEBSITE-004) đã code:** `SitePublication` + publish/rollback + endpoint đọc công khai `GET /api/site` (xem các mục bên dưới; brief FE: `Docs/tasks/WEBSITE-004/brief.md`, lệch: `Docs/tasks/WEBSITE-004/changelog.md`). **Chưa** có `NavigationConfig` (7),
+draft có `version`, validate **toàn tree** mỗi lần `PUT`. **8b (WEBSITE-004) đã code:** `SitePublication` + publish/rollback + endpoint đọc công khai `GET /api/site` (xem các mục bên dưới; brief FE: `Docs/tasks/WEBSITE-004/brief.md`, lệch: `Docs/tasks/WEBSITE-004/changelog.md`). **Bước 7 (WEBSITE-007, BE) đã code:** `NavigationConfig` + `GET`/`PUT` menu + snapshot mang menu (mục "Menu (`NavigationConfig`)"; lệch: `Docs/tasks/WEBSITE-007/changelog.md`). **Chưa** có
 bảng `*_translation` (#98), `SeedTemplateId`, prune bản publish (8d), custom domain (`ShopDomain`). Contract `website.v1`/`media.v1` đã qua Gate 1 và promote
 (`contracts/openapi/`, `luongpham`); đã merge `master`, Gate 2 đóng 2026-11-12. Brief cho FE: `Docs/tasks/WEBSITE-001/brief.md`. Lệch so với `05` và mục "Chưa làm xong":
 `Docs/tasks/WEBSITE-001/changelog.md`.
@@ -28,6 +28,7 @@ bảng `*_translation` (#98), `SeedTemplateId`, prune bản publish (8d), custom
 | `Page` | `Kind` (`Composable` / `System`), `SystemType?`, `Slug?` (`""` = trang chủ; **NULL chỉ cho `NotFound`**), SEO, `OgImageId`, `NoIndex`, `IsEnabled`, `SortOrder`. `Page.SoftDelete()`; `CanBeDeleted` (System page và trang chủ không xoá được) |
 | `PageDraft` | 1:1 với `Page`. `Tree` (jsonb, `schemaVersion` ở gốc, #94), `Version` (= cột hệ thống `xmin`), `IsDirty` |
 | `SitePublication` | **Bất biến** (`TenantEntity`, không audit/soft delete, không setter). Một bản = snapshot toàn site (`Snapshot` jsonb, `schemaVersion` ở gốc), `Version` tăng dần theo website (`ux_site_publication_website_version`, không tái dùng số sau rollback), `Note ≤ 200`, `PublishedAt`, `PublishedByUserId`. Khoá phụ `(id, website_id)`; FK ghép `(website_id, shop_id) → website`. `Website.CurrentPublicationId` trỏ bản đang chạy qua FK ghép `(current_publication_id, id) → site_publication (id, website_id)` — không trỏ chéo website được (R4) |
+| `NavigationConfig` | 1:1 với `Website` (PK `Id` = website id, cột `website_id`). `Items` (jsonb `{ schemaVersion, items }`, `DocumentKind.Navigation`), `IsDirty`, `Version` (= `xmin`). FK ghép `(website_id, shop_id) → website`. **Không bao giờ xoá mềm** (PK là `website_id` — dòng xoá mềm bị filter giấu nhưng vẫn giữ PK ⇒ lưu mãi 409). Chi tiết: mục "Menu" |
 
 Mọi bảng có `shop_id`, mọi FK tới entity thuộc shop là **FK ghép** `(X, shop_id) → (id, shop_id)` (#92).
 Tên bảng/cột snake_case số ít (`website`, `theme`, `page`, `page_draft`). `Theme` và `PageDraft` có PK là `Id` của base
@@ -50,6 +51,8 @@ Mọi route **trừ `getPublishedSite`**: `RequireAuthorization(RequireGlobalSco
 | `savePageDraft` | `PUT /shops/{shopId}/website/pages/{pageId}/draft` | 200 `{version,isDirty,sanitized}` | 401 403 404 409 413 422 |
 | `getTheme` | `GET /shops/{shopId}/website/theme` | 200 | 401 403 404 |
 | `updateTheme` | `PUT /shops/{shopId}/website/theme` | 200 | 401 403 404 413 422 |
+| `getNavigation` | `GET /shops/{shopId}/website/navigation` | 200 `{version: int\|null, isDirty, items}` (menu **đã ghép**) | 401 403 404 `WEBSITE_NOT_FOUND` |
+| `saveNavigation` | `PUT /shops/{shopId}/website/navigation` | 200 `{version, isDirty}` | 400 `NAVIGATION_BODY_INVALID` · 401 403 404 · 409 `NAVIGATION_CONFLICT` · 413 `NAVIGATION_BODY_TOO_LARGE` · 422 `NAVIGATION_INVALID` |
 | `publishWebsite` | `POST /shops/{shopId}/website/publications` | 201 + `Location` | 401 403 404 409 `PUBLISH_CONFLICT` · 422 `PUBLISH_BLOCKED` |
 | `listPublications` | `GET /shops/{shopId}/website/publications` | 200 **mảng** (≤ 50, version giảm dần, không kèm snapshot) — ngoại lệ có chủ đích của "một shape pagination" (#19): danh sách có trần cứng, không phân trang; trần thành 20 khi có prune (8d). Như `listPages` | 401 403 404 |
 | `rollbackPublication` | `POST /shops/{shopId}/website/publications/{publicationId}/rollback` | 200 | 401 403 404 `PUBLICATION_NOT_FOUND` · 409 `ROLLBACK_CONFLICT` |
@@ -102,9 +105,19 @@ Singleton, resolve **eager** ở `Program.cs` — thiếu/hỏng file làm host 
 - **Publish** (một `SaveChanges`): gom website + theme + mọi trang **đang bật** và draft; mỗi trang `PageTreeValidator` → `RequiredPropsChecker` → `IMediaReferenceValidator` (ảnh tree + OG trang);
   OG mặc định + favicon kiểm một lần (`pageId = null`). Bất kỳ lỗi nào → `422 PUBLISH_BLOCKED` (`params.errors[] { pageId, pageTitle, path, code, message }`, ≤ 100, `params.truncated`), không ghi gì.
   Rồi chuẩn hoá `imageId` về GUID chữ thường (R14), nạp bảng `media`, `Version = max + 1`, `SnapshotBuilder.Build`, `Website.Publish` (Draft → Published; **Suspended giữ nguyên**), hạ `IsDirty` **chỉ** draft đang bẩn
-  (⇒ `version` draft đó đổi — FE nạp lại). 23505 / `xmin` lệch → `409 PUBLISH_CONFLICT`. Sau commit: `ISitePointerCache.InvalidateAsync` (lỗi chỉ log; TTL 5 phút là lưới an toàn).
-- **Snapshot v1** (khác `05` §7): `schemaVersion, version, defaultLocale, locales, theme{presetKey,tokens}, navigation{items:[]}, seo{…faviconAssetId}, tracking, media{imageId→{storageKey,preset}}, pages[]` (mỗi trang có `id`; `slug: null` chỉ ở `NotFound`).
-- **Rollback** chỉ đổi con trỏ (`Website.PointTo`), không sinh bản mới, không đổi `Status`, không đụng nội dung draft; draft đang sạch → `IsDirty = true` (G7). Tìm bản bằng `Id + ShopId + WebsiteId` trong một query.
+  (⇒ `version` draft đó đổi — FE nạp lại). Menu: `Merge` → `ForSnapshot` (chỉ mục đang hiện, trỏ trang có trong snapshot) → vào snapshot; chưa có dòng `NavigationConfig` ⇒ tạo từ menu tự sinh; `MarkPublished()` cùng `SaveChanges`. Menu **không** chặn publish.
+  23505 / `xmin` lệch (website hoặc menu) → `409 PUBLISH_CONFLICT`. Sau commit: `ISitePointerCache.InvalidateAsync` (lỗi chỉ log; TTL 5 phút là lưới an toàn).
+- **Snapshot v1** (khác `05` §7): `schemaVersion, version, defaultLocale, locales, theme{presetKey,tokens}, navigation{items}, seo{…faviconAssetId}, tracking, media{imageId→{storageKey,preset}}, pages[]` (mỗi trang có `id`; `slug: null` chỉ ở `NotFound`).
+  `navigation.items` (#113, từ WEBSITE-007): `{ key: "page:{guid chữ thường}"|"custom", label: string|null, url? (chỉ custom), children? }`, tối đa 3 cấp (cấp 3 không `children`), **không** `hidden`, thứ tự = vị trí mảng. Bản publish trước Bước 7 có `items: []` — vẫn hợp lệ, `schemaVersion` vẫn 1. Nhãn/URL do FE ghép từ `pages` — BE không dựng URL.
+- **Rollback** chỉ đổi con trỏ (`Website.PointTo`), không sinh bản mới, không đổi `Status`, không đụng nội dung draft; draft đang sạch → `IsDirty = true` (G7); menu có dòng → `IsDirty = true`. Tìm bản bằng `Id + ShopId + WebsiteId` trong một query.
+
+## Menu (`NavigationConfig`, Bước 7 — #113)
+
+- **Ghép lúc đọc** (`NavigationItems.Merge`, hàm thuần): chưa có dòng ⇒ tự sinh từ mọi trang chưa xoá trừ `NotFound`, theo `SortOrder` rồi `Title`, tất cả hiện (`version: null`, `isDirty: true`); trang chưa có trong menu ⇒ nối **cuối cấp 1, `hidden`**; trang đã xoá ⇒ bỏ cả nhánh con. Trang **đang tắt** vẫn giữ trong menu (không render, không vào snapshot). Không ghi chéo từ `CreatePage`/`DeletePage`.
+- **Lưu** (`PUT`): body thô có trần 256 KB (413), ba kiểu DTO cho ba cấp (cấp 3 `additionalProperties: false`, `key`/`hidden` bắt buộc) ⇒ sai shape/cấp 4/thiếu field ⇒ `400 NAVIGATION_BODY_INVALID` (`detail` chỉ đường dẫn cấu trúc, không lặp input).
+  Rồi `Validate` ⇒ `422 NAVIGATION_INVALID` `params.errors[] {path (JSON Pointer vào items), code, message}`: `NAV_PAGE_NOT_FOUND` (cả trang shop khác / đã xoá — không lộ tồn tại), `NAV_PAGE_DUPLICATE`, `NAV_PAGE_NOT_ALLOWED` (`NotFound`), `NAV_URL_UNSAFE` (`LinkUrlRules.IsSafe`: http(s)/mailto/tel; > 2048), `NAV_LABEL_REQUIRED` (custom), `NAV_LABEL_TOO_LONG` (> 60), `NAV_TOO_MANY_ITEMS` (> 12 cấp 1, > 10 mỗi cha). `NAV_TOO_DEEP` chỉ phòng dữ liệu lưu hỏng — qua HTTP cấp 4 là 400.
+  Lưu `Normalize(items)` (trim; nhãn rỗng ⇒ `null`; khoá GUID chữ thường) ⇒ `IsDirty = true`.
+- Trang tra **trong câu query** theo tenant + `website_id` (#21.3); `ShopId` chỉ từ `ITenantContext` (#99).
 
 ## Đọc công khai: `GET /api/site` (#108, #109)
 
@@ -125,6 +138,7 @@ Singleton, resolve **eager** ở `Program.cs` — thiếu/hỏng file làm host 
   handler cụ thể bắt `23505` trước để trả `WEBSITE_ALREADY_EXISTS`/`PAGE_SLUG_TAKEN`.
 - Cây y hệt bản đã lưu → EF không UPDATE → `version` giữ nguyên.
 - `Theme` **không** có concurrency.
+- `NavigationConfig.Version` ↔ `xmin`. `PUT` gửi `version` đã đọc: `null` mà đã có dòng, số mà chưa có dòng, số lệch, race insert lần đầu (23505 — unique duy nhất của bảng là PK) hay `DbUpdateConcurrencyException` ⇒ `409 NAVIGATION_CONFLICT` `params { currentVersion, updatedAt }` (**cả hai null** khi chưa có dòng). Lưu ý: publish khi menu chưa từng lưu **tạo dòng** ⇒ tab đang giữ `version: null` lưu sau đó nhận 409 — FE nạp lại menu sau publish/rollback.
 - `Website` có concurrency token = cột hệ thống `xmin` (shadow property `RowVersion`, không lộ ra Domain/DTO; migration `WebsiteRowVersion` không sinh SQL). Publish và rollback đều ghi dòng này ⇒ chạy song song thì bên sau nhận `409 PUBLISH_CONFLICT` / `ROLLBACK_CONFLICT`, không còn last-write-wins (review I1, #112).
 
 ## Thêm một System page mới
@@ -175,11 +189,16 @@ kiểm `dotnet ef migrations has-pending-model-changes` ra "No changes". Mẫu c
 ## Build/test: khi `Vsite.Api.exe` khoá DLL
 
 Một process dev `Vsite.Api.exe` đang chạy từ `backend/src/Vsite.Api/bin/Debug/net9.0` làm `dotnet build` mặc định lỗi `MSB3027`.
-**Không cần kill nó.** Dùng một props đổi `OutputPath` (ví dụ `C:\tmp\vout.props`, đặt `BaseOutputPath`/`OutputPath` sang thư mục ngoài repo) và chạy:
+**Không cần kill nó.** Dùng một props đổi `BaseOutputPath` sang thư mục **trong** project (ví dụ `C:\tmp\vout.props`):
+
+```xml
+<Project><PropertyGroup><BaseOutputPath>$(MSBuildProjectDirectory)\bin\alt\</BaseOutputPath></PropertyGroup></Project>
+```
 
 ```powershell
 $env:CustomBeforeMicrosoftCommonProps = 'C:\tmp\vout.props'; dotnet test backend/vsite.sln
 ```
 
-File props không nằm trong repo (không commit). Test Integration cần Docker (Testcontainers) — Docker không chạy thì ghi vào `Docs/DOCKER-TEST-DEBT.md`, đừng `Skip`.
+**Đừng** đặt output **ngoài repo**: `TreeFixtures` đi ngược lên từ thư mục test DLL để tìm `pnpm-workspace.yaml`, nên ~270 test Website đỏ giả (WEBSITE-007).
+`bin/alt` nằm dưới `backend/**/bin/` (đã gitignore). File props không nằm trong repo (không commit). Test Integration cần Docker (Testcontainers) — Docker không chạy thì ghi vào `Docs/DOCKER-TEST-DEBT.md`, đừng `Skip`.
 Một lần chạy full hiếm khi có 2 test `TenantResolutionTests` đỏ do `Docker.DotNet` lúc khởi động container (flake khi nhiều container chạy dồn) — chạy lại riêng trước khi điều tra.

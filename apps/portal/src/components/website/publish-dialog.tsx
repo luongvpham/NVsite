@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, Dialog } from '@vsite/ui';
 import { usePublishWebsiteFlow } from '../../hooks/use-publish-website';
+import { useMenuDirty } from '../../hooks/use-menu-dirty';
 import { PublishErrors } from './publish-errors';
 
 export const PUBLISH_NOTE_MAX = 200;
@@ -46,6 +47,7 @@ export function PublishDialog(props: PublishDialogProps) {
 function PublishDialogBody({ shopId, open, onOpenChange, currentPageId, onSettled, siteUrl = null, notice }: PublishDialogProps) {
   const [note, setNote] = useState('');
   const { publish, isPending, result, failure } = usePublishWebsiteFlow(shopId, { onSettled });
+  const menuDirty = useMenuDirty(shopId);
 
   const trimmedLength = note.trim().length;
   const tooLong = trimmedLength > PUBLISH_NOTE_MAX;
@@ -57,6 +59,7 @@ function PublishDialogBody({ shopId, open, onOpenChange, currentPageId, onSettle
   return (
     <Dialog open={open} onClose={close} title="Xuất bản website" dismissible={!isPending}>
       {notice && <p className="mb-3 text-sm text-muted-foreground">{notice}</p>}
+      {menuDirty && !result && <p className="mb-3 text-sm text-foreground">Menu có thay đổi chưa publish</p>}
       {result ? (
         <div className="space-y-4">
           <p className="text-sm text-foreground">Đã xuất bản bản v{result.version}</p>

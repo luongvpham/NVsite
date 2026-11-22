@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dialog } from '@vsite/ui';
 import { getErrorCode } from '@vsite/shared';
 import {
+  getGetNavigationQueryKey,
   getGetWebsiteQueryKey,
   getListPagesQueryKey,
   getListPublicationsQueryKey,
@@ -53,6 +54,7 @@ export function PublicationHistory({ shopId }: { shopId: string }) {
         void queryClient.invalidateQueries({ queryKey: getGetWebsiteQueryKey(shopId) });
         void queryClient.invalidateQueries({ queryKey: getListPagesQueryKey(shopId) });
         void queryClient.invalidateQueries({ queryKey: getListPublicationsQueryKey(shopId) });
+        void queryClient.invalidateQueries({ queryKey: getGetNavigationQueryKey(shopId) });
       },
     },
   });

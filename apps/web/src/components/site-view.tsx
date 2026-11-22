@@ -1,4 +1,4 @@
-import { RenderContextProvider } from '@vsite/builder-components';
+import { createResolveUrl, RenderContextProvider, resolveNavigation } from '@vsite/builder-components';
 import { decorateWithAnchor, RenderTree, SiteLayout, useAnchorScroll, type PageRoot } from '@vsite/builder-renderer';
 import { themeStyle } from '@vsite/theme-engine';
 import { selectPage } from '../lib/select-page';
@@ -21,9 +21,17 @@ export function SiteView({ data }: Readonly<{ data: SiteViewData }>) {
   if (!selection.page) return <NotFoundPage />;
 
   const pages = snapshot.pages.map((p) => ({ id: p.id, slug: p.slug, systemType: p.systemType, isEnabled: true }));
+  // Một `resolveUrl` cho cả menu và cây trang (#103); menu chỉ đọc snapshot đã publish (không draft).
+  const resolveUrl = createResolveUrl({
+    basePath: '',
+    locale: snapshot.defaultLocale,
+    defaultLocale: snapshot.defaultLocale,
+    pages,
+  });
+  const menuItems = resolveNavigation(snapshot.navigation.items, snapshot.pages, resolveUrl);
   return (
     <div style={themeStyle(snapshot.theme.tokens)}>
-      <SiteLayout shop={{ name: shop.name, logoUrl: shop.logoUrl }} homeHref="/" year={year}>
+      <SiteLayout shop={{ name: shop.name, logoUrl: shop.logoUrl }} homeHref="/" year={year} menuItems={menuItems}>
         <RenderContextProvider value={{ mediaMap: snapshot.media }}>
           <RenderTree
             tree={selection.page.tree as unknown as PageRoot}

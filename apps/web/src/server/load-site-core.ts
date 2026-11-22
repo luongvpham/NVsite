@@ -22,7 +22,8 @@ export type SiteLoaderKind = (typeof SiteLoaderKind)[keyof typeof SiteLoaderKind
 
 /**
  * Snapshot đi từ JSON của BE (đã qua Zod) nên luôn serialize được, nhưng schema để vài chỗ là
- * `unknown` (vd `navigation.items`) và kiểm tra kiểu serialize của Start từ chối `unknown`. Đổi
+ * map mở / `unknown` (vd `tracking: Record<string, unknown>`, như `props` của node) và kiểm tra kiểu
+ * serialize của Start từ chối `unknown`. Đổi
  * `unknown` → `JsonValue` ở tầng kiểu; vẫn gán ngược được cho `SiteSnapshot` (T5 dùng thẳng).
  */
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };

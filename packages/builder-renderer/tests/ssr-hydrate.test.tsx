@@ -2,7 +2,7 @@ import { act } from 'react';
 import { renderToString } from 'react-dom/server';
 import { hydrateRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadValidTrees, SiteApp } from './helpers/site-app';
+import { loadValidTrees, menuItems, SiteApp } from './helpers/site-app';
 
 /** R3 — HTML server == lần render client đầu: hydrate không báo lệch (năm ©, id, thời gian…). */
 describe('hydrate SSR→CSR không lệch', () => {
@@ -26,6 +26,21 @@ describe('hydrate SSR→CSR không lệch', () => {
     const reference = document.createElement('div');
     reference.innerHTML = html;
     expect(strip(container.innerHTML)).toBe(strip(reference.innerHTML));
+    container.remove();
+  });
+
+  it('có menu lồng 3 cấp: hydrate không lệch (R7)', () => {
+    const tree = loadValidTrees()[0]?.tree as never;
+    const errors: unknown[] = [];
+    vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => void errors.push(args));
+    const html = renderToString(<SiteApp tree={tree} menu={menuItems} />);
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    act(() => {
+      hydrateRoot(container, <SiteApp tree={tree} menu={menuItems} />, { onRecoverableError: (e) => errors.push(e) });
+    });
+    expect(errors).toEqual([]);
     container.remove();
   });
 });

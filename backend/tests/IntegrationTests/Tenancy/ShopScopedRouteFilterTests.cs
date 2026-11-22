@@ -48,7 +48,7 @@ public sealed class ShopScopedRouteFilterTests
     /// <c>WEBSITE_OWNER_REQUIRED</c>. Thêm endpoint website mới mà quên <c>RequireShopOwner</c> là RED ngay (#17).</summary>
     [Fact]
     public void Every_website_endpoint_requires_owner_with_WEBSITE_OWNER_REQUIRED() =>
-        AssertEveryEndpointOfDocumentIsOwnerOnly("website", "WEBSITE_OWNER_REQUIRED", expectedMinimum: 10);
+        AssertEveryEndpointOfDocumentIsOwnerOnly("website", "WEBSITE_OWNER_REQUIRED", expectedMinimum: 16);
 
     private static void AssertEveryEndpointOfDocumentIsOwnerOnly(string document, string errorCode, int expectedMinimum)
     {

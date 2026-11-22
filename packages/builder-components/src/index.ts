@@ -11,7 +11,13 @@ export { default as treeRules } from '../generated/tree-rules.json';
 export { getPropsSchema } from './props-schemas';
 export { componentManifests } from './manifests';
 export { NODE_ID_PATTERN, themeTokensSchema, treeEnvelopeSchema, siteSnapshotSchema } from '../meta/envelope-schema';
-export type { SiteSnapshot } from '../meta/envelope-schema';
+export type {
+  SiteNavigationChildItem,
+  SiteNavigationGrandchildItem,
+  SiteNavigationItem,
+  SiteNavigationKey,
+  SiteSnapshot,
+} from '../meta/envelope-schema';
 export { isSafeLinkUrl } from './link-url';
 export { sanitizeRichText } from './sanitize-html';
 export * from './inspector/Inspector';
@@ -19,3 +25,4 @@ export * from './inspector/path-utils';
 export * from './inspector/types';
 export * from './context';
 export * from './site-url';
+export * from './site-navigation';

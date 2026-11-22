@@ -102,6 +102,64 @@ describe('Website — quyền (R4)', () => {
   });
 });
 
+describe('Website — lối vào màn Menu (WEBSITE-007 F4)', () => {
+  it('Owner: tổng quan có link "Sắp menu" → mở màn Menu', async () => {
+    asRole('Owner');
+    server.use(
+      http.get('*/api/shops/:shopId/website', () => HttpResponse.json(website)),
+      http.get('*/api/shops/:shopId/website/pages', () => HttpResponse.json(seededPages)),
+      http.get('*/api/shops/:shopId/website/publications', () => HttpResponse.json([])),
+      http.get('*/api/shops/:shopId/website/navigation', () =>
+        HttpResponse.json({
+          version: null,
+          isDirty: true,
+          items: [{ key: 'page:p-home', label: null, url: null, hidden: false, children: [] }],
+        }),
+      ),
+    );
+    renderApp('/shops/shop-1/website');
+
+    const link = await screen.findByRole('link', { name: 'Sắp menu' });
+    expect(link).toHaveAttribute('href', '/shops/shop-1/website/menu');
+    fireEvent.click(link);
+
+    expect(await screen.findByRole('heading', { name: 'Menu website' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Kéo Trang chủ' })).toBeInTheDocument();
+  });
+
+  it('F5: tổng quan hiện "Menu có thay đổi chưa publish" khi isDirty, ẩn khi không', async () => {
+    asRole('Owner');
+    let dirty = true;
+    server.use(
+      http.get('*/api/shops/:shopId/website', () => HttpResponse.json(website)),
+      http.get('*/api/shops/:shopId/website/pages', () => HttpResponse.json(seededPages)),
+      http.get('*/api/shops/:shopId/website/publications', () => HttpResponse.json([])),
+      http.get('*/api/shops/:shopId/website/navigation', () => HttpResponse.json({ version: 2, isDirty: dirty, items: [] })),
+    );
+    const { unmount } = renderApp('/shops/shop-1/website');
+    expect(await screen.findByText('Menu có thay đổi chưa publish')).toBeInTheDocument();
+    unmount();
+    dirty = false;
+    renderApp('/shops/shop-1/website');
+    await screen.findByRole('link', { name: 'Sắp menu' });
+    await waitFor(() => { expect(screen.queryByText('Menu có thay đổi chưa publish')).not.toBeInTheDocument(); });
+  });
+
+  it('Manager mở thẳng URL menu → "Chỉ chủ shop", không gọi API menu', async () => {
+    asRole('Manager');
+    let navigationCalls = 0;
+    server.use(
+      http.get('*/api/shops/:shopId/website/navigation', () => {
+        navigationCalls += 1;
+        return HttpResponse.json({ version: null, isDirty: true, items: [] });
+      }),
+    );
+    renderApp('/shops/shop-1/website/menu');
+    expect(await screen.findByText(/Chỉ chủ shop/)).toBeInTheDocument();
+    expect(navigationCalls).toBe(0);
+  });
+});
+
 describe('Website — tạo website', () => {
   it('đang tải → hiện loading', async () => {
     asRole('Owner');

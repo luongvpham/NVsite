@@ -24,14 +24,14 @@ const page = (id: string, slug: string | null, title: string, children: unknown[
   tree: tree(children),
 });
 
-function snapshot(pages: unknown[]) {
+function snapshot(pages: unknown[], navItems: unknown[] = []) {
   return siteSnapshotSchema.parse({
     schemaVersion: 1,
     version: 1,
     defaultLocale: 'vi',
     locales: ['vi'],
     theme: { presetKey: null, tokens: { ...themeTokensConfig.defaults, colors: { ...themeTokensConfig.defaults.colors, primary: '#123456' } } },
-    navigation: { items: [] },
+    navigation: { items: navItems },
     seo: { defaultTitle: null, defaultDescription: null, ogImageId: null, faviconAssetId: null },
     tracking: {},
     media: {},
@@ -46,10 +46,10 @@ const PAGES = [
 ];
 
 type SiteData = Extract<SiteLoaderData, { kind: 'site' }>;
-const data = (path: string, pages: unknown[] = PAGES): SiteData => ({
+const data = (path: string, pages: unknown[] = PAGES, navItems: unknown[] = []): SiteData => ({
   kind: SiteLoaderKind.Site,
   shop: { name: 'Spa ABC', logoUrl: '/media/s/logo.png' },
-  snapshot: snapshot(pages) as SiteData['snapshot'],
+  snapshot: snapshot(pages, navItems) as SiteData['snapshot'],
   publishedAt: '2026-11-01T10:00:00+00:00',
   path,
   year: 2027,
@@ -86,5 +86,40 @@ describe('SiteView SSR (#103)', () => {
     const out = html(data('/khong-co', PAGES.slice(0, 2)));
     expect(out).toContain('Không tìm thấy trang');
     expect(out).not.toContain('Nội dung');
+  });
+
+  describe('menu (WEBSITE-007, #113)', () => {
+    const G_HOME = '11111111-1111-4111-8111-111111111111';
+    const G_CONTACT = '22222222-2222-4222-8222-222222222222';
+    const G_GONE = '33333333-3333-4333-8333-333333333333';
+    const MENU_PAGES = [
+      page(G_HOME, '', 'Trang chủ', [richText('c_home1', '<p>Home</p>')]),
+      page(G_CONTACT, 'lien-he', 'Liên hệ', [richText('c_contact1', '<p>Contact</p>')], 'Contact'),
+      page('p-nf', null, 'Không tìm thấy', [richText('c_notfound1', '<p>NF</p>')], 'NotFound'),
+    ];
+    const navPage = (id: string, label: string | null, children?: unknown[]) => ({
+      key: `page:${id}`,
+      label,
+      ...(children ? { children } : {}),
+    });
+    const navHtml = (items: unknown[]) => html(data('/', MENU_PAGES, items));
+
+    it('hiện menu cấp 1 và con, href đi qua resolveUrl', () => {
+      const out = navHtml([navPage(G_HOME, 'Nhà', [navPage(G_CONTACT, 'Gặp chúng tôi')])]);
+      expect(out).toContain('Nhà');
+      expect(out).toContain('Gặp chúng tôi');
+      expect(out).toContain('href="/lien-he"');
+      expect(out).toContain('href="/"');
+    });
+    it('R6: items rỗng → header không menu, không lỗi', () => {
+      const out = navHtml([]);
+      expect(out).toContain('Spa ABC');
+      expect(out).not.toContain('<nav');
+    });
+    it('mục mồ côi (trang không có trong snapshot.pages) không render', () => {
+      const out = navHtml([navPage(G_GONE, 'Mồ côi XYZ'), navPage(G_CONTACT, 'Liên hệ menu')]);
+      expect(out).not.toContain('Mồ côi XYZ');
+      expect(out).toContain('Liên hệ menu');
+    });
   });
 });

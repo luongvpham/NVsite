@@ -13,7 +13,7 @@ namespace Vsite.Application.Website.Commands.RollbackPublication;
 /// <summary>
 /// Flow 2 (WEBSITE-004 T5). Bản được tìm bằng <c>Id + ShopId + WebsiteId</c> trong MỘT câu query (#21.3, R4) → không thấy: 404
 /// <c>PUBLICATION_NOT_FOUND</c>. Đã là bản đang chạy: trả luôn, không ghi gì. Còn lại: <c>Website.PointTo</c> (không đổi
-/// <c>Status</c>) + mọi draft <c>MarkDirty</c> (G7, KHÔNG đụng nội dung draft) trong MỘT <c>SaveChanges</c>; sau commit xoá
+/// <c>Status</c>) + mọi draft và menu (nếu có dòng, WEBSITE-007) <c>MarkDirty</c> (G7, KHÔNG đụng nội dung) trong MỘT <c>SaveChanges</c>; sau commit xoá
 /// con trỏ cache (#109, R5) — lỗi xoá chỉ log (cùng quy ước publish; con trỏ cũ hết hạn theo TTL).
 /// </summary>
 public sealed class RollbackPublicationHandler(
@@ -51,6 +51,11 @@ public sealed class RollbackPublicationHandler(
         {
             draft.MarkDirty();
         }
+
+        // Menu đang sửa giữ nguyên nhưng giờ khác bản đang chạy (WEBSITE-007 Flow 6). Chưa có dòng (website publish trước Bước 7) ⇒ không làm gì.
+        var nav = await db.NavigationConfigs
+            .FirstOrDefaultAsync(n => n.Id == website.Id && n.ShopId == shopId && !n.IsDirty, cancellationToken);
+        nav?.MarkDirty();
 
         try
         {

@@ -55,6 +55,13 @@ public sealed class SchemaVersioningTests
     }
 
     [Fact]
+    public void Current_version_is_one_for_navigation()
+    {
+        Assert.Equal(1, Versioning().Current(DocumentKind.Navigation));
+        Assert.Equal(1, DocumentSchemaVersions.Navigation);
+    }
+
+    [Fact]
     public void Snapshot_newer_than_current_is_unsupported()
     {
         var result = Versioning().Upcast(DocumentKind.Snapshot, JsonNode.Parse("""{ "schemaVersion": 2 }"""));

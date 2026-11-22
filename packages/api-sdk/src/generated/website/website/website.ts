@@ -23,11 +23,14 @@ import type {
 import type {
   CreatePageRequest,
   HttpValidationProblemDetails,
+  NavigationDto,
   PageDraftDto,
   PageDto,
   ProblemDetails,
   PublicationDto,
   PublishWebsiteBody,
+  SaveNavigationRequest,
+  SaveNavigationResultDto,
   SavePageDraftRequest,
   SavePageDraftResultDto,
   ThemeDto,
@@ -940,6 +943,150 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getRollbackPublicationMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const getNavigation = (
+    shopId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<NavigationDto>(
+      {url: `/api/shops/${shopId}/website/navigation`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetNavigationQueryKey = (shopId?: string,) => {
+    return [
+    `/api/shops/${shopId}/website/navigation`
+    ] as const;
+    }
+
+    
+export const getGetNavigationQueryOptions = <TData = Awaited<ReturnType<typeof getNavigation>>, TError = ProblemDetails>(shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNavigation>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNavigationQueryKey(shopId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNavigation>>> = ({ signal }) => getNavigation(shopId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(shopId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNavigation>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetNavigationQueryResult = NonNullable<Awaited<ReturnType<typeof getNavigation>>>
+export type GetNavigationQueryError = ProblemDetails
+
+
+export function useGetNavigation<TData = Awaited<ReturnType<typeof getNavigation>>, TError = ProblemDetails>(
+ shopId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNavigation>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getNavigation>>,
+          TError,
+          Awaited<ReturnType<typeof getNavigation>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetNavigation<TData = Awaited<ReturnType<typeof getNavigation>>, TError = ProblemDetails>(
+ shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNavigation>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getNavigation>>,
+          TError,
+          Awaited<ReturnType<typeof getNavigation>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetNavigation<TData = Awaited<ReturnType<typeof getNavigation>>, TError = ProblemDetails>(
+ shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNavigation>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetNavigation<TData = Awaited<ReturnType<typeof getNavigation>>, TError = ProblemDetails>(
+ shopId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNavigation>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetNavigationQueryOptions(shopId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const saveNavigation = (
+    shopId: string,
+    saveNavigationRequest: SaveNavigationRequest,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<SaveNavigationResultDto>(
+      {url: `/api/shops/${shopId}/website/navigation`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: saveNavigationRequest
+    },
+      options);
+    }
+  
+
+
+export const getSaveNavigationMutationOptions = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveNavigation>>, TError,{shopId: string;data: SaveNavigationRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveNavigation>>, TError,{shopId: string;data: SaveNavigationRequest}, TContext> => {
+
+const mutationKey = ['saveNavigation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveNavigation>>, {shopId: string;data: SaveNavigationRequest}> = (props) => {
+          const {shopId,data} = props ?? {};
+
+          return  saveNavigation(shopId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveNavigationMutationResult = NonNullable<Awaited<ReturnType<typeof saveNavigation>>>
+    export type SaveNavigationMutationBody = SaveNavigationRequest
+    export type SaveNavigationMutationError = ProblemDetails | HttpValidationProblemDetails
+
+    export const useSaveNavigation = <TError = ProblemDetails | HttpValidationProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveNavigation>>, TError,{shopId: string;data: SaveNavigationRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof saveNavigation>>,
+        TError,
+        {shopId: string;data: SaveNavigationRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getSaveNavigationMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

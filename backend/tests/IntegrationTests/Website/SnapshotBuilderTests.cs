@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Vsite.Application.Website.Navigation;
 using Vsite.Application.Website.Publishing;
 using Vsite.Domain.Website.Entities;
 using Vsite.Domain.Website.Enums;
@@ -46,7 +47,7 @@ public sealed class SnapshotBuilderTests
     {
         var (website, theme, pages) = SeedWebsite();
 
-        var json = SnapshotBuilder.Build(website, theme, version: 1, pages, media: []);
+        var json = SnapshotBuilder.Build(website, theme, version: 1, pages, media: [], navigation: []);
 
         var violations = WebsiteHandlerKit.S.Schemas.ValidateSiteSnapshot(json);
         Assert.Empty(violations);
@@ -57,7 +58,7 @@ public sealed class SnapshotBuilderTests
     {
         var (website, theme, pages) = SeedWebsite();
 
-        var root = JsonNode.Parse(SnapshotBuilder.Build(website, theme, version: 7, pages, media: []))!.AsObject();
+        var root = JsonNode.Parse(SnapshotBuilder.Build(website, theme, version: 7, pages, media: [], navigation: []))!.AsObject();
 
         Assert.Equal(1, root["schemaVersion"]!.GetValue<int>());
         Assert.Equal(7, root["version"]!.GetValue<int>());
@@ -81,7 +82,7 @@ public sealed class SnapshotBuilderTests
     {
         var (website, theme, pages) = SeedWebsite();
 
-        var root = JsonNode.Parse(SnapshotBuilder.Build(website, theme, 1, pages, []))!.AsObject();
+        var root = JsonNode.Parse(SnapshotBuilder.Build(website, theme, 1, pages, [], []))!.AsObject();
 
         Assert.Equal("spa-lavender", root["theme"]!["presetKey"]!.GetValue<string>());
         Assert.True(JsonNode.DeepEquals(JsonNode.Parse(theme.Tokens), root["theme"]!["tokens"]));
@@ -92,7 +93,7 @@ public sealed class SnapshotBuilderTests
     {
         var (website, theme, pages) = SeedWebsite();
 
-        var arr = JsonNode.Parse(SnapshotBuilder.Build(website, theme, 1, pages, []))!["pages"]!.AsArray();
+        var arr = JsonNode.Parse(SnapshotBuilder.Build(website, theme, 1, pages, [], []))!["pages"]!.AsArray();
 
         var home = arr.Single(p => p!["kind"]!.GetValue<string>() == "Composable");
         Assert.Equal("", home!["slug"]!.GetValue<string>());
@@ -130,7 +131,7 @@ public sealed class SnapshotBuilderTests
             new(Page.NewComposable(shopId, websiteId, "p2a", "A", 2), tree),
         };
 
-        var titles = JsonNode.Parse(SnapshotBuilder.Build(website, theme, 1, pages, []))!["pages"]!.AsArray()
+        var titles = JsonNode.Parse(SnapshotBuilder.Build(website, theme, 1, pages, [], []))!["pages"]!.AsArray()
             .Select(p => p!["title"]!.GetValue<string>()).ToArray();
 
         Assert.Equal(new[] { "A", "Z", "A", "B" }, titles); // sort 1 (A,Z) rồi sort 2 (A,B)
@@ -148,7 +149,7 @@ public sealed class SnapshotBuilderTests
             new(library, "shops/x/orig.webp", null),
         };
 
-        var table = JsonNode.Parse(SnapshotBuilder.Build(website, theme, 1, pages, media))!["media"]!.AsObject();
+        var table = JsonNode.Parse(SnapshotBuilder.Build(website, theme, 1, pages, media, []))!["media"]!.AsObject();
 
         Assert.Equal(2, table.Count);
         Assert.Equal("shops/x/clone.webp", table[clone.ToString()]!["storageKey"]!.GetValue<string>());
@@ -157,6 +158,66 @@ public sealed class SnapshotBuilderTests
         Assert.Equal(clone.ToString(), clone.ToString().ToLowerInvariant()); // GUID "D" đã là chữ thường
 
         // Snapshot có media vẫn hợp lệ theo schema.
-        Assert.Empty(WebsiteHandlerKit.S.Schemas.ValidateSiteSnapshot(SnapshotBuilder.Build(website, theme, 1, pages, media)));
+        Assert.Empty(WebsiteHandlerKit.S.Schemas.ValidateSiteSnapshot(SnapshotBuilder.Build(website, theme, 1, pages, media, [])));
+    }
+
+    // ---- WEBSITE-007 T4 (#113): navigation.items ----
+
+    private static NavItem PageNav(Guid id, string? label = null, params NavItem[] children) =>
+        new(NavItem.PageKey(id), label, null, false, children);
+
+    private static NavItem CustomNav(string label, string url) => new(NavItem.CustomKey, label, url, false, []);
+
+    [Fact]
+    public void Navigation_items_with_three_levels_are_written_as_keys_and_validate_against_schema()
+    {
+        var (website, theme, pages) = SeedWebsite();
+        var home = pages[0].Page.Id;
+        var contact = pages.Single(p => p.Page.SystemType == SystemType.Contact).Page.Id;
+        var nav = new[]
+        {
+            PageNav(home, null, PageNav(contact, "Liên hệ", CustomNav("Zalo", "https://zalo.me/0901"))),
+            CustomNav("Gọi ngay", "tel:0901234567"),
+        };
+
+        var json = SnapshotBuilder.Build(website, theme, 1, pages, [], nav);
+
+        Assert.Empty(WebsiteHandlerKit.S.Schemas.ValidateSiteSnapshot(json));
+        var expected = JsonNode.Parse(
+            "[{\"key\":\"page:" + home + "\",\"label\":null,\"children\":[" +
+            "{\"key\":\"page:" + contact + "\",\"label\":\"Liên hệ\",\"children\":[" +
+            "{\"key\":\"custom\",\"label\":\"Zalo\",\"url\":\"https://zalo.me/0901\"}]}]}," +
+            "{\"key\":\"custom\",\"label\":\"Gọi ngay\",\"url\":\"tel:0901234567\"}]");
+        Assert.True(
+            JsonNode.DeepEquals(expected, JsonNode.Parse(json)!["navigation"]!["items"]),
+            JsonNode.Parse(json)!["navigation"]!.ToJsonString());
+    }
+
+    [Fact]
+    public void Navigation_page_key_is_lowercase_guid_like_pages_id_even_if_stored_uppercase()
+    {
+        var (website, theme, pages) = SeedWebsite();
+        var home = pages[0].Page.Id;
+        var nav = new[] { new NavItem("page:" + home.ToString("D").ToUpperInvariant(), null, null, false, []) };
+
+        var json = SnapshotBuilder.Build(website, theme, 1, pages, [], nav);
+
+        Assert.Equal("page:" + home.ToString("D"), JsonNode.Parse(json)!["navigation"]!["items"]![0]!["key"]!.GetValue<string>());
+        Assert.Empty(WebsiteHandlerKit.S.Schemas.ValidateSiteSnapshot(json));
+    }
+
+    [Fact]
+    public void Snapshot_schema_rejects_a_fourth_level_and_a_hidden_flag()
+    {
+        var (website, theme, pages) = SeedWebsite();
+        var root = JsonNode.Parse(SnapshotBuilder.Build(website, theme, 1, pages, [], []))!.AsObject();
+
+        root["navigation"]!["items"] = JsonNode.Parse(
+            "[{\"key\":\"custom\",\"label\":\"a\",\"url\":\"/a\",\"children\":[{\"key\":\"custom\",\"label\":\"b\",\"url\":\"/b\",\"children\":[" +
+            "{\"key\":\"custom\",\"label\":\"c\",\"url\":\"/c\",\"children\":[{\"key\":\"custom\",\"label\":\"d\",\"url\":\"/d\"}]}]}]}]");
+        Assert.NotEmpty(WebsiteHandlerKit.S.Schemas.ValidateSiteSnapshot(root.ToJsonString()));
+
+        root["navigation"]!["items"] = JsonNode.Parse("[{\"key\":\"custom\",\"label\":\"a\",\"url\":\"/a\",\"hidden\":false}]");
+        Assert.NotEmpty(WebsiteHandlerKit.S.Schemas.ValidateSiteSnapshot(root.ToJsonString()));
     }
 }

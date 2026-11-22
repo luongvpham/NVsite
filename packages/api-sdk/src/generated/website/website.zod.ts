@@ -209,6 +209,66 @@ export const rollbackPublicationResponse = zod.object({
 })
 
 
+export const getNavigationParams = zod.object({
+  "shopId": zod.string().uuid()
+})
+
+export const getNavigationResponse = zod.object({
+  "version": zod.number().nullable(),
+  "isDirty": zod.boolean(),
+  "items": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string().nullable(),
+  "url": zod.string().nullable(),
+  "hidden": zod.boolean(),
+  "children": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string().nullable(),
+  "url": zod.string().nullable(),
+  "hidden": zod.boolean(),
+  "children": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string().nullable(),
+  "url": zod.string().nullable(),
+  "hidden": zod.boolean()
+}))
+}))
+}))
+})
+
+
+export const saveNavigationParams = zod.object({
+  "shopId": zod.string().uuid()
+})
+
+export const saveNavigationBody = zod.object({
+  "version": zod.number().nullable(),
+  "items": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string().nullable(),
+  "url": zod.string().nullable(),
+  "hidden": zod.boolean(),
+  "children": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string().nullable(),
+  "url": zod.string().nullable(),
+  "hidden": zod.boolean(),
+  "children": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string().nullable(),
+  "url": zod.string().nullable(),
+  "hidden": zod.boolean()
+}))
+}))
+}))
+})
+
+export const saveNavigationResponse = zod.object({
+  "version": zod.number(),
+  "isDirty": zod.boolean()
+})
+
+
 export const getPublishedSiteResponse = zod.object({
   "status": zod.enum(['Draft', 'Published', 'Suspended']),
   "shop": zod.object({

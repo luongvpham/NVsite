@@ -47,3 +47,27 @@ public sealed class DraftConflictException(DraftConflictParams info)
 {
     public DraftConflictParams Info { get; } = info;
 }
+
+/// <summary>
+/// Phần <c>params</c> của 409 <c>NAVIGATION_CONFLICT</c> (data-needs WEBSITE-007: như <c>DRAFT_CONFLICT</c> — <c>currentVersion</c>,
+/// <c>updatedAt</c>). Cả hai <c>null</c> khi chưa có bản lưu nào (client gửi <c>version</c> mà menu chưa từng được lưu).
+/// </summary>
+public sealed record NavigationConflictParams(long? CurrentVersion, DateTimeOffset? UpdatedAt);
+
+/// <summary>409 — menu đã được lưu ở nơi khác (version lệch, gửi <c>null</c> khi đã có bản lưu, hoặc race lúc INSERT/UPDATE).</summary>
+public sealed class NavigationConflictException(NavigationConflictParams info)
+    : AppException(
+        "NAVIGATION_CONFLICT",
+        "Menu vừa được lưu ở nơi khác. Hãy tải lại bản mới nhất.",
+        statusCode: 409,
+        errorParams: info)
+{
+    public NavigationConflictParams Info { get; } = info;
+}
+
+/// <summary>
+/// 400 <c>NAVIGATION_BODY_INVALID</c> — body <c>saveNavigation</c> không đọc được theo kiểu: JSON hỏng, thiếu <c>key</c>/<c>hidden</c> ở
+/// bất kỳ cấp nào, sai kiểu, hoặc có thuộc tính lạ ở cấp 3 (vd. <c>children</c> cấp 4 — #113). Lỗi theo mục (nội dung) vẫn là 422.
+/// </summary>
+public sealed class NavigationBodyInvalidException(string detail)
+    : AppException("NAVIGATION_BODY_INVALID", detail, statusCode: 400);

@@ -38,6 +38,7 @@ public interface IAppDbContext
     DbSet<Theme> Themes { get; }
     DbSet<Page> Pages { get; }
     DbSet<PageDraft> PageDrafts { get; }
+    DbSet<NavigationConfig> NavigationConfigs { get; }
     DbSet<SitePublication> SitePublications { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);

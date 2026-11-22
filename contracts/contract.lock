@@ -18,9 +18,9 @@
     "taskId": "WEBSITE-004"
   },
   "website.v1.json": {
-    "sha256": "9632e7edb031a7cd9494fb3a7a6845427468bd9b84097469418a9ddfe15fa898",
-    "approvedAt": "2026-11-18T14:58:29.085Z",
+    "sha256": "67c95b310d76727314da78ac0243b860a3632a85fbe26356ed08afc1a4d62142",
+    "approvedAt": "2026-11-21T01:12:12.577Z",
     "approvedBy": "gate1-pre-production-89",
-    "taskId": "WEBSITE-004"
+    "taskId": "WEBSITE-007"
   }
 }
