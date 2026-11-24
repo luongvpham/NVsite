@@ -64,7 +64,7 @@ describe('getAccessTokenRoles', () => {
     const role = '???>>>~~~ô';
     const raw = JSON.stringify({ role });
     const encoded = b64url(raw);
-    expect(/[-_]/.test(encoded) || encoded.length % 4 !== 0).toBe(true);
+    expect(/[-_]/.test(encoded) && encoded.length % 4 !== 0).toBe(true);
     setAccessToken(`h.${encoded}.s`);
     expect(getAccessTokenRoles()).toEqual([role]);
   });
@@ -112,6 +112,59 @@ describe('subscribeAccessToken', () => {
     await restoreSession();
 
     expect(cb).toHaveBeenCalledTimes(1);
+    expect(getAccessTokenRoles()).toEqual([]);
+    off();
+  });
+});
+
+describe('refresh và epoch phiên', () => {
+  function deferredRefresh() {
+    let resolve!: (token: string) => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<{ data: { accessToken: string } }>((res, rej) => {
+      resolve = (accessToken) => {
+        res({ data: { accessToken } });
+      };
+      reject = rej;
+    });
+    vi.spyOn(axios, 'post').mockReturnValue(promise);
+    return { resolve, reject };
+  }
+
+  it('refresh hỏng sau khi phiên đã clear + đăng nhập mới → KHÔNG xoá token mới', async () => {
+    setAccessToken(jwt({}));
+    const refresh = deferredRefresh();
+    const pending = restoreSession();
+
+    setAccessToken(undefined);
+    const newToken = jwt({ role: 'PlatformAdmin' });
+    setAccessToken(newToken);
+    const cb = vi.fn();
+    const off = subscribeAccessToken(cb);
+    const rolesBefore = getAccessTokenRoles();
+
+    refresh.reject(new Error('401'));
+    await pending;
+
+    expect(cb).not.toHaveBeenCalled();
+    expect(getAccessTokenRoles()).toBe(rolesBefore);
+    expect(getAccessTokenRoles()).toEqual(['PlatformAdmin']);
+    off();
+  });
+
+  it('refresh thành công sau khi phiên đã clear → token không được hồi sinh, subscriber không bị gọi', async () => {
+    setAccessToken(jwt({ role: 'PlatformAdmin' }));
+    const refresh = deferredRefresh();
+    const pending = restoreSession();
+
+    setAccessToken(undefined);
+    const cb = vi.fn();
+    const off = subscribeAccessToken(cb);
+
+    refresh.resolve(jwt({ role: 'PlatformAdmin' }));
+    await expect(pending).resolves.toBeUndefined();
+
+    expect(cb).not.toHaveBeenCalled();
     expect(getAccessTokenRoles()).toEqual([]);
     off();
   });

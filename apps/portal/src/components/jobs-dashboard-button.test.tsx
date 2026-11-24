@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setAccessToken } from '@vsite/api-sdk';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import { restoreSession, setAccessToken } from '@vsite/api-sdk';
 import { useSessionStore } from '../stores/session-store';
 import { renderApp } from '../test/render-app';
 import { renderWithQuery } from '../test/render-with-query';
@@ -19,10 +19,10 @@ const adminToken = () => jwt({ role: 'PlatformAdmin' });
 const BUTTON = { name: 'Job nền' };
 const ENDPOINT = '/api/platform/jobs/dashboard-session';
 
-let openSpy: ReturnType<typeof vi.spyOn>;
+let openSpy: MockInstance<typeof window.open>;
 
 beforeEach(() => {
-  openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+  openSpy = vi.spyOn(window, 'open').mockReturnValue({} as Window);
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -65,18 +65,23 @@ describe('hiện/ẩn theo claim role', () => {
     expect(screen.queryByRole('button', BUTTON)).not.toBeInTheDocument();
   });
 
-  it('token đổi sau refresh: không role → có role ⇒ hiện, rồi mất role ⇒ ẩn', () => {
+  it('token đổi qua refresh thật: không role → có role ⇒ hiện, rồi refresh mất role ⇒ ẩn', async () => {
+    let refreshedToken = adminToken();
+    server.use(
+      http.post('/api/auth/refresh-token', () => HttpResponse.json({ accessToken: refreshedToken })),
+    );
     setAccessToken(jwt({}));
     renderWithQuery(<JobsDashboardButton />);
     expect(screen.queryByRole('button', BUTTON)).not.toBeInTheDocument();
 
-    act(() => {
-      setAccessToken(adminToken());
+    await act(async () => {
+      await restoreSession();
     });
     expect(screen.getByRole('button', BUTTON)).toBeInTheDocument();
 
-    act(() => {
-      setAccessToken(jwt({}));
+    refreshedToken = jwt({});
+    await act(async () => {
+      await restoreSession();
     });
     expect(screen.queryByRole('button', BUTTON)).not.toBeInTheDocument();
   });
@@ -101,6 +106,22 @@ describe('bấm nút', () => {
     });
     expect(calls).toBe(1);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', BUTTON)).toBeEnabled();
+  });
+
+  it('window.open trả null (popup bị chặn) → thông báo + link thật tới /hangfire, nút vẫn dùng được', async () => {
+    setAccessToken(adminToken());
+    openSpy.mockReturnValue(null);
+    server.use(http.post(ENDPOINT, () => new HttpResponse(null, { status: 204 })));
+    renderWithQuery(<JobsDashboardButton />);
+
+    fireEvent.click(screen.getByRole('button', BUTTON));
+
+    const link = await screen.findByRole('link', { name: 'mở trang job nền' });
+    expect(link).toHaveAttribute('href', '/hangfire');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    expect(screen.getByRole('alert')).toHaveTextContent('Trình duyệt chặn tab mới');
     expect(screen.getByRole('button', BUTTON)).toBeEnabled();
   });
 
@@ -204,7 +225,9 @@ describe('bấm nút', () => {
     renderWithQuery(<JobsDashboardButton />);
 
     fireEvent.click(screen.getByRole('button', BUTTON));
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    const alert = await screen.findByRole('alert');
+    expect(alert).not.toHaveTextContent('không có quyền');
+    expect(alert).toHaveTextContent('Không mở được dashboard job nền');
     expect(screen.getByRole('button', BUTTON)).toBeEnabled();
 
     fireEvent.click(screen.getByRole('button', BUTTON));

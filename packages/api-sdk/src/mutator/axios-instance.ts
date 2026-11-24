@@ -135,7 +135,8 @@ async function refreshAccessToken(): Promise<string | undefined> {
     assignAccessToken(response.data.accessToken);
     return accessToken;
   } catch {
-    assignAccessToken(undefined);
+    // Refresh "đời" cũ hỏng không được xoá token của phiên mới (đăng xuất rồi đăng nhập lại trong lúc refresh bay).
+    if (epoch === sessionEpoch) assignAccessToken(undefined);
     return undefined;
   }
 }

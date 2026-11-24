@@ -5,6 +5,7 @@ import { getAccessTokenRoles, subscribeAccessToken, useCreateJobsDashboardSessio
 
 const PLATFORM_ADMIN_ROLE = 'PlatformAdmin';
 const DENIED_MESSAGE = 'Bạn không có quyền xem job nền';
+const POPUP_BLOCKED_MESSAGE = 'Trình duyệt chặn tab mới — ';
 const GENERIC_ERROR_MESSAGE = 'Không mở được dashboard job nền, vui lòng thử lại.';
 
 /**
@@ -32,14 +33,17 @@ export function JobsDashboardButton() {
   const roles = useSyncExternalStore(subscribeAccessToken, getAccessTokenRoles);
   const [denied, setDenied] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [popupBlocked, setPopupBlocked] = useState(false);
 
   const mutation = useCreateJobsDashboardSession({
     mutation: {
       onMutate: () => {
         setMessage(null);
+        setPopupBlocked(false);
       },
       onSuccess: () => {
-        window.open('/hangfire', '_blank');
+        // null = trình duyệt chặn popup (Safari hay chặn sau khoảng trễ async) → đưa link thật để người dùng tự bấm.
+        if (window.open('/hangfire', '_blank') === null) setPopupBlocked(true);
       },
       onError: (error) => {
         if (isForbidden(error)) {
@@ -67,6 +71,14 @@ export function JobsDashboardButton() {
         >
           Job nền
         </Button>
+      )}
+      {popupBlocked && (
+        <span className="text-sm text-destructive" role="alert">
+          {POPUP_BLOCKED_MESSAGE}
+          <a href="/hangfire" target="_blank" rel="noopener" className="underline">
+            mở trang job nền
+          </a>
+        </span>
       )}
       {message && (
         <span className="text-sm text-destructive" role="alert">
