@@ -28,27 +28,23 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next)
 
         if (string.Equals(hostLabel, "admin", StringComparison.Ordinal))
         {
-            tenantContext.AudienceKind = TenantAudienceKind.Portal;
-            tenantContext.ShopId = null;
+            tenantContext.Set(TenantAudienceKind.Portal, null);
         }
         else if (reservedRoutes.Routes.ReservedSubdomains.Contains(hostLabel))
         {
             // "www", "api", "cdn"... — reserved, không thể là slug shop nào, khỏi query DB.
-            tenantContext.AudienceKind = TenantAudienceKind.Main;
-            tenantContext.ShopId = null;
+            tenantContext.Set(TenantAudienceKind.Main, null);
         }
         else
         {
             var shopId = await shopLookup.FindShopIdBySlugAsync(hostLabel, context.RequestAborted);
             if (shopId is not null)
             {
-                tenantContext.AudienceKind = TenantAudienceKind.Shop;
-                tenantContext.ShopId = shopId;
+                tenantContext.Set(TenantAudienceKind.Shop, shopId);
             }
             else
             {
-                tenantContext.AudienceKind = TenantAudienceKind.Main;
-                tenantContext.ShopId = null;
+                tenantContext.Set(TenantAudienceKind.Main, null);
             }
         }
 

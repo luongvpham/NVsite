@@ -112,6 +112,8 @@ builder.Services.AddSingleton<SlugRules>();
 // middleware set giá trị, mọi handler đọc qua ITenantContext (không handler nào tự resolve ShopId).
 builder.Services.AddScoped<TenantContext>();
 builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
+// #116 — scope tenant ngoài request (job nền).
+builder.Services.AddSingleton<ITenantScopeFactory, TenantScopeFactory>();
 
 // Toàn bộ wiring Infrastructure (DbContext, Redis, MediatR, service từng module) nằm sau MỘT
 // method này — Program.cs không tự đăng ký implementation nào (architecture-guide.md §1).

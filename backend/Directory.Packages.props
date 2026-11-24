@@ -9,6 +9,10 @@
     <PackageVersion Include="HtmlSanitizer" Version="9.2.1039" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9" />
     <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="9.0.9" />
+    <!-- Job nền (JOBS-001, #115/#116). Cùng dòng 1.8.x với Hangfire.AspNetCore + Hangfire.PostgreSql (T4). -->
+    <PackageVersion Include="Hangfire.Core" Version="1.8.25" />
+    <!-- Hangfire.Core kéo Newtonsoft.Json 11.0.1 (GHSA-5crp-9r3c-p9vr, High) — ghim bản đã vá. -->
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <!-- Application layer -->
     <PackageVersion Include="MediatR" Version="12.4.1" />
     <PackageVersion Include="FluentValidation" Version="11.11.0" />

@@ -86,7 +86,7 @@ public sealed class ShopMembershipEndpointFilter(TenantContext tenantContext, IC
             throw new ForbiddenAccessException(ownerRequirement.ErrorCode, ownerRequirement.Detail);
         }
 
-        tenantContext.ShopId = shopId;
+        tenantContext.AttachShop(shopId);
 
         return await next(context);
     }
