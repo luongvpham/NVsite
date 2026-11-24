@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from '@tanstack/react-router';
 import { Button } from '@vsite/ui';
 import { logout, waitForPendingRefresh } from '@vsite/api-sdk';
+import { JobsDashboardButton } from '../components/jobs-dashboard-button';
 import { ensureSession, useSessionStore } from '../stores/session-store';
 
 /**
@@ -32,22 +33,25 @@ function AuthenticatedLayout() {
             vsite portal
           </Link>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            // Thoát phía FE NGAY — không chờ mạng, nên server treo cũng không kẹt nút (I3).
-            clearSession();
-            void navigate({ to: '/login' });
-            // Rồi thu hồi refresh token + xoá cookie ở BE (#101), SAU khi refresh đang bay (nếu có) xong
-            // (I1). Lỗi mạng/500 chỉ để cookie sống tới hết hạn — chấp nhận, FE đã thoát.
-            void waitForPendingRefresh()
-              .then(() => logout())
-              .catch(() => undefined);
-          }}
-        >
-          Đăng xuất
-        </Button>
+        <div className="flex items-center gap-3">
+          <JobsDashboardButton />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              // Thoát phía FE NGAY — không chờ mạng, nên server treo cũng không kẹt nút (I3).
+              clearSession();
+              void navigate({ to: '/login' });
+              // Rồi thu hồi refresh token + xoá cookie ở BE (#101), SAU khi refresh đang bay (nếu có) xong
+              // (I1). Lỗi mạng/500 chỉ để cookie sống tới hết hạn — chấp nhận, FE đã thoát.
+              void waitForPendingRefresh()
+                .then(() => logout())
+                .catch(() => undefined);
+            }}
+          >
+            Đăng xuất
+          </Button>
+        </div>
       </header>
       <Outlet />
     </div>
