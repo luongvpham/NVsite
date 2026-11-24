@@ -162,6 +162,9 @@ Vi phạm là lỗi bảo mật, không phải code style:
 5. Quyền theo shop kiểm ở **Authorization Handler**, không tin claim trong token.
    Cách làm hiện tại: endpoint có `{shopId}` gắn `.RequireShopMembership()`; cần role Owner thì
    `.RequireShopOwner(errorCode, detail)`. **Handler không tự query `UserShop`/`RoleId`.**
+   Role **platform** (`PlatformAdmin`) là ngoại lệ có chủ đích: tin claim, gắn policy ở nhóm
+   `/platform/*` — quy tắc ở #114 (`backend/docs/modules/identity.md`), hiện thực ở module
+   `Platform` (`backend/docs/modules/platform.md`).
 6. **`IgnoreQueryFilters()` chỉ ở file trong allowlist** (`IgnoreQueryFiltersAllowlistTests`) — nó tắt
    CẢ filter tenant lẫn soft-delete. Đọc `UserShop` xuyên shop thì dùng `UserShopQueries`
    (Quyết định #90).
@@ -198,6 +201,51 @@ viết lại thành `{ "allOf": [ { "$ref": ... } ], "nullable": true }` để O
   vụ, **không theo path**, để đổi path không làm đổi tên ở FE. Đổi tên một `operationId` = đổi
   contract (Gate 1).
 - `ApiRoutePrefixTests` chặn cả hai: endpoint ngoài `/api`, endpoint thiếu/trùng `operationId`.
+
+## Job nền (Quyết định #116, #115)
+
+Hangfire chạy **trong process `Vsite.Api`** (không thêm deployment), lưu trên Postgres hiện có, schema riêng `hangfire`.
+
+**Quy ước tenant cho job (#116).** Mặc định mỗi lần chạy chỉ xử lý **một shop** (fan-out):
+1. Job **cha** theo lịch gọi `Vsite.Infrastructure.Jobs.ShopFanOut.EnqueuePerShop<TJob>()` — lấy `Id` của **mọi shop chưa xoá
+   mềm** (mọi `Status`, kể cả `Draft`) qua `ListShopIdsAsync()` (helper duy nhất; không `IgnoreQueryFilters()` vì `Shop` không phải
+   tenant entity), enqueue mỗi shop một job con.
+2. Job con = `Vsite.Infrastructure.Jobs.ShopJobRunner.RunAsync<TJob>(shopId, ct)`: shop đã xoá mềm ⇒ no-op (log Information); còn thì
+   `ITenantScopeFactory.BeginShopScope(shopId)` (`Vsite.Application.Common.Interfaces`; hiện thực `Vsite.Api.Tenancy.TenantScopeFactory`)
+   mở **DI scope mới từ root** với `TenantContext` đặt **đúng một lần**, resolve `TJob` **trong scope đó** rồi gọi `ExecuteAsync`.
+3. `TJob : IShopJob` (`Vsite.Application.Common.Jobs`, `Task ExecuteAsync(CancellationToken)`) **không nhận `shopId`** — đọc shop qua
+   `ITenantContext`, query bình thường, Global Query Filter lo phần cách ly. Lỗi shop nào retry shop đó.
+
+**Ngoại lệ chạy một lần cho nhiều shop** (chỉ hai loại):
+- **(a)** bảng **không tenant** (`RefreshToken`, `PasswordResetToken`, `PendingRegistration`, `User`…) — set-based, vd. 3 job của Identity.
+- **(b)** dọn dẹp set-based trên bảng tenant mà **mỗi dòng tự quyết bởi dữ liệu của chính nó** — file phải thuộc allowlist
+  `IgnoreQueryFilters()` (`IgnoreQueryFiltersAllowlistTests`).
+
+**Cấm** nạp dữ liệu nhiều shop vào bộ nhớ rồi xử lý chung. Muốn thống kê xuyên shop thì dùng helper allowlist (#114 mục 7), không phải job.
+
+**Vị trí code.** Job nằm trong **module sở hữu dữ liệu** (vd. `Vsite.Application.Identity.Jobs`). `Jobs` **không phải module** mà là
+segment dùng chung (`ModuleBoundaryTests.SharedSegments["Infrastructure"]`, #115); hạ tầng chung (`JobsOptions`, `HangfireSetup`,
+`ShopFanOut`, `ShopJobRunner`, `RecurringJobs`) ở `Vsite.Infrastructure.Jobs`. Application không tham chiếu Infrastructure nên tham số cấu
+hình (vd. grace) đi vào job qua **tham số `RunAsync`**, do `RecurringJobs.Register` truyền.
+
+**Schema `hangfire` do Hangfire tự tạo/nâng** (`PrepareSchemaIfNecessary`), **không** qua EF migration và không theo quy ước snake_case
+của repo. **Đừng "sửa" bằng migration**, và `has-pending-model-changes` không liên quan tới nó.
+
+**Cấu hình** — section `Jobs` (`Vsite.Infrastructure.Jobs.JobsOptions`; không cần khai trong `appsettings*.json`, đây là mặc định):
+
+| Khoá | Mặc định | Ý nghĩa |
+|---|---|---|
+| `Jobs:ServerEnabled` | `true` | Chạy Hangfire server + đăng ký recurring job trong process này |
+| `Jobs:WorkerCount` | `2` | Số worker |
+| `Jobs:TimeZone` | `Asia/Ho_Chi_Minh` | Múi giờ lịch cron. `InvariantGlobalization=true` ⇒ Windows fallback `SE Asia Standard Time`; **image Linux cần tzdata** |
+| `Jobs:TokenCleanupGrace` | `00:00:00` | Đệm trước khi xoá token/đăng ký hết hạn (đổi có hiệu lực sau lần `Register` kế tiếp = lần khởi động kế tiếp) |
+| `Jobs:PrepareSchema` | `true` | Cho Hangfire tạo/nâng schema `hangfire` lúc storage khởi tạo |
+| `Jobs:StartupConnectionMaxRetries` | `2` | Số lần thử lại mở kết nối lúc storage khởi tạo (DB chết ⇒ ~14 s chờ) |
+
+**Test.** Mọi host test đặt `Jobs:ServerEnabled=false` (không có worker chạy giữa chừng) và **gọi job trực tiếp**. `JobsOptions` đọc
+**lazy** khi resolve (config của `WebApplicationFactory` áp sau `Program.cs` — đọc eager làm cờ này bị lờ âm thầm). Test cách ly job theo
+shop: `tests/IntegrationTests/Jobs/ShopJobIsolationTests.cs` (job mẫu `SampleShopJob` chỉ ở project test). Dashboard `/hangfire`,
+cookie và module `Platform`: `backend/docs/modules/platform.md`. Job Identity: `backend/docs/modules/identity.md` §Job nền.
 
 ## Testing
 

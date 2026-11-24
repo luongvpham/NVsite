@@ -135,7 +135,8 @@ hiện ra.
 
 ## 8a. Hangfire — hạ tầng job (dùng chung)
 
-**Gồm:** Hangfire lưu trên Postgres. Dashboard chỉ `PlatformAdmin`. Quy ước job chạy **ngoài** request
+**Gồm:** Hangfire lưu trên Postgres. Dashboard chỉ `PlatformAdmin` — policy, nhóm `/platform/*` và
+cookie vào dashboard theo #114. Quy ước job chạy **ngoài** request
 không có tenant context: job đặt `TenantContext` theo từng shop, hoặc dùng helper truy vấn có trong
 allowlist (#90) — **không** rải `IgnoreQueryFilters()`. Trả luôn 3 job của `03` (IDENTITY-001 §B).
 

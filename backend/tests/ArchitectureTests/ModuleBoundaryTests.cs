@@ -28,7 +28,9 @@ public sealed class ModuleBoundaryTests
         ["Application"] = ["Common"],
         // "Imaging" thêm ở T1 (MEDIA-001, Quyết định #82) — pipeline ImageSharp dùng chung cho mọi
         // module cần xử lý ảnh (Media, sau này Listing/Product), không riêng cho module Media.
-        ["Infrastructure"] = ["Persistence", "Configuration", "Imaging"],
+        // "Jobs" thêm ở T2 (JOBS-001, #115/#116) — khung fan-out/runner job nền (Hangfire) dùng chung cho mọi
+        // module có job, không thuộc riêng module nào.
+        ["Infrastructure"] = ["Persistence", "Configuration", "Imaging", "Jobs"],
         ["Api"] = ["Auth", "ExceptionHandling", "OpenApi", "Tenancy"],
     };
 

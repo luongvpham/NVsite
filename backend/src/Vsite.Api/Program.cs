@@ -1,10 +1,12 @@
 using System.Text.Json.Serialization;
+using Hangfire;
 using Microsoft.AspNetCore.Routing;
 using Vsite.Api.Auth;
 using Vsite.Api.Identity;
 using Vsite.Api.ExceptionHandling;
 using Vsite.Api.Media;
 using Vsite.Api.OpenApi;
+using Vsite.Api.Platform;
 using Vsite.Api.Shop;
 using Vsite.Api.Tenancy;
 using Vsite.Api.Website;
@@ -21,6 +23,7 @@ using Vsite.Domain.ReservedRoutes;
 using Vsite.Infrastructure;
 using Vsite.Infrastructure.Configuration;
 using Vsite.Infrastructure.Imaging;
+using Vsite.Infrastructure.Jobs;
 using Vsite.Infrastructure.Website;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,6 +56,11 @@ builder.Services.AddOpenApi("media", options => options
     .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
 
 builder.Services.AddOpenApi("website", options => options
+    .AddSchemaTransformer<ProblemDetailsSchemaTransformer>()
+    .AddSchemaTransformer<DuplicateNullableSchemaOccurrenceTagger>()
+    .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
+
+builder.Services.AddOpenApi("platform", options => options
     .AddSchemaTransformer<ProblemDetailsSchemaTransformer>()
     .AddSchemaTransformer<DuplicateNullableSchemaOccurrenceTagger>()
     .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
@@ -112,13 +120,32 @@ builder.Services.AddSingleton<SlugRules>();
 // middleware set giá trị, mọi handler đọc qua ITenantContext (không handler nào tự resolve ShopId).
 builder.Services.AddScoped<TenantContext>();
 builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
+// #116 — scope tenant ngoài request (job nền).
+builder.Services.AddSingleton<ITenantScopeFactory, TenantScopeFactory>();
 
 // Toàn bộ wiring Infrastructure (DbContext, Redis, MediatR, service từng module) nằm sau MỘT
 // method này — Program.cs không tự đăng ký implementation nào (architecture-guide.md §1).
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// Build-time OpenAPI generation (Microsoft.Extensions.ApiDescription.Server → GetDocument.Insider) khởi động host
+// thật mà không cần job nền: tắt server + không ghi lịch/không chạm DB. Phát hiện ở MỘT chỗ này, các lớp dưới chỉ
+// đọc Jobs:ServerEnabled.
+if (System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider")
+{
+    builder.Configuration["Jobs:ServerEnabled"] = "false";
+}
+
+// Hangfire (JOBS-001 T4): storage Postgres schema `hangfire`, server chỉ khi Jobs:ServerEnabled.
+builder.Services.AddJobs(builder.Configuration);
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
+
+// #114 mục 8 / #115 — cookie dashboard Hangfire (phát ở /api/platform, kiểm ở filter dashboard T4).
+builder.Services.AddSingleton(sp => new JobsDashboardCookie(
+    sp.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(),
+    sp.GetRequiredService<TimeProvider>(),
+    sp.GetRequiredService<IHostEnvironment>().IsDevelopment()));
 builder.Services.AddScoped<IAuditActor, HttpAuditActor>();
 
 // JWT Bearer validation + policy RequireGlobalScope (Quyết định #32).
@@ -201,6 +228,24 @@ api.MapShopEndpoints();
 api.MapMediaEndpoints();
 api.MapWebsiteEndpoints();
 api.MapSiteEndpoints();
+api.MapPlatformEndpoints();
+
+// Dashboard Hangfire (#114 mục 8): cố ý NGOÀI /api (ngoại lệ trong ApiRoutePrefixTests). Chạy sau
+// TenantResolutionMiddleware nên filter đọc được AudienceKind; chỉ host admin + cookie dashboard.
+app.MapHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [], // bỏ mặc định LocalRequestsOnly; cổng thật là filter async bên dưới
+    AsyncAuthorization = [new JobsDashboardAuthorizationFilter()],
+    IsReadOnlyFunc = _ => false,
+    AppPath = null,
+});
+
+// Lịch job định kỳ (T5): chỉ khi server chạy — host test (ServerEnabled=false) và build-time OpenAPI không ghi storage.
+var jobsOptions = app.Services.GetRequiredService<JobsOptions>(); // đọc lazy từ config cuối (có override của test)
+if (jobsOptions.ServerEnabled)
+{
+    RecurringJobs.Register(app.Services.GetRequiredService<IRecurringJobManager>(), jobsOptions);
+}
 
 app.Run();
 

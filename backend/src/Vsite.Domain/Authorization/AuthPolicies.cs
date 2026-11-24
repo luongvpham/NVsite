@@ -5,4 +5,8 @@ namespace Vsite.Domain.Authorization;
 public static class AuthPolicies
 {
     public const string RequireGlobalScope = "RequireGlobalScope";
+
+    /// <summary>Quyết định #114 — role claim `PlatformAdmin` VÀ audience `vsite-portal`. Policy gắn ở cấp nhóm
+    /// `MapGroup("/platform")` (tức `/api/platform`), không gắn từng endpoint.</summary>
+    public const string PlatformAdmin = "PlatformAdmin";
 }

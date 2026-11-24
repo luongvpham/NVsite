@@ -10,6 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- TenantContext.Set là internal (#116) — test khẳng định "đặt hai lần ném". -->
+    <InternalsVisibleTo Include="IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Vsite.Application\Vsite.Application.csproj" />
     <!-- Infrastructure CHỈ để gọi AddInfrastructure() trong Program.cs (DI wiring) —
          endpoint/handler không được dùng type của Infrastructure (architecture-guide.md §1). -->

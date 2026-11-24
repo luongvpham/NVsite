@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Vsite.Api.Tenancy;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Identity.Interfaces;
+using Vsite.Domain.Abstractions;
 using Vsite.Domain.Exceptions;
 using Vsite.Domain.Identity;
 
@@ -53,9 +54,34 @@ public sealed class ShopMembershipEndpointFilterTests
         Assert.Equal(ShopId, tenant.ShopId);
     }
 
+    [Fact]
+    public async Task Host_resolved_shop_is_rejected_with_SHOP_ACCESS_DENIED_before_attach()
+    {
+        var tenant = new TenantContext();
+        tenant.Set(TenantAudienceKind.Shop, Guid.NewGuid());
+        var hostShop = tenant.ShopId;
+        var filter = new ShopMembershipEndpointFilter(tenant, new FakeUser(), new FakeMembership(StaffRoleId));
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.RouteValues["shopId"] = ShopId.ToString();
+        httpContext.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(), "test"));
+        var nextCalled = false;
+
+        var ex = await Assert.ThrowsAsync<ForbiddenAccessException>(async () =>
+            await filter.InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ =>
+            {
+                nextCalled = true;
+                return ValueTask.FromResult<object?>(null);
+            }));
+
+        Assert.Equal("SHOP_ACCESS_DENIED", ex.ErrorCode);
+        Assert.False(nextCalled);
+        Assert.Equal(hostShop, tenant.ShopId);
+    }
+
     private static async Task<(ForbiddenAccessException? Ex, bool NextCalled, TenantContext Tenant)> InvokeAsync(Guid? roleId, bool ownerRequired)
     {
         var tenant = new TenantContext();
+        tenant.Set(TenantAudienceKind.Portal, null); // như TenantResolutionMiddleware cho host admin.*
         var filter = new ShopMembershipEndpointFilter(tenant, new FakeUser(), new FakeMembership(roleId));
 
         var httpContext = new DefaultHttpContext();

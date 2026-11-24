@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Vsite.Domain.Authorization;
+using Vsite.Domain.Identity;
 using Vsite.Infrastructure.Identity;
 
 namespace Vsite.Api.Auth;
@@ -39,13 +40,20 @@ public static class AuthenticationSetup
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
                     ValidateLifetime = true,
+                    // #114: để RequireRole khớp claim "role" (MapInboundClaims = false nên tên không bị đổi).
+                    RoleClaimType = "role",
                     ClockSkew = TimeSpan.FromSeconds(30),
                 };
             });
 
         services.AddAuthorizationBuilder()
             .AddPolicy(AuthPolicies.RequireGlobalScope, policy =>
-                policy.RequireAssertion(ctx => AudienceHelpers.IsGlobalScope(ctx.User.FindFirst("aud")?.Value)));
+                policy.RequireAssertion(ctx => AudienceHelpers.IsGlobalScope(ctx.User.FindFirst("aud")?.Value)))
+            // #114 mục 5: kiểm cả role claim LẪN audience — API đang ValidateAudience = false nên
+            // không được dựa vào bước validate token.
+            .AddPolicy(AuthPolicies.PlatformAdmin, policy => policy
+                .RequireRole(WellKnownRoles.PlatformAdminCode)
+                .RequireAssertion(ctx => ctx.User.FindFirst("aud")?.Value == AudienceHelpers.Portal));
 
         return services;
     }

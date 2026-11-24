@@ -35,6 +35,11 @@
     <PackageReference Include="JsonSchema.Net" />
     <!-- IRichTextSanitizer (T4, WEBSITE-001, #67, G4) — Ganss.Xss, MIT -->
     <PackageReference Include="HtmlSanitizer" />
+    <!-- Job nền (JOBS-001, #115/#116): IBackgroundJobClient + storage Postgres (schema hangfire) + server trong process Api. -->
+    <PackageReference Include="Hangfire.Core" />
+    <PackageReference Include="Hangfire.AspNetCore" />
+    <PackageReference Include="Hangfire.PostgreSql" />
+    <PackageReference Include="Newtonsoft.Json" />
   </ItemGroup>
 
 </Project>

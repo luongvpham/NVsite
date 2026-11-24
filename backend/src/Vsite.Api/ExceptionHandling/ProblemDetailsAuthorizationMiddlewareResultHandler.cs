@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Mvc;
+using Vsite.Domain.Authorization;
 
 namespace Vsite.Api.ExceptionHandling;
 
@@ -27,13 +28,21 @@ public sealed class ProblemDetailsAuthorizationMiddlewareResultHandler : IAuthor
 
         var isAuthenticated = context.User.Identity?.IsAuthenticated == true;
 
+        // AuthorizationPolicy không mang tên — nhận ra PlatformAdmin qua metadata endpoint (policy gắn ở
+        // cấp nhóm /platform, #114 mục 6).
+        // Giả định: route /platform chỉ mang đúng policy PlatformAdmin — thêm policy khác vào nhóm thì phát hiện này cần xét lại.
+        var requiresPlatformAdmin = context.GetEndpoint()?.Metadata.GetOrderedMetadata<IAuthorizeData>()
+            .Any(a => string.Equals(a.Policy, AuthPolicies.PlatformAdmin, StringComparison.Ordinal)) == true;
+
         var problemDetails = isAuthenticated
             ? new ProblemDetails
             {
                 Status = StatusCodes.Status403Forbidden,
                 Title = "Forbidden",
-                Detail = "Token hiện tại không đủ quyền cho thao tác này.",
-                Extensions = { ["error_code"] = "INSUFFICIENT_SCOPE" },
+                Detail = requiresPlatformAdmin
+                    ? "Thao tác này chỉ dành cho quản trị nền tảng (PlatformAdmin)."
+                    : "Token hiện tại không đủ quyền cho thao tác này.",
+                Extensions = { ["error_code"] = requiresPlatformAdmin ? "PLATFORM_ADMIN_REQUIRED" : "INSUFFICIENT_SCOPE" },
             }
             : new ProblemDetails
             {

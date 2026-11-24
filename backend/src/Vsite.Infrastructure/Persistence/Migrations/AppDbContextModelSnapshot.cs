@@ -125,6 +125,9 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_password_reset_token");
 
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_password_reset_token_expires_at");
+
                     b.HasIndex("TokenHash")
                         .IsUnique()
                         .HasDatabaseName("ix_password_reset_token_token_hash");
@@ -237,6 +240,9 @@ namespace Vsite.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_refresh_token");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_refresh_token_expires_at");
 
                     b.HasIndex("TokenHash")
                         .IsUnique()

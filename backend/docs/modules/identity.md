@@ -130,6 +130,63 @@ tài khoản dùng được = `User.Status = Active` (`User.CanSignIn`).
 | **Đăng ký lại** khi membership **đã xoá mềm** | **Khôi phục** dòng cũ lúc verify email: role `Customer`, `Active`, mật khẩu mới, `Source` giữ nguyên (#29), **thu hồi mọi refresh token cũ của scope shop đó**. Unique `(user_id, shop_id)` không lọc soft delete nên không tạo dòng mới |
 | **Đăng ký lại** khi membership `Suspended`/`Invited` | **Chặn 409** `EMAIL_ALREADY_REGISTERED_AT_SHOP` — không lách lệnh đình chỉ của shop |
 
+### Quyết định #114 — Quyền `PlatformAdmin`: role claim trong token, nhóm route riêng
+
+Người duyệt chốt 2026-11-23. ✅ Mục 1–6 và 8 đã code ở JOBS-001 (Bước 8a, S1 BE) — claim, policy, nhóm route, cookie dashboard; hiện thực ở module `Platform` (`backend/docs/modules/platform.md`). 📐 Mục 7 (đọc chéo shop cho thống kê) **chưa làm** — chờ task màn quản trị. Nút "Job nền" ở Portal chờ S2 FE (`Docs/tasks/JOBS-001/brief.md`).
+
+**Ba luồng xác định quyền, không trộn nhau:**
+
+| Luồng | Ai | Xác định bằng |
+|---|---|---|
+| 1. Shop Site | Khách vào `{slug}.vsite.vn` / domain riêng | Host → `TenantContext.ShopId` (#108) |
+| 2. Portal theo shop | Chủ shop ở `admin.vsite.vn`, route `{shopId}` | Token + `{shopId}`, kiểm membership trong DB mỗi request (#90, #100) |
+| 3. Platform | Super admin / dev: thống kê, chạy job | **Role claim trong token** + nhóm route `/platform/*` |
+
+**Luồng 3 — quy tắc:**
+
+1. **Claim `role = "PlatformAdmin"`** khi `User.RoleId == WellKnownRoles.PlatformAdminId` (GUID cố định của seed; giá trị claim = `WellKnownRoles.PlatformAdminCode`). Không thêm cột/flag
+   `IsPlatformAdmin` — `User.RoleId` là nguồn duy nhất. Đặt `RoleClaimType = "role"` khi validate JWT
+   để `RequireRole` khớp.
+2. **Chỉ phát claim cho token audience `vsite-portal`** — không bao giờ cho `shop:*` (site shop chứa
+   nội dung do shop kiểm soát, rủi ro XSS cao hơn), cũng không cho `vsite-main`.
+3. **Refresh tính lại claim từ DB**, không chép từ token cũ (cùng chỗ tính `ownerShopIds`). Thiếu điều
+   này thì chuỗi refresh giữ quyền tới 30 ngày.
+4. **Gỡ quyền có độ trễ ≤ TTL access token (15 phút)** — chấp nhận có chủ đích. Cần thu hồi khẩn: đặt
+   `User.Status = Suspended` → refresh kế tiếp 401 + thu hồi refresh token (#90).
+5. **Policy `AuthPolicies.PlatformAdmin` kiểm cả hai:** có role claim **và** audience `vsite-portal`
+   (API đang `ValidateAudience = false`, không được dựa vào bước validate token).
+6. **Gắn policy ở cấp nhóm `MapGroup("/platform")`**, không gắn từng endpoint; có test kiến trúc khẳng
+   định mọi route `/platform/*` mang policy này. **Không** thêm nhánh "PlatformAdmin thì bỏ qua" vào
+   `ShopMembershipEndpointFilter` hay bất kỳ filter/handler dùng chung nào của luồng 1, 2.
+7. **Đọc chéo shop chỉ qua helper trong allowlist** (`IgnoreQueryFiltersAllowlistTests`), chỉ đọc, tự
+   viết lại `!IsDeleted`. Global Query Filter vẫn bật ở mọi nơi; `ShopId = null` vẫn là fail-closed
+   (rỗng), **không** mang nghĩa "thấy mọi shop". Thống kê tổng hợp (đếm, tổng) không cần audit log;
+   thao tác đọc/sửa dữ liệu của **một shop cụ thể** vẫn theo #21.2 — command riêng, audit log riêng.
+8. **Dashboard Hangfire** (trình duyệt không gửi Bearer): endpoint trong `/platform` đổi JWT lấy cookie
+   `HttpOnly`, path `/hangfire`, sống ≤ 15 phút; `IDashboardAuthorizationFilter` kiểm cookie đó.
+
+**Quan hệ với #21:** #21.5 ("không tin claim trong token") áp dụng cho quyền **theo shop**. Role
+platform là ngoại lệ có chủ đích ở mục 4 — đánh đổi độ trễ ≤ 15 phút lấy việc không tra DB mỗi request.
+#21.2 giữ nguyên: không bypass ngầm, chỉ đọc chéo qua nhóm route và helper riêng.
+
+## Job nền của Identity (JOBS-001, #116 ngoại lệ (a))
+
+Ba job dọn/kiểm theo `03` §4–§5, nằm ở `Vsite.Application.Identity.Jobs`; hạ tầng và quy ước job: `backend/CLAUDE.md` §Job nền. Cả ba chạy **một lần cho toàn hệ**
+(không fan-out theo shop — bảng không tenant, set-based), **03:00 giờ `Asia/Ho_Chi_Minh`** hằng ngày (cron `0 3 * * *`, `RecurringJobs.Register` lúc khởi động khi `Jobs:ServerEnabled`).
+
+| Job (id recurring) | Làm gì |
+|---|---|
+| `PendingRegistrationCleanupJob` (`identity.pending-registration-cleanup`) | Xoá `PendingRegistration` có `ExpiresAt < now - grace` |
+| `ExpiredTokenCleanupJob` (`identity.expired-token-cleanup`) | Xoá `RefreshToken` và `PasswordResetToken` có `ExpiresAt < now - grace` |
+| `ZaloIdentityIntegrityJob` (`identity.zalo-integrity`) | Đếm `User` có `PrimaryIdentityKind = Zalo` mà không có `ExternalLogin` (`Provider = ExternalLoginProviders.Zalo`); `> 0` ⇒ log **Warning** (số lượng + ≤ 20 `UserId`). **Chỉ log, không sửa dữ liệu** |
+
+- **Grace:** `Jobs:TokenCleanupGrace`, mặc định `00:00:00` (xoá ngay khi hết hạn); đi vào job qua tham số `RunAsync(grace, ct)`. Điều kiện `<` nghiêm ngặt — dòng đúng bằng `now - grace` được giữ.
+- **Lô 5.000 dòng:** `DELETE … WHERE id IN (SELECT id … ORDER BY id LIMIT 5000)`, lặp tới khi lô < 5.000; log Information số dòng mỗi bảng.
+- **Dọn theo `ExpiresAt`, KHÔNG theo `RevokedAt`/`ConsumedAt`:** token đã revoke nhưng còn hạn **không bị xoá**. `RefreshTokenHandler` chỉ thu hồi cả họ khi còn thấy dòng đã revoke (phát hiện reuse);
+  xoá sớm theo `RevokedAt` là mất tín hiệu đó. Xoá token đã hết hạn thì kẻ gian cũng không dùng được — rủi ro còn lại chỉ là mất dấu vết, nên grace cấu hình được.
+- **Index:** migration `AddTokenExpiresAtIndexes` thêm `ix_refresh_token_expires_at`, `ix_password_reset_token_expires_at` (`pending_registration` đã có sẵn).
+- Zalo Login chưa bật nên job integrity thường trả 0. Test: `tests/IntegrationTests/Identity/IdentityJobsTests.cs`.
+
 ## Lệch có chủ đích so với `DesignIdeal/03-identity-entity-design.md`
 
 > 📌 Danh sách đầy đủ (kèm phần **chưa làm xong** và bảng đối chiếu ràng buộc DB) nằm ở
