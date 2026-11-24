@@ -58,7 +58,8 @@ public sealed class RefreshTokenHandler(IAppDbContext db, IJwtTokenService token
             .ToListAsync(cancellationToken);
 
         var accessToken = tokenService.CreateAccessToken(new AccessTokenRequest(
-            user.Id, existing.Audience, user.Email, user.Phone, user.FullName, user.AvatarUrl, ownerShopIds));
+            user.Id, existing.Audience, user.Email, user.Phone, user.FullName, user.AvatarUrl, ownerShopIds,
+            PlatformRoles.For(user, existing.Audience)));
 
         var rawNewRefreshToken = tokenService.GenerateOpaqueToken();
         var now = DateTimeOffset.UtcNow;

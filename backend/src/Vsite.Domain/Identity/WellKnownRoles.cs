@@ -7,6 +7,9 @@ namespace Vsite.Domain.Identity;
 /// </summary>
 public static class WellKnownRoles
 {
+    /// <summary>`Role.Code` của PlatformAdmin — giá trị claim `role` trong token (#114).</summary>
+    public const string PlatformAdminCode = "PlatformAdmin";
+
     public static readonly Guid PlatformUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
     public static readonly Guid PlatformAdminId = Guid.Parse("00000000-0000-0000-0000-000000000002");
     public static readonly Guid OwnerId = Guid.Parse("00000000-0000-0000-0000-000000000003");

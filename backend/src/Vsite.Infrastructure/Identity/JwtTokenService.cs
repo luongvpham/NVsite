@@ -47,6 +47,9 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options) : IJwtTokenSer
         // đúng shape `ownerShopIds: string[]` của Quyết định #27. CHỈ để render UI shop switcher.
         claims.AddRange(request.OwnerShopIds.Select(shopId => new Claim("ownerShopIds", shopId.ToString())));
 
+        // #114: claim `role` (một claim mỗi phần tử). Handler đã quyết định ai được nhận — service chỉ ghi.
+        claims.AddRange(request.Roles.Select(role => new Claim("role", role)));
+
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey));
         var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 

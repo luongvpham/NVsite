@@ -110,7 +110,8 @@ public sealed class LoginHandler(
             .ToListAsync(cancellationToken);
 
         var accessToken = tokenService.CreateAccessToken(new AccessTokenRequest(
-            user.Id, audience, user.Email, user.Phone, user.FullName, user.AvatarUrl, ownerShopIds));
+            user.Id, audience, user.Email, user.Phone, user.FullName, user.AvatarUrl, ownerShopIds,
+            PlatformRoles.For(user, audience)));
 
         var rawRefreshToken = tokenService.GenerateOpaqueToken();
         var refreshTokenExpiresAt = now.Add(RefreshTokenLifetime);

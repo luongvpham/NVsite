@@ -7,7 +7,8 @@ public sealed record AccessTokenRequest(
     string? Phone,
     string? Name,
     string? Avatar,
-    IReadOnlyCollection<Guid> OwnerShopIds);
+    IReadOnlyCollection<Guid> OwnerShopIds,
+    IReadOnlyCollection<string> Roles);
 
 public sealed record AccessTokenResult(string Token, DateTimeOffset ExpiresAt);
 
