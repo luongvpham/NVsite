@@ -30,6 +30,7 @@ public sealed class ProblemDetailsAuthorizationMiddlewareResultHandler : IAuthor
 
         // AuthorizationPolicy không mang tên — nhận ra PlatformAdmin qua metadata endpoint (policy gắn ở
         // cấp nhóm /platform, #114 mục 6).
+        // Giả định: route /platform chỉ mang đúng policy PlatformAdmin — thêm policy khác vào nhóm thì phát hiện này cần xét lại.
         var requiresPlatformAdmin = context.GetEndpoint()?.Metadata.GetOrderedMetadata<IAuthorizeData>()
             .Any(a => string.Equals(a.Policy, AuthPolicies.PlatformAdmin, StringComparison.Ordinal)) == true;
 

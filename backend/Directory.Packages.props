@@ -11,6 +11,9 @@
     <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="9.0.9" />
     <!-- Job nền (JOBS-001, #115/#116). Cùng dòng 1.8.x với Hangfire.AspNetCore + Hangfire.PostgreSql (T4). -->
     <PackageVersion Include="Hangfire.Core" Version="1.8.25" />
+    <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.25" />
+    <!-- 1.21.1 phát hành 2026-02-11; phụ thuộc Hangfire.Core >= 1.8.0. -->
+    <PackageVersion Include="Hangfire.PostgreSql" Version="1.21.1" />
     <!-- Hangfire.Core kéo Newtonsoft.Json 11.0.1 (GHSA-5crp-9r3c-p9vr, High) — ghim bản đã vá. -->
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <!-- Application layer -->

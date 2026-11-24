@@ -18,7 +18,9 @@ namespace Vsite.IntegrationTests;
 /// </summary>
 public sealed class ApiRoutePrefixTests
 {
-    private static readonly string[] AllowedOutsideApi = ["openapi/"];
+    // "hangfire": dashboard Hangfire (JOBS-001 T4, #114) là UI của thư viện, không phải API — mount ở /hangfire,
+    // khoá bằng JobsDashboardAuthorizationFilter (host admin + cookie), không có operationId.
+    private static readonly string[] AllowedOutsideApi = ["openapi/", "hangfire"];
 
     [Fact]
     public void Every_endpoint_is_mounted_under_api_prefix()
@@ -32,6 +34,7 @@ public sealed class ApiRoutePrefixTests
                 {
                     // Giá trị giả — không request nào chạm DB/Redis (cùng khuôn ShopScopedRouteFilterTests).
                     ["ConnectionStrings:Identity"] = "Host=localhost;Port=1;Database=fake;Username=fake;Password=fake",
+                    ["Jobs:ServerEnabled"] = "false", // R8: không chạy worker Hangfire nền trong test
                     ["ConnectionStrings:Redis"] = "localhost:1",
                     ["Jwt:SigningKey"] = "test-signing-key-not-for-production-use-32-chars-min",
                     ["Jwt:Issuer"] = "vsite-test",

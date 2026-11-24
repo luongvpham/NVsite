@@ -42,6 +42,7 @@ public sealed class ShopApiFactory : WebApplicationFactory<Program>, IAsyncLifet
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:Identity"] = _postgres.GetConnectionString(),
+                ["Jobs:ServerEnabled"] = "false", // R8: không chạy worker Hangfire nền trong test
                 ["ConnectionStrings:Redis"] = _redis.GetConnectionString(),
                 ["Jwt:SigningKey"] = "test-signing-key-not-for-production-use-32-chars-min",
                 ["Jwt:Issuer"] = "vsite-test",

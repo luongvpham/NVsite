@@ -183,6 +183,7 @@ public sealed class ShopScopedRouteFilterTests
                     // Giá trị giả — test này không gửi request nào chạm DB/Redis thật, chỉ đọc
                     // EndpointDataSource sau khi host build xong.
                     ["ConnectionStrings:Identity"] = "Host=localhost;Port=1;Database=fake;Username=fake;Password=fake",
+                    ["Jobs:ServerEnabled"] = "false", // R8: không chạy worker Hangfire nền trong test
                     ["ConnectionStrings:Redis"] = "localhost:1",
                     ["Jwt:SigningKey"] = "test-signing-key-not-for-production-use-32-chars-min",
                     ["Jwt:Issuer"] = "vsite-test",

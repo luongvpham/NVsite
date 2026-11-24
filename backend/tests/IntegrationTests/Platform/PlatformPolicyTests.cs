@@ -94,6 +94,10 @@ public sealed class PlatformPolicyTests(IdentityApiFactory factory)
             var response = await _client.SendAsync(PostWithToken(pair.AccessToken, host));
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
             Assert.False(response.Headers.Contains("Set-Cookie"));
+            // Host admin: ShopMembershipValidationMiddleware chặn token shop sai audience trước khi tới policy;
+            // host shop: tới được policy PlatformAdmin ⇒ PLATFORM_ADMIN_REQUIRED. Hai mã khác nhau, đều 403.
+            var expected = host == PortalHost ? "TOKEN_SHOP_MISMATCH" : "PLATFORM_ADMIN_REQUIRED";
+            Assert.Equal(expected, await ErrorCodeAsync(response));
         }
     }
 
@@ -135,8 +139,12 @@ public sealed class PlatformPolicyTests(IdentityApiFactory factory)
         Assert.False(cookie.TryValidate((string?)null, out _));
 
         // ký bằng purpose khác (payload hợp lệ, hạn xa)
-        var foreign = dp.CreateProtector("Another.Purpose")
-            .Protect("{\"userId\":\"" + userId + "\",\"expiresAt\":\"2099-01-01T00:00:00+00:00\"}");
+        // Payload dựng bằng CÙNG serializer/khoá (PascalCase) như payload thật — nếu dùng khoá camelCase thì
+        // deserialize ra Guid.Empty và test đỏ-giả-xanh ngay cả khi purpose bị bỏ qua.
+        var forgedPayload = JsonSerializer.Serialize(new { UserId = userId, ExpiresAt = new DateTimeOffset(2099, 1, 1, 0, 0, 0, TimeSpan.Zero) });
+        // Đối chứng: cùng payload ký bằng ĐÚNG purpose thì hợp lệ ⇒ payload không phải lý do bị từ chối bên dưới.
+        Assert.True(cookie.TryValidate(dp.CreateProtector(JobsDashboardCookie.Purpose).Protect(forgedPayload), out _));
+        var foreign = dp.CreateProtector("Another.Purpose").Protect(forgedPayload);
         Assert.False(cookie.TryValidate(foreign, out _));
 
         // hết hạn: còn hạn tới < expiresAt, hết ở >= expiresAt

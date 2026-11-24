@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Hangfire;
 using Microsoft.AspNetCore.Routing;
 using Vsite.Api.Auth;
 using Vsite.Api.Identity;
@@ -22,6 +23,7 @@ using Vsite.Domain.ReservedRoutes;
 using Vsite.Infrastructure;
 using Vsite.Infrastructure.Configuration;
 using Vsite.Infrastructure.Imaging;
+using Vsite.Infrastructure.Jobs;
 using Vsite.Infrastructure.Website;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -125,6 +127,9 @@ builder.Services.AddSingleton<ITenantScopeFactory, TenantScopeFactory>();
 // method này — Program.cs không tự đăng ký implementation nào (architecture-guide.md §1).
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// Hangfire (JOBS-001 T4): storage Postgres schema `hangfire`, server chỉ khi Jobs:ServerEnabled.
+builder.Services.AddJobs(builder.Configuration);
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
 
@@ -216,6 +221,16 @@ api.MapMediaEndpoints();
 api.MapWebsiteEndpoints();
 api.MapSiteEndpoints();
 api.MapPlatformEndpoints();
+
+// Dashboard Hangfire (#114 mục 8): cố ý NGOÀI /api (ngoại lệ trong ApiRoutePrefixTests). Chạy sau
+// TenantResolutionMiddleware nên filter đọc được AudienceKind; chỉ host admin + cookie dashboard.
+app.MapHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [], // bỏ mặc định LocalRequestsOnly; cổng thật là filter async bên dưới
+    AsyncAuthorization = [new JobsDashboardAuthorizationFilter()],
+    IsReadOnlyFunc = _ => false,
+    AppPath = null,
+});
 
 app.Run();
 
