@@ -22,5 +22,11 @@
     "approvedAt": "2026-11-21T01:12:12.577Z",
     "approvedBy": "gate1-pre-production-89",
     "taskId": "WEBSITE-007"
+  },
+  "platform.v1.json": {
+    "sha256": "5c3e7d24a554f9c9ce5c364b761d6a2779c1d179a6fcb80cbeae24cb7bd18ed5",
+    "approvedAt": "2026-11-24T02:44:59.175Z",
+    "approvedBy": "gate1-pre-production-89",
+    "taskId": "JOBS-001"
   }
 }
