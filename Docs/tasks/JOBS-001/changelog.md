@@ -169,6 +169,18 @@ vì test tìm repo root theo đường dẫn bin. Khi PID 4300 đã tắt thì c
 
 ---
 
+### 17. (S2/FE) `scripts/lib/barrel.mjs` bỏ file zod rỗng
+`platform.zod.ts` do Orval sinh ra chỉ có comment (endpoint không body/param) → `export *` gây TS2306 ở typecheck api-sdk lẫn portal. Sửa gốc ở script barrel (bỏ file không có `export`, có test), chạy lại `pnpm gen:api`; không sửa tay `generated/`. Entry `platformZod` giữ theo brief.
+
+### 18. (S2/FE) Mutator: `refreshAccessToken` catch chỉ xoá token khi `epoch === sessionEpoch`
+Lỗi có sẵn (refresh cũ hỏng đè token phiên đăng nhập mới) — lộ ra vì nút "Job nền" phản ứng theo token. Có test.
+
+### 19. (S2/FE) `isForbidden` đọc AxiosError thô theo hình dạng
+Portal không phụ thuộc axios. 403 nhận biết qua `response.status`, `ProblemDetails.status`, hoặc `error_code` `PLATFORM_ADMIN_REQUIRED`/`TOKEN_SHOP_MISMATCH`. 403 không status và error_code lạ sẽ hiện lỗi chung (BE luôn gửi status).
+
+### 20. (S2/FE) `window.open` bị chặn popup
+Reviewer chỉ ra `window.open` chạy sau await (Safari có thể chặn). Thêm: trả `null` ⇒ hiện liên kết `/hangfire` dự phòng. Brief chỉ định `window.open`, giữ nguyên.
+
 ## Chưa làm xong / nợ
 
 ### Việc của session sau
@@ -198,6 +210,12 @@ vì test tìm repo root theo đường dẫn bin. Khi PID 4300 đã tắt thì c
 - T5: test dọn Zalo bỏ qua điều kiện provider khi seed.
 - T6: fan-out gọi job bằng reflection (bỏ qua serializer/activator); test B không kiểm DB đổi bằng truy vấn riêng.
 - Giả định G1–G11 của plan §12 giữ nguyên, **ngoại trừ** G9 (đặt `AudienceKind = Shop` cho job — giữ) và G10 (Hangfire dùng chung connection `Identity` và database — giữ); không giả định nào bị đảo.
+
+### S2/FE — hoãn
+- Interceptor vẫn gọi `onSessionExpired` khi refresh stale-epoch hỏng (logout rồi login nhanh lúc refresh cũ đang bay) — có sẵn, ngoài phạm vi nút; token mới đã không bị xoá nhưng store có thể bị clear. Cần để `refreshAccessToken` báo "stale".
+- `popupBlocked` không reset khi nút bị ẩn (cosmetic).
+- Portal MSW server mặc định chưa có handler platform (test tự override).
+- **F2 (nghiệm thu tay) CHƯA chạy** — chờ người chạy bảng 5 dòng ở brief + kiểm Safari/popup; xem báo cáo.
 
 ### Chưa nằm trong phạm vi (đúng plan §1)
 
