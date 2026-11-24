@@ -12,6 +12,7 @@ public sealed class PasswordResetTokenConfiguration : IEntityTypeConfiguration<P
         builder.HasKey(t => t.Id);
 
         builder.HasIndex(t => t.TokenHash).IsUnique();
+        builder.HasIndex(t => t.ExpiresAt); // job dọn token hết hạn (JOBS-001 T5)
 
         builder.HasOne<User>()
             .WithMany()

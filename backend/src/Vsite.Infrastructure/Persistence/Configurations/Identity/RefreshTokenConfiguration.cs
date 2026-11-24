@@ -13,6 +13,7 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
 
         builder.HasIndex(t => t.TokenHash).IsUnique();
         builder.HasIndex(t => new { t.UserId, t.Audience, t.ShopId });
+        builder.HasIndex(t => t.ExpiresAt); // job dọn token hết hạn (JOBS-001 T5)
 
         builder.HasOne<User>()
             .WithMany()

@@ -127,6 +127,14 @@ builder.Services.AddSingleton<ITenantScopeFactory, TenantScopeFactory>();
 // method này — Program.cs không tự đăng ký implementation nào (architecture-guide.md §1).
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// Build-time OpenAPI generation (Microsoft.Extensions.ApiDescription.Server → GetDocument.Insider) khởi động host
+// thật mà không cần job nền: tắt server + không ghi lịch/không chạm DB. Phát hiện ở MỘT chỗ này, các lớp dưới chỉ
+// đọc Jobs:ServerEnabled.
+if (System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider")
+{
+    builder.Configuration["Jobs:ServerEnabled"] = "false";
+}
+
 // Hangfire (JOBS-001 T4): storage Postgres schema `hangfire`, server chỉ khi Jobs:ServerEnabled.
 builder.Services.AddJobs(builder.Configuration);
 
@@ -231,6 +239,13 @@ app.MapHangfireDashboard("/hangfire", new DashboardOptions
     IsReadOnlyFunc = _ => false,
     AppPath = null,
 });
+
+// Lịch job định kỳ (T5): chỉ khi server chạy — host test (ServerEnabled=false) và build-time OpenAPI không ghi storage.
+var jobsOptions = app.Services.GetRequiredService<JobsOptions>(); // đọc lazy từ config cuối (có override của test)
+if (jobsOptions.ServerEnabled)
+{
+    RecurringJobs.Register(app.Services.GetRequiredService<IRecurringJobManager>(), jobsOptions);
+}
 
 app.Run();
 

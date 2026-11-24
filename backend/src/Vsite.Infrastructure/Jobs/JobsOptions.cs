@@ -15,4 +15,10 @@ public sealed class JobsOptions
 
     /// <summary>Đệm trước khi dọn token/đăng ký hết hạn; mặc định 0 = xoá ngay khi hết hạn.</summary>
     public TimeSpan TokenCleanupGrace { get; set; } = TimeSpan.Zero;
+
+    /// <summary>Cho Hangfire tự tạo/nâng schema <c>hangfire</c> khi storage khởi tạo (không có EF migration cho schema này).</summary>
+    public bool PrepareSchema { get; set; } = true;
+
+    /// <summary>Số lần thử lại thêm khi mở kết nối lúc storage khởi tạo (mặc định thư viện ~5 lần, ~30 s).</summary>
+    public int StartupConnectionMaxRetries { get; set; } = 2;
 }

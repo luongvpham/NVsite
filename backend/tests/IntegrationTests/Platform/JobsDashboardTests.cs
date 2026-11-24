@@ -78,6 +78,34 @@ public sealed class JobsDashboardTests(IdentityApiFactory factory)
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Post_action_with_valid_cookie_is_allowed_and_without_cookie_gets_401()
+    {
+        // Thao tác ghi của dashboard (trigger job định kỳ) cũng đi qua filter cookie — không chỉ GET trang.
+        var allowed = await PostAsync(PortalHost, IssueCookie());
+        Assert.NotEqual(HttpStatusCode.Unauthorized, allowed.StatusCode);
+        Assert.NotEqual(HttpStatusCode.Forbidden, allowed.StatusCode);
+        Assert.True((int)allowed.StatusCode < 500, $"POST dashboard trả {(int)allowed.StatusCode}");
+
+        var denied = await PostAsync(PortalHost, null);
+        Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
+    }
+
+    private async Task<HttpResponseMessage> PostAsync(string host, string? cookieValue)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/hangfire/recurring/trigger")
+        {
+            Content = new FormUrlEncodedContent([new KeyValuePair<string, string>("jobs[]", "no-such-recurring-job")]),
+        };
+        request.Headers.Host = host;
+        if (cookieValue is not null)
+        {
+            request.Headers.Add("Cookie", $"{JobsDashboardCookie.Name}={Uri.EscapeDataString(cookieValue)}");
+        }
+
+        return await _client.SendAsync(request);
+    }
+
     private async Task<HttpResponseMessage> GetAsync(string host, string? cookieValue)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, DashboardPath);
