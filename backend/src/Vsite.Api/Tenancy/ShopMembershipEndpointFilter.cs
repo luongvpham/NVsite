@@ -77,6 +77,13 @@ public sealed class ShopMembershipEndpointFilter(TenantContext tenantContext, IC
     {
         var shopId = Guid.Parse((string)context.HttpContext.Request.RouteValues["shopId"]!);
 
+        // Host đã resolve ra một shop (audience Shop) ⇒ ShopId đã chốt từ Host, route `{shopId}` không được phép
+        // gắn/ghi đè (#116). Từ chối bằng đúng 403 SHOP_ACCESS_DENIED sẵn có — trước AttachShop nên không thể 500.
+        if (tenantContext.ShopId is not null)
+        {
+            throw new ForbiddenAccessException("SHOP_ACCESS_DENIED", "Không có quyền truy cập shop này.");
+        }
+
         var roleId = await membershipService.FindActiveRoleIdAsync(currentUser.UserId, shopId, context.HttpContext.RequestAborted)
             ?? throw new ForbiddenAccessException("SHOP_ACCESS_DENIED", "Không có quyền truy cập shop này.");
 

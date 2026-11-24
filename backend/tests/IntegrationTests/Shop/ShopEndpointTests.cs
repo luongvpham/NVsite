@@ -167,6 +167,23 @@ public sealed class ShopEndpointTests
     }
 
     [Fact]
+    public async Task GetShop_from_a_shop_host_with_a_global_token_returns_403_SHOP_ACCESS_DENIED_not_500()
+    {
+        // #116 — Host đã resolve ra shop (audience Shop) thì route {shopId} không được gắn/ghi đè ShopId.
+        // Token global (vsite-main) vẫn qua RequireGlobalScope, nên filter phải tự từ chối — không 500.
+        var ownerToken = await RegisterVerifyLoginGlobalAsync(NewEmail());
+        var slug = NewSlug();
+        var created = await CreateShopAsync(ownerToken, new CreateShopRequest("Shop Host", slug, ShopKind.Hosted, null));
+        var shopId = (await created.Content.ReadFromJsonAsync<ShopDto>(JsonOptions))!.Id;
+
+        var response = await SendAsync(HttpMethod.Get, $"/api/shops/{shopId}", $"{slug}.vsite.local", ownerToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.Equal("SHOP_ACCESS_DENIED", problem!.Extensions["error_code"]!.ToString());
+    }
+
+    [Fact]
     public async Task GetShop_of_another_shop_returns_403_forbidden_not_empty_404()
     {
         // SHOP-001 §3 — test tenant isolation quan trọng nhất: user chỉ là Owner của shop A gọi

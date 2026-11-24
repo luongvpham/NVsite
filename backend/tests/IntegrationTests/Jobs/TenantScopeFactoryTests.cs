@@ -34,6 +34,37 @@ public sealed class TenantScopeFactoryTests
     }
 
     [Fact]
+    public async Task BeginShopScope_from_inside_a_request_scope_leaves_the_request_tenant_untouched()
+    {
+        // R4: factory luôn tạo scope MỚI từ root nên không thể ghi đè tenant của scope request.
+        await using var provider = BuildProvider();
+        var requestShop = Guid.NewGuid();
+        var jobShop = Guid.NewGuid();
+        await using var requestScope = provider.CreateAsyncScope();
+        var requestTenant = requestScope.ServiceProvider.GetRequiredService<TenantContext>();
+        requestTenant.Set(TenantAudienceKind.Portal, requestShop);
+
+        var factory = requestScope.ServiceProvider.GetRequiredService<ITenantScopeFactory>();
+        await using var jobScope = factory.BeginShopScope(jobShop);
+
+        var jobTenant = jobScope.ServiceProvider.GetRequiredService<TenantContext>();
+        Assert.Equal(TenantAudienceKind.Portal, requestTenant.AudienceKind);
+        Assert.Equal(requestShop, requestTenant.ShopId);
+        Assert.Equal(jobShop, jobTenant.ShopId);
+        Assert.Equal(TenantAudienceKind.Shop, jobTenant.AudienceKind);
+        Assert.NotSame(requestTenant, jobTenant);
+    }
+
+    [Fact]
+    public void AttachShop_before_Set_throws()
+    {
+        var tenant = new TenantContext();
+
+        Assert.Throws<InvalidOperationException>(() => tenant.AttachShop(Guid.NewGuid()));
+        Assert.Null(tenant.ShopId);
+    }
+
+    [Fact]
     public void Setting_tenant_twice_throws_and_keeps_the_old_value()
     {
         var tenant = new TenantContext();
