@@ -119,17 +119,11 @@ lúc làm, nên **mục "chưa làm xong" có thể chưa đủ** — bổ sung 
 trong `backend/tests/IntegrationTests/Identity/` phải insert row `Shop` bằng tay qua `AppDbContext`
 để test). Task `SHOP-001` đang có `plan.md` cho việc này.
 
-### B. Không có Hangfire — ba job `03` yêu cầu đều chưa tồn tại
+### B. Ba job `03` yêu cầu — đã xong ở JOBS-001 (2026-11-24)
 
-Không có gói Hangfire nào trong `backend/src`. Ba việc phụ thuộc nó:
-
-| Nguồn | Job | Hệ quả khi thiếu |
-|---|---|---|
-| `03` §5 | Dọn `PendingRegistration` hết hạn (gộp chung job dọn token, Quyết định #3) | Bảng phình dần; `IX_PendingRegistration_ExpiresAt` đã tạo sẵn để phục vụ job này |
-| `03` §4 | Integrity job quét `User` có `PrimaryIdentityKind = 'Zalo'` mà thiếu `ExternalLogin` | Lớp phòng vệ thứ 3 của nhánh Zalo chưa có — hiện chỉ còn aggregate invariant |
-| `03` §5 | Dọn `RefreshToken` / `PasswordResetToken` hết hạn | Như trên |
-
-Chưa cấp bách vì Zalo Login chưa bật và lưu lượng bằng 0, nhưng phải làm trước launch.
+Hangfire và cả ba job (dọn `PendingRegistration`, dọn `RefreshToken`/`PasswordResetToken`, integrity Zalo) đã code ở `JOBS-001` (Bước 8a). Lệch so với `03`: dọn theo
+`ExpiresAt < now - đệm` (đệm cấu hình, mặc định 0), **không** theo `RevokedAt`; integrity Zalo chỉ log Warning. Chi tiết: `Docs/tasks/JOBS-001/changelog.md` và
+`backend/docs/modules/identity.md` §Job nền của Identity.
 
 ### C. Verify-email từ domain shop chưa có bước handoff code
 
