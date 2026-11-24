@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Vsite.Application.Common.Interfaces;
+using Vsite.Domain.Identity;
 using Vsite.Domain.Identity.Enums;
 
 namespace Vsite.Application.Identity.Jobs;
@@ -11,16 +12,13 @@ namespace Vsite.Application.Identity.Jobs;
 /// </summary>
 public sealed class ZaloIdentityIntegrityJob(IAppDbContext db, ILogger<ZaloIdentityIntegrityJob> logger)
 {
-    /// <summary>Giá trị <c>ExternalLogin.Provider</c> của Zalo.</summary>
-    public const string ZaloProvider = "zalo";
-
     private const int SampleSize = 20;
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
         var orphans = db.Users.AsNoTracking().Where(u =>
             u.PrimaryIdentityKind == PrimaryIdentityKind.Zalo
-            && !db.ExternalLogins.Any(e => e.UserId == u.Id && e.Provider == ZaloProvider));
+            && !db.ExternalLogins.Any(e => e.UserId == u.Id && e.Provider == ExternalLoginProviders.Zalo));
 
         var count = await orphans.CountAsync(cancellationToken);
         if (count == 0)

@@ -165,7 +165,7 @@ public sealed class IdentityJobsTests(PostgresFixture postgres) : IAsyncLifetime
         db.ExternalLogins.Add(new ExternalLogin
         {
             UserId = ok.Id,
-            Provider = ZaloIdentityIntegrityJob.ZaloProvider,
+            Provider = ExternalLoginProviders.Zalo,
             ProviderUserId = $"z-{ok.Id:N}",
         });
         await db.SaveChangesAsync();
@@ -181,6 +181,7 @@ public sealed class IdentityJobsTests(PostgresFixture postgres) : IAsyncLifetime
     {
         // InvariantGlobalization=true: Windows không resolve IANA, helper có fallback Windows id (cùng UTC+7).
         var tz = Vsite.Infrastructure.Jobs.RecurringJobs.ResolveTimeZone("Asia/Ho_Chi_Minh");
+        Assert.Contains(tz.Id, new[] { "Asia/Ho_Chi_Minh", "SE Asia Standard Time" });
         Assert.Equal(TimeSpan.FromHours(7), tz.BaseUtcOffset);
     }
 
