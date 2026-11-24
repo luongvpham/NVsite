@@ -40,7 +40,6 @@ export * from './media/media.zod';
 
 // platform
 export * from './platform/platform/platform';
-export * from './platform/platform.zod';
 
 // shop
 export * from './shop/shop/shop';
