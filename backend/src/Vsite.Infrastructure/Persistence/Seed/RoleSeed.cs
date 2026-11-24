@@ -18,7 +18,7 @@ public static class RoleSeed
     public static Role[] All { get; } =
     [
         new(WellKnownRoles.PlatformUserId) { Code = "PlatformUser", Name = "Người dùng nền tảng", Scope = RoleScope.Platform, IsSystem = true, CreatedAt = Epoch, UpdatedAt = Epoch },
-        new(WellKnownRoles.PlatformAdminId) { Code = "PlatformAdmin", Name = "Quản trị nền tảng", Scope = RoleScope.Platform, IsSystem = true, CreatedAt = Epoch, UpdatedAt = Epoch },
+        new(WellKnownRoles.PlatformAdminId) { Code = WellKnownRoles.PlatformAdminCode, Name = "Quản trị nền tảng", Scope = RoleScope.Platform, IsSystem = true, CreatedAt = Epoch, UpdatedAt = Epoch },
         new(WellKnownRoles.OwnerId) { Code = "Owner", Name = "Chủ shop", Scope = RoleScope.Shop, IsSystem = true, CreatedAt = Epoch, UpdatedAt = Epoch },
         new(WellKnownRoles.ManagerId) { Code = "Manager", Name = "Quản lý", Scope = RoleScope.Shop, IsSystem = true, CreatedAt = Epoch, UpdatedAt = Epoch },
         new(WellKnownRoles.StaffId) { Code = "Staff", Name = "Nhân viên", Scope = RoleScope.Shop, IsSystem = true, CreatedAt = Epoch, UpdatedAt = Epoch },

@@ -5,6 +5,7 @@ using Vsite.Api.Identity;
 using Vsite.Api.ExceptionHandling;
 using Vsite.Api.Media;
 using Vsite.Api.OpenApi;
+using Vsite.Api.Platform;
 using Vsite.Api.Shop;
 using Vsite.Api.Tenancy;
 using Vsite.Api.Website;
@@ -53,6 +54,11 @@ builder.Services.AddOpenApi("media", options => options
     .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
 
 builder.Services.AddOpenApi("website", options => options
+    .AddSchemaTransformer<ProblemDetailsSchemaTransformer>()
+    .AddSchemaTransformer<DuplicateNullableSchemaOccurrenceTagger>()
+    .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
+
+builder.Services.AddOpenApi("platform", options => options
     .AddSchemaTransformer<ProblemDetailsSchemaTransformer>()
     .AddSchemaTransformer<DuplicateNullableSchemaOccurrenceTagger>()
     .AddDocumentTransformer<DuplicateNullableSchemaDocumentTransformer>());
@@ -121,6 +127,12 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
+
+// #114 mục 8 / #115 — cookie dashboard Hangfire (phát ở /api/platform, kiểm ở filter dashboard T4).
+builder.Services.AddSingleton(sp => new JobsDashboardCookie(
+    sp.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(),
+    sp.GetRequiredService<TimeProvider>(),
+    sp.GetRequiredService<IHostEnvironment>().IsDevelopment()));
 builder.Services.AddScoped<IAuditActor, HttpAuditActor>();
 
 // JWT Bearer validation + policy RequireGlobalScope (Quyết định #32).
@@ -203,6 +215,7 @@ api.MapShopEndpoints();
 api.MapMediaEndpoints();
 api.MapWebsiteEndpoints();
 api.MapSiteEndpoints();
+api.MapPlatformEndpoints();
 
 app.Run();
 
