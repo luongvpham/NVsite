@@ -51,6 +51,18 @@ vì test tìm repo root theo đường dẫn bin. Khi PID 4300 đã tắt thì c
 
 ---
 
+### Nghiệm thu F2 (BE thật, trình duyệt thật — người chạy 2026-11-25)
+
+| # | Kiểm | Kết quả |
+|---|---|---|
+| 1 | Admin đăng nhập Portal, bấm "Job nền" → tab `/hangfire` (`http://admin.vsite.local:5173/hangfire`) | ✅ đạt |
+| 2 | Chủ shop thường: không thấy nút; POST bằng devtools ⇒ 403 `PLATFORM_ADMIN_REQUIRED` | ✅ đạt |
+| 3 | `/hangfire` không cookie / từ host shop bị chặn | ✅ đạt |
+| 4 | "Trigger now" 3 recurring job chạy thành công, log đúng số dòng | ✅ đạt |
+| 5 | Gỡ role bằng SQL ⇒ sau ≤15' + refresh nút biến mất | ✅ đạt |
+
+Nguồn: người báo bằng lời ("các dòng 2–5 cũng ok"), agent không tự chứng kiến; không có chi tiết từng dòng.
+
 ## Lệch có chủ đích (giữ nguyên, không phải bug)
 
 ### 1. `Hangfire.Core` thêm ở T2, không phải T4
@@ -215,7 +227,7 @@ Reviewer chỉ ra `window.open` chạy sau await (Safari có thể chặn). Thê
 - Interceptor vẫn gọi `onSessionExpired` khi refresh stale-epoch hỏng (logout rồi login nhanh lúc refresh cũ đang bay) — có sẵn, ngoài phạm vi nút; token mới đã không bị xoá nhưng store có thể bị clear. Cần để `refreshAccessToken` báo "stale".
 - `popupBlocked` không reset khi nút bị ẩn (cosmetic).
 - Portal MSW server mặc định chưa có handler platform (test tự override).
-- **F2 (nghiệm thu tay) CHƯA chạy** — chờ người chạy bảng 5 dòng ở brief + kiểm Safari/popup; xem báo cáo.
+- Kiểm Safari/popup ở trình duyệt chưa được báo cáo (F2 chỉ xác nhận chung 5 dòng).
 
 ### Chưa nằm trong phạm vi (đúng plan §1)
 
