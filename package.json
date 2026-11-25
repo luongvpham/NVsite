@@ -24,7 +24,8 @@
     "format:check": "prettier --check ."
   },
   "simple-git-hooks": {
-    "pre-commit": "node tools/pre-commit-check-additive.mjs && node tools/docs/check-docs.mjs && node tools/docs/gen-doc-index.mjs --check"
+    "pre-commit": "node tools/pre-commit-check-additive.mjs && node tools/docs/check-docs.mjs && node tools/docs/gen-doc-index.mjs --check",
+    "pre-push": "node tools/pre-push-block-protected.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
