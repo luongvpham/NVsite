@@ -7,11 +7,11 @@ using Vsite.Domain.Exceptions;
 
 namespace Vsite.Application.Website.Queries.ListPublications;
 
-/// <summary>Flow 3 (WEBSITE-004 T5). <c>Take(50)</c> mới nhất; chiếu cột tường minh để KHÔNG kéo <c>Snapshot</c> (vài trăm KB/bản).</summary>
+/// <summary>Flow 3 (WEBSITE-004 T5). <c>Take(20)</c> mới nhất (khớp hạn mức prune #118); chiếu cột tường minh để KHÔNG kéo <c>Snapshot</c> (vài trăm KB/bản).</summary>
 public sealed class ListPublicationsHandler(IAppDbContext db, ITenantContext tenant)
     : IRequestHandler<ListPublicationsQuery, IReadOnlyList<PublicationDto>>
 {
-    public const int MaxItems = 50;
+    public const int MaxItems = 20;
 
     public async Task<IReadOnlyList<PublicationDto>> Handle(ListPublicationsQuery request, CancellationToken cancellationToken)
     {

@@ -66,6 +66,12 @@ public sealed class RollbackPublicationHandler(
             throw new ConflictException("ROLLBACK_CONFLICT", "Website vừa được chỉnh sửa hoặc xuất bản ở nơi khác. Hãy tải lại rồi thử lại.");
         }
 
+        catch (DbUpdateException ex) when (UniqueViolation.IsForeignKeyViolation(ex))
+        {
+            // Bản bị job prune xoá cứng giữa lúc nạp và ghi (WEBSITE-008, #118, R2).
+            throw new NotFoundException("Publication", request.PublicationId);
+        }
+
         try
         {
             await pointerCache.InvalidateAsync(shopId, CancellationToken.None);
