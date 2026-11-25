@@ -212,7 +212,7 @@ Plan §8 ghi `apps/portal/src/components/platform/jobs-dashboard-button.tsx`; fi
 
 1. ~~S2 FE (F1–F2)~~ — xong (mục S2/FE bên dưới).
 2. ~~`pnpm gen:api` + entry `platform`~~ — xong ở `a7ba587`.
-3. ~~`change-reviewer` toàn nhánh~~ — xong, xem `review.md`. **W1 (CSRF dashboard Hangfire, BE) chưa sửa** — chờ người quyết ở Gate 2.
+3. ~~`change-reviewer` toàn nhánh~~ — xong, xem `review.md`. W1 (CSRF dashboard) đã sửa ở D1 (`f30902c`).
 4. Nhắc người sửa `DesignIdeal/step.md` (8a xong, 8d dùng khung #116) — S1 không được sửa file đó.
 
 ### Nợ "Trước ra mắt"

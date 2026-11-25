@@ -151,7 +151,7 @@ Bảng xếp theo **thứ tự làm**, không theo số bước. Việc chưa x�
 | `BOOTSTRAP-002/changelog.md` | Chưa có cách enforce #11/#53 (chặn hardcode URL ảnh) |
 | `BOOTSTRAP-002/changelog.md` | Thiếu test `data:` URL scheme trong `href` khi sanitize |
 | `IDENTITY-001/changelog.md` §A | Một số giá trị `UserShopSource` chưa bao giờ được ghi — mới có `RegisteredOnShop` (verify-email) và `ShopCreator` (`POST /api/shops`, SHOP-001) |
-| `JOBS-001/changelog.md` "Chưa làm xong / nợ" | ⛔ **W1 chống CSRF cho thao tác ghi của dashboard `/hangfire` (BE; `SameSite=Strict` không chặn subdomain shop) — quyết ở Gate 2** · nợ S2/FE nhỏ (onSessionExpired sau refresh stale, popupBlocked, Safari chưa thử) · ⛔ **trước ra mắt:** Caddy route `/hangfire` trên host `admin.*` · Data Protection key ring bền · tzdata trong image Linux · Postgres chết lúc boot khi `ServerEnabled=true` (~14 s rồi có thể crash). |
+| `JOBS-001/changelog.md` "Chưa làm xong / nợ" | W1 CSRF dashboard đã sửa (JOBS-001-D1, same-origin) · Minor còn: Host không port nhận Origin cùng host khác port, thiếu 2 test biên · nợ S2/FE nhỏ (onSessionExpired sau refresh stale, popupBlocked, Safari chưa thử) · ⛔ **trước ra mắt:** Caddy route `/hangfire` trên host `admin.*` · Data Protection key ring bền · tzdata trong image Linux · Postgres chết lúc boot khi `ServerEnabled=true` (~14 s rồi có thể crash). |
 | `IDENTITY-001/changelog.md` §C | Verify-email từ domain shop chưa có bước handoff code (`03` §5) |
 | `IDENTITY-001/changelog.md` §F | Social Login chưa làm — schema `ExternalLogin` đã sẵn, luồng OAuth chưa có |
 | `IDENTITY-001/changelog.md` §D | `ShopCustomerDto` chưa có — khi làm màn "Khách hàng" ở Portal phải đọc `03` §3.3 trước, đừng serialize thẳng `User` |

@@ -4,7 +4,7 @@
 > Từng task BE đã review riêng ở S1 (xem ledger); từng task FE review bằng opus + re-review.
 
 ## Kết luận
-**Không có Critical** về tenant (#21) hay lệch contract. **1 Warning bảo mật (W1) cần người quyết ở Gate 2**; còn lại là tài liệu (đã sửa) và Suggestion.
+**Không có Critical** về tenant (#21) hay lệch contract. **1 Warning bảo mật (W1, CSRF dashboard) — đã sửa ở D1**; còn lại là tài liệu (đã sửa) và Suggestion.
 
 ## Đã kiểm và đạt
 - #21/job nền: `BeginShopScope` luôn scope mới từ root, `Set` đúng một lần; `ShopJobRunner` kiểm shop trong câu query; không thêm `IgnoreQueryFilters()`; endpoint không body.
@@ -17,11 +17,11 @@
 ## Warning
 | # | Nội dung | Xử lý |
 |---|---|---|
-| W1 | **CSRF dashboard Hangfire.** Không đăng ký `IAntiforgery` ⇒ Hangfire bỏ kiểm token cho POST (test `JobsDashboardTests` xác nhận POST không token vẫn qua). `SameSite=Strict` chỉ chặn khác *site*; `spa-abc.vsite.vn` và `admin.vsite.vn` cùng site ⇒ trang shop (nội dung shop kiểm soát) có thể form-POST trigger/xoá/requeue job trong 15' cookie còn sống. Plan G3 ("Strict chặn CSRF") không đủ. | **CHƯA SỬA** — S2 cấm sửa `backend/`. Đề xuất: `AddAntiforgery()` hoặc filter chặn không-GET khi `Sec-Fetch-Site`/`Origin` ngoài `admin.*`, kèm test POST thiếu token bị từ chối. Ghi ở changelog + 00-INDEX §4 (⛔). Người quyết: sửa trước merge hay trước ra mắt. |
+| W1 | **CSRF dashboard Hangfire.** Không đăng ký `IAntiforgery` ⇒ Hangfire bỏ kiểm token cho POST (test `JobsDashboardTests` xác nhận POST không token vẫn qua). `SameSite=Strict` chỉ chặn khác *site*; `spa-abc.vsite.vn` và `admin.vsite.vn` cùng site ⇒ trang shop (nội dung shop kiểm soát) có thể form-POST trigger/xoá/requeue job trong 15' cookie còn sống. Plan G3 ("Strict chặn CSRF") không đủ. | **ĐÃ SỬA** (người cho phép sửa trong session, vòng `JOBS-001-D1`, commit `f30902c`): filter dashboard đòi same-origin cho request ghi (`Origin` host[:port] = `Host`, hoặc không Origin thì `Sec-Fetch-Site: same-origin`; còn lại 401). Test RED 9/18 trước khi sửa; IntegrationTests 1056 pass/1 skip, Arch 22. Review lại (opus): Approved, không Critical/Important. Minor chưa làm: M1 khi `Host` không port thì Origin cùng host khác port vẫn qua (nên đòi `IsDefaultPort`), thiếu test lệch port và test Origin cross-site + `Sec-Fetch-Site: same-origin`. |
 | W2 | changelog còn "S2 chưa mở", thiếu commit/kiểm chứng FE | Đã sửa (phần kiểm chứng FE: portal 434, api-sdk 29+7 — xem báo cáo) |
 | W3 | 00-INDEX §3/§4 còn ghi S2 chưa làm | Đã sửa |
 | W4 | Nợ S2 chưa có nơi theo dõi | Đã thêm vào 00-INDEX §4 |
-| W5 | #114 ghi nút Portal "chờ S2" ở 3 chỗ | `DECISIONS.md` đã sửa. **`backend/docs/modules/identity.md:135` và `platform.md:9` chưa sửa** (cấm sửa `backend/`) — người/BE session cập nhật |
+| W5 | #114 ghi nút Portal "chờ S2" ở 3 chỗ | Đã sửa cả 3 (`DECISIONS.md`, `identity.md`, `platform.md`) |
 | W6 | plan §8 trích đường dẫn nút sai (`components/platform/…`) | Đã sửa plan + changelog mục 21 |
 | W7 | plan §6 trích `PlatformPolicyTests` cho "claim và audience" nhưng test thật là Theory `PlatformAdminClaimTests.Policy_requires_both_role_and_portal_audience` | Ghi ở changelog; plan chưa đổi |
 
