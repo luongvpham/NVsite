@@ -141,16 +141,12 @@ public sealed class PublicationPrunerTests(PostgresFixture postgres) : IAsyncLif
     }
 
     [Fact]
-    public async Task List_is_capped_at_20_newest()
+    public async Task Current_is_v3_of_25_keeps_3_and_7_to_25()
     {
-        var (shopId, _, _) = await SeedAsync(25);
+        var (shopId, _, _) = await SeedAsync(25, currentVersion: 3);
 
-        await using var request = new Request(Cs, shopId);
-        var list = await request.ListPublications();
-
-        Assert.Equal(20, list.Count);
-        Assert.Equal(25, list[0].Version);
-        Assert.Equal(6, list[^1].Version);
+        Assert.Equal(5, await PruneAsync(shopId));
+        Assert.Equal(new[] { 3 }.Concat(Enumerable.Range(7, 19)), await VersionsAsync(shopId));
     }
 
     // ---- R2: rollback tới bản bị xoá cứng sau khi handler đã nạp ----

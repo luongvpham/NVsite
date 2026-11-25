@@ -29,18 +29,35 @@ public sealed class PublicationPruner(IAppDbContext db, ITenantContext tenant, I
 
         var keep = options.Value.PublicationsToKeep;
         var current = website.CurrentPublicationId;
-        var currentId = current ?? Guid.Empty;
         var others = current is null ? keep : keep - 1;
 
-        var keepIds = await db.SitePublications.AsNoTracking()
-            .Where(p => p.ShopId == shopId && p.WebsiteId == website.Id && p.Id != currentId)
+        var candidates = db.SitePublications.AsNoTracking()
+            .Where(p => p.ShopId == shopId && p.WebsiteId == website.Id);
+        if (current is { } currentId)
+        {
+            candidates = candidates.Where(p => p.Id != currentId);
+        }
+
+        var keptVersions = await candidates
             .OrderByDescending(p => p.Version)
             .Take(others)
-            .Select(p => p.Id)
+            .Select(p => p.Version)
             .ToListAsync(cancellationToken);
+        if (keptVersions.Count < others)
+        {
+            return 0;
+        }
 
-        return await db.SitePublications
-            .Where(p => p.ShopId == shopId && p.WebsiteId == website.Id && p.Id != currentId && !keepIds.Contains(p.Id))
-            .ExecuteDeleteAsync(cancellationToken);
+        // Xoá theo ngưỡng Version: bản publish mới chen vào giữa hai câu query có Version cao hơn nên không bao giờ khớp.
+        // Rollback chen vào khoảng này (trỏ current về bản sắp xoá) kết thúc bằng FK abort + Hangfire retry, không mất dữ liệu.
+        var threshold = keptVersions.Count == 0 ? int.MaxValue : keptVersions.Min();
+        var doomed = db.SitePublications
+            .Where(p => p.ShopId == shopId && p.WebsiteId == website.Id && p.Version < threshold);
+        if (current is { } keepId)
+        {
+            doomed = doomed.Where(p => p.Id != keepId);
+        }
+
+        return await doomed.ExecuteDeleteAsync(cancellationToken);
     }
 }
