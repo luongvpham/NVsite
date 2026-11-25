@@ -27,6 +27,9 @@ Máy có Docker (Testcontainers chạy thật) ⇒ **không có nợ Docker**, `
 **Gate 1:** `platform.v1` (một endpoint mới `createJobsDashboardSession`) đã promote với `approvedBy = gate1-pre-production-89`
 (#89: chỉ thêm, không câu hỏi). `identity.v1` không đổi — claim `role` nằm trong JWT, không trong OpenAPI.
 
+### Kiểm chứng S2/FE (2026-11-25)
+`pnpm build && pnpm test` xanh 10/10 task: portal 434 test, `@vsite/api-sdk` 29 vitest + 7 barrel; typecheck + lint sạch; `pnpm check:docs` OK. Test viết trước, đỏ trước khi implement (api-sdk 15/15, portal không load được); vòng sửa review có 2 test đỏ trước (popup chặn, refresh cũ đè token mới).
+
 ### Bằng chứng T6 — test cách ly thật sự bắt được lỗi (plan §9 T6)
 
 Test `ShopJobIsolationTests` (4 ca, Postgres thật) phải **đỏ nếu bỏ cơ chế đặt tenant**. Có hai lần thử tạm, đều ở bản copy,
