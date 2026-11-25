@@ -78,7 +78,10 @@ export function buildBarrels(generatedDir) {
       index.push(spec(module, 'model', file));
     }
 
-    for (const file of tsFiles(moduleDir).filter((f) => !f.endsWith('.msw.ts'))) {
+    // Orval sinh zod RỖNG (chỉ comment) cho module không có body/param để validate (vd. platform) — `export *`
+    // từ file không có export là TS2306 "is not a module". Bỏ file không có câu `export` nào.
+    const hasExport = (f) => /^export\s/m.test(readFileSync(path.join(moduleDir, f), 'utf8'));
+    for (const file of tsFiles(moduleDir).filter((f) => !f.endsWith('.msw.ts') && hasExport(f))) {
       index.push(spec(module, file));
     }
   }

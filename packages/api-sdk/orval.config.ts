@@ -56,6 +56,32 @@ export default defineConfig({
       override: { header },
     },
   },
+  platform: {
+    input: '../../contracts/openapi/platform.v1.json',
+    output: {
+      mode: 'tags-split',
+      target: 'src/generated/platform/platform.ts',
+      schemas: 'src/generated/platform/model',
+      client: 'react-query',
+      mock: { type: 'msw' },
+      override: {
+        mutator: {
+          path: './src/mutator/axios-instance.ts',
+          name: 'customInstance',
+        },
+        header,
+      },
+    },
+  },
+  platformZod: {
+    input: '../../contracts/openapi/platform.v1.json',
+    output: {
+      mode: 'single',
+      target: 'src/generated/platform/platform.zod.ts',
+      client: 'zod',
+      override: { header },
+    },
+  },
   media: {
     input: '../../contracts/openapi/media.v1.json',
     output: {

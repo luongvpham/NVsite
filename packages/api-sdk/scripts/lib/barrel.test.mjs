@@ -35,6 +35,16 @@ test('client, model, zod vào index; .msw vào mocks; bỏ model/index.ts của 
   assert.doesNotMatch(mocks, /shopDto|zod/);
 });
 
+test('zod rỗng (module chỉ có endpoint không body, vd. platform) không vào index — TS2306 "not a module"', () => {
+  put('platform/platform/platform.ts');
+  put('platform/platform.zod.ts', '/**\n * GENERATED — DO NOT EDIT (pnpm gen:api)\n */\n\n');
+
+  const { index } = buildBarrels(root);
+
+  assert.match(index, /export \* from '\.\/platform\/platform\/platform';/);
+  assert.doesNotMatch(index, /platform\.zod/);
+});
+
 test('module/tag mới tự có mặt — không ai phải sửa barrel tay', () => {
   put('website/website/website.ts');
   put('website/site/site.ts');

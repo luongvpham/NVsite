@@ -82,16 +82,78 @@ public sealed class JobsDashboardTests(IdentityApiFactory factory)
     public async Task Post_action_with_valid_cookie_is_allowed_and_without_cookie_gets_401()
     {
         // Thao tác ghi của dashboard (trigger job định kỳ) cũng đi qua filter cookie — không chỉ GET trang.
-        var allowed = await PostAsync(PortalHost, IssueCookie());
-        Assert.NotEqual(HttpStatusCode.Unauthorized, allowed.StatusCode);
-        Assert.NotEqual(HttpStatusCode.Forbidden, allowed.StatusCode);
-        Assert.True((int)allowed.StatusCode < 500, $"POST dashboard trả {(int)allowed.StatusCode}");
+        var allowed = await PostAsync(PortalHost, IssueCookie(), origin: $"http://{PortalHost}");
+        AssertAllowed(allowed);
 
-        var denied = await PostAsync(PortalHost, null);
+        var denied = await PostAsync(PortalHost, null, origin: $"http://{PortalHost}");
         Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
     }
 
-    private async Task<HttpResponseMessage> PostAsync(string host, string? cookieValue)
+    // W1 / JOBS-001-D1 — chống CSRF: POST phải cùng origin với host admin.
+    [Fact]
+    public async Task Post_with_valid_cookie_from_shop_origin_gets_401()
+    {
+        var response = await PostAsync(PortalHost, IssueCookie(), origin: "http://spa-abc.vsite.local");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_with_valid_cookie_and_no_origin_nor_fetch_site_gets_401()
+    {
+        var response = await PostAsync(PortalHost, IssueCookie());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_without_origin_but_sec_fetch_site_same_origin_is_allowed()
+    {
+        var response = await PostAsync(PortalHost, IssueCookie(), secFetchSite: "same-origin");
+
+        AssertAllowed(response);
+    }
+
+    [Theory]
+    [InlineData("same-site")]
+    [InlineData("cross-site")]
+    [InlineData("none")]
+    public async Task Post_without_origin_and_sec_fetch_site_not_same_origin_gets_401(string site)
+    {
+        var response = await PostAsync(PortalHost, IssueCookie(), secFetchSite: site);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("garbage")]
+    [InlineData("http://")]
+    [InlineData("::::")]
+    public async Task Post_with_malformed_origin_gets_401_not_500(string origin)
+    {
+        var response = await PostAsync(PortalHost, IssueCookie(), origin: origin);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_with_valid_cookie_is_allowed_without_origin()
+    {
+        var response = await GetAsync(PortalHost, IssueCookie());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    private static void AssertAllowed(HttpResponseMessage response)
+    {
+        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.True((int)response.StatusCode < 500, $"POST dashboard trả {(int)response.StatusCode}");
+    }
+
+    private async Task<HttpResponseMessage> PostAsync(
+        string host, string? cookieValue, string? origin = null, string? secFetchSite = null)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/hangfire/recurring/trigger")
         {
@@ -101,6 +163,16 @@ public sealed class JobsDashboardTests(IdentityApiFactory factory)
         if (cookieValue is not null)
         {
             request.Headers.Add("Cookie", $"{JobsDashboardCookie.Name}={Uri.EscapeDataString(cookieValue)}");
+        }
+
+        if (origin is not null)
+        {
+            request.Headers.TryAddWithoutValidation("Origin", origin);
+        }
+
+        if (secFetchSite is not null)
+        {
+            request.Headers.TryAddWithoutValidation("Sec-Fetch-Site", secFetchSite);
         }
 
         return await _client.SendAsync(request);

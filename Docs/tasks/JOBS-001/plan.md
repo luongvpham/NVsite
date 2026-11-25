@@ -233,7 +233,7 @@ Docs/architecture/dependency-map.json                         sửa  + Platform
 contracts/openapi/platform.v1.json                            mới  (qua promote, không ghi tay)
 packages/api-sdk/src/mutator/axios-instance.ts (hoặc file cạnh) sửa  đọc claim token hiện tại
 apps/portal/src/routes/_authenticated.tsx                     sửa  nút "Job nền"
-apps/portal/src/components/platform/jobs-dashboard-button.tsx mới
+apps/portal/src/components/jobs-dashboard-button.tsx mới
 apps/portal/vite.config.ts                                    sửa  proxy /hangfire
 ```
 

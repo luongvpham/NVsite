@@ -2,6 +2,7 @@
 
 export * from './identity/identity/identity.msw';
 export * from './media/media/media.msw';
+export * from './platform/platform/platform.msw';
 export * from './shop/shop/shop.msw';
 export * from './website/site/site.msw';
 export * from './website/website/website.msw';

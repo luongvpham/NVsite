@@ -60,6 +60,9 @@ export default defineConfig({
       // Mọi API dưới /api (Quyết định #91) — MỘT mục proxy. Trước đây proxy riêng '/auth' + '/shops'
       // nên route SPA /shops/... của chính Portal (F5 ở /shops/new) bị đẩy sang BE và 404.
       '/api': { target: 'http://localhost:5270', changeOrigin: false },
+      // Dashboard Hangfire (JOBS-001, #114) — cùng dạng '/api': changeOrigin:true ghi đè Host thành localhost:5270
+      // ⇒ audience sai ⇒ dashboard 401. Cookie dashboard host-only nên phải đi cùng host admin.*.
+      '/hangfire': { target: 'http://localhost:5270', changeOrigin: false },
       // Ảnh không đi qua API — mọi ảnh phục vụ tại /media/{storageKey} (#88). Ảnh trong nội dung
       // builder: qua resolveImage(); field DTO đặt tên *Url (vd. ShopDto.logoUrl) BE trả sẵn có
       // tiền tố /media/ nên dùng nguyên; storageKey thô của Library (chưa có imageId) qua mediaUrl().

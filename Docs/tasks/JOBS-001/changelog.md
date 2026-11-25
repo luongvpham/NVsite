@@ -7,7 +7,7 @@ chưa mở — việc FE ở [`brief.md`](brief.md).
 **Đọc kèm:** [`contract-diff.md`](contract-diff.md) (Gate 1) · `backend/CLAUDE.md` §Job nền (#116) ·
 `backend/docs/modules/platform.md` (#115, cookie, dashboard) · `backend/docs/modules/identity.md` §#114 và §Job nền của Identity.
 
-**Commit:** `9054802` (T1) · `5e8a091` + `c126e98` (T2) · `ba8a254` (T3) · `68623e7` (T4) · `dbb2f77` + `a36314e` (T5) · `dc92b41` (T6).
+**Commit:** `9054802` (T1) · `5e8a091` + `c126e98` (T2) · `ba8a254` (T3) · `68623e7` (T4) · `dbb2f77` + `a36314e` (T5) · `dc92b41` (T6) · S2/FE: `a7ba587` (orval platform + gen:api) · `cc67937` + `3b9a0af` (F1) · `695660b` (fix review F1) · `615f2fd` + commit ghi F2 (docs).
 
 ---
 
@@ -26,6 +26,9 @@ Máy có Docker (Testcontainers chạy thật) ⇒ **không có nợ Docker**, `
 
 **Gate 1:** `platform.v1` (một endpoint mới `createJobsDashboardSession`) đã promote với `approvedBy = gate1-pre-production-89`
 (#89: chỉ thêm, không câu hỏi). `identity.v1` không đổi — claim `role` nằm trong JWT, không trong OpenAPI.
+
+### Kiểm chứng S2/FE (2026-11-25)
+`pnpm build && pnpm test` xanh 10/10 task: portal 434 test, `@vsite/api-sdk` 29 vitest + 7 barrel; typecheck + lint sạch; `pnpm check:docs` OK. Test viết trước, đỏ trước khi implement (api-sdk 15/15, portal không load được); vòng sửa review có 2 test đỏ trước (popup chặn, refresh cũ đè token mới).
 
 ### Bằng chứng T6 — test cách ly thật sự bắt được lỗi (plan §9 T6)
 
@@ -51,7 +54,26 @@ vì test tìm repo root theo đường dẫn bin. Khi PID 4300 đã tắt thì c
 
 ---
 
+### Nghiệm thu F2 (BE thật, trình duyệt thật — người chạy 2026-11-25)
+
+| # | Kiểm | Kết quả |
+|---|---|---|
+| 1 | Admin đăng nhập Portal, bấm "Job nền" → tab `/hangfire` (`http://admin.vsite.local:5173/hangfire`) | ✅ đạt |
+| 2 | Chủ shop thường: không thấy nút; POST bằng devtools ⇒ 403 `PLATFORM_ADMIN_REQUIRED` | ✅ đạt |
+| 3 | `/hangfire` không cookie / từ host shop bị chặn | ✅ đạt |
+| 4 | "Trigger now" 3 recurring job chạy thành công, log đúng số dòng | ✅ đạt |
+| 5 | Gỡ role bằng SQL ⇒ sau ≤15' + refresh nút biến mất | ✅ đạt |
+
+Nguồn: người báo bằng lời ("các dòng 2–5 cũng ok"), agent không tự chứng kiến; không có chi tiết từng dòng.
+
 ## Lệch có chủ đích (giữ nguyên, không phải bug)
+
+### JOBS-001-D1 (W1 CSRF) — dashboard chặn POST khác origin
+
+- **Vấn đề:** `/hangfire` không chống CSRF cho thao tác ghi: `SameSite=Strict` không chặn request từ `{slug}.vsite.*` (cùng site với `admin.*`), `IAntiforgery` không đăng ký nên Hangfire bỏ kiểm token.
+- **Thực thi:** `JobsDashboardAuthorizationFilter` thêm kiểm same-origin cho method ngoài GET/HEAD/OPTIONS, sau kiểm cookie + audience Portal: có `Origin` ⇒ host[:port] phải bằng `Host` request (không so scheme); không có `Origin` ⇒ chỉ nhận `Sec-Fetch-Site: same-origin`; còn lại (kể cả `Origin` hỏng/"null") ⇒ false ⇒ 401. GET/HEAD/OPTIONS giữ nguyên. Test: `JobsDashboardTests` (viết trước, đỏ 9/18, rồi xanh).
+- **Vì sao không `AddAntiforgery()`:** Hangfire chỉ kiểm token khi có `IAntiforgery`, nhưng việc đó kéo thêm cookie/state antiforgery cho một dashboard chỉ-admin; kiểm Origin/Sec-Fetch-Site không thêm state, nằm gọn trong filter sẵn có và test được bằng integration test.
+- **Cơ sở:** JS ajax và form POST của dashboard trình duyệt luôn gửi `Origin`; client không phải trình duyệt (không Origin, không Sec-Fetch-Site) bị từ chối có chủ đích.
 
 ### 1. `Hangfire.Core` thêm ở T2, không phải T4
 
@@ -169,15 +191,28 @@ vì test tìm repo root theo đường dẫn bin. Khi PID 4300 đã tắt thì c
 
 ---
 
+### 17. (S2/FE) `scripts/lib/barrel.mjs` bỏ file zod rỗng
+`platform.zod.ts` do Orval sinh ra chỉ có comment (endpoint không body/param) → `export *` gây TS2306 ở typecheck api-sdk lẫn portal. Sửa gốc ở script barrel (bỏ file không có `export`, có test), chạy lại `pnpm gen:api`; không sửa tay `generated/`. Entry `platformZod` giữ theo brief.
+
+### 18. (S2/FE) Mutator: `refreshAccessToken` catch chỉ xoá token khi `epoch === sessionEpoch`
+Lỗi có sẵn (refresh cũ hỏng đè token phiên đăng nhập mới) — lộ ra vì nút "Job nền" phản ứng theo token. Có test.
+
+### 19. (S2/FE) `isForbidden` đọc AxiosError thô theo hình dạng
+Portal không phụ thuộc axios. 403 nhận biết qua `response.status`, `ProblemDetails.status`, hoặc `error_code` `PLATFORM_ADMIN_REQUIRED`/`TOKEN_SHOP_MISMATCH`. 403 không status và error_code lạ sẽ hiện lỗi chung (BE luôn gửi status).
+
+### 20. (S2/FE) `window.open` bị chặn popup
+Reviewer chỉ ra `window.open` chạy sau await (Safari có thể chặn). Thêm: trả `null` ⇒ hiện liên kết `/hangfire` dự phòng. Brief chỉ định `window.open`, giữ nguyên.
+
+### 21. (S2/FE) Đường dẫn file nút
+Plan §8 ghi `apps/portal/src/components/platform/jobs-dashboard-button.tsx`; file thật là `apps/portal/src/components/jobs-dashboard-button.tsx` (không có thư mục `platform/`).
+
 ## Chưa làm xong / nợ
 
 ### Việc của session sau
 
-1. **S2 FE (F1–F2)** — nút "Job nền" ở Portal, proxy `/hangfire`, nghiệm thu tay với BE thật. Việc cụ thể ở [`brief.md`](brief.md).
-2. **`pnpm gen:api` + entry `platform` trong `packages/api-sdk/orval.config.ts`** — **hoãn sang S2**: S1 không được đụng `packages/` (Ruling 9).
-   Hệ quả: `packages/api-sdk/src/generated/` chưa có `createJobsDashboardSession`; `check-no-drift` hiện OK. S2 thêm `platform` + `platformZod`
-   (mẫu như `shop`/`shopZod`) rồi chạy `pnpm gen:api` **trước** F1.
-3. `change-reviewer` toàn nhánh (model mạnh nhất — chạm bảo mật/tenant), `review.md` kèm "Ma sát quy trình", Gate 2 — sau S2 (plan §11).
+1. ~~S2 FE (F1–F2)~~ — xong (mục S2/FE bên dưới).
+2. ~~`pnpm gen:api` + entry `platform`~~ — xong ở `a7ba587`.
+3. ~~`change-reviewer` toàn nhánh~~ — xong, xem `review.md`. W1 (CSRF dashboard) đã sửa ở D1 (`f30902c`).
 4. Nhắc người sửa `DesignIdeal/step.md` (8a xong, 8d dùng khung #116) — S1 không được sửa file đó.
 
 ### Nợ "Trước ra mắt"
@@ -198,6 +233,14 @@ vì test tìm repo root theo đường dẫn bin. Khi PID 4300 đã tắt thì c
 - T5: test dọn Zalo bỏ qua điều kiện provider khi seed.
 - T6: fan-out gọi job bằng reflection (bỏ qua serializer/activator); test B không kiểm DB đổi bằng truy vấn riêng.
 - Giả định G1–G11 của plan §12 giữ nguyên, **ngoại trừ** G9 (đặt `AudienceKind = Shop` cho job — giữ) và G10 (Hangfire dùng chung connection `Identity` và database — giữ); không giả định nào bị đảo.
+
+### S2/FE — hoãn
+- Interceptor vẫn gọi `onSessionExpired` khi refresh stale-epoch hỏng (logout rồi login nhanh lúc refresh cũ đang bay) — có sẵn, ngoài phạm vi nút; token mới đã không bị xoá nhưng store có thể bị clear. Cần để `refreshAccessToken` báo "stale".
+- `popupBlocked` không reset khi nút bị ẩn (cosmetic).
+- Portal MSW server mặc định chưa có handler platform (test tự override).
+- Kiểm Safari/popup ở trình duyệt chưa được báo cáo (F2 chỉ xác nhận chung 5 dòng).
+- Sau review toàn nhánh (Suggestion, chưa làm): `DisplayStorageConnectionString=false`; cân nhắc `hangfire` vào reserved-routes hoặc ghi "chỉ admin.*" ở nợ Caddy; mở rộng test dò bypass; `denied` không reset khi token đổi; ngoại lệ `ApiRoutePrefixTests` nên là `"hangfire/"`.
+- Plan §6 dòng "Policy kiểm claim và audience" trích `PlatformPolicyTests` — test chứng minh thật là Theory `PlatformAdminClaimTests.Policy_requires_both_role_and_portal_audience`.
 
 ### Chưa nằm trong phạm vi (đúng plan §1)
 

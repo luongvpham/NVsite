@@ -29,9 +29,63 @@ let accessToken: string | undefined;
 /** Tăng mỗi lần phiên bị clear — refresh đang bay từ "đời" trước không được hồi sinh access token. */
 let sessionEpoch = 0;
 
+const tokenListeners = new Set<() => void>();
+
+/** Mọi chỗ gán access token đi qua đây để subscriber (UI) biết token đã đổi. */
+function assignAccessToken(token: string | undefined): void {
+  if (token === accessToken) return;
+  accessToken = token;
+  tokenListeners.forEach((listener) => {
+    listener();
+  });
+}
+
 export function setAccessToken(token: string | undefined): void {
   if (token === undefined) sessionEpoch += 1;
-  accessToken = token;
+  assignAccessToken(token);
+}
+
+/**
+ * Đăng ký lắng nghe thay đổi access token (set, refresh thành công, refresh hỏng, clear) — đúng chữ ký
+ * `subscribe` của `useSyncExternalStore`. Trả hàm huỷ đăng ký.
+ */
+export function subscribeAccessToken(listener: () => void): () => void {
+  tokenListeners.add(listener);
+  return () => {
+    tokenListeners.delete(listener);
+  };
+}
+
+const NO_ROLES: readonly string[] = Object.freeze([]);
+let rolesCache: { token: string | undefined; roles: readonly string[] } = { token: undefined, roles: NO_ROLES };
+
+/**
+ * Claim `role` của access token HIỆN TẠI (decode payload, KHÔNG verify chữ ký). Chỉ để hiện/ẩn UI — quyền
+ * thật do BE kiểm (#114). Token thiếu/hỏng ⇒ `[]`, không ném. Cùng một token trả cùng một tham chiếu mảng
+ * (cache) nên dùng được làm snapshot của `useSyncExternalStore`.
+ */
+export function getAccessTokenRoles(): readonly string[] {
+  if (rolesCache.token !== accessToken) {
+    rolesCache = { token: accessToken, roles: accessToken ? readRoles(accessToken) : NO_ROLES };
+  }
+  return rolesCache.roles;
+}
+
+function readRoles(token: string): readonly string[] {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return NO_ROLES;
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+    const claims: unknown = JSON.parse(new TextDecoder().decode(bytes));
+    if (typeof claims !== 'object' || claims === null) return NO_ROLES;
+    const role = (claims as Record<string, unknown>).role;
+    if (typeof role === 'string') return [role];
+    if (Array.isArray(role)) return role.filter((r): r is string => typeof r === 'string');
+    return NO_ROLES;
+  } catch {
+    return NO_ROLES;
+  }
 }
 
 /**
@@ -78,10 +132,11 @@ async function refreshAccessToken(): Promise<string | undefined> {
     );
     // Phiên đã bị clear (đăng xuất) trong lúc request bay → bỏ kết quả, không khôi phục token.
     if (epoch !== sessionEpoch) return undefined;
-    accessToken = response.data.accessToken;
+    assignAccessToken(response.data.accessToken);
     return accessToken;
   } catch {
-    accessToken = undefined;
+    // Refresh "đời" cũ hỏng không được xoá token của phiên mới (đăng xuất rồi đăng nhập lại trong lúc refresh bay).
+    if (epoch === sessionEpoch) assignAccessToken(undefined);
     return undefined;
   }
 }
