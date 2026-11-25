@@ -7,7 +7,7 @@ chưa mở — việc FE ở [`brief.md`](brief.md).
 **Đọc kèm:** [`contract-diff.md`](contract-diff.md) (Gate 1) · `backend/CLAUDE.md` §Job nền (#116) ·
 `backend/docs/modules/platform.md` (#115, cookie, dashboard) · `backend/docs/modules/identity.md` §#114 và §Job nền của Identity.
 
-**Commit:** `9054802` (T1) · `5e8a091` + `c126e98` (T2) · `ba8a254` (T3) · `68623e7` (T4) · `dbb2f77` + `a36314e` (T5) · `dc92b41` (T6).
+**Commit:** `9054802` (T1) · `5e8a091` + `c126e98` (T2) · `ba8a254` (T3) · `68623e7` (T4) · `dbb2f77` + `a36314e` (T5) · `dc92b41` (T6) · S2/FE: `a7ba587` (orval platform + gen:api) · `cc67937` + `3b9a0af` (F1) · `695660b` (fix review F1) · `615f2fd` + commit ghi F2 (docs).
 
 ---
 
@@ -193,15 +193,16 @@ Portal không phụ thuộc axios. 403 nhận biết qua `response.status`, `Pro
 ### 20. (S2/FE) `window.open` bị chặn popup
 Reviewer chỉ ra `window.open` chạy sau await (Safari có thể chặn). Thêm: trả `null` ⇒ hiện liên kết `/hangfire` dự phòng. Brief chỉ định `window.open`, giữ nguyên.
 
+### 21. (S2/FE) Đường dẫn file nút
+Plan §8 ghi `apps/portal/src/components/platform/jobs-dashboard-button.tsx`; file thật là `apps/portal/src/components/jobs-dashboard-button.tsx` (không có thư mục `platform/`).
+
 ## Chưa làm xong / nợ
 
 ### Việc của session sau
 
-1. **S2 FE (F1–F2)** — nút "Job nền" ở Portal, proxy `/hangfire`, nghiệm thu tay với BE thật. Việc cụ thể ở [`brief.md`](brief.md).
-2. **`pnpm gen:api` + entry `platform` trong `packages/api-sdk/orval.config.ts`** — **hoãn sang S2**: S1 không được đụng `packages/` (Ruling 9).
-   Hệ quả: `packages/api-sdk/src/generated/` chưa có `createJobsDashboardSession`; `check-no-drift` hiện OK. S2 thêm `platform` + `platformZod`
-   (mẫu như `shop`/`shopZod`) rồi chạy `pnpm gen:api` **trước** F1.
-3. `change-reviewer` toàn nhánh (model mạnh nhất — chạm bảo mật/tenant), `review.md` kèm "Ma sát quy trình", Gate 2 — sau S2 (plan §11).
+1. ~~S2 FE (F1–F2)~~ — xong (mục S2/FE bên dưới).
+2. ~~`pnpm gen:api` + entry `platform`~~ — xong ở `a7ba587`.
+3. ~~`change-reviewer` toàn nhánh~~ — xong, xem `review.md`. **W1 (CSRF dashboard Hangfire, BE) chưa sửa** — chờ người quyết ở Gate 2.
 4. Nhắc người sửa `DesignIdeal/step.md` (8a xong, 8d dùng khung #116) — S1 không được sửa file đó.
 
 ### Nợ "Trước ra mắt"
@@ -226,8 +227,11 @@ Reviewer chỉ ra `window.open` chạy sau await (Safari có thể chặn). Thê
 ### S2/FE — hoãn
 - Interceptor vẫn gọi `onSessionExpired` khi refresh stale-epoch hỏng (logout rồi login nhanh lúc refresh cũ đang bay) — có sẵn, ngoài phạm vi nút; token mới đã không bị xoá nhưng store có thể bị clear. Cần để `refreshAccessToken` báo "stale".
 - `popupBlocked` không reset khi nút bị ẩn (cosmetic).
+- ⛔ **W1 (review toàn nhánh): dashboard `/hangfire` thiếu chống CSRF cho thao tác ghi.** `SameSite=Strict` không chặn request từ subdomain shop (cùng site với `admin.*`); repo không đăng ký `IAntiforgery` nên Hangfire bỏ kiểm token. FE session cấm sửa `backend/` ⇒ chưa sửa. Cách sửa: `AddAntiforgery()` hoặc filter chặn POST có `Sec-Fetch-Site`/`Origin` ngoài `admin.*`, kèm test. Quyết trước ra mắt.
 - Portal MSW server mặc định chưa có handler platform (test tự override).
 - Kiểm Safari/popup ở trình duyệt chưa được báo cáo (F2 chỉ xác nhận chung 5 dòng).
+- Sau review toàn nhánh (Suggestion, chưa làm): `DisplayStorageConnectionString=false`; cân nhắc `hangfire` vào reserved-routes hoặc ghi "chỉ admin.*" ở nợ Caddy; mở rộng test dò bypass; `denied` không reset khi token đổi; ngoại lệ `ApiRoutePrefixTests` nên là `"hangfire/"`.
+- Plan §6 dòng "Policy kiểm claim và audience" trích `PlatformPolicyTests` — test chứng minh thật là Theory `PlatformAdminClaimTests.Policy_requires_both_role_and_portal_audience`.
 
 ### Chưa nằm trong phạm vi (đúng plan §1)
 
