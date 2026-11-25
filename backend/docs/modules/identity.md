@@ -132,7 +132,7 @@ tài khoản dùng được = `User.Status = Active` (`User.CanSignIn`).
 
 ### Quyết định #114 — Quyền `PlatformAdmin`: role claim trong token, nhóm route riêng
 
-Người duyệt chốt 2026-11-23. ✅ Mục 1–6 và 8 đã code ở JOBS-001 (Bước 8a, S1 BE) — claim, policy, nhóm route, cookie dashboard; hiện thực ở module `Platform` (`backend/docs/modules/platform.md`). 📐 Mục 7 (đọc chéo shop cho thống kê) **chưa làm** — chờ task màn quản trị. Nút "Job nền" ở Portal chờ S2 FE (`Docs/tasks/JOBS-001/brief.md`).
+Người duyệt chốt 2026-11-23. ✅ Mục 1–6 và 8 đã code ở JOBS-001 (Bước 8a, S1 BE) — claim, policy, nhóm route, cookie dashboard; hiện thực ở module `Platform` (`backend/docs/modules/platform.md`). 📐 Mục 7 (đọc chéo shop cho thống kê) **chưa làm** — chờ task màn quản trị. Nút "Job nền" ở Portal đã code (S2 FE, `Docs/tasks/JOBS-001/brief.md`).
 
 **Ba luồng xác định quyền, không trộn nhau:**
 

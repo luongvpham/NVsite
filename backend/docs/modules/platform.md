@@ -6,7 +6,7 @@
 ## Trạng thái (JOBS-001, Bước 8a)
 
 Module `Platform` mới có **một endpoint**: đổi JWT của `PlatformAdmin` lấy cookie vào dashboard Hangfire. Contract `platform.v1` đã
-qua Gate 1 (promote, `gate1-pre-production-89`). Nút ở Portal (S2 FE) chưa làm — brief: `Docs/tasks/JOBS-001/brief.md`.
+qua Gate 1 (promote, `gate1-pre-production-89`). Nút ở Portal (S2 FE) đã code — brief: `Docs/tasks/JOBS-001/brief.md`.
 Lệch so với plan và nợ: `Docs/tasks/JOBS-001/changelog.md`. Màn quản trị/thống kê nền tảng (#114 mục 7) **chưa làm** — module này sinh ra để chứa chúng.
 
 ## Quyết định #115 — Module `Platform`
@@ -81,7 +81,8 @@ Giả định ngầm: nhóm `/platform` hiện chỉ có một policy.
 `Vsite.Api.Platform.JobsDashboardAuthorizationFilter` (`IDashboardAsyncAuthorizationFilter`, đặt ở `AsyncAuthorization`; `Authorization = []` để bỏ
 mặc định `LocalRequestsOnly`) cho qua khi **cả hai**:
 1. `ITenantContext.AudienceKind == Portal` — tức host `admin.*` (host shop và `api.*` ⇒ 401, kể cả mang cookie chép tay); tenant middleware chạy trước dashboard nên có sẵn;
-2. cookie `vsite_jobs_dashboard` giải mã được và chưa hết hạn.
+2. cookie `vsite_jobs_dashboard` giải mã được và chưa hết hạn;
+3. (JOBS-001-D1, W1 — CSRF) với method ghi (khác GET/HEAD/OPTIONS) phải **cùng origin**: có `Origin` ⇒ host[:port] của nó = `Host` request; không có `Origin` ⇒ chỉ nhận `Sec-Fetch-Site: same-origin`; `Origin` hỏng/"null"/khác host ⇒ 401. Cần vì `{slug}.vsite.*` và `admin.*` cùng site nên `SameSite=Strict` không chặn form-POST từ trang shop. Client không phải trình duyệt (không gửi Origin) bị từ chối có chủ đích.
 
 Mọi lỗi giải mã ⇒ `false` (Hangfire trả 401), không ném 500. Dashboard đủ thao tác (trigger, retry, xoá — `IsReadOnlyFunc = _ => false`).
 

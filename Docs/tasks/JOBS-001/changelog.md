@@ -68,6 +68,13 @@ Nguồn: người báo bằng lời ("các dòng 2–5 cũng ok"), agent không 
 
 ## Lệch có chủ đích (giữ nguyên, không phải bug)
 
+### JOBS-001-D1 (W1 CSRF) — dashboard chặn POST khác origin
+
+- **Vấn đề:** `/hangfire` không chống CSRF cho thao tác ghi: `SameSite=Strict` không chặn request từ `{slug}.vsite.*` (cùng site với `admin.*`), `IAntiforgery` không đăng ký nên Hangfire bỏ kiểm token.
+- **Thực thi:** `JobsDashboardAuthorizationFilter` thêm kiểm same-origin cho method ngoài GET/HEAD/OPTIONS, sau kiểm cookie + audience Portal: có `Origin` ⇒ host[:port] phải bằng `Host` request (không so scheme); không có `Origin` ⇒ chỉ nhận `Sec-Fetch-Site: same-origin`; còn lại (kể cả `Origin` hỏng/"null") ⇒ false ⇒ 401. GET/HEAD/OPTIONS giữ nguyên. Test: `JobsDashboardTests` (viết trước, đỏ 9/18, rồi xanh).
+- **Vì sao không `AddAntiforgery()`:** Hangfire chỉ kiểm token khi có `IAntiforgery`, nhưng việc đó kéo thêm cookie/state antiforgery cho một dashboard chỉ-admin; kiểm Origin/Sec-Fetch-Site không thêm state, nằm gọn trong filter sẵn có và test được bằng integration test.
+- **Cơ sở:** JS ajax và form POST của dashboard trình duyệt luôn gửi `Origin`; client không phải trình duyệt (không Origin, không Sec-Fetch-Site) bị từ chối có chủ đích.
+
 ### 1. `Hangfire.Core` thêm ở T2, không phải T4
 
 - **Plan nói gì:** T4 mới thêm gói Hangfire.
@@ -230,7 +237,6 @@ Plan §8 ghi `apps/portal/src/components/platform/jobs-dashboard-button.tsx`; fi
 ### S2/FE — hoãn
 - Interceptor vẫn gọi `onSessionExpired` khi refresh stale-epoch hỏng (logout rồi login nhanh lúc refresh cũ đang bay) — có sẵn, ngoài phạm vi nút; token mới đã không bị xoá nhưng store có thể bị clear. Cần để `refreshAccessToken` báo "stale".
 - `popupBlocked` không reset khi nút bị ẩn (cosmetic).
-- ⛔ **W1 (review toàn nhánh): dashboard `/hangfire` thiếu chống CSRF cho thao tác ghi.** `SameSite=Strict` không chặn request từ subdomain shop (cùng site với `admin.*`); repo không đăng ký `IAntiforgery` nên Hangfire bỏ kiểm token. FE session cấm sửa `backend/` ⇒ chưa sửa. Cách sửa: `AddAntiforgery()` hoặc filter chặn POST có `Sec-Fetch-Site`/`Origin` ngoài `admin.*`, kèm test. Quyết trước ra mắt.
 - Portal MSW server mặc định chưa có handler platform (test tự override).
 - Kiểm Safari/popup ở trình duyệt chưa được báo cáo (F2 chỉ xác nhận chung 5 dòng).
 - Sau review toàn nhánh (Suggestion, chưa làm): `DisplayStorageConnectionString=false`; cân nhắc `hangfire` vào reserved-routes hoặc ghi "chỉ admin.*" ở nợ Caddy; mở rộng test dò bypass; `denied` không reset khi token đổi; ngoại lệ `ApiRoutePrefixTests` nên là `"hangfire/"`.
