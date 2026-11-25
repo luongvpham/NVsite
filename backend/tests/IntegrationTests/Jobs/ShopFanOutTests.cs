@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Vsite.Application.Media.Options;
+using Vsite.Application.Website.Options;
 using Vsite.Api.Tenancy;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Common.Jobs;
@@ -170,8 +173,8 @@ public sealed class ShopFanOutWiringTests(IdentityApiFactory factory)
     [Fact]
     public void Job_options_have_planned_defaults()
     {
-        var retention = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Vsite.Application.Website.Options.BuilderRetentionOptions>>().Value;
-        var media = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Vsite.Application.Media.Options.MediaCleanupOptions>>().Value;
+        var retention = factory.Services.GetRequiredService<IOptions<BuilderRetentionOptions>>().Value;
+        var media = factory.Services.GetRequiredService<IOptions<MediaCleanupOptions>>().Value;
 
         Assert.Equal(20, retention.PublicationsToKeep);
         Assert.Equal(TimeSpan.FromDays(7), retention.DeletedPageGrace);
@@ -189,6 +192,29 @@ public sealed class ShopFanOutWiringTests(IdentityApiFactory factory)
         var bad = factory.WithWebHostBuilder(b => b.ConfigureAppConfiguration((_, c) =>
             c.AddInMemoryCollection(new Dictionary<string, string?> { [key] = value })));
 
-        Assert.ThrowsAny<Exception>(() => bad.Server);
+        var ex = Record.Exception(() => bad.Server);
+
+        var validation = Unwrap(ex).OfType<OptionsValidationException>().FirstOrDefault();
+        Assert.True(validation is not null, $"Expected OptionsValidationException, got: {ex}");
+        Assert.Contains(key, string.Join(" ", validation!.Failures));
+    }
+
+    private static IEnumerable<Exception> Unwrap(Exception? ex)
+    {
+        while (ex is not null)
+        {
+            yield return ex;
+            if (ex is AggregateException agg)
+            {
+                foreach (var inner in agg.InnerExceptions.SelectMany(i => Unwrap(i)))
+                {
+                    yield return inner;
+                }
+
+                yield break;
+            }
+
+            ex = ex.InnerException;
+        }
     }
 }
