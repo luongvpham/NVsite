@@ -50,6 +50,10 @@ public static class HangfireSetup
         services.AddScoped<ExpiredTokenCleanupJob>();
         services.AddScoped<ZaloIdentityIntegrityJob>();
 
+        // Khung fan-out theo shop (#116) — job con chạy trong TenantScope của từng shop.
+        services.AddScoped<ShopFanOut>();
+        services.AddScoped<ShopJobRunner>();
+
         // Worker: đăng ký luôn nhưng bọc cổng — chỉ dựng/chạy khi ServerEnabled (đọc lazy, xem doc class).
         var before = services.Count;
         var gated = false;

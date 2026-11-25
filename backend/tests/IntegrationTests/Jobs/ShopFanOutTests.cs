@@ -1,7 +1,9 @@
 using Hangfire;
 using Hangfire.Common;
 using Hangfire.States;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Vsite.Api.Tenancy;
 using Vsite.Application.Common.Interfaces;
@@ -149,5 +151,44 @@ public sealed class ShopFanOutTests : IAsyncLifetime
         }
 
         public bool ChangeState(string jobId, IState state, string expectedState) => throw new NotSupportedException();
+    }
+}
+
+/// <summary>WEBSITE-008 T1 — DI production (host thật) nối khung fan-out + options job builder.</summary>
+[Collection(IdentityApiCollection.Name)]
+public sealed class ShopFanOutWiringTests(IdentityApiFactory factory)
+{
+    [Fact]
+    public void Production_host_resolves_ShopFanOut_and_ShopJobRunner()
+    {
+        using var scope = factory.Services.CreateScope();
+
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ShopFanOut>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ShopJobRunner>());
+    }
+
+    [Fact]
+    public void Job_options_have_planned_defaults()
+    {
+        var retention = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Vsite.Application.Website.Options.BuilderRetentionOptions>>().Value;
+        var media = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Vsite.Application.Media.Options.MediaCleanupOptions>>().Value;
+
+        Assert.Equal(20, retention.PublicationsToKeep);
+        Assert.Equal(TimeSpan.FromDays(7), retention.DeletedPageGrace);
+        Assert.Equal(TimeSpan.FromDays(1), retention.NavigationQuietPeriod);
+        Assert.Equal(TimeSpan.FromDays(7), media.OrphanGrace);
+    }
+
+    [Theory]
+    [InlineData("Jobs:BuilderRetention:PublicationsToKeep", "0")]
+    [InlineData("Jobs:BuilderRetention:DeletedPageGrace", "-1.00:00:00")]
+    [InlineData("Jobs:BuilderRetention:NavigationQuietPeriod", "-00:00:01")]
+    [InlineData("Jobs:MediaCleanup:OrphanGrace", "-1.00:00:00")]
+    public void Invalid_job_options_fail_host_startup(string key, string value)
+    {
+        var bad = factory.WithWebHostBuilder(b => b.ConfigureAppConfiguration((_, c) =>
+            c.AddInMemoryCollection(new Dictionary<string, string?> { [key] = value })));
+
+        Assert.ThrowsAny<Exception>(() => bad.Server);
     }
 }
