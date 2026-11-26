@@ -89,6 +89,65 @@ public sealed class MediaAssetTests
         Assert.Equal("MEDIA_CLONE_FROM_CLONE", ex.ErrorCode);
     }
 
+    private static readonly DateTimeOffset T0 = new(2026, 11, 1, 0, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void MarkOrphaned_keeps_first_timestamp()
+    {
+        var direct = MediaAsset.NewDirect(ShopId, "k/d.webp", 320, 96, 1, "320x96,inside", 0.5f, 0.5f, null, null);
+
+        direct.MarkOrphaned(T0);
+        direct.MarkOrphaned(T0.AddDays(3));
+
+        Assert.Equal(T0, direct.OrphanedAt);
+    }
+
+    [Fact]
+    public void ClearOrphaned_resets_to_null()
+    {
+        var direct = MediaAsset.NewDirect(ShopId, "k/d.webp", 320, 96, 1, "320x96,inside", 0.5f, 0.5f, null, null);
+        direct.MarkOrphaned(T0);
+
+        direct.ClearOrphaned();
+
+        Assert.Null(direct.OrphanedAt);
+    }
+
+    [Fact]
+    public void MarkOrphaned_on_live_library_throws()
+    {
+        var library = MediaAsset.NewLibrary(ShopId, "k/l.webp", 1200, 800, 1, 0.5f, 0.5f, null, null);
+
+        Assert.Throws<DomainException>(() => library.MarkOrphaned(T0));
+        Assert.Null(library.OrphanedAt);
+    }
+
+    [Fact]
+    public void MarkOrphaned_on_soft_deleted_library_is_allowed()
+    {
+        var library = MediaAsset.NewLibrary(ShopId, "k/l.webp", 1200, 800, 1, 0.5f, 0.5f, null, null);
+        library.SoftDeleteFromLibrary();
+
+        library.MarkOrphaned(T0);
+
+        Assert.Equal(T0, library.OrphanedAt);
+    }
+
+    [Fact]
+    public void MarkOrphaned_allowed_for_clone_direct_derivative()
+    {
+        var library = MediaAsset.NewLibrary(ShopId, "k/l.webp", 1200, 800, 1, 0.5f, 0.5f, null, null);
+        var direct = MediaAsset.NewDirect(ShopId, "k/d.webp", 320, 96, 1, "320x96,inside", 0.5f, 0.5f, null, null);
+        var clone = MediaAsset.NewClone(library, "k/c.webp", 320, 96, 1, "320x96,inside", 0.5f, 0.5f);
+        var derivative = MediaAsset.NewDerivative(library, "k/v.webp", 320, 96, 1, "320x96,inside", 0.5f, 0.5f);
+
+        foreach (var a in new[] { direct, clone, derivative })
+        {
+            a.MarkOrphaned(T0);
+            Assert.Equal(T0, a.OrphanedAt);
+        }
+    }
+
     [Theory]
     [InlineData(-0.1f, 0.5f)]
     [InlineData(1.1f, 0.5f)]

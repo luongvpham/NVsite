@@ -661,6 +661,10 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("original_file_name");
 
+                    b.Property<DateTimeOffset?>("OrphanedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("orphaned_at");
+
                     b.Property<string>("Preset")
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
@@ -714,6 +718,10 @@ namespace Vsite.Infrastructure.Persistence.Migrations
                         .IsDescending(false, true)
                         .HasDatabaseName("ix_media_asset_library")
                         .HasFilter("is_in_library AND NOT is_deleted");
+
+                    b.HasIndex("ShopId", "OrphanedAt")
+                        .HasDatabaseName("ix_media_asset_orphaned")
+                        .HasFilter("orphaned_at IS NOT NULL");
 
                     b.HasIndex("SourceAssetId", "Preset")
                         .IsUnique()

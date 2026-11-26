@@ -191,6 +191,27 @@ public sealed class MediaDbConstraintTests(PostgresFixture postgres)
         Assert.Null(reloadedClone.SourceAssetId);
     }
 
+    /// <summary>WEBSITE-008 (#117) — cột `orphaned_at` + index một phần `ix_media_asset_orphaned`.</summary>
+    [Fact]
+    public async Task Orphaned_at_column_and_partial_index_exist()
+    {
+        await using var db = CreateContext();
+        await db.Database.MigrateAsync();
+
+        var column = await db.Database.SqlQuery<string>($"""
+            SELECT data_type AS "Value" FROM information_schema.columns
+            WHERE table_name = 'media_asset' AND column_name = 'orphaned_at'
+            """).SingleAsync();
+        Assert.Equal("timestamp with time zone", column);
+
+        var def = await db.Database.SqlQuery<string>($"""
+            SELECT indexdef AS "Value" FROM pg_indexes
+            WHERE tablename = 'media_asset' AND indexname = 'ix_media_asset_orphaned'
+            """).SingleAsync();
+        Assert.Contains("(shop_id, orphaned_at)", def);
+        Assert.Contains("WHERE (orphaned_at IS NOT NULL)", def);
+    }
+
     private AppDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(postgres.ConnectionString).Options;

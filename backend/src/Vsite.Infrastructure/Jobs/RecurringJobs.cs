@@ -1,5 +1,7 @@
 using Hangfire;
 using Vsite.Application.Identity.Jobs;
+using Vsite.Application.Media.Jobs;
+using Vsite.Application.Website.Jobs;
 
 namespace Vsite.Infrastructure.Jobs;
 
@@ -15,6 +17,12 @@ public static class RecurringJobs
     public const string ExpiredTokenCleanupId = "identity.expired-token-cleanup";
     public const string ZaloIntegrityId = "identity.zalo-integrity";
 
+    public const string WebsiteRetentionCron = "30 3 * * *";
+    public const string MediaOrphanCleanupCron = "0 4 * * *";
+
+    public const string WebsiteRetentionId = "website.retention";
+    public const string MediaOrphanCleanupId = "media.orphan-cleanup";
+
     public static void Register(IRecurringJobManager manager, JobsOptions options)
     {
         var tz = ResolveTimeZone(options.TimeZone);
@@ -27,6 +35,12 @@ public static class RecurringJobs
             ExpiredTokenCleanupId, j => j.RunAsync(grace, CancellationToken.None), Daily, recurring);
         manager.AddOrUpdate<ZaloIdentityIntegrityJob>(
             ZaloIntegrityId, j => j.RunAsync(CancellationToken.None), Daily, recurring);
+
+        // Job cha fan-out theo shop (#116). Website 03:30; ảnh 04:00 để thấy kết quả prune/purge cùng ngày.
+        manager.AddOrUpdate<ShopFanOut>(
+            WebsiteRetentionId, f => f.EnqueuePerShop<WebsiteRetentionJob>(CancellationToken.None), WebsiteRetentionCron, recurring);
+        manager.AddOrUpdate<ShopFanOut>(
+            MediaOrphanCleanupId, f => f.EnqueuePerShop<MediaOrphanCleanupJob>(CancellationToken.None), MediaOrphanCleanupCron, recurring);
     }
 
     /// <summary>

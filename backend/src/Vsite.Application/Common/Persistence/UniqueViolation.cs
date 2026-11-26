@@ -27,6 +27,23 @@ public static class UniqueViolation
         return false;
     }
 
+    /// <summary>SQLSTATE của <c>foreign_key_violation</c> trong PostgreSQL.</summary>
+    public const string ForeignKeySqlState = "23503";
+
+    /// <summary><c>true</c> khi <paramref name="exception"/> hoặc một <c>InnerException</c> của nó là DbException có SQLSTATE 23503.</summary>
+    public static bool IsForeignKeyViolation(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is DbException { SqlState: ForeignKeySqlState })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Lỗi concurrency token (<c>xmin</c> lệch) — kể cả bị bọc.</summary>
     public static bool IsConcurrencyConflict(Exception exception)
     {

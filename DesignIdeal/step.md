@@ -161,6 +161,7 @@ bind dùng đúng mô hình đọc công khai đã chốt ở 8b.
 - `ShopServiceGroup` → `Service`. Có luôn `DetailPageId`, vì `Page` đã có nên không cần tách đợt như
   `06` §9. Màn quản lý dịch vụ ở Portal.
 - Sanitize `Description` bằng profile `basic`. Ảnh dữ liệu nghiệp vụ nguồn `Service`/`ServiceGroup` (#73).
+  **Bắt buộc:** đăng ký `IMediaUsageSource` cho ảnh này trong cùng task — thiếu thì job dọn ảnh mồ côi (8d, #117) sẽ xoá ảnh (`backend/docs/modules/media.md` §5).
 - Manifest `ServiceGrid`/`ServiceList`/`PriceTable`/`ServiceHighlight`/`ServiceGroupTabs`.
   Nguồn menu `serviceGroup:{id}`.
 - Xoá `Service` → quét tree tìm `binding.serviceId`, chỉ cảnh báo (`06` §7).

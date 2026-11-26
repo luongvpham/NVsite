@@ -30,6 +30,25 @@ public sealed class NavigationItemsTests
     private static string[] Errs(IEnumerable<NavError> e) => e.Select(x => $"{x.Path} {x.Code}").ToArray();
 
     [Fact]
+    public void DropOrphans_DropsMissingPageWithChildren_KeepsCustomAndHidden_AppendsNothing()
+    {
+        var gone = Guid.NewGuid();
+        var stored = new[]
+        {
+            Pg(gone, children: Pg(B)),
+            Pg(A, hidden: true, children: [Pg(Guid.NewGuid()), Custom("x", "https://x.vn", hidden: true)]),
+            Custom("y", "https://y.vn"),
+        };
+
+        var kept = NavigationItems.DropOrphans(stored, new HashSet<Guid> { A, B, C });
+
+        Assert.Equal([NavItem.PageKey(A), "custom"], Keys(kept));
+        Assert.True(kept[0].Hidden);
+        Assert.Equal(["custom"], Keys(kept[0].Children));
+        Assert.DoesNotContain(NavItem.PageKey(C), Keys(kept));
+    }
+
+    [Fact]
     public void Merge_NoStored_AutoGeneratesBySortOrderThenTitle_SkipsNotFound_KeepsDisabled()
     {
         var pages = Pages.Append(P(Guid.NewGuid(), "Off", 9, enabled: false)).ToArray();

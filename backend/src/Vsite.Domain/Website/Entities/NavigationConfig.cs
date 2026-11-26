@@ -55,6 +55,20 @@ public sealed class NavigationConfig : TenantAuditableEntity
         IsDirty = true;
     }
 
+    /// <summary>
+    /// Job dọn mục mồ côi (WEBSITE-008, #118): đổi <see cref="Items"/> nhưng KHÔNG đổi <see cref="IsDirty"/> — snapshot công khai
+    /// vốn đã lọc mục trỏ trang không còn (<c>ForSnapshot</c>) nên bản publish không khác đi.
+    /// </summary>
+    public void PruneOrphans(string itemsJson)
+    {
+        if (string.IsNullOrWhiteSpace(itemsJson))
+        {
+            throw new DomainException("NAVIGATION_ITEMS_REQUIRED", "Tài liệu menu không được rỗng.");
+        }
+
+        Items = itemsJson;
+    }
+
     /// <summary>Publish: menu giờ khớp bản đang chạy → <c>IsDirty = false</c>. Không đụng <see cref="Items"/>.</summary>
     public void MarkPublished() => IsDirty = false;
 

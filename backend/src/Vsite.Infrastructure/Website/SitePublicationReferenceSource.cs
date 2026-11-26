@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Vsite.Application.Common.Interfaces;
 using Vsite.Application.Media.Dtos;
@@ -33,7 +32,7 @@ public sealed class SitePublicationReferenceSource(IAppDbContext db, ITenantCont
             .ToHashSet();
         wanted.Add(assetId);
 
-        // Tải snapshot của mọi bản của shop (≈20 bản sau prune 8d, chưa có prune thì nhiều hơn) rồi đọc key `media` trong memory —
+        // Tải snapshot của mọi bản của shop (tối đa 20 bản nhờ job prune 8d, #118) rồi đọc key `media` trong memory —
         // đổi lấy việc đi qua ReadCurrent/versioning thay vì SQL jsonb thô. Nếu bản lớn gây chậm: prefilter `snapshot->'media' ?| keys`.
         var currentId = await db.Websites
             .AsNoTracking()
@@ -50,7 +49,7 @@ public sealed class SitePublicationReferenceSource(IAppDbContext db, ITenantCont
         var current = false;
         foreach (var publication in publications)
         {
-            if (!MediaKeys(publication.Snapshot).Any(wanted.Contains))
+            if (!SnapshotMediaKeys.Read(publication.Snapshot, versioning).Any(wanted.Contains))
             {
                 continue;
             }
@@ -63,23 +62,5 @@ public sealed class SitePublicationReferenceSource(IAppDbContext db, ITenantCont
         }
 
         return found ? [new MediaReferenceDto(MediaReferenceKind.SitePublication, IsCurrent: current)] : [];
-    }
-
-    private IEnumerable<Guid> MediaKeys(string stored)
-    {
-        var snapshot = JsonNode.Parse(StoredDocuments.ReadCurrent(DocumentKind.Snapshot, stored, versioning));
-        if (snapshot?["media"] is not JsonObject media)
-        {
-            yield break;
-        }
-
-        foreach (var (key, _) in media)
-        {
-            // Guid.TryParse không phân biệt hoa/thường nên R14 (key viết thường) khớp mà không phải so chuỗi.
-            if (Guid.TryParse(key, out var id))
-            {
-                yield return id;
-            }
-        }
     }
 }

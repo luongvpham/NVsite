@@ -32,6 +32,9 @@ public sealed class AppDbContext(
 {
     public ITenantContext TenantContext { get; } = tenantContext;
 
+    public async Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken) =>
+        await Database.BeginTransactionAsync(cancellationToken);
+
     // ---- Identity ----
     public DbSet<User> Users => Set<User>();
     public DbSet<ExternalLogin> ExternalLogins => Set<ExternalLogin>();

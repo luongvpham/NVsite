@@ -63,6 +63,11 @@ public sealed class MediaAssetConfiguration : IEntityTypeConfiguration<MediaAsse
             .HasDatabaseName("ix_media_asset_source")
             .HasFilter("source_asset_id IS NOT NULL");
 
+        // [8] Job dọn ảnh mồ côi (WEBSITE-008, #117) — chỉ quét các dòng đã đánh dấu.
+        builder.HasIndex(m => new { m.ShopId, m.OrphanedAt })
+            .HasDatabaseName("ix_media_asset_orphaned")
+            .HasFilter("orphaned_at IS NOT NULL");
+
         // FK ShopId → Shop — Media.dependsOn = ["Shop"], hợp lệ khai từ phía Media.
         builder.HasOne<ShopEntity>()
             .WithMany()

@@ -12,8 +12,10 @@ using Vsite.Application.Identity.Interfaces;
 using Vsite.Application.Identity.Options;
 using Vsite.Application.Media;
 using Vsite.Application.Media.Interfaces;
+using Vsite.Application.Media.Options;
 using Vsite.Application.Shop.Interfaces;
 using Vsite.Application.Website.Interfaces;
+using Vsite.Application.Website.Options;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Infrastructure.Identity;
 using Vsite.Infrastructure.Imaging;
@@ -52,6 +54,25 @@ public static class DependencyInjection
         services.AddImagingModule(configuration);
         services.AddMediaModule();
         services.AddWebsiteModule();
+        services.AddJobOptions(configuration);
+
+        return services;
+    }
+
+    // ---- Options job nền WEBSITE-008 (validate lúc khởi động) ----
+    private static IServiceCollection AddJobOptions(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<BuilderRetentionOptions>()
+            .Bind(configuration.GetSection(BuilderRetentionOptions.SectionName))
+            .Validate(o => o.PublicationsToKeep >= 1, "Jobs:BuilderRetention:PublicationsToKeep phải >= 1.")
+            .Validate(o => o.DeletedPageGrace >= TimeSpan.Zero, "Jobs:BuilderRetention:DeletedPageGrace phải >= 0.")
+            .Validate(o => o.NavigationQuietPeriod >= TimeSpan.Zero, "Jobs:BuilderRetention:NavigationQuietPeriod phải >= 0.")
+            .ValidateOnStart();
+
+        services.AddOptions<MediaCleanupOptions>()
+            .Bind(configuration.GetSection(MediaCleanupOptions.SectionName))
+            .Validate(o => o.OrphanGrace >= TimeSpan.Zero, "Jobs:MediaCleanup:OrphanGrace phải >= 0.")
+            .ValidateOnStart();
 
         return services;
     }
@@ -135,6 +156,11 @@ public static class DependencyInjection
         // T8 WEBSITE-004 — snapshot publish (08 §4) và ảnh OG/favicon của Page/Website.
         services.AddScoped<IMediaReferenceSource, Vsite.Infrastructure.Website.SitePublicationReferenceSource>();
         services.AddScoped<IMediaReferenceSource, Vsite.Infrastructure.Website.SeoImageReferenceSource>();
+
+        // WEBSITE-008 T6 (#117) — nguồn "ảnh đang dùng" cho job dọn ảnh mồ côi; Website cài, ném khi không đọc được (R5).
+        services.AddScoped<IMediaUsageSource, Vsite.Infrastructure.Website.PageDraftUsageSource>();
+        services.AddScoped<IMediaUsageSource, Vsite.Infrastructure.Website.SitePublicationUsageSource>();
+        services.AddScoped<IMediaUsageSource, Vsite.Infrastructure.Website.SeoImageUsageSource>();
 
         return services;
     }

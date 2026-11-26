@@ -7,7 +7,7 @@
 
 `Website` → `Theme` → `Page` → `PageDraft` (backend) đã code: tạo website trắng, API metadata trang, `GET`/`PUT`
 draft có `version`, validate **toàn tree** mỗi lần `PUT`. **8b (WEBSITE-004) đã code:** `SitePublication` + publish/rollback + endpoint đọc công khai `GET /api/site` (xem các mục bên dưới; brief FE: `Docs/tasks/WEBSITE-004/brief.md`, lệch: `Docs/tasks/WEBSITE-004/changelog.md`). **Bước 7 (WEBSITE-007, BE) đã code:** `NavigationConfig` + `GET`/`PUT` menu + snapshot mang menu (mục "Menu (`NavigationConfig`)"; lệch: `Docs/tasks/WEBSITE-007/changelog.md`). **Chưa** có
-bảng `*_translation` (#98), `SeedTemplateId`, prune bản publish (8d), custom domain (`ShopDomain`). Contract `website.v1`/`media.v1` đã qua Gate 1 và promote
+bảng `*_translation` (#98), `SeedTemplateId`, custom domain (`ShopDomain`). Contract `website.v1`/`media.v1` đã qua Gate 1 và promote
 (`contracts/openapi/`, `luongpham`); đã merge `master`, Gate 2 đóng 2026-11-12. Brief cho FE: `Docs/tasks/WEBSITE-001/brief.md`. Lệch so với `05` và mục "Chưa làm xong":
 `Docs/tasks/WEBSITE-001/changelog.md`.
 
@@ -54,7 +54,7 @@ Mọi route **trừ `getPublishedSite`**: `RequireAuthorization(RequireGlobalSco
 | `getNavigation` | `GET /shops/{shopId}/website/navigation` | 200 `{version: int\|null, isDirty, items}` (menu **đã ghép**) | 401 403 404 `WEBSITE_NOT_FOUND` |
 | `saveNavigation` | `PUT /shops/{shopId}/website/navigation` | 200 `{version, isDirty}` | 400 `NAVIGATION_BODY_INVALID` · 401 403 404 · 409 `NAVIGATION_CONFLICT` · 413 `NAVIGATION_BODY_TOO_LARGE` · 422 `NAVIGATION_INVALID` |
 | `publishWebsite` | `POST /shops/{shopId}/website/publications` | 201 + `Location` | 401 403 404 409 `PUBLISH_CONFLICT` · 422 `PUBLISH_BLOCKED` |
-| `listPublications` | `GET /shops/{shopId}/website/publications` | 200 **mảng** (≤ 50, version giảm dần, không kèm snapshot) — ngoại lệ có chủ đích của "một shape pagination" (#19): danh sách có trần cứng, không phân trang; trần thành 20 khi có prune (8d). Như `listPages` | 401 403 404 |
+| `listPublications` | `GET /shops/{shopId}/website/publications` | 200 **mảng** (≤ 20, version giảm dần, không kèm snapshot) — ngoại lệ có chủ đích của "một shape pagination" (#19): danh sách có trần cứng, không phân trang; trần cứng 20 (bằng mặc định `PublicationsToKeep`; đặt keep > 20 thì UI không thấy bản dư) (#118, hạ 50 → 20 ở WEBSITE-008; contract không ghi trần nên không đổi contract). Như `listPages` | 401 403 404 |
 | `rollbackPublication` | `POST /shops/{shopId}/website/publications/{publicationId}/rollback` | 200 | 401 403 404 `PUBLICATION_NOT_FOUND` · 409 `ROLLBACK_CONFLICT` |
 | `getPublishedSite` | **`GET /api/site`** (tag `Site`, cùng document `website`) | 200 · 304 | 404 `SITE_NOT_FOUND` — **`AllowAnonymous`**, xem mục "Đọc công khai" |
 
@@ -178,6 +178,16 @@ kiểm `dotnet ef migrations has-pending-model-changes` ra "No changes". Mẫu c
 - **#112 — Quy tắc publish/rollback.** Một trang **đang bật** lỗi ⇒ chặn cả lần publish (`422 PUBLISH_BLOCKED`, lỗi theo trang, không ghi gì); trang đang tắt không bị kiểm, không vào snapshot;
   trang chủ tắt vẫn publish được (site không có trang chủ — 8c hiện `NotFound`). Rollback chỉ đổi con trỏ: không sinh bản mới, không đổi `Status`, không đụng nội dung draft (draft sạch → `IsDirty = true`).
   Publish ∥ rollback bị chặn bằng concurrency token của `Website`. 8b không có endpoint gỡ xuất bản / đình chỉ.
+
+## Job dọn dẹp — `website.retention` (WEBSITE-008, #118)
+
+Một job theo shop (#116) lúc 03:30, ba bước tuần tự (`WebsiteRetentionJob`); cấu hình `Jobs:BuilderRetention:*` (`backend/CLAUDE.md` §Job nền):
+
+1. **Prune `SitePublication`** (`PublicationPruner`): giữ **đúng 20 bản gồm bản current** (current + 19 bản `Version` lớn nhất khác), xoá cứng phần còn lại. Predicate xoá theo ngưỡng `Version` (< bản non-current nhỏ nhất được giữ, `Id != current`) nên publish đồng thời không bị chạm. Không có current ⇒ giữ N bản mới nhất. FK `Restrict` (`Website.CurrentPublicationId`) là lưới cuối. Rollback về bản vừa bị prune ⇒ `404 PUBLICATION_NOT_FOUND` (FK `23503` được bắt), không 500; rollback chen vào giữa lúc job xoá ⇒ FK abort + Hangfire retry.
+2. **Purge trang đã xoá** (`DeletedPagePurger`): trang xoá mềm **> 7 ngày** ⇒ xoá cứng `PageDraft` và gỡ `Page.OgImageId`; dòng `Page` **không** xoá. `IgnoreQueryFilters()` với `ShopId` tường minh (file trong allowlist).
+3. **Dọn menu** (`NavigationOrphanCleaner`): chỉ menu **không sửa trong 24h**; bỏ mục trỏ trang đã xoá (cha bị bỏ thì bỏ cả con — dùng chung `NavigationItems.DropOrphans` với `Merge` lúc đọc); **không** bật `IsDirty`; không có mục mồ côi thì không ghi. Lần ghi của job cập nhật `UpdatedAt` (khởi động lại cửa sổ 24h — vô hại). Gặp concurrency ⇒ bỏ lượt, log, không retry ngay.
+
+Dọn ảnh (job riêng 04:00, module Media): `media.md` §5. Nguồn "ảnh đang dùng" của Website: `PageDraftUsageSource`/`SitePublicationUsageSource`/`SeoImageUsageSource` (Infrastructure/Website).
 
 ## Media liên quan
 

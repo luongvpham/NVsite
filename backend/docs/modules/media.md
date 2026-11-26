@@ -147,8 +147,8 @@ Nguồn Website cài ở `Vsite.Infrastructure/Website`, đăng ký ở `AddMedi
 
 ## 5. ⚠️ Cảnh báo — xoá node không xoá ảnh (`08` §4)
 
-Bước 4 (module này) **không xoá file nào**, ngoại trừ thao tác shop chủ động xoá khỏi Library (và đó
-cũng chỉ là soft delete). Cụ thể:
+Các thao tác của shop (và Bước 4) **không xoá file nào**, ngoại trừ xoá khỏi Library (chỉ là soft delete); file thật chỉ bị job
+`media.orphan-cleanup` xoá sau grace (xem dưới). Cụ thể:
 
 | Hành động | Record | File trên storage |
 |---|---|---|
@@ -159,9 +159,27 @@ cũng chỉ là soft delete). Cụ thể:
 > **Cám dỗ tự nhiên** khi code Operations Engine (Website Bước 5) là "xoá node thì xoá luôn ảnh cho
 > sạch". Làm thế là vỡ #41. Node delete **chỉ** đụng tree, không bao giờ gọi xoá `MediaAsset`.
 
-Ai thật sự dọn file: Hangfire job định kỳ quét record không còn được tham chiếu (tree, snapshot,
-entity nghiệp vụ qua Public Contract) → soft delete → sau grace period mới xoá file thật + record.
-Đó là việc của Bước 8, không phải module này.
+**Ai thật sự dọn file — job `media.orphan-cleanup` (WEBSITE-008, #117, 04:00 mỗi ngày, theo shop #116).** Code:
+`Vsite.Application.Media.Jobs.MediaOrphanCleanupJob`; cấu hình `Jobs:MediaCleanup:OrphanGrace` (mặc định 7 ngày).
+
+- **"Ảnh đang dùng"** gom từ `IMediaUsageSource` (interface ở Media; Website cài ở `Infrastructure/Website`: tree draft của trang còn
+  sống, `snapshot.media` của bản publish còn giữ, `Page.OgImageId`, `Website.DefaultOgImageId`/`FaviconAssetId`; Media tự đọc `Shop.LogoId`).
+  Media không đọc bảng Website (#1, `ModuleBoundaryTests`).
+- **Ứng viên:** `Clone`, `Direct`, `Library` đã xoá mềm, `Derivative` có bản gốc mất hoặc là ứng viên không được dùng.
+  `Library` còn sống **không bao giờ** bị đánh dấu/xoá (`MediaAsset.MarkOrphaned` ném `MEDIA_ORPHAN_LIVE_LIBRARY`). Phái sinh được coi là
+  đang dùng khi bản gốc đang dùng hoặc là Library sống.
+- **Hai bước** qua cột `MediaAsset.OrphanedAt` (index `ix_media_asset_orphaned`; **không** dùng `IsDeleted` để undo/copy node không bị
+  `MediaReferenceValidator` chặn — validator bỏ qua `OrphanedAt`): ứng viên không dùng và tạo quá grace → đánh dấu; đã đánh dấu quá grace
+  mà vẫn không dùng → mỗi ảnh một transaction: xoá cứng record → xoá file → commit; được dùng lại → bỏ đánh dấu. Ảnh tạo < grace không xét
+  (clone picker chưa kịp vào draft).
+- **An toàn:** nguồn "đang dùng" ném (snapshot hỏng/thiếu media, draft không validate được, thiếu tenant) ⇒ job của shop đó **dừng, KHÔNG xoá
+  gì**, Hangfire retry (nếu lần thu thập thứ hai — trước vòng xoá — ném thì các cập nhật đánh dấu/bỏ đánh dấu đã lưu được giữ; không phá huỷ). Trước vòng xoá job gom lại tập "đang dùng" một lần nữa. `ExecuteDelete` kiểm lại `ShopId`/`OrphanedAt`/Library.
+- **⚠️ Quy tắc bắt buộc:** entity/JSON nào lưu id `MediaAsset` (vd. ảnh `Service`/`ServiceGroup`) **phải đăng ký một `IMediaUsageSource` trong cùng task**. Không đăng ký ⇒ job thấy ảnh "không dùng" và xoá cứng nó sau grace (Clone/Direct/Derivative và Library xoá mềm là ứng viên bất kể module sở hữu).
+- **FK:** chỉ `Shop.LogoId → media_asset` là `Restrict` (FK chặn ⇒ rollback, file còn nguyên, log Warning). FK `Page.OgImageId`,
+  `Website.DefaultOgImageId`, `Website.FaviconAssetId` là `SET NULL` — chúng **không** chặn xoá; an toàn dựa vào tập "đang dùng".
+- **Giới hạn đã biết:** (1) ảnh được dùng lại đúng trong vòng lặp xoá (sau ≥ 2 × grace không dùng) vẫn có cửa sổ race hẹp; (2) một draft
+  hỏng validate chặn job ảnh của shop đó tới khi sửa; (3) `OrphanGrace=0` đánh dấu ngay clone picker mới tạo; (4) file không có record
+  (`UploadShopLogoHandler` race, MEDIA-001 #10) job không thấy. Lệch/chưa làm: `Docs/tasks/WEBSITE-008/changelog.md`.
 
 ## 6. Storage — cấu hình (`Storage` section, `Vsite.Application.Common.Imaging.StorageOptions`)
 

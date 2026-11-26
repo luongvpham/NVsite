@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Vsite.Application.Identity.Jobs;
+using Vsite.Application.Media.Jobs;
+using Vsite.Application.Website.Jobs;
 
 namespace Vsite.Infrastructure.Jobs;
 
@@ -26,6 +28,10 @@ public static class HangfireSetup
 
         services.AddHangfire((sp, config) =>
         {
+            // Đặt TRƯỚC mọi thứ có thể ném. AddHangfire vừa đặt log provider STATIC = AspNetCoreLogProvider(LoggerFactory của host này); bọc lại để host khác đã dispose
+            // không làm Hangfire ném ObjectDisposedException (xem DisposalSafeLogProvider).
+            config.UseLogProvider(new DisposalSafeLogProvider(new Hangfire.AspNetCore.AspNetCoreLogProvider(
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>())));
             var options = sp.GetRequiredService<JobsOptions>();
             config
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
@@ -49,6 +55,17 @@ public static class HangfireSetup
         services.AddScoped<PendingRegistrationCleanupJob>();
         services.AddScoped<ExpiredTokenCleanupJob>();
         services.AddScoped<ZaloIdentityIntegrityJob>();
+
+        // Job theo shop (#116/#117/#118) — resolve trong TenantScope của shop do ShopJobRunner dựng.
+        services.AddScoped<PublicationPruner>();
+        services.AddScoped<DeletedPagePurger>();
+        services.AddScoped<NavigationOrphanCleaner>();
+        services.AddScoped<WebsiteRetentionJob>();
+        services.AddScoped<MediaOrphanCleanupJob>();
+
+        // Khung fan-out theo shop (#116) — job con chạy trong TenantScope của từng shop.
+        services.AddScoped<ShopFanOut>();
+        services.AddScoped<ShopJobRunner>();
 
         // Worker: đăng ký luôn nhưng bọc cổng — chỉ dựng/chạy khi ServerEnabled (đọc lazy, xem doc class).
         var before = services.Count;

@@ -464,6 +464,8 @@ public sealed class ShopLogoTests
         public DbSet<Vsite.Domain.Website.Entities.PageDraft> PageDrafts => inner.PageDrafts;
         public DbSet<Vsite.Domain.Website.Entities.NavigationConfig> NavigationConfigs => inner.NavigationConfigs;
         public DbSet<Vsite.Domain.Website.Entities.SitePublication> SitePublications => inner.SitePublications;
+        public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken) =>
+            inner.BeginTransactionAsync(cancellationToken);
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Simulated DB failure (R4 endpoint test, T7).");

@@ -232,7 +232,7 @@ fixture README (S0 đề xuất, BE dùng đúng tên; **FE 5b phải dùng cùn
 | 10 | `JsonElement` → schema rỗng ở `tree`/`tokens` (Orval ra `interface JsonElement {}`); FE dùng Zod của `builder-components` | Gate 1 câu 2 |
 | 11 | Website chưa có `CurrentPublicationId`/`SeedTemplateId`/`NavigationConfig`/bảng translation; chưa có publish/rollback | Bước 7, 8b, 11, L (#98) |
 | 12 | `references` validate lại toàn bộ draft của shop có clone liên quan (đủ cho shop nhỏ; cần cache/cột index ảnh nếu thành điểm nóng); `references` của **clone id** không báo `PageDraft` | Bước 8 (job dọn mồ côi) |
-| 13 | `DeletePage` không xoá mềm draft; không có job dọn | Bước 8 |
+| 13 | ✅ *Đã làm ở WEBSITE-008 (#118).* `DeletePage` không xoá mềm draft; job `website.retention` xoá cứng draft của trang xoá mềm > 7 ngày | `WEBSITE-008/changelog.md` |
 | 14 | `references` chưa báo `Page.OgImageId` / `Website.DefaultOgImageId` / `FaviconAssetId`: xoá ảnh Library đang làm OG không cảnh báo (đề xuất `MediaReferenceKind.PageOgImage` ở Bước 8); `UpdatePage` chỉ kiểm OG khi OG đổi | `00-INDEX.md` §4 (nợ WEBSITE-001 #14–#17) |
 | 15 | Draft cũ không qua validate (vd. lưu trước khi có luật mới) → `references` rỗng im lặng thay vì báo; thiếu test `has-pending-model-changes` (migration lệch model); race `23505` ở `CreatePage`/`CreateWebsite`/`UpdatePage` chưa có test tất định kiểu `BumpXminInterceptor` | `00-INDEX.md` §4 |
 | 16 | `ConcurrencyAndUniqueExceptionHandler` là **toàn cục**: `23505` ở Identity/Shop nay là 409 `CONFLICT_UNIQUE` thay 500 — có thể ở route chưa khai 409 trong OpenAPI | `contract-diff.md` Giả định 10; `00-INDEX.md` §4 |

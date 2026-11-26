@@ -194,7 +194,7 @@ tôi", xoá mục cha không hỏi lại) và đưa chúng vào danh sách feedb
 - Menu lồng tối đa 3 cấp (05 không nói độ sâu).
 - Nguồn mục chỉ có `page:{id}` và `custom`. `serviceGroup` để Bước 9; `sysProductListing`/`productCategory` để 10c.
 - Chưa có nhãn đa ngôn ngữ `labels` (#98, bước L).
-- Chưa có job dọn mục mồ côi (8d). Hiện mục mồ côi bị bỏ lúc đọc và lúc render.
+- ✅ *Job dọn mục mồ côi đã làm ở WEBSITE-008 (#118):* `website.retention` bỏ mục trỏ trang đã xoá khỏi menu không sửa trong 24h. Lúc đọc/render vẫn bỏ mục mồ côi như cũ.
 
 ## Chưa làm xong / theo dõi
 

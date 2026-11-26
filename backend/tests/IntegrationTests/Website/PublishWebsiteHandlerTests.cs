@@ -460,10 +460,10 @@ public sealed class PublishWebsiteHandlerTests(PostgresFixture postgres) : IAsyn
     }
 
     [Fact]
-    public async Task List_is_capped_at_50_newest_T5()
+    public async Task List_is_capped_at_20_newest_T5()
     {
         var seeded = await AddWebsiteAsync(Cs);
-        for (var i = 0; i < 52; i++)
+        for (var i = 0; i < 22; i++)
         {
             await using var request = new Request(Cs, seeded.ShopId);
             await request.Publish();
@@ -472,8 +472,8 @@ public sealed class PublishWebsiteHandlerTests(PostgresFixture postgres) : IAsyn
         await using var list = new Request(Cs, seeded.ShopId);
         var result = await list.ListPublications();
 
-        Assert.Equal(50, result.Count);
-        Assert.Equal(52, result[0].Version);
+        Assert.Equal(20, result.Count);
+        Assert.Equal(22, result[0].Version);
         Assert.Equal(3, result[^1].Version);
     }
 
