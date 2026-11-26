@@ -225,8 +225,14 @@ Hangfire chạy **trong process `Vsite.Api`** (không thêm deployment), lưu tr
 
 **Vị trí code.** Job nằm trong **module sở hữu dữ liệu** (vd. `Vsite.Application.Identity.Jobs`). `Jobs` **không phải module** mà là
 segment dùng chung (`ModuleBoundaryTests.SharedSegments["Infrastructure"]`, #115); hạ tầng chung (`JobsOptions`, `HangfireSetup`,
-`ShopFanOut`, `ShopJobRunner`, `RecurringJobs`) ở `Vsite.Infrastructure.Jobs`. Application không tham chiếu Infrastructure nên tham số cấu
-hình (vd. grace) đi vào job qua **tham số `RunAsync`**, do `RecurringJobs.Register` truyền.
+`ShopFanOut`, `ShopJobRunner`, `RecurringJobs`) ở `Vsite.Infrastructure.Jobs`. Application không tham chiếu Infrastructure nên cấu hình
+của job **theo shop** (`IShopJob` không nhận tham số) đi qua **options ở `Application/{Module}/Options/`** (tiền lệ `AuthOptions`; bind ở
+`AddJobOptions` trong `AddInfrastructure`, `ValidateOnStart`). Tham số `RunAsync` do `RecurringJobs.Register` truyền chỉ còn dùng cho job
+**không tenant** của Identity (vd. grace token).
+
+**Job recurring theo shop hiện có** (WEBSITE-008, #117, #118): `website.retention` (03:30; một job gộp ba bước prune bản publish → purge
+draft/OG trang xoá > grace → dọn mục menu mồ côi) và `media.orphan-cleanup` (04:00, sau retention để thấy kết quả prune cùng ngày; ảnh
+mồ côi hai bước qua `MediaAsset.OrphanedAt`). Chi tiết: `backend/docs/modules/website.md`, `media.md` §5.
 
 **Schema `hangfire` do Hangfire tự tạo/nâng** (`PrepareSchemaIfNecessary`), **không** qua EF migration và không theo quy ước snake_case
 của repo. **Đừng "sửa" bằng migration**, và `has-pending-model-changes` không liên quan tới nó.
@@ -241,6 +247,10 @@ của repo. **Đừng "sửa" bằng migration**, và `has-pending-model-changes
 | `Jobs:TokenCleanupGrace` | `00:00:00` | Đệm trước khi xoá token/đăng ký hết hạn (đổi có hiệu lực sau lần `Register` kế tiếp = lần khởi động kế tiếp) |
 | `Jobs:PrepareSchema` | `true` | Cho Hangfire tạo/nâng schema `hangfire` lúc storage khởi tạo |
 | `Jobs:StartupConnectionMaxRetries` | `2` | Số lần thử lại mở kết nối lúc storage khởi tạo (DB chết ⇒ ~14 s chờ) |
+| `Jobs:BuilderRetention:PublicationsToKeep` | `20` | Số bản `SitePublication` giữ, **gồm bản current** (#118). Tối thiểu 1 |
+| `Jobs:BuilderRetention:DeletedPageGrace` | `7.00:00:00` | Trang xoá mềm quá hạn này mới bị purge draft + gỡ `OgImageId` |
+| `Jobs:BuilderRetention:NavigationQuietPeriod` | `1.00:00:00` | Menu sửa trong khoảng này thì job không đụng (không đè lên chủ shop đang sửa) |
+| `Jobs:MediaCleanup:OrphanGrace` | `7.00:00:00` | Ảnh không dùng liên tục quá hạn này mới bị xoá (#117). ⚠️ `0` hợp lệ nhưng đánh dấu ngay clone picker mới tạo chưa kịp vào draft — đừng đặt `0` ở production |
 
 **Test.** Mọi host test đặt `Jobs:ServerEnabled=false` (không có worker chạy giữa chừng) và **gọi job trực tiếp**. `JobsOptions` đọc
 **lazy** khi resolve (config của `WebApplicationFactory` áp sau `Program.cs` — đọc eager làm cờ này bị lờ âm thầm). Test cách ly job theo

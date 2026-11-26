@@ -83,7 +83,7 @@ Làm đúng F1 → F6 của plan §10. Những điểm plan chưa nói, hoặc S
 - **Mọi thứ trong `backend/` và `contracts/`.** BE đã xong và đã khoá. Thấy BE "sai" thì dừng và báo, đừng sửa.
 - Component Registry (menu là chrome, không có manifest) và `config/reserved-routes.json`.
 - Nguồn mục khác `page:` / `custom` (`serviceGroup` để Bước 9; `productCategory`/`sysProductListing` để 10c).
-- Nhãn đa ngôn ngữ `labels` (#98, bước L). Job dọn mục mồ côi (8d).
+- Nhãn đa ngôn ngữ `labels` (#98, bước L). Job dọn mục mồ côi (8d) — đã làm ở WEBSITE-008 (BE, #118).
 - Dấu "chưa publish" cấp website (gồm theme). F5 chỉ nhắc về menu.
 - Sửa lỗi chung "bind body có kiểu trả 500/400 rỗng" (`00-INDEX` §4) — task riêng.
 

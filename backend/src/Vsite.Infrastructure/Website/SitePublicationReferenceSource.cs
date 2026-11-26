@@ -32,7 +32,7 @@ public sealed class SitePublicationReferenceSource(IAppDbContext db, ITenantCont
             .ToHashSet();
         wanted.Add(assetId);
 
-        // Tải snapshot của mọi bản của shop (≈20 bản sau prune 8d, chưa có prune thì nhiều hơn) rồi đọc key `media` trong memory —
+        // Tải snapshot của mọi bản của shop (tối đa 20 bản nhờ job prune 8d, #118) rồi đọc key `media` trong memory —
         // đổi lấy việc đi qua ReadCurrent/versioning thay vì SQL jsonb thô. Nếu bản lớn gây chậm: prefilter `snapshot->'media' ?| keys`.
         var currentId = await db.Websites
             .AsNoTracking()

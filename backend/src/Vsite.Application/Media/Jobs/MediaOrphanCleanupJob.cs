@@ -20,7 +20,7 @@ namespace Vsite.Application.Media.Jobs;
 /// <item>Ứng viên = <c>Clone</c>/<c>Direct</c>/<c>Derivative</c>, hoặc <c>Library</c> đã xoá mềm. <c>Library</c> còn sống KHÔNG BAO GIỜ là ứng viên.</item>
 /// <item>Ứng viên không dùng, tạo trước <c>now − grace</c>, chưa đánh dấu ⇒ <c>MarkOrphaned(now)</c>. Đã đánh dấu mà không còn là
 /// "ứng viên không dùng" ⇒ <c>ClearOrphaned</c>.</item>
-/// <item>Đã đánh dấu trước <c>now − grace</c> và vẫn không dùng ⇒ mỗi ảnh MỘT transaction: xoá record → xoá file → commit. Lỗi (FK còn giữ,
+/// <item>Đã đánh dấu trước <c>now − grace</c> và vẫn không dùng ⇒ mỗi ảnh MỘT transaction: xoá record → xoá file → commit. Lỗi (FK Restrict còn giữ — hiện chỉ <c>Shop.LogoId</c>; FK OG/favicon là SET NULL —
 /// storage ném…) ⇒ rollback, record + file + dấu còn nguyên, log Warning, sang ảnh khác (R6).</item>
 /// </list>
 /// Nguồn "đang dùng" ném ⇒ log Error rồi ném lại TRƯỚC khi ghi bất cứ gì (R5, Hangfire retry).

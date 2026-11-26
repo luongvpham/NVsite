@@ -8,7 +8,7 @@ namespace Vsite.Application.Website.Jobs;
 
 /// <summary>
 /// WEBSITE-008 (#118) — purge draft của trang đã xoá mềm quá <see cref="BuilderRetentionOptions.DeletedPageGrace"/> trong shop hiện tại
-/// (<see cref="ITenantContext"/>), đồng thời gỡ <c>Page.OgImageId</c> (FK Restrict giữ ảnh OG mãi). Không xoá dòng <c>Page</c>.
+/// (<see cref="ITenantContext"/>), đồng thời gỡ <c>Page.OgImageId</c> (FK là SET NULL nên không chặn xoá ảnh; gỡ cho gọn, trang đã xoá không còn đường quay lại). Không xoá dòng <c>Page</c>.
 /// <c>IgnoreQueryFilters()</c> tắt cả filter tenant lẫn soft-delete nên mọi query mang <c>ShopId == shopId</c> tường minh.
 /// <c>ExecuteDelete</c> vì <c>Remove</c> sẽ bị interceptor đổi thành xoá mềm.
 /// </summary>
