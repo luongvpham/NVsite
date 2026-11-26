@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Vsite.Application.Identity.Jobs;
+using Vsite.Application.Media.Jobs;
+using Vsite.Application.Website.Jobs;
 
 namespace Vsite.Infrastructure.Jobs;
 
@@ -49,6 +51,13 @@ public static class HangfireSetup
         services.AddScoped<PendingRegistrationCleanupJob>();
         services.AddScoped<ExpiredTokenCleanupJob>();
         services.AddScoped<ZaloIdentityIntegrityJob>();
+
+        // Job theo shop (#116/#117/#118) — resolve trong TenantScope của shop do ShopJobRunner dựng.
+        services.AddScoped<PublicationPruner>();
+        services.AddScoped<DeletedPagePurger>();
+        services.AddScoped<NavigationOrphanCleaner>();
+        services.AddScoped<WebsiteRetentionJob>();
+        services.AddScoped<MediaOrphanCleanupJob>();
 
         // Khung fan-out theo shop (#116) — job con chạy trong TenantScope của từng shop.
         services.AddScoped<ShopFanOut>();
