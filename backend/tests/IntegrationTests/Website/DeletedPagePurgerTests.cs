@@ -13,6 +13,8 @@ public sealed class DeletedPagePurgerTests(PostgresFixture postgres) : IAsyncLif
 {
     private static readonly DateTimeOffset Now = new(2026, 11, 26, 3, 30, 0, TimeSpan.Zero);
 
+    private static TimeSpan Days(double d) => TimeSpan.FromDays(d);
+
     private string Cs => postgres.ConnectionString;
 
     public Task InitializeAsync() => MigrateAsync(Cs);
@@ -20,7 +22,7 @@ public sealed class DeletedPagePurgerTests(PostgresFixture postgres) : IAsyncLif
     public Task DisposeAsync() => Task.CompletedTask;
 
     /// <summary>Shop + website + một trang Composable có draft và ảnh OG; <paramref name="deletedDaysAgo"/> null = còn sống.</summary>
-    private async Task<(Guid ShopId, Guid PageId)> SeedAsync(double? deletedDaysAgo)
+    private async Task<(Guid ShopId, Guid PageId)> SeedAsync(TimeSpan? deletedAgo, bool withDraft = true)
     {
         var seeded = await AddWebsiteAsync(Cs);
         var ogId = await AddAssetAsync(Cs, seeded.ShopId, "Library");
@@ -28,14 +30,18 @@ public sealed class DeletedPagePurgerTests(PostgresFixture postgres) : IAsyncLif
         var page = Page.NewComposable(seeded.ShopId, seeded.Website.Id, $"p-{Guid.NewGuid():N}"[..12], "Trang", 99);
         page.SetOgImage(ogId);
         db.Pages.Add(page);
-        db.PageDrafts.Add(PageDraft.Create(seeded.ShopId, page.Id, "{}"));
+        if (withDraft)
+        {
+            db.PageDrafts.Add(PageDraft.Create(seeded.ShopId, page.Id, "{}"));
+        }
+
         await db.SaveChangesAsync();
 
-        if (deletedDaysAgo is { } days)
+        if (deletedAgo is { } ago)
         {
             page.SoftDelete();
             await db.SaveChangesAsync();
-            var at = Now - TimeSpan.FromDays(days);
+            var at = Now - ago;
             await db.Pages.IgnoreQueryFilters().Where(p => p.Id == page.Id).ExecuteUpdateAsync(s => s.SetProperty(p => p.DeletedAt, at));
         }
 
@@ -60,7 +66,7 @@ public sealed class DeletedPagePurgerTests(PostgresFixture postgres) : IAsyncLif
     [Fact]
     public async Task Deleted_8_days_ago_drops_draft_and_og_image()
     {
-        var (shopId, pageId) = await SeedAsync(8);
+        var (shopId, pageId) = await SeedAsync(Days(8));
 
         Assert.Equal(1, await PurgeAsync(shopId));
 
@@ -72,7 +78,7 @@ public sealed class DeletedPagePurgerTests(PostgresFixture postgres) : IAsyncLif
     [Fact]
     public async Task Deleted_6_days_ago_is_untouched()
     {
-        var (shopId, pageId) = await SeedAsync(6);
+        var (shopId, pageId) = await SeedAsync(Days(6));
 
         Assert.Equal(0, await PurgeAsync(shopId));
 
@@ -96,12 +102,51 @@ public sealed class DeletedPagePurgerTests(PostgresFixture postgres) : IAsyncLif
     [Fact]
     public async Task Other_shop_deleted_page_is_untouched_116()
     {
-        var (shopA, _) = await SeedAsync(null);
-        var (shopB, pageB) = await SeedAsync(8);
+        var (shopA, pageA) = await SeedAsync(Days(8));
+        var (shopB, pageB) = await SeedAsync(Days(8));
 
-        Assert.Equal(0, await PurgeAsync(shopA));
+        Assert.Equal(1, await PurgeAsync(shopA));
 
-        var (draft, og) = await StateAsync(shopB, pageB);
+        var (draftA, ogA) = await StateAsync(shopA, pageA);
+        Assert.False(draftA);
+        Assert.Null(ogA);
+        var (draftB, ogB) = await StateAsync(shopB, pageB);
+        Assert.True(draftB);
+        Assert.NotNull(ogB);
+    }
+
+    [Fact]
+    public async Task Deleted_page_without_draft_still_gets_og_image_cleared()
+    {
+        var (shopId, pageId) = await SeedAsync(Days(8), withDraft: false);
+
+        Assert.Equal(0, await PurgeAsync(shopId));
+
+        var (draft, og) = await StateAsync(shopId, pageId);
+        Assert.False(draft);
+        Assert.Null(og);
+    }
+
+    [Fact]
+    public async Task Boundary_one_minute_past_grace_is_purged()
+    {
+        var (shopId, pageId) = await SeedAsync(Days(7) + TimeSpan.FromMinutes(1));
+
+        Assert.Equal(1, await PurgeAsync(shopId));
+
+        var (draft, og) = await StateAsync(shopId, pageId);
+        Assert.False(draft);
+        Assert.Null(og);
+    }
+
+    [Fact]
+    public async Task Boundary_one_minute_before_grace_is_kept()
+    {
+        var (shopId, pageId) = await SeedAsync(Days(7) - TimeSpan.FromMinutes(1));
+
+        Assert.Equal(0, await PurgeAsync(shopId));
+
+        var (draft, og) = await StateAsync(shopId, pageId);
         Assert.True(draft);
         Assert.NotNull(og);
     }
