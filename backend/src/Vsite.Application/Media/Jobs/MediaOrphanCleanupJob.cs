@@ -54,24 +54,31 @@ public sealed class MediaOrphanCleanupJob(
 
         var liveLibrary = rows.Where(r => r.Kind == MediaAssetKind.Library && !r.IsDeleted).Select(r => r.Id).ToHashSet();
 
-        bool IsUnusedCandidate(Row r)
+        bool IsUnusedCandidate(Row r, HashSet<Guid> inUse)
         {
             var candidate = r.Kind != MediaAssetKind.Library || r.IsDeleted;
-            if (!candidate || used.Contains(r.Id))
+            if (!candidate || inUse.Contains(r.Id))
             {
                 return false;
             }
 
             return !(r.Kind == MediaAssetKind.Derivative && r.SourceAssetId is { } source
-                && (used.Contains(source) || liveLibrary.Contains(source)));
+                && (inUse.Contains(source) || liveLibrary.Contains(source)));
         }
 
-        var toClear = rows.Where(r => r.OrphanedAt is not null && !IsUnusedCandidate(r)).Select(r => r.Id).ToList();
-        var toMark = rows.Where(r => r.OrphanedAt is null && r.CreatedAt < cutoff && IsUnusedCandidate(r)).Select(r => r.Id).ToList();
-        var toDelete = rows.Where(r => r.OrphanedAt < cutoff && IsUnusedCandidate(r)).ToList();
+        var toClear = rows.Where(r => r.OrphanedAt is not null && !IsUnusedCandidate(r, used)).Select(r => r.Id).ToList();
+        var toMark = rows.Where(r => r.OrphanedAt is null && r.CreatedAt < cutoff && IsUnusedCandidate(r, used)).Select(r => r.Id).ToList();
+        var due = rows.Where(r => r.OrphanedAt < cutoff && IsUnusedCandidate(r, used)).ToList();
 
         var cleared = await UpdateMarksAsync(shopId, toClear, mark: false, now, cancellationToken);
         var marked = await UpdateMarksAsync(shopId, toMark, mark: true, now, cancellationToken);
+
+        // Thu lại "đang dùng" ngay trước pha xoá: ảnh được đưa lại vào draft/snapshot trong lúc job chạy (R4) thì không xoá. Ảnh bị
+        // loại ở đây GIỮ dấu — lần chạy sau thấy nó được dùng và bỏ dấu (bước clear). Nguồn ném ⇒ dừng, không xoá gì (R5).
+        // Cửa sổ còn lại: ảnh được đưa lại vào draft SAU lần thu này mà trước khi vòng xoá tới nó — chỉ trong thời gian chạy vòng xoá,
+        // và ảnh phải đã không dùng ≥ 2 × grace. Chấp nhận (WEBSITE-008, ghi ở changelog).
+        var usedNow = due.Count == 0 ? used : await CollectUsedAsync(shopId, cancellationToken);
+        var toDelete = due.Where(r => IsUnusedCandidate(r, usedNow)).ToList();
 
         var deleted = 0;
         foreach (var row in toDelete)
@@ -83,8 +90,8 @@ public sealed class MediaOrphanCleanupJob(
         }
 
         logger.LogInformation(
-            "Dọn ảnh mồ côi shop {ShopId}: bỏ đánh dấu {Cleared}, đánh dấu {Marked}, xoá {Deleted}/{Due}.",
-            shopId, cleared, marked, deleted, toDelete.Count);
+            "Dọn ảnh mồ côi shop {ShopId}: bỏ đánh dấu {Cleared}, đánh dấu {Marked}, xoá {Deleted}/{Due} (bỏ qua {Reused} vừa dùng lại).",
+            shopId, cleared, marked, deleted, toDelete.Count, due.Count - toDelete.Count);
     }
 
     private async Task<HashSet<Guid>> CollectUsedAsync(Guid shopId, CancellationToken ct)

@@ -407,6 +407,75 @@ public sealed class MediaOrphanCleanupJobTests(PostgresFixture postgres) : IAsyn
     }
 
     [Fact]
+    public async Task Asset_reused_during_the_run_is_not_deleted_second_collection_before_delete_phase()
+    {
+        var seeded = await AddWebsiteAsync(Cs);
+        var asset = await AddDirectAsync(seeded.ShopId, Days(30));
+        var storage = new RecordingStorage();
+        await RunAsync(seeded.ShopId, Now, storage);
+        AssertMarkedAt(Now, await StateAsync(asset.Id));
+
+        // Lần thu 1 (đầu job) chưa thấy; lần thu 2 (trước pha xoá) thấy — mô phỏng chủ shop đưa ảnh lại vào draft giữa chừng.
+        var source = new UsedFromCall(2, asset.Id);
+        await RunAsync(seeded.ShopId, Now + Days(8), storage, source);
+
+        Assert.Equal(2, source.Calls);
+        Assert.True((await StateAsync(asset.Id)).Exists);
+        Assert.Empty(storage.Deleted);
+
+        // Lần sau nguồn vẫn thấy ảnh ⇒ bỏ dấu.
+        await RunAsync(seeded.ShopId, Now + Days(9), storage, new UsedFromCall(1, asset.Id));
+        AssertUntouched(await StateAsync(asset.Id));
+    }
+
+    [Fact]
+    public async Task Second_collection_throwing_aborts_without_deleting_R5()
+    {
+        var seeded = await AddWebsiteAsync(Cs);
+        var asset = await AddDirectAsync(seeded.ShopId, Days(30));
+        var storage = new RecordingStorage();
+        await RunAsync(seeded.ShopId, Now, storage);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            RunAsync(seeded.ShopId, Now + Days(8), storage, new ThrowingFromCall(2)));
+
+        AssertMarkedAt(Now, await StateAsync(asset.Id));
+        Assert.Empty(storage.Deleted);
+    }
+
+    [Fact]
+    public async Task Soft_deleted_clone_and_direct_still_in_a_snapshot_are_protected()
+    {
+        var seeded = await AddWebsiteAsync(Cs);
+        await using var request = new Request(Cs, seeded.ShopId);
+        var library = await AddLibraryAsync(seeded.ShopId, Days(30));
+        var clone = await AddCloneAsync(seeded.ShopId, library, Days(30));
+        var direct = await AddDirectAsync(seeded.ShopId, Days(30));
+        await SaveTreeAsync(request, seeded.Home.Id, TreeWith(
+            Hero("c_hero1", clone.Id.ToString("D")), Gallery("c_gall1", direct.Id.ToString("D"))));
+        await request.Publish();
+        await SaveTreeAsync(request, seeded.Home.Id, TreeWith());
+        await using (var db = NewDb(Cs, seeded.ShopId))
+        {
+            foreach (var id in new[] { clone.Id, direct.Id })
+            {
+                (await db.MediaAssets.SingleAsync(m => m.Id == id)).SoftDeleteFromLibrary();
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        var storage = new RecordingStorage();
+
+        await RunAsync(seeded.ShopId, Now, storage);
+        await RunAsync(seeded.ShopId, Now + Days(8), storage);
+
+        AssertUntouched(await StateAsync(clone.Id));
+        AssertUntouched(await StateAsync(direct.Id));
+        Assert.Empty(storage.Deleted);
+    }
+
+    [Fact]
     public async Task Other_shop_is_unchanged_116()
     {
         var a = await AddWebsiteAsync(Cs);
@@ -453,6 +522,30 @@ public sealed class MediaOrphanCleanupJobTests(PostgresFixture postgres) : IAsyn
     {
         public Task<IReadOnlySet<Guid>> CollectUsedAssetIdsAsync(CancellationToken ct) =>
             throw new InvalidOperationException("Simulated unreadable snapshot (R5).");
+    }
+
+    /// <summary>Trả <paramref name="assetId"/> từ lần gọi thứ <paramref name="fromCall"/> trở đi (trước đó: rỗng).</summary>
+    private sealed class UsedFromCall(int fromCall, Guid assetId) : IMediaUsageSource
+    {
+        public int Calls { get; private set; }
+
+        public Task<IReadOnlySet<Guid>> CollectUsedAssetIdsAsync(CancellationToken ct)
+        {
+            Calls++;
+            IReadOnlySet<Guid> result = Calls >= fromCall ? new HashSet<Guid> { assetId } : new HashSet<Guid>();
+            return Task.FromResult(result);
+        }
+    }
+
+    /// <summary>Ném từ lần gọi thứ <paramref name="fromCall"/> (lần thu trước pha xoá).</summary>
+    private sealed class ThrowingFromCall(int fromCall) : IMediaUsageSource
+    {
+        private int _calls;
+
+        public Task<IReadOnlySet<Guid>> CollectUsedAssetIdsAsync(CancellationToken ct) =>
+            ++_calls >= fromCall
+                ? throw new InvalidOperationException("Simulated unreadable source on second collection (R5).")
+                : Task.FromResult<IReadOnlySet<Guid>>(new HashSet<Guid>());
     }
 
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider
