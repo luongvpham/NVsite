@@ -247,7 +247,7 @@ của repo. **Đừng "sửa" bằng migration**, và `has-pending-model-changes
 | `Jobs:TokenCleanupGrace` | `00:00:00` | Đệm trước khi xoá token/đăng ký hết hạn (đổi có hiệu lực sau lần `Register` kế tiếp = lần khởi động kế tiếp) |
 | `Jobs:PrepareSchema` | `true` | Cho Hangfire tạo/nâng schema `hangfire` lúc storage khởi tạo |
 | `Jobs:StartupConnectionMaxRetries` | `2` | Số lần thử lại mở kết nối lúc storage khởi tạo (DB chết ⇒ ~14 s chờ) |
-| `Jobs:BuilderRetention:PublicationsToKeep` | `20` | Số bản `SitePublication` giữ, **gồm bản current** (#118). Tối thiểu 1 |
+| `Jobs:BuilderRetention:PublicationsToKeep` | `20` | Số bản `SitePublication` giữ, **gồm bản current** (#118). Tối thiểu 1. ⚠️ `listPublications` có trần cứng 20 (bằng mặc định): đặt > 20 thì UI không thấy bản dư |
 | `Jobs:BuilderRetention:DeletedPageGrace` | `7.00:00:00` | Trang xoá mềm quá hạn này mới bị purge draft + gỡ `OgImageId` |
 | `Jobs:BuilderRetention:NavigationQuietPeriod` | `1.00:00:00` | Menu sửa trong khoảng này thì job không đụng (không đè lên chủ shop đang sửa) |
 | `Jobs:MediaCleanup:OrphanGrace` | `7.00:00:00` | Ảnh không dùng liên tục quá hạn này mới bị xoá (#117). ⚠️ `0` hợp lệ nhưng đánh dấu ngay clone picker mới tạo chưa kịp vào draft — đừng đặt `0` ở production |

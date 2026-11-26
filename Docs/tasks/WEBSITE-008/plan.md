@@ -1,6 +1,9 @@
 # WEBSITE-008 — Job của builder (Bước 8d)
 
-> **Đã chốt 2026-11-26 — chưa code**
+> **Đã chốt 2026-11-26 — ĐÃ CODE (nhánh `feature/WEBSITE-008`)**
+>
+> ⚠️ Tiền đề FK `Restrict` của finding 10 / R6 / §3 Flow 4 **sai**: FK OG/favicon là `SET NULL`, chỉ `Shop.LogoId` là `Restrict`. Sửa ở
+> [`changelog.md`](changelog.md) §1 — đọc đó trước, đừng tin các đoạn plan nói FK chặn xoá ảnh đang dùng.
 >
 > **Lane B (không chạm contract).** Chỉ BE, một session S1; có migration (`MediaAsset.OrphanedAt`) và đi qua
 > Website + Media nên vẫn có plan. Không có màn hình ⇒ không `data-needs.md`. Contract `listPublications` không ghi trần
@@ -30,29 +33,29 @@ chạy nền theo lịch, theo từng shop (#116).
 
 | Khả năng | Trạng thái | Ở đâu | Ghi chú |
 |---|---|---|---|
-| Khung fan-out theo shop (#116) | 🟡 | [ShopFanOut.cs:13](backend/src/Vsite.Infrastructure/Jobs/ShopFanOut.cs#L13), [ShopJobRunner.cs:14](backend/src/Vsite.Infrastructure/Jobs/ShopJobRunner.cs#L14), [IShopJob.cs:7](backend/src/Vsite.Application/Common/Jobs/IShopJob.cs#L7) | Code có, nhưng **chưa đăng ký DI ở production** — chỉ test dựng ([ShopJobIsolationTests.cs:188](backend/tests/IntegrationTests/Jobs/ShopJobIsolationTests.cs#L188)). 8d là job thật đầu tiên dùng nó |
-| Đăng ký job + lịch | ✅ | [HangfireSetup.cs:49](backend/src/Vsite.Infrastructure/Jobs/HangfireSetup.cs#L49), [RecurringJobs.cs:12](backend/src/Vsite.Infrastructure/Jobs/RecurringJobs.cs#L12) | 3 job Identity chạy `0 3 * * *`; tham số cấu hình đi vào job qua tham số `RunAsync` |
-| Allowlist `IgnoreQueryFilters()` | ✅ | [IgnoreQueryFiltersAllowlistTests.cs:21](backend/tests/ArchitectureTests/IgnoreQueryFiltersAllowlistTests.cs#L21) | Khoá số lần gọi mỗi file |
-| Bản publish + con trỏ current | ✅ | [SitePublication.cs:18](backend/src/Vsite.Domain/Website/Entities/SitePublication.cs#L18), [Website.cs:55](backend/src/Vsite.Domain/Website/Entities/Website.cs#L55) | Không xoá mềm; FK `Restrict` từ `CurrentPublicationId` nên DB tự chặn xoá bản current |
-| Prune bản publish | ❌ | — | Chưa có đường xoá cứng nào. Danh sách trả ≤ 50 ([ListPublicationsHandler.cs:14](backend/src/Vsite.Application/Website/Queries/ListPublications/ListPublicationsHandler.cs#L14)) |
-| Cache site công khai chịu được bản bị xoá | ✅ | [GetPublishedSiteHandler.cs:56](backend/src/Vsite.Application/Website/Queries/GetPublishedSite/GetPublishedSiteHandler.cs#L56) | Con trỏ Redis trỏ tới bản đã mất → tự đọc lại DB. Prune bản không-current an toàn |
-| Xoá file trên storage | 🟡 | [IObjectStorage.cs:20](backend/src/Vsite.Application/Common/Imaging/IObjectStorage.cs#L20) | `DeleteAsync` có (LocalDisk + S3), chưa nghiệp vụ nào gọi |
-| Định nghĩa "ảnh mồ côi" + grace period | ❌ | [media.md:162](backend/docs/modules/media.md#L162) | Thiết kế: quét tham chiếu (tree, snapshot, entity nghiệp vụ) → xoá mềm → sau grace period xoá file + record. Chưa có cấu hình retention |
-| Nguồn tham chiếu ảnh | 🟡 | [PageDraftReferenceSource.cs:16](backend/src/Vsite.Infrastructure/Website/PageDraftReferenceSource.cs#L16), [SitePublicationReferenceSource.cs:28](backend/src/Vsite.Infrastructure/Website/SitePublicationReferenceSource.cs#L28) | Có cho endpoint cảnh báo `references` (hỏi theo **một** ảnh Library). Job cần hỏi ngược: "tập id đang dùng của cả shop" |
-| Menu bỏ qua mục mồ côi | ✅ (lúc đọc) / ❌ (dọn) | [NavigationItems.cs:72](backend/src/Vsite.Domain/Website/NavigationItems.cs#L72) | Bỏ lúc đọc, lúc publish và lúc render. Chưa dọn trong DB |
-| Draft của trang đã xoá | ❌ | [DeletePageHandler.cs:27](backend/src/Vsite.Application/Website/Commands/DeletePage/DeletePageHandler.cs#L27) | Xoá trang chỉ xoá mềm `Page`, draft nằm lại (WEBSITE-001 #13) |
+| Khung fan-out theo shop (#116) | 🟡 | [ShopFanOut.cs:13](../../../backend/src/Vsite.Infrastructure/Jobs/ShopFanOut.cs#L13), [ShopJobRunner.cs:14](../../../backend/src/Vsite.Infrastructure/Jobs/ShopJobRunner.cs#L14), [IShopJob.cs:7](../../../backend/src/Vsite.Application/Common/Jobs/IShopJob.cs#L7) | Code có, nhưng **chưa đăng ký DI ở production** — chỉ test dựng ([ShopJobIsolationTests.cs:188](../../../backend/tests/IntegrationTests/Jobs/ShopJobIsolationTests.cs#L188)). 8d là job thật đầu tiên dùng nó |
+| Đăng ký job + lịch | ✅ | [HangfireSetup.cs:49](../../../backend/src/Vsite.Infrastructure/Jobs/HangfireSetup.cs#L49), [RecurringJobs.cs:12](../../../backend/src/Vsite.Infrastructure/Jobs/RecurringJobs.cs#L12) | 3 job Identity chạy `0 3 * * *`; tham số cấu hình đi vào job qua tham số `RunAsync` |
+| Allowlist `IgnoreQueryFilters()` | ✅ | [IgnoreQueryFiltersAllowlistTests.cs:21](../../../backend/tests/ArchitectureTests/IgnoreQueryFiltersAllowlistTests.cs#L21) | Khoá số lần gọi mỗi file |
+| Bản publish + con trỏ current | ✅ | [SitePublication.cs:18](../../../backend/src/Vsite.Domain/Website/Entities/SitePublication.cs#L18), [Website.cs:55](../../../backend/src/Vsite.Domain/Website/Entities/Website.cs#L55) | Không xoá mềm; FK `Restrict` từ `CurrentPublicationId` nên DB tự chặn xoá bản current |
+| Prune bản publish | ❌ | — | Chưa có đường xoá cứng nào. Danh sách trả ≤ 50 ([ListPublicationsHandler.cs:14](../../../backend/src/Vsite.Application/Website/Queries/ListPublications/ListPublicationsHandler.cs#L14)) |
+| Cache site công khai chịu được bản bị xoá | ✅ | [GetPublishedSiteHandler.cs:56](../../../backend/src/Vsite.Application/Website/Queries/GetPublishedSite/GetPublishedSiteHandler.cs#L56) | Con trỏ Redis trỏ tới bản đã mất → tự đọc lại DB. Prune bản không-current an toàn |
+| Xoá file trên storage | 🟡 | [IObjectStorage.cs:20](../../../backend/src/Vsite.Application/Common/Imaging/IObjectStorage.cs#L20) | `DeleteAsync` có (LocalDisk + S3), chưa nghiệp vụ nào gọi |
+| Định nghĩa "ảnh mồ côi" + grace period | ❌ | [media.md:162](../../../backend/docs/modules/media.md#L162) | Thiết kế: quét tham chiếu (tree, snapshot, entity nghiệp vụ) → xoá mềm → sau grace period xoá file + record. Chưa có cấu hình retention |
+| Nguồn tham chiếu ảnh | 🟡 | [PageDraftReferenceSource.cs:16](../../../backend/src/Vsite.Infrastructure/Website/PageDraftReferenceSource.cs#L16), [SitePublicationReferenceSource.cs:28](../../../backend/src/Vsite.Infrastructure/Website/SitePublicationReferenceSource.cs#L28) | Có cho endpoint cảnh báo `references` (hỏi theo **một** ảnh Library). Job cần hỏi ngược: "tập id đang dùng của cả shop" |
+| Menu bỏ qua mục mồ côi | ✅ (lúc đọc) / ❌ (dọn) | [NavigationItems.cs:72](../../../backend/src/Vsite.Application/Website/Navigation/NavigationItems.cs#L72) | Bỏ lúc đọc, lúc publish và lúc render. Chưa dọn trong DB |
+| Draft của trang đã xoá | ❌ | [DeletePageHandler.cs:27](../../../backend/src/Vsite.Application/Website/Commands/DeletePage/DeletePageHandler.cs#L27) | Xoá trang chỉ xoá mềm `Page`, draft nằm lại (WEBSITE-001 #13) |
 
 ### Phát hiện khi khảo sát
 
 1. **Khung fan-out chưa nối vào production.** `ShopFanOut`/`ShopJobRunner` không được đăng ký DI ngoài test;
    `ShopJobRunner` resolve job bằng `GetRequiredService` nên mỗi job con phải đăng ký. 8d phải nối lần đầu.
 2. **Tài liệu nói "ảnh clone đã xoá mềm" nhưng code không có trạng thái đó.** Chỉ ảnh Library bị xoá mềm
-   (`SoftDeleteFromLibrary`, [MediaAsset.cs:211](backend/src/Vsite.Domain/Media/Entities/MediaAsset.cs#L211)). Clone/Direct mồ côi là clone
+   (`SoftDeleteFromLibrary`, [MediaAsset.cs:211](../../../backend/src/Vsite.Domain/Media/Entities/MediaAsset.cs#L211)). Clone/Direct mồ côi là clone
    **không còn ai tham chiếu**, không phải clone bị đánh dấu xoá.
 3. **Ranh giới module:** Media phụ thuộc `[Shop]`, Website phụ thuộc `[Shop, Media]`
    (`Docs/architecture/dependency-map.json`). Job dọn ảnh cần đọc tree + snapshot (Website) → hoặc đặt ở Website,
    hoặc Media khai interface để Website cài (như `PageDraftReferenceSource`).
-4. **Validator chặn id ảnh đã xoá mềm** ([MediaReferenceValidator.cs:56](backend/src/Vsite.Infrastructure/Media/MediaReferenceValidator.cs#L56)):
+4. **Validator chặn id ảnh đã xoá mềm** ([MediaReferenceValidator.cs:56](../../../backend/src/Vsite.Infrastructure/Media/MediaReferenceValidator.cs#L56)):
    nếu job đánh dấu một clone là mồ côi trong lúc editor vẫn giữ nó (undo), autosave kế tiếp bị từ chối.
 5. **Job sửa menu sẽ làm editor dính 409** — `navigation_config.Version` = xmin; `Replace()` còn bật `IsDirty`.
 6. Các comment đã giả định có prune: `SitePublicationReferenceSource` ("≈20 bản sau prune"),
@@ -66,12 +69,12 @@ Lịch: mỗi ngày, sau 3 job Identity (`0 3 * * *`). Mỗi job là job cha fan
 
 ### Flow 1: Prune bản publish (Website)
 1. Job cha enqueue mỗi shop một job con                ❌ chưa nối `ShopFanOut` vào DI production (phát hiện 1)
-2. Đọc website của shop + `CurrentPublicationId`        ✅ [Website.cs:55](backend/src/Vsite.Domain/Website/Entities/Website.cs#L55)
+2. Đọc website của shop + `CurrentPublicationId`        ✅ [Website.cs:55](../../../backend/src/Vsite.Domain/Website/Entities/Website.cs#L55)
 3. Giữ = bản current + 19 bản `Version` lớn nhất khác   ❌ (người chốt: **đúng 20, gồm current**)
 4. Xoá cứng phần còn lại (set-based, trong scope shop)  ❌ — FK `Restrict` là lưới cuối nếu lỡ chạm bản current
-5. Site công khai không vỡ                              ✅ [GetPublishedSiteHandler.cs:56](backend/src/Vsite.Application/Website/Queries/GetPublishedSite/GetPublishedSiteHandler.cs#L56)
+5. Site công khai không vỡ                              ✅ [GetPublishedSiteHandler.cs:56](../../../backend/src/Vsite.Application/Website/Queries/GetPublishedSite/GetPublishedSiteHandler.cs#L56)
 - Nhánh: ≤ 20 bản → không làm gì. Chưa có website → không làm gì. Chủ shop rollback về bản X đúng lúc job xoá X →
-  rollback gặp FK/không tìm thấy → phải trả 404 có `error_code`, không 500 (cần kiểm [RollbackPublicationHandler.cs:26](backend/src/Vsite.Application/Website/Commands/RollbackPublication/RollbackPublicationHandler.cs#L26)).
+  rollback gặp FK/không tìm thấy → phải trả 404 có `error_code`, không 500 (cần kiểm [RollbackPublicationHandler.cs:26](../../../backend/src/Vsite.Application/Website/Commands/RollbackPublication/RollbackPublicationHandler.cs#L26)).
 
 ### Flow 2: Dọn draft của trang đã xoá (Website)
 1. Tìm `PageDraft` có `Page` đã xoá mềm                 ❌
@@ -79,17 +82,17 @@ Lịch: mỗi ngày, sau 3 job Identity (`0 3 * * *`). Mỗi job là job cha fan
 - Người chốt: chờ **7 ngày** sau khi trang bị xoá mềm; cùng lúc gỡ `Page.OgImageId` (phát hiện 10).
 
 ### Flow 3: Dọn mục menu mồ côi (Website)
-1. Đọc `NavigationConfig` của website                   ✅ [NavigationConfig.cs:13](backend/src/Vsite.Domain/Website/Entities/NavigationConfig.cs#L13)
+1. Đọc `NavigationConfig` của website                   ✅ [NavigationConfig.cs:13](../../../backend/src/Vsite.Domain/Website/Entities/NavigationConfig.cs#L13)
 2. Bỏ qua nếu menu được sửa trong 24h qua               ❌ (người chốt: **chỉ dọn menu yên 24h**; dùng `UpdatedAt ?? CreatedAt`)
-3. Bỏ mục trỏ trang không còn, **cha bị bỏ thì bỏ cả con** — đúng ngữ nghĩa lúc đọc ([NavigationItems.cs:67-72](backend/src/Vsite.Application/Website/Navigation/NavigationItems.cs#L67-L72)) để
+3. Bỏ mục trỏ trang không còn, **cha bị bỏ thì bỏ cả con** — đúng ngữ nghĩa lúc đọc ([NavigationItems.cs:67-72](../../../backend/src/Vsite.Application/Website/Navigation/NavigationItems.cs#L67-L72)) để
    chủ shop không thấy menu đổi. **Không** nối thêm trang mới như `Merge` làm.  ❌ cần hàm thuần riêng
-4. Lưu, **không bật `IsDirty`**                         ❌ `Replace()` luôn bật dirty ([NavigationConfig.cs:47-55](backend/src/Vsite.Domain/Website/Entities/NavigationConfig.cs#L47-L55)) → cần method domain mới
+4. Lưu, **không bật `IsDirty`**                         ❌ `Replace()` luôn bật dirty ([NavigationConfig.cs:47-55](../../../backend/src/Vsite.Domain/Website/Entities/NavigationConfig.cs#L47-L55)) → cần method domain mới
 - Nhánh: không có mục mồ côi → không ghi (không đổi xmin, không gây 409).
 
 ### Flow 4: Dọn ảnh mồ côi (Media, cần dữ liệu Website)
 1. Gom **tập id ảnh đang được dùng** của shop:
-   - id trong tree draft của trang còn sống             🟡 có walker ([PageDraftReferenceSource.cs:38](backend/src/Vsite.Infrastructure/Website/PageDraftReferenceSource.cs#L38)), nhưng đang hỏi theo một ảnh
-   - id trong `snapshot.media` của các bản còn lại       🟡 [SitePublicationReferenceSource.cs:28](backend/src/Vsite.Infrastructure/Website/SitePublicationReferenceSource.cs#L28)
+   - id trong tree draft của trang còn sống             🟡 có walker ([PageDraftReferenceSource.cs:38](../../../backend/src/Vsite.Infrastructure/Website/PageDraftReferenceSource.cs#L38)), nhưng đang hỏi theo một ảnh
+   - id trong `snapshot.media` của các bản còn lại       🟡 [SitePublicationReferenceSource.cs:28](../../../backend/src/Vsite.Infrastructure/Website/SitePublicationReferenceSource.cs#L28)
    - FK nghiệp vụ: `Page.OgImageId`, `Website.DefaultOgImageId`/`FaviconAssetId`, `Shop.LogoId` ❌
 2. Ứng viên = Clone, Direct, Library **đã xoá mềm**, Derivative có bản gốc không còn dùng. Library còn sống
    **không bao giờ** là ứng viên (ảnh của chủ shop trong thư viện).
@@ -116,10 +119,10 @@ Lịch: mỗi ngày, sau 3 job Identity (`0 3 * * *`). Mỗi job là job cha fan
 ### Phát hiện thêm ở pha 5
 
 8. **Rollback về bản vừa bị prune trả 500.** Handler nạp bản publish, rồi `SaveChanges` gặp FK `23503` (bản đã bị
-   xoá cứng giữa chừng) — chỉ bắt lỗi concurrency ([RollbackPublicationHandler.cs:60-67](backend/src/Vsite.Application/Website/Commands/RollbackPublication/RollbackPublicationHandler.cs#L60-L67)) → T2 bắt thêm FK → 404.
-9. **`IShopJob` không nhận tham số** ([IShopJob.cs:7](backend/src/Vsite.Application/Common/Jobs/IShopJob.cs#L7)), nên "tham số cấu hình đi vào job qua `RunAsync`"
+   xoá cứng giữa chừng) — chỉ bắt lỗi concurrency ([RollbackPublicationHandler.cs:60-67](../../../backend/src/Vsite.Application/Website/Commands/RollbackPublication/RollbackPublicationHandler.cs#L60-L67)) → T2 bắt thêm FK → 404.
+9. **`IShopJob` không nhận tham số** ([IShopJob.cs:7](../../../backend/src/Vsite.Application/Common/Jobs/IShopJob.cs#L7)), nên "tham số cấu hình đi vào job qua `RunAsync`"
    (`backend/CLAUDE.md` §Job nền) không dùng được cho job theo shop. Cấu hình đi qua options ở `Application/{Module}/Options/`
-   (tiền lệ `AuthOptions`, bind ở [DependencyInjection.cs:62](backend/src/Vsite.Infrastructure/DependencyInjection.cs#L62)). T9 sửa câu đó trong `backend/CLAUDE.md`.
+   (tiền lệ `AuthOptions`, bind ở [DependencyInjection.cs:62](../../../backend/src/Vsite.Infrastructure/DependencyInjection.cs#L62)). T9 sửa câu đó trong `backend/CLAUDE.md`.
 10. **Trang đã xoá mềm vẫn giữ FK `Page.OgImageId`** (`Restrict`) → ảnh OG của nó không bao giờ xoá được. T3 gỡ luôn
     `OgImageId` của trang đã xoá > 7 ngày cùng lúc purge draft.
 
@@ -130,7 +133,7 @@ Lịch: mỗi ngày, sau 3 job Identity (`0 3 * * *`). Mỗi job là job cha fan
 | #116: job con chỉ chạm shop của scope | ca "shop B không đổi" trong mọi test job | T2, T3, T4, T7, T8 |
 | #21.2 + #116 ngoại lệ (b): `IgnoreQueryFilters()` chỉ ở file allowlist, `ShopId` tường minh | `IgnoreQueryFiltersAllowlistTests` | T3 (T7 nếu cần) |
 | #1 Media không đọc bảng Website | `ModuleBoundaryTests` (interface ở Media, cài ở `Infrastructure/Website`) | T6 |
-| Bản current không bao giờ bị prune | test + FK `Restrict` ([WebsiteConfiguration.cs:77](backend/src/Vsite.Infrastructure/Persistence/Configurations/Website/WebsiteConfiguration.cs#L77)) | T2 |
+| Bản current không bao giờ bị prune | test + FK `Restrict` ([WebsiteConfiguration.cs:77](../../../backend/src/Vsite.Infrastructure/Persistence/Configurations/Website/WebsiteConfiguration.cs#L77)) | T2 |
 | `Library` còn sống không bao giờ bị đánh dấu/xoá | test + `DomainException` trong `MarkOrphaned` | T5, T7 |
 | Không sửa contract / generated | review: diff không có `contracts/`, `packages/api-sdk/src/generated` | review |
 | Migration snake_case, không pending | cột `orphaned_at` + kiểm pending model changes | T5 |
@@ -219,10 +222,10 @@ Nhánh `feature/WEBSITE-008` từ `master`. Kiểm chung: `dotnet test backend/t
 - `Vsite.Application/Media/Interfaces/IMediaUsageSource.cs`: `Task<IReadOnlySet<Guid>> CollectUsedAssetIdsAsync(CancellationToken)`;
   shop từ `ITenantContext`; **ném** khi không đọc được (R5), không trả rỗng.
 - Cài ở `Vsite.Infrastructure/Website/`:
-  - `PageDraftUsageSource` — id ảnh trong tree draft của trang sống (walker như [PageDraftReferenceSource.cs:38](backend/src/Vsite.Infrastructure/Website/PageDraftReferenceSource.cs#L38))
-  - `SitePublicationUsageSource` — key `snapshot.media` của mọi bản còn lại (dùng chung hàm đọc key với [SitePublicationReferenceSource.cs:70](backend/src/Vsite.Infrastructure/Website/SitePublicationReferenceSource.cs#L70))
+  - `PageDraftUsageSource` — id ảnh trong tree draft của trang sống (walker như [PageDraftReferenceSource.cs:38](../../../backend/src/Vsite.Infrastructure/Website/PageDraftReferenceSource.cs#L38))
+  - `SitePublicationUsageSource` — key `snapshot.media` của mọi bản còn lại (dùng chung hàm đọc key với [SitePublicationReferenceSource.cs:70](../../../backend/src/Vsite.Infrastructure/Website/SitePublicationReferenceSource.cs#L70))
   - `SeoImageUsageSource` — `Page.OgImageId` (trang sống), `Website.DefaultOgImageId`, `Website.FaviconAssetId`
-- `Shop.LogoId` đọc thẳng trong job (Media dependsOn Shop). Đăng ký cạnh [DependencyInjection.cs:133-137](backend/src/Vsite.Infrastructure/DependencyInjection.cs#L133-L137).
+- `Shop.LogoId` đọc thẳng trong job (Media dependsOn Shop). Đăng ký cạnh [DependencyInjection.cs:133-137](../../../backend/src/Vsite.Infrastructure/DependencyInjection.cs#L133-L137).
 - [ ] Test trước: `backend/tests/IntegrationTests/Website/MediaUsageSourceTests.cs` — từng nguồn đúng id; draft trang đã xoá không tính; GUID hoa/thường khớp; shop B không lọt; snapshot hỏng ⇒ ném
 - [ ] `ModuleBoundaryTests` xanh
 - [ ] FAIL → hiện thực → PASS

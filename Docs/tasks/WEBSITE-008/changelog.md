@@ -60,9 +60,10 @@ Docker thật; `ArchitectureTests` pass.
   Media không đọc bảng Website (#1). Dùng chung `PageTreeImageIds`/`SnapshotMediaKeys` với chế độ **strict** cho đường usage: lỗi validate/snapshot thiếu media ⇒ **ném**
   thay vì trả danh sách thiếu (trả thiếu = xoá nhầm ảnh đang dùng). Thiếu tenant cũng ném.
 
-### 9. `IAppDbContext` có thêm `DatabaseFacade Database`
+### 9. `IAppDbContext` có thêm `BeginTransactionAsync`
 
-- Để mở transaction theo từng ảnh trong `MediaOrphanCleanupJob`. Xoá cứng bằng `ExecuteDelete` kiểm lại `ShopId`/`Id`/`OrphanedAt < cutoff`; Library ⇒ thêm `IsDeleted`.
+- Chỉ lộ `Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken)` (không lộ `DatabaseFacade` — Application không có SQL thô vượt filter tenant; sửa sau review toàn nhánh). `AppDbContext` ủy quyền `Database.BeginTransactionAsync`; decorator test forward.
+  Dùng để mở transaction theo từng ảnh trong `MediaOrphanCleanupJob`. Xoá cứng bằng `ExecuteDelete` kiểm lại `ShopId`/`Id`/`OrphanedAt < cutoff`; Library ⇒ thêm `IsDeleted`.
   File vào allowlist `IgnoreQueryFilters()` thêm một file nữa.
 
 ### 10. Đánh dấu bằng cột `OrphanedAt` (migration), không dùng `IsDeleted`
@@ -81,6 +82,12 @@ Docker thật; `ArchitectureTests` pass.
    (MEDIA-001 #3 "job dọn mồ côi" đã xong ở đây.) Cần dọn theo storage hoặc sửa handler.
 5. Truy vấn ban đầu liệt kê media của shop **không phân trang** (7 cột hẹp); đánh dấu/bỏ đánh dấu mới batch 500. Đủ cho shop nhỏ; xem lại nếu có shop hàng chục nghìn ảnh.
 6. `references` của Media vẫn là `IMediaReferenceSource` riêng (cảnh báo khi xoá); chưa hợp nhất với `IMediaUsageSource`.
+7. **⚠️ Quy tắc bắt buộc cho mọi task sau:** entity/JSON nào lưu id `MediaAsset` (vd. ảnh `Service`/`ServiceGroup`, bước 9) **phải đăng ký một `IMediaUsageSource` trong cùng task**.
+   Không đăng ký thì `MediaOrphanCleanupJob` thấy ảnh "không dùng", đánh dấu rồi xoá cứng (Clone/Direct/Derivative và Library đã xoá mềm là ứng viên bất kể module sở hữu).
+   Việc theo dõi (tuỳ chọn): test liệt kê FK tới `media_asset` từ `information_schema` và so với danh sách đã được nguồn usage phủ — FK mới chưa có nguồn thì đỏ.
+8. `PublicationsToKeep = 1`: publish đồng thời dựa vào FK abort + retry (bản mới chưa là current khi job chạy ⇒ có thể bị prune ⇒ FK/predicate chặn, publish retry). Chấp nhận.
+9. `ListPublicationsHandler.MaxItems = 20` là hằng cứng, còn `PublicationsToKeep` cấu hình được: đặt keep > 20 thì UI không thấy bản dư.
+10. Sửa sau review toàn nhánh: nguồn usage ném ⇒ không XOÁ gì; lần thu thập thứ hai (trước vòng xoá) ném thì các cập nhật đánh dấu/bỏ đánh dấu đã lưu được giữ (không phá huỷ).
 
 ## Giả định tôi đã tự đặt
 
@@ -100,6 +107,7 @@ Docker thật; `ArchitectureTests` pass.
 - TDD lệch thứ tự ở T4 và T6 (code trước test; T6 kiểm bằng mutation). Sự cố nhỏ: implementer T3 chạy `git stash pop` — đã kiểm tra, không mất dữ liệu (stash bị bỏ `00a498f` giống HEAD).
 - **Docker:** máy session này **có Docker**, mọi test Testcontainers đã chạy thật ⇒ `Docs/DOCKER-TEST-DEBT.md` **không** có mục mới (vẫn rỗng).
 - Không đụng `contracts/` hay file generated.
+- **Theo dõi test flaky:** lần chạy full IntegrationTests ở T7 fail một lần `JobsDashboardTests` ×2 và `ShopFanOutWiringTests` ×1, không tái hiện ở T8 (full run 1121 pass). Lần chạy full kế tiếp để ý ba test này.
 
 ## Test giữ các ràng buộc
 

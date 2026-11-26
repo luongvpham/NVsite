@@ -23,7 +23,8 @@ namespace Vsite.Application.Media.Jobs;
 /// <item>Đã đánh dấu trước <c>now − grace</c> và vẫn không dùng ⇒ mỗi ảnh MỘT transaction: xoá record → xoá file → commit. Lỗi (FK Restrict còn giữ — hiện chỉ <c>Shop.LogoId</c>; FK OG/favicon là SET NULL —
 /// storage ném…) ⇒ rollback, record + file + dấu còn nguyên, log Warning, sang ảnh khác (R6).</item>
 /// </list>
-/// Nguồn "đang dùng" ném ⇒ log Error rồi ném lại TRƯỚC khi ghi bất cứ gì (R5, Hangfire retry).
+/// Nguồn "đang dùng" ném ⇒ log Error rồi ném lại (R5, Hangfire retry): KHÔNG xoá gì. Nếu lần thu thập thứ hai (trước vòng xoá) ném thì các cập nhật
+/// đánh dấu / bỏ đánh dấu đã lưu được giữ nguyên (không phá huỷ).
 /// Đọc <c>Library</c> đã xoá mềm cần <c>IgnoreQueryFilters()</c> (tắt cả filter tenant) ⇒ mọi query mang <c>ShopId == shopId</c> tường minh.
 /// Xoá cứng bằng <c>ExecuteDelete</c> vì <c>Remove</c> bị interceptor đổi thành xoá mềm.
 /// </summary>
@@ -154,7 +155,7 @@ public sealed class MediaOrphanCleanupJob(
 
     private async Task<bool> TryDeleteAsync(Guid shopId, Row row, DateTimeOffset cutoff, CancellationToken ct)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await using var transaction = await db.BeginTransactionAsync(ct);
         try
         {
             // Điều kiện xoá viết lại trong SQL: dòng đã bị bỏ đánh dấu / đổi trạng thái giữa chừng thì không khớp ⇒ không xoá.

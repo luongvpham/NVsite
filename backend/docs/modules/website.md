@@ -54,7 +54,7 @@ Mọi route **trừ `getPublishedSite`**: `RequireAuthorization(RequireGlobalSco
 | `getNavigation` | `GET /shops/{shopId}/website/navigation` | 200 `{version: int\|null, isDirty, items}` (menu **đã ghép**) | 401 403 404 `WEBSITE_NOT_FOUND` |
 | `saveNavigation` | `PUT /shops/{shopId}/website/navigation` | 200 `{version, isDirty}` | 400 `NAVIGATION_BODY_INVALID` · 401 403 404 · 409 `NAVIGATION_CONFLICT` · 413 `NAVIGATION_BODY_TOO_LARGE` · 422 `NAVIGATION_INVALID` |
 | `publishWebsite` | `POST /shops/{shopId}/website/publications` | 201 + `Location` | 401 403 404 409 `PUBLISH_CONFLICT` · 422 `PUBLISH_BLOCKED` |
-| `listPublications` | `GET /shops/{shopId}/website/publications` | 200 **mảng** (≤ 20, version giảm dần, không kèm snapshot) — ngoại lệ có chủ đích của "một shape pagination" (#19): danh sách có trần cứng, không phân trang; trần = số bản prune giữ (#118, hạ 50 → 20 ở WEBSITE-008; contract không ghi trần nên không đổi contract). Như `listPages` | 401 403 404 |
+| `listPublications` | `GET /shops/{shopId}/website/publications` | 200 **mảng** (≤ 20, version giảm dần, không kèm snapshot) — ngoại lệ có chủ đích của "một shape pagination" (#19): danh sách có trần cứng, không phân trang; trần cứng 20 (bằng mặc định `PublicationsToKeep`; đặt keep > 20 thì UI không thấy bản dư) (#118, hạ 50 → 20 ở WEBSITE-008; contract không ghi trần nên không đổi contract). Như `listPages` | 401 403 404 |
 | `rollbackPublication` | `POST /shops/{shopId}/website/publications/{publicationId}/rollback` | 200 | 401 403 404 `PUBLICATION_NOT_FOUND` · 409 `ROLLBACK_CONFLICT` |
 | `getPublishedSite` | **`GET /api/site`** (tag `Site`, cùng document `website`) | 200 · 304 | 404 `SITE_NOT_FOUND` — **`AllowAnonymous`**, xem mục "Đọc công khai" |
 

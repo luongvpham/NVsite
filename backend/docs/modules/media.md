@@ -172,8 +172,9 @@ Các thao tác của shop (và Bước 4) **không xoá file nào**, ngoại tr�
   `MediaReferenceValidator` chặn — validator bỏ qua `OrphanedAt`): ứng viên không dùng và tạo quá grace → đánh dấu; đã đánh dấu quá grace
   mà vẫn không dùng → mỗi ảnh một transaction: xoá cứng record → xoá file → commit; được dùng lại → bỏ đánh dấu. Ảnh tạo < grace không xét
   (clone picker chưa kịp vào draft).
-- **An toàn:** nguồn "đang dùng" ném (snapshot hỏng/thiếu media, draft không validate được, thiếu tenant) ⇒ job của shop đó **dừng, không ghi
-  gì**, Hangfire retry. Trước vòng xoá job gom lại tập "đang dùng" một lần nữa. `ExecuteDelete` kiểm lại `ShopId`/`OrphanedAt`/Library.
+- **An toàn:** nguồn "đang dùng" ném (snapshot hỏng/thiếu media, draft không validate được, thiếu tenant) ⇒ job của shop đó **dừng, KHÔNG xoá
+  gì**, Hangfire retry (nếu lần thu thập thứ hai — trước vòng xoá — ném thì các cập nhật đánh dấu/bỏ đánh dấu đã lưu được giữ; không phá huỷ). Trước vòng xoá job gom lại tập "đang dùng" một lần nữa. `ExecuteDelete` kiểm lại `ShopId`/`OrphanedAt`/Library.
+- **⚠️ Quy tắc bắt buộc:** entity/JSON nào lưu id `MediaAsset` (vd. ảnh `Service`/`ServiceGroup`) **phải đăng ký một `IMediaUsageSource` trong cùng task**. Không đăng ký ⇒ job thấy ảnh "không dùng" và xoá cứng nó sau grace (Clone/Direct/Derivative và Library xoá mềm là ứng viên bất kể module sở hữu).
 - **FK:** chỉ `Shop.LogoId → media_asset` là `Restrict` (FK chặn ⇒ rollback, file còn nguyên, log Warning). FK `Page.OgImageId`,
   `Website.DefaultOgImageId`, `Website.FaviconAssetId` là `SET NULL` — chúng **không** chặn xoá; an toàn dựa vào tập "đang dùng".
 - **Giới hạn đã biết:** (1) ảnh được dùng lại đúng trong vòng lặp xoá (sau ≥ 2 × grace không dùng) vẫn có cửa sổ race hẹp; (2) một draft

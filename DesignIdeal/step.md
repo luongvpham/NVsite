@@ -147,6 +147,7 @@ có test khẳng định job xử lý shop A không chạm dữ liệu shop B.
 
 **Gồm:** prune `SitePublication` giữ 20 bản (không xoá bản current) · dọn file media mồ côi theo
 retention (#55, #72 — MEDIA-001 #3) · dọn mục menu mồ côi · dọn draft của page đã xoá mềm (WEBSITE-001 #13).
+**Nhắc cho bước 9:** ảnh của `Service`/`ServiceGroup` phải đăng ký `IMediaUsageSource` trong cùng task, nếu không job 8d sẽ xoá ảnh đó.
 
 **Xong khi:** website có hơn 20 bản thì còn đúng 20 và bản current vẫn còn; ảnh clone không còn bản
 publish nào tham chiếu thì file bị dọn, ảnh còn được tham chiếu thì không.
