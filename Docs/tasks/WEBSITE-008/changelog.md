@@ -107,7 +107,7 @@ Docker thật; `ArchitectureTests` pass.
 - TDD lệch thứ tự ở T4 và T6 (code trước test; T6 kiểm bằng mutation). Sự cố nhỏ: implementer T3 chạy `git stash pop` — đã kiểm tra, không mất dữ liệu (stash bị bỏ `00a498f` giống HEAD).
 - **Docker:** máy session này **có Docker**, mọi test Testcontainers đã chạy thật ⇒ `Docs/DOCKER-TEST-DEBT.md` **không** có mục mới (vẫn rỗng).
 - Không đụng `contracts/` hay file generated.
-- **Theo dõi test flaky:** lần chạy full IntegrationTests ở T7 fail một lần `JobsDashboardTests` ×2 và `ShopFanOutWiringTests` ×1, không tái hiện ở T8 (full run 1121 pass). Lần chạy full kế tiếp để ý ba test này.
+- **Test chập chờn đã sửa gốc:** `JobsDashboardTests` ×2 + `ShopFanOutWiringTests` ×1 đỏ ngẫu nhiên khi chạy full IntegrationTests (`TypeInitializationException` ở `Hangfire.GlobalJobFilters` ← `ObjectDisposedException: LoggerFactory`). Gốc: Hangfire giữ log provider ở biến static toàn process, `AddHangfire` đặt nó theo `LoggerFactory` của host cấu hình gần nhất; host khởi động lỗi của `Invalid_job_options_fail_host_startup` (T1) bị dispose ngay ⇒ static trỏ factory đã chết ⇒ Hangfire khởi tạo static lần đầu sau đó thì hỏng vĩnh viễn cho cả process. Sửa: `HangfireSetup` bọc provider bằng `DisposalSafeLogProvider` (production một host: hành vi không đổi). Test giữ: `HangfireLogProviderTests`. Kiểm: full IntegrationTests xanh nhiều lần liên tiếp.
 
 ## Test giữ các ràng buộc
 
