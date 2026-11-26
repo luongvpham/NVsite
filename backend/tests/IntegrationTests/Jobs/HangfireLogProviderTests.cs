@@ -20,7 +20,7 @@ public sealed class HangfireLogProviderTests(IdentityApiFactory factory)
             c.AddInMemoryCollection(new Dictionary<string, string?> { ["Jobs:MediaCleanup:OrphanGrace"] = "-1.00:00:00" })));
         Assert.NotNull(Record.Exception(() => bad.Server)); // host lỗi khởi động, đã cấu hình Hangfire rồi bị dispose
 
-        var ex = Record.Exception(() => Hangfire.Logging.LogProvider.GetLogger("diag").Log(Hangfire.Logging.LogLevel.Info, () => "x"));
+        var ex = Record.Exception(() => Hangfire.Logging.LogProvider.GetLogger("hangfire-logprovider-test").Log(Hangfire.Logging.LogLevel.Info, () => "x"));
 
         Assert.Null(ex);
     }

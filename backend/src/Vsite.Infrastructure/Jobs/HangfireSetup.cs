@@ -28,11 +28,11 @@ public static class HangfireSetup
 
         services.AddHangfire((sp, config) =>
         {
-            var options = sp.GetRequiredService<JobsOptions>();
-            // AddHangfire vừa đặt log provider STATIC = AspNetCoreLogProvider(LoggerFactory của host này); bọc lại để host khác đã dispose
+            // Đặt TRƯỚC mọi thứ có thể ném. AddHangfire vừa đặt log provider STATIC = AspNetCoreLogProvider(LoggerFactory của host này); bọc lại để host khác đã dispose
             // không làm Hangfire ném ObjectDisposedException (xem DisposalSafeLogProvider).
             config.UseLogProvider(new DisposalSafeLogProvider(new Hangfire.AspNetCore.AspNetCoreLogProvider(
                 sp.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>())));
+            var options = sp.GetRequiredService<JobsOptions>();
             config
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
                 .UseSimpleAssemblyNameTypeSerializer()
