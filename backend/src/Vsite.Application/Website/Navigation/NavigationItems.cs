@@ -82,16 +82,9 @@ public static class NavigationItems
             return ordered.Select(p => PageItem(p.Id, hidden: false)).ToList();
         }
 
-        var existing = pages.Select(p => p.Id).ToHashSet();
+        var result = DropOrphans(stored, pages.Select(p => p.Id).ToHashSet()).ToList();
         var inMenu = new HashSet<Guid>();
-        var result = new List<NavItem>();
-        foreach (var item in stored)
-        {
-            if (MergeItem(item, existing, inMenu, depth: 1) is { } merged)
-            {
-                result.Add(merged);
-            }
-        }
+        TrackAll(result, inMenu);
 
         foreach (var p in ordered.Where(p => !inMenu.Contains(p.Id)))
         {
@@ -100,6 +93,27 @@ public static class NavigationItems
 
         return result;
     }
+
+    /// <summary>
+    /// Bỏ mục trỏ trang không còn trong <paramref name="existingPageIds"/> (kèm cả cây con); giữ <c>custom</c> và mục <c>hidden</c>.
+    /// Không nối trang mới. Dùng chung cho <see cref="Merge"/> (đọc) và job dọn menu (WEBSITE-008, #118) để hai đường không lệch.
+    /// </summary>
+    public static IReadOnlyList<NavItem> DropOrphans(IReadOnlyList<NavItem> items, IReadOnlySet<Guid> existingPageIds)
+    {
+        var result = new List<NavItem>();
+        foreach (var item in items)
+        {
+            if (DropOrphansItem(item, existingPageIds, depth: 1) is { } kept)
+            {
+                result.Add(kept);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>Tổng số mục ở mọi cấp (job dùng để biết có mục nào bị bỏ).</summary>
+    public static int CountAll(IReadOnlyList<NavItem> items) => items.Sum(i => 1 + CountAll(i.Children));
 
     /// <summary>Trim nhãn/url; nhãn rỗng sau trim ⇒ null; <c>page</c> không mang url. Dùng TRƯỚC khi lưu (R4).</summary>
     public static IReadOnlyList<NavItem> Normalize(IReadOnlyList<NavItem> items) =>
@@ -219,35 +233,39 @@ public static class NavigationItems
 
     private static NavItem PageItem(Guid id, bool hidden) => new(NavItem.PageKey(id), null, null, hidden, NoChildren);
 
-    private static bool IsLive(NavItem item, HashSet<Guid> existing) =>
+    private static bool IsLive(NavItem item, IReadOnlySet<Guid> existing) =>
         item.IsCustom || (item.PageId is { } id && existing.Contains(id));
 
-    private static void Track(NavItem item, HashSet<Guid> inMenu)
+    private static void TrackAll(IReadOnlyList<NavItem> items, HashSet<Guid> inMenu)
     {
-        if (item.PageId is { } id)
+        foreach (var item in items)
         {
-            inMenu.Add(id);
+            if (item.PageId is { } id)
+            {
+                inMenu.Add(id);
+            }
+
+            TrackAll(item.Children, inMenu);
         }
     }
 
     private static bool Visible(NavItem item, IReadOnlySet<Guid> published) =>
         !item.Hidden && (item.IsCustom || (item.PageId is { } id && published.Contains(id)));
 
-    /// <summary>Đệ quy mọi cấp: bỏ mục (cùng cả cây con) trỏ trang không còn; ghi nhận trang còn trong menu.</summary>
-    private static NavItem? MergeItem(NavItem item, HashSet<Guid> existing, HashSet<Guid> inMenu, int depth)
+    /// <summary>Đệ quy mọi cấp: bỏ mục (cùng cả cây con) trỏ trang không còn.</summary>
+    private static NavItem? DropOrphansItem(NavItem item, IReadOnlySet<Guid> existing, int depth)
     {
         if (!IsLive(item, existing))
         {
             return null;
         }
 
-        Track(item, inMenu);
         var children = new List<NavItem>();
         if (depth < MaxDepth)
         {
             foreach (var c in item.Children)
             {
-                if (MergeItem(c, existing, inMenu, depth + 1) is { } m)
+                if (DropOrphansItem(c, existing, depth + 1) is { } m)
                 {
                     children.Add(m);
                 }
