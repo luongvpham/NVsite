@@ -56,6 +56,10 @@ public sealed class MediaAsset : TenantAuditableEntity
     /// thẳng). Không phải quan hệ sống — <c>ON DELETE SET NULL</c>.</summary>
     public Guid? SourceAssetId { get; private set; }
 
+    /// <summary>WEBSITE-008 (#117) — mốc job dọn ảnh mồ côi đánh dấu lần đầu thấy record không còn
+    /// được dùng; <c>NULL</c> = chưa đánh dấu. Quá grace mà vẫn không dùng thì mới xoá.</summary>
+    public DateTimeOffset? OrphanedAt { get; private set; }
+
     private MediaAsset()
     {
     }
@@ -212,6 +216,23 @@ public sealed class MediaAsset : TenantAuditableEntity
     {
         IsDeleted = true;
     }
+
+    /// <summary>Đánh dấu mồ côi (#117). Đã đánh dấu thì giữ mốc cũ. Bản Library còn sống không bao
+    /// giờ là ứng viên (ảnh của chủ shop) ⇒ <see cref="DomainException"/>.</summary>
+    public void MarkOrphaned(DateTimeOffset at)
+    {
+        if (Kind == MediaAssetKind.Library && !IsDeleted)
+        {
+            throw new DomainException(
+                "MEDIA_ORPHAN_LIVE_LIBRARY",
+                "Không được đánh dấu mồ côi bản Library còn sống.");
+        }
+
+        OrphanedAt ??= at;
+    }
+
+    /// <summary>Bỏ đánh dấu mồ côi (ảnh được dùng lại trong lúc chờ).</summary>
+    public void ClearOrphaned() => OrphanedAt = null;
 
     private static void ValidateFocal(float x, float y)
     {
