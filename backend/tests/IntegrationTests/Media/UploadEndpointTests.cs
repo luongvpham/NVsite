@@ -345,6 +345,7 @@ public sealed class UploadEndpointTests
         public DbSet<Vsite.Domain.Website.Entities.PageDraft> PageDrafts => inner.PageDrafts;
         public DbSet<Vsite.Domain.Website.Entities.NavigationConfig> NavigationConfigs => inner.NavigationConfigs;
         public DbSet<Vsite.Domain.Website.Entities.SitePublication> SitePublications => inner.SitePublications;
+        public Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database => inner.Database;
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Simulated DB failure (R4 endpoint test).");

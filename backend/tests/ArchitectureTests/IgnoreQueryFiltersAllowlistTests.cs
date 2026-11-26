@@ -32,6 +32,8 @@ public sealed class IgnoreQueryFiltersAllowlistTests
             (1, "Kiểm trùng slug kể cả shop đã xoá mềm (unique index không lọc soft delete); Shop không tenant-scoped."),
         ["Vsite.Application/Website/Jobs/DeletedPagePurger.cs"] =
             (2, "Job dọn trang đã xoá mềm (#118): phải thấy Page/PageDraft đã xoá mềm; mọi query có ShopId == shop của scope (#116)."),
+        ["Vsite.Application/Media/Jobs/MediaOrphanCleanupJob.cs"] =
+            (3, "Job dọn ảnh mồ côi (#117): phải thấy Library đã xoá mềm (ứng viên) — nạp, đánh dấu, xoá; mọi query có ShopId == shop của scope (#116)."),
         ["Vsite.Application/Shop/Commands/UpdateShop/UpdateShopHandler.cs"] =
             (1, "Như CreateShopHandler."),
     };

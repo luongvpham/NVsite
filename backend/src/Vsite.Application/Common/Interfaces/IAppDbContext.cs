@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Vsite.Domain.Identity.Entities;
 using Vsite.Domain.Media.Entities;
 using Vsite.Domain.Website.Entities;
@@ -42,4 +43,8 @@ public interface IAppDbContext
     DbSet<SitePublication> SitePublications { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>WEBSITE-008 (#117) — transaction tường minh khi một thao tác DB phải đi cùng một tác dụng ngoài DB
+    /// (vd. job dọn ảnh: xoá record → xoá file → commit). <c>DbContext</c> cài sẵn; decorator test forward.</summary>
+    DatabaseFacade Database { get; }
 }
