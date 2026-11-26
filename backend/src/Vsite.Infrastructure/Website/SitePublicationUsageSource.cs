@@ -25,7 +25,7 @@ public sealed class SitePublicationUsageSource(IAppDbContext db, ITenantContext 
         var used = new HashSet<Guid>();
         foreach (var snapshot in snapshots)
         {
-            used.UnionWith(SnapshotMediaKeys.Read(snapshot, versioning));
+            used.UnionWith(SnapshotMediaKeys.Read(snapshot, versioning, strict: true));
         }
 
         return used;

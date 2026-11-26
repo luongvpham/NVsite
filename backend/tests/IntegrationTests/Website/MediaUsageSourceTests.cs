@@ -77,6 +77,24 @@ public sealed class MediaUsageSourceTests(PostgresFixture postgres) : IAsyncLife
         await Assert.ThrowsAnyAsync<Exception>(() => Drafts(request));
     }
 
+    [Fact]
+    public async Task Draft_source_throws_on_unknown_node_type_even_with_valid_envelope()
+    {
+        var seeded = await AddWebsiteAsync(Cs);
+        await using var request = new Request(Cs, seeded.ShopId);
+        var (_, clones) = await AddLibraryWithClonesAsync(Cs, seeded.ShopId, 1);
+        // Hero hợp lệ + một node type lạ: validator báo lỗi nên danh sách ảnh có thể thiếu → nguồn phải ném.
+        var tree = TreeWith(Hero("c_hero1", clones[0].ToString("D")), "{\"id\":\"c_x1\",\"type\":\"NoSuchType\",\"props\":{}}");
+        await using (var db = NewDb(Cs, null))
+        {
+            var changed = await db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE page_draft SET tree = {tree}::jsonb WHERE shop_id = {seeded.ShopId}");
+            Assert.True(changed >= 1);
+        }
+
+        await Assert.ThrowsAnyAsync<Exception>(() => Drafts(request));
+    }
+
     // ---------- SitePublicationUsageSource ----------
 
     [Fact]
@@ -132,6 +150,22 @@ public sealed class MediaUsageSourceTests(PostgresFixture postgres) : IAsyncLife
             // Hỏng đúng MỘT bản: nguồn vẫn phải ném, không trả tập từ các bản còn lại.
             var changed = await db.Database.ExecuteSqlInterpolatedAsync(
                 $"UPDATE site_publication SET snapshot = '{{\"schemaVersion\":999}}'::jsonb WHERE id = (SELECT id FROM site_publication WHERE shop_id = {seeded.ShopId} LIMIT 1)");
+            Assert.Equal(1, changed);
+        }
+
+        await Assert.ThrowsAnyAsync<Exception>(() => Publications(request));
+    }
+
+    [Fact]
+    public async Task Publication_source_throws_when_snapshot_has_no_media()
+    {
+        var seeded = await AddWebsiteAsync(Cs);
+        await using var request = new Request(Cs, seeded.ShopId);
+        await request.Publish();
+        await using (var db = NewDb(Cs, null))
+        {
+            var changed = await db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE site_publication SET snapshot = snapshot - 'media' WHERE shop_id = {seeded.ShopId}");
             Assert.Equal(1, changed);
         }
 

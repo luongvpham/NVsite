@@ -6,8 +6,8 @@ namespace Vsite.Infrastructure.Website;
 /// <summary>
 /// Một chỗ duy nhất đọc <c>imageId</c> trong tree draft (walker của <see cref="PageTreeValidator"/>), dùng chung cho
 /// <see cref="PageDraftReferenceSource"/> và <see cref="PageDraftUsageSource"/>. So theo <see cref="Guid"/> (hoa/thường không quan trọng);
-/// id không phải GUID bị bỏ qua (không thể khớp asset nào). <paramref name="strict"/>: tree không qua validator thì NÉM thay vì trả rỗng
-/// (validator trả danh sách ảnh rỗng khi lỗi) — bắt buộc cho đường quyết định xoá.
+/// id không phải GUID bị bỏ qua (không thể khớp asset nào). <paramref name="strict"/>: tree không qua validator thì NÉM thay vì trả tập thiếu — ĐỪNG nới
+/// (khi có lỗi validator trả danh sách ảnh RỖNG hoặc THIẾU: lỗi vỏ/kiểu node lạ return trước khi duyệt props, và trần số lỗi cắt ngang lượt duyệt) — bắt buộc cho đường quyết định xoá.
 /// </summary>
 internal static class PageTreeImageIds
 {
