@@ -157,6 +157,11 @@ public static class DependencyInjection
         services.AddScoped<IMediaReferenceSource, Vsite.Infrastructure.Website.SitePublicationReferenceSource>();
         services.AddScoped<IMediaReferenceSource, Vsite.Infrastructure.Website.SeoImageReferenceSource>();
 
+        // WEBSITE-008 T6 (#117) — nguồn "ảnh đang dùng" cho job dọn ảnh mồ côi; Website cài, ném khi không đọc được (R5).
+        services.AddScoped<IMediaUsageSource, Vsite.Infrastructure.Website.PageDraftUsageSource>();
+        services.AddScoped<IMediaUsageSource, Vsite.Infrastructure.Website.SitePublicationUsageSource>();
+        services.AddScoped<IMediaUsageSource, Vsite.Infrastructure.Website.SeoImageUsageSource>();
+
         return services;
     }
 }

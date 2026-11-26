@@ -46,8 +46,8 @@ public sealed class PageDraftReferenceSource(IAppDbContext db, ITenantContext te
         var references = new List<MediaReferenceDto>();
         foreach (var draft in drafts)
         {
-            var usesAsset = validator.Validate(draft.Tree, draft.Kind).ImageIds
-                .Any(raw => Guid.TryParse(raw, out var id) && cloneIds.Contains(id));
+            var usesAsset = PageTreeImageIds.Read(validator, draft.Tree, draft.Kind, strict: false)
+                .Any(cloneIds.Contains);
             if (usesAsset)
             {
                 references.Add(new MediaReferenceDto(MediaReferenceKind.PageDraft, draft.PageId, draft.Title));
